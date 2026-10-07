@@ -590,3 +590,5 @@ td.group-column .show-more > a.btn::after { content: "Mostrar más"; }
 td.group-column .show-more > a.btn.hidden { display: none; }
 /* kanban: la fila de estados que Espo fija al hacer scroll queda justo bajo el encabezado de la página (no detrás) */
 .kanban-head-container.sticked { top: var(--ch-ph-h, 56px) !important; z-index: 85; background: var(--ch-bg); padding: 6px 0 4px; }
+.kanban-head th.ch-head-search-cell { background: transparent !important; border: 0 !important; padding: 6px 0 2px !important; font-weight: 400; }
+.kanban-head .ch-head-search .ch-col-search { margin: 0; }
