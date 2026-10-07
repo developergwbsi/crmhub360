@@ -297,13 +297,13 @@
     ses: {label: 'Amazon SES', host: 'email-smtp.us-east-1.amazonaws.com', port: 587, security: 'TLS', help: 'Usa las credenciales SMTP de SES (no las de IAM) y ajusta la región en el servidor si no es us-east-1.'},
     other: {label: 'Otro servidor SMTP', help: 'Escribe los datos que te dio tu proveedor de correo.'},
   };
-  const presetOf = h => Object.keys(MAIL_PRESETS).find(k => MAIL_PRESETS[k].host && MAIL_PRESETS[k].host === h) || (h ? 'other' : 'gmail');
+  const presetOf = h => Object.keys(MAIL_PRESETS).find(k => MAIL_PRESETS[k].host && MAIL_PRESETS[k].host === h) || (h ? 'other' : '');
   async function drawMail() {
     const main = document.getElementById('main');
     main.innerHTML = '<h2>Correo general</h2><p class="sub">Cargando…</p>';
     let m; try { m = await api('GET', '/settings/mail'); } catch (e) { main.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
     main.innerHTML = `<h2>Correo general</h2><p class="sub">Cuenta de correo (SMTP) del sistema. Se usa para recuperar tu contraseña del Centro y para las empresas a las que decidas prestarles el correo (se activa en el panel de cada empresa → Servicios).</p>
-      <div class="card" style="padding:18px 20px;max-width:760px"><label>Proveedor de correo</label><select id="pr">${Object.keys(MAIL_PRESETS).map(k => `<option value="${k}">${esc(MAIL_PRESETS[k].label)}</option>`).join('')}</select>
+      <div class="card" style="padding:18px 20px;max-width:760px"><label>Proveedor de correo</label><select id="pr"><option value="">Elige tu proveedor…</option>${Object.keys(MAIL_PRESETS).map(k => `<option value="${k}">${esc(MAIL_PRESETS[k].label)}</option>`).join('')}</select>
       <div class="notice" id="hp"></div>
       <div class="grid2"><div><label>Servidor SMTP</label><input id="h" value="${esc(m.host || '')}" placeholder="smtp.proveedor.com"></div><div><label>Puerto</label><input id="po" type="number" value="${esc(m.port || 587)}"></div></div>
       <div class="grid2"><div><label>Seguridad</label><select id="se"><option value="TLS">STARTTLS (587)</option><option value="SSL">SSL/TLS (465)</option><option value="">Ninguna</option></select></div><div><label>Usuario (correo completo)</label><input id="us" value="${esc(m.user || '')}" autocomplete="off" placeholder="tucuenta@gmail.com"></div></div>
@@ -312,15 +312,15 @@
       <div class="err" id="er" hidden></div><div class="ok" id="okm" hidden></div><div class="acts"><button class="btn primary" id="sv">Guardar</button><button class="btn" id="ts">Enviar correo de prueba</button></div></div>`;
     const $ = id => document.getElementById(id), val = id => $(id).value.trim();
     $('se').value = m.security == null ? 'TLS' : m.security;
-    const showHelp = () => { const p = MAIL_PRESETS[$('pr').value]; $('hp').innerHTML = p.help || ''; $('hp').hidden = !p.help; };
+    const showHelp = () => { const p = MAIL_PRESETS[$('pr').value] || {}; $('hp').innerHTML = p.help || ''; $('hp').hidden = !p.help; };
     $('pr').value = presetOf(m.host); showHelp();
     $('pr').onchange = () => {   // al elegir un proveedor se rellenan servidor, puerto y seguridad
-      const p = MAIL_PRESETS[$('pr').value]; showHelp();
+      const p = MAIL_PRESETS[$('pr').value] || {}; showHelp();
       if (p.host) { $('h').value = p.host; $('po').value = p.port; $('se').value = p.security; }
       if (p.user) { $('us').value = p.user; }
     };
-    $('us').addEventListener('blur', () => { const p = MAIL_PRESETS[$('pr').value]; if (p.userIsFrom && !val('fa') && /@/.test(val('us'))) { $('fa').value = val('us'); } });
-    $('h').addEventListener('input', () => { const k = presetOf(val('h')); if ($('pr').value !== k) { $('pr').value = k; showHelp(); } });
+    $('us').addEventListener('blur', () => { const p = MAIL_PRESETS[$('pr').value] || {}; if (p.userIsFrom && !val('fa') && /@/.test(val('us'))) { $('fa').value = val('us'); } });
+    $('h').addEventListener('input', () => { const k = presetOf(val('h')); if (k && $('pr').value !== k) { $('pr').value = k; showHelp(); } });
     const body = () => ({host: val('h'), port: +val('po') || 587, security: $('se').value, user: val('us'), password: $('pw').value, from_address: val('fa') || val('us'), from_name: val('fn') || 'Crm Hub 360'});
     const save = async () => {   // se guarda sin recargar la página: lo escrito se conserva
       const er = $('er'), ok = $('okm'); er.hidden = true; ok.hidden = true;
@@ -405,7 +405,7 @@
   }
 
   // ---------- base de producción
-  async function loadSide() { const [r, j, a] = await Promise.all([api('GET', '/releases'), api('GET', '/jobs'), api('GET', '/audit')]); state.releases = r.items; state.jobs = j.items; state.audit = a.items; if (state.tab !== 'empresas') { draw(); } }
+  async function loadSide() { const [r, j, a] = await Promise.all([api('GET', '/releases'), api('GET', '/jobs'), api('GET', '/audit')]); state.releases = r.items; state.jobs = j.items; state.audit = a.items; if (state.tab === 'base' || state.tab === 'actividad') { if (!document.querySelector('.back, .drawer, .viewer')) { draw(); } } }
   function drawBase() {
     const main = document.getElementById('main'); const cur = state.releases.find(r => r.current);
     main.innerHTML = `<h2>Base de producción</h2><p class="sub">Desarrollo es siempre la base. Al publicar, se congela una copia de su código y configuración: esa copia es la réplica con la que se crean las empresas nuevas.</p>
