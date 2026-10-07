@@ -190,7 +190,7 @@ ENV
 
   echo "==> Semilla: ajustes es_ES/COP, roles, equipos, usuario API"
   local api_key
-  api_key="$(python3 "$SRC/bin/seed_tenant.py" "http://127.0.0.1:$web_port" admin "$admin_pass" "$email" | jq -r .api_key)"
+  api_key="$(python3 "$SRC/bin/seed_tenant.py" "http://127.0.0.1:$web_port" admin "$admin_pass" "$email" "$name" | jq -r .api_key)"
   [[ -n "$api_key" && "$api_key" != null ]] || die "falló la semilla"
 
   local lic="NULL"; [[ -z "$until" ]] || lic="'$until'"

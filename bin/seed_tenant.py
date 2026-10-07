@@ -30,7 +30,7 @@ def log(msg: str) -> None:
 
 # Ajustes regionales y de marca
 api("PUT", "Settings", {
-    "language": "es_ES", "applicationName": "Crm Hub 360", "timeZone": "America/Bogota",
+    "language": "es_ES", "applicationName": (sys.argv[5] if len(sys.argv) > 5 else "Crm Hub 360"), "timeZone": "America/Bogota",
     "dateFormat": "DD/MM/YYYY", "timeFormat": "HH:mm", "weekStart": 1,
     "currencyList": ["COP", "USD"], "defaultCurrency": "COP", "baseCurrency": "COP",
     **UI_SETTINGS,

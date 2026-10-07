@@ -294,11 +294,29 @@
     }, {passive: true});
     window.addEventListener('resize', syncSticky);
     // Modo lectura (soporte): aviso permanente y botones de edición ocultos; los permisos del rol lo impiden de todos modos
-    var roChecked = false;
+    var roChecked = false, SYSTEM = 'Crm Hub 360';
+    function companyName() { try { return localStorage.getItem('ch-app-name') || ''; } catch (e) { return ''; } }
+    // Marca: la empresa pone su nombre; «Crm Hub 360» (el sistema) se muestra siempre debajo, en el menú, el título y el inicio de sesión
+    function paintBrand() {
+        var name = companyName(), a = document.querySelector('#navbar .navbar-brand');
+        if (a && name) {
+            var cur = a.querySelector('.ch-brand-co');
+            if (!cur) {
+                a.classList.add('ch-has-brand');
+                a.insertAdjacentHTML('beforeend', '<span class="ch-brand"><b class="ch-brand-co"></b><small class="ch-brand-sys">' + SYSTEM + '</small></span>');
+                cur = a.querySelector('.ch-brand-co');
+            }
+            if (cur.textContent !== name) { cur.textContent = name; }
+            a.title = name + ' · ' + SYSTEM;
+        }
+        if (name && document.title.indexOf(SYSTEM) === -1) { document.title = (document.title || name) + ' · ' + SYSTEM; }
+    }
     function checkReadOnly() {
         if (roChecked || !document.body.classList.contains('has-navbar') || !window.Espo || !Espo.Ajax) { return; }
         roChecked = true;
         Espo.Ajax.getRequest('App/user').then(function (r) {
+            var n = r && r.settings && r.settings.applicationName;
+            if (n) { try { localStorage.setItem('ch-app-name', n); } catch (e) { /* privado */ } paintBrand(); }
             if (r && r.user && r.user.userName === 'soporte-lectura') {
                 document.body.classList.add('ch-readonly');
                 if (!document.getElementById('ch-ro')) {
@@ -314,7 +332,7 @@
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });

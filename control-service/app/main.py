@@ -224,7 +224,7 @@ def upgrade_company(slug: str, actor: str = Depends(me)):
     return {"job": jid}
 
 
-@app.post("/api/companies/{slug}/{action}")
+@app.post("/api/companies/{slug}/power/{action}")
 def power_company(slug: str, action: str, actor: str = Depends(me)):
     if action not in ("suspend", "resume"):
         raise HTTPException(404, "Acción desconocida")
@@ -232,6 +232,27 @@ def power_company(slug: str, action: str, actor: str = Depends(me)):
     jid = enqueue(action, {"slug": t["slug"]}, actor)
     audit(actor, "suspender_empresa" if action == "suspend" else "reactivar_empresa", slug, {"job": jid})
     return {"job": jid}
+
+
+class NameReq(BaseModel):
+    name: str = Field(min_length=2, max_length=80)
+
+
+@app.put("/api/companies/{slug}/name")
+async def rename_company(slug: str, req: NameReq, actor: str = Depends(me)):
+    """Nombre que ven los usuarios de la empresa (el sistema siempre se muestra como Crm Hub 360)."""
+    t = get_tenant(slug)
+    name = req.name.strip()
+    if re.search(r"[<>\\'\"`;]", name):
+        raise HTTPException(400, "El nombre no puede llevar comillas ni símbolos < > ;")
+    async with espo(t) as c:
+        r = await c.put("/Settings", json={"applicationName": name})
+    if r.status_code != 200:
+        raise HTTPException(502, "No se pudo actualizar el nombre en la empresa")
+    with db() as c:
+        c.execute("UPDATE tenants SET name=%s WHERE slug=%s", (name, slug))
+    audit(actor, "renombrar_empresa", slug, {"nombre": name})
+    return {"name": name}
 
 
 class ReleaseReq(BaseModel):
@@ -314,7 +335,8 @@ async def reset_password(slug: str, uid: str, req: PwReq, actor: str = Depends(m
             raise HTTPException(404, "Usuario no encontrado")
         r = await c.put(f"/User/{uid}", json={"password": pw, "passwordConfirm": pw})
     if r.status_code != 200:
-        raise HTTPException(502, "No se pudo cambiar la contraseña")
+        why = r.headers.get("X-Status-Reason") or ""
+        raise HTTPException(502, "No se pudo cambiar la contraseña" + (f": {why}" if why else ""))
     # la clave de «admin» la usa el propio Centro para gestionar la empresa: se mantiene sincronizada en tenants/<slug>/.env
     if u.json().get("userName") == "admin":
         path = f"{TENANTS_DIR}/{slug}/.env"

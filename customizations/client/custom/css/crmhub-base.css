@@ -626,3 +626,13 @@ body.ch-split .page-header { margin-right: 0; }
 .ch-ro-banner { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 2500; background: #1c2240; color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.35); pointer-events: none; }
 body.ch-readonly .detail-button-container, body.ch-readonly [data-action="create"], body.ch-readonly .ch-contact-btn, body.ch-readonly [data-name="edit"],
 body.ch-readonly .list-row-buttons, body.ch-readonly .actions-btn-group { display: none !important; }
+
+/* ===== Marca: empresa arriba, «Crm Hub 360» (el sistema) siempre debajo ===== */
+#navbar .navbar-brand.ch-has-brand { display: flex !important; flex-direction: column; justify-content: center; gap: 1px; padding: 8px 16px !important; height: auto !important; min-height: 52px; }
+#navbar .navbar-brand.ch-has-brand img.logo { display: none; }
+.ch-brand { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.ch-brand-co { color: #fff; font-size: 15px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
+.ch-brand-sys { color: hsl(215 20% 66%); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.ch-brand-sys::before { content: "◆ "; color: var(--ch-primary, #7b8cff); font-size: 9px; }
+body.minimized #navbar .navbar-brand.ch-has-brand img.logo { display: block; }
+body.minimized #navbar .navbar-brand.ch-has-brand .ch-brand { display: none; }

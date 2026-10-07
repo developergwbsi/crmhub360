@@ -36,7 +36,12 @@
     return new Promise(res => {
       const m = modal(`<h3>${esc(title)}</h3>${opts.text ? `<p>${esc(opts.text)}</p>` : ''}<label>${esc(label)}</label><input type="${opts.type || 'text'}" placeholder="${esc(opts.placeholder || '')}" maxlength="120"><div class="err" hidden></div><div class="foot"><button class="btn" data-x="n">Cancelar</button><button class="btn primary" data-x="y">${esc(opts.ok || 'Guardar')}</button></div>`);
       const inp = m.el.querySelector('input'); setTimeout(() => inp.focus(), 30);
-      const go = () => { const v = inp.value.trim(); if (opts.required && !v) { const e = m.el.querySelector('.err'); e.hidden = false; e.textContent = 'Este dato es obligatorio.'; return; } m.close(); res(v); };
+      const go = () => {
+        const v = inp.value.trim(), e = m.el.querySelector('.err');
+        const bad = (opts.required && !v) ? 'Este dato es obligatorio.' : (opts.validate ? opts.validate(v) : '');
+        if (bad) { e.hidden = false; e.textContent = bad; inp.focus(); return; }
+        m.close(); res(v);
+      };
       m.el.querySelector('[data-x=n]').onclick = () => { m.close(); res(null); };
       m.el.querySelector('[data-x=y]').onclick = go; inp.addEventListener('keydown', e => { if (e.key === 'Enter') { go(); } });
     });
@@ -157,7 +162,7 @@
     d.innerHTML = `<header><div style="flex:1"><div class="name" style="font-size:17px">${esc(c.name)}</div><div class="mut">${esc(c.host)}</div></div><button class="x" aria-label="Cerrar">×</button></header><div class="body">
       <div class="acts"><a class="btn" href="https://${esc(c.host)}" target="_blank" rel="noopener">Abrir sitio</a><button class="btn primary" data-a="ro">Ver en modo lectura</button>
         ${isClient ? `<button class="btn" data-a="up">Actualizar a la base actual</button><button class="btn ${c.status === 'active' ? 'danger' : ''}" data-a="pw">${c.status === 'active' ? 'Suspender' : 'Reactivar'}</button>` : ''}
-        <button class="btn" data-a="cred">Ver credenciales del admin</button></div>
+        <button class="btn" data-a="cred">Ver credenciales del admin</button><button class="btn" data-a="ren">Cambiar nombre</button></div>
       <h4 style="margin:18px 0 6px">Datos</h4><div class="kv"><span>Estado</span><span>${esc(c.status === 'active' ? 'Activa' : 'Suspendida')}</span><span>Plan</span><span>${esc(c.plan)} · hasta ${c.maxUsers} usuarios</span>
         <span>Licencia</span><span>${esc(c.license || 'Sin vencimiento')}</span><span>Versión instalada</span><span>${esc(c.health.version || '—')}</span><span>Base de producción</span><span>${esc(c.kind === 'client' ? (c.release || 'ninguna') : 'Código de desarrollo')}</span>
         <span>Creada</span><span>${esc(fmtDate(c.createdAt))}</span><span>Respuesta</span><span>${c.health.ms == null ? '—' : c.health.ms + ' ms'}</span></div>
@@ -173,21 +178,25 @@
       if (!await confirmBox('Ver credenciales', 'Se mostrará el usuario y la contraseña del administrador de «' + c.name + '». Queda registrado en la actividad.', 'Mostrar')) { return; }
       try { const r = await api('GET', `/companies/${slug}/admin-credentials`); secretBox('Administrador de ' + c.name, `Usuario: ${r.userName} · Sitio: ${r.url}`, r.password); } catch (e) { toast(e.message); }
     };
+    d.querySelector('[data-a=ren]').onclick = async () => {
+      const nm = await inputBox('Nombre de la empresa', 'Nombre que verán sus usuarios', {text: 'Aparece en el menú y en el inicio de sesión. «Crm Hub 360» se muestra siempre como nombre del sistema.', ok: 'Guardar', required: true, validate: v => (v.length < 2 ? 'Escribe al menos 2 caracteres.' : /[<>;'"`]/.test(v) ? 'No uses comillas ni los símbolos < > ;' : '')});
+      if (nm === null) { return; }
+      try { await api('PUT', `/companies/${slug}/name`, {name: nm}); toast('Nombre actualizado'); close(); loadCompanies(); } catch (e) { toast(e.message); }
+    };
     const up = d.querySelector('[data-a=up]');
     if (up) { up.onclick = async () => { if (await confirmBox('Actualizar empresa', 'Se aplicará la base de producción actual (' + state.currentRelease + '). El sitio se reinicia unos segundos.', 'Actualizar')) { close(); const r = await api('POST', `/companies/${slug}/upgrade`); watchJob(r.job, 'Actualizando «' + c.name + '»'); } }; }
     const pw = d.querySelector('[data-a=pw]');
     if (pw) { pw.onclick = async () => {
       const susp = c.status === 'active';
       if (await confirmBox(susp ? 'Suspender empresa' : 'Reactivar empresa', susp ? 'Se detiene el sitio y deja de recibir mensajes. Los datos se conservan.' : 'Se vuelve a encender el sitio.', susp ? 'Suspender' : 'Reactivar', susp)) {
-        close(); const r = await api('POST', `/companies/${slug}/${susp ? 'suspend' : 'resume'}`); watchJob(r.job, (susp ? 'Suspendiendo «' : 'Reactivando «') + c.name + '»');
+        close(); const r = await api('POST', `/companies/${slug}/power/${susp ? 'suspend' : 'resume'}`); watchJob(r.job, (susp ? 'Suspendiendo «' : 'Reactivando «') + c.name + '»');
       } }; }
     try {
       const r = await api('GET', `/companies/${slug}/users`);
       d.querySelector('#us').innerHTML = r.items.length ? r.items.map(u => `<div class="userrow"><div style="flex:1"><b>${esc(u.userName)}</b> <span class="chip">${esc(u.type === 'admin' ? 'Administrador' : u.type === 'api' ? 'Integración' : 'Usuario')}</span>${u.active ? '' : ' <span class="chip warn">Inactivo</span>'}<div class="mut">${esc(u.name || '')} ${esc(u.email || '')}</div></div>${u.type === 'api' ? '' : `<button class="btn sm" data-u="${esc(u.id)}" data-n="${esc(u.userName)}">Cambiar clave</button>`}</div>`).join('') : '<div class="mut">Sin usuarios.</div>';
       d.querySelectorAll('[data-u]').forEach(b => b.onclick = async () => {
-        const custom = await inputBox('Cambiar contraseña de ' + b.dataset.n, 'Nueva contraseña (déjala vacía para generar una segura)', {type: 'text', ok: 'Cambiar', placeholder: 'Generar automáticamente'});
+        const custom = await inputBox('Cambiar contraseña de ' + b.dataset.n, 'Nueva contraseña (mínimo 10 caracteres; vacía = generar una segura)', {type: 'text', ok: 'Cambiar', placeholder: 'Generar automáticamente', validate: v => (v && v.length < 10 ? 'La contraseña debe tener al menos 10 caracteres (o déjala vacía para generar una).' : '')});
         if (custom === null) { return; }
-        if (custom && custom.length < 10) { toast('La contraseña debe tener al menos 10 caracteres'); return; }
         try { const r2 = await api('POST', `/companies/${slug}/users/${b.dataset.u}/password`, custom ? {password: custom} : {}); secretBox('Contraseña cambiada', 'Nueva contraseña de «' + r2.userName + '». No se vuelve a mostrar.', r2.password, 'Entrégala por un canal seguro; el usuario puede cambiarla desde su perfil.'); } catch (e) { toast(e.message); }
       });
     } catch (e) { d.querySelector('#us').innerHTML = `<div class="err">${esc(e.message)}</div>`; }

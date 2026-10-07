@@ -8,10 +8,11 @@
                 </svg>
                 <span>{{appName}}</span>
             </div>
+            <div class="crmhub-system">con <b>Crm Hub 360</b></div>
 
             <h1>Vende más,<br>con cada lead bajo control.</h1>
             <p class="crmhub-lead">
-                {{appName}} es la plataforma comercial que centraliza tus leads, automatiza la evaluación
+                Crm Hub 360 es la plataforma comercial que centraliza tus leads, automatiza la evaluación
                 de crédito con inteligencia artificial y mantiene a todo tu equipo alineado.
             </p>
 
@@ -21,13 +22,13 @@
                 <li><span class="crmhub-ic">👥</span><div><strong>Equipos y pipeline</strong><small>Roles, jerarquías y tableros Kanban para cada comercial.</small></div></li>
             </ul>
 
-            <div class="crmhub-brand-foot">© {{year}} {{appName}} · Todos los derechos reservados</div>
+            <div class="crmhub-brand-foot">© {{year}} {{appName}} · Plataforma Crm Hub 360</div>
         </div>
     </aside>
 
     <main class="crmhub-form-side">
         <div class="crmhub-card">
-            <div class="crmhub-mobile-brand">{{appName}}</div>
+            <div class="crmhub-mobile-brand">{{appName}} <small>· Crm Hub 360</small></div>
             <h2>Bienvenido de nuevo</h2>
             <p class="crmhub-sub">Inicia sesión para continuar en {{appName}}.</p>
 

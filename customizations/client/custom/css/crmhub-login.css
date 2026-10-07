@@ -64,3 +64,6 @@ html[data-ch-theme="dark"] .crmhub-login {
     .crmhub-brand { display: none; }
     .crmhub-mobile-brand { display: block; }
 }
+
+.crmhub-system { margin: -44px 0 48px 56px; font-size: 13px; color: rgba(255,255,255,.7); letter-spacing: .02em; } .crmhub-system b { color: #fff; font-weight: 700; }
+.crmhub-mobile-brand small { font-weight: 500; opacity: .7; font-size: .6em; }
