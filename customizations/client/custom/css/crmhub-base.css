@@ -553,11 +553,26 @@ body.modal-open:has(.ch-drawer) { overflow: auto !important; padding-right: 0 !i
 .ch-tl-action { background: color-mix(in srgb, #2fa36b 16%, var(--ch-surface)); color: #2fa36b; } .ch-tl-auto { background: var(--ch-soft2); color: var(--ch-muted); }
 .ch-tl-main { flex: 1; min-width: 0; } .ch-tl-top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; }
 .ch-tl-text { margin-top: 4px; overflow-wrap: anywhere; } .ch-tl-meta { font-size: 12px; color: var(--ch-muted); margin-top: 2px; }
-/* chat, teléfono y correos: ventanas centradas (Espo abre los modales como panel lateral) */
-.ch-chat-modal .modal-dialog, .ch-phone-modal .modal-dialog, .ch-mail-modal .modal-dialog { margin: 4vh auto !important; height: auto !important; max-height: 92vh; }
-.ch-chat-modal .modal-content, .ch-phone-modal .modal-content, .ch-mail-modal .modal-content { height: auto !important; max-height: 92vh; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; }
-.ch-chat-modal .modal-body, .ch-phone-modal .modal-body, .ch-mail-modal .modal-body { overflow-y: auto; max-height: none !important; }
-.ch-chat { height: min(620px, 92vh - 90px); }
-.ch-chat-modal .modal-body, .ch-phone-modal .modal-body, .ch-mail-modal .modal-body { height: auto !important; min-height: 0 !important; flex: 0 1 auto !important; }
-.ch-chat-modal .modal-content, .ch-phone-modal .modal-content, .ch-mail-modal .modal-content { min-height: 0 !important; }
+/* chat, teléfono y correos: siempre como panel lateral a toda la altura */
+.ch-chat-modal .modal-content, .ch-phone-modal .modal-content, .ch-mail-modal .modal-content { height: 100% !important; display: flex; flex-direction: column; border-radius: 18px 0 0 18px; overflow: hidden; }
+.ch-chat-modal .modal-header, .ch-phone-modal .modal-header, .ch-mail-modal .modal-header { flex: none; }
+.ch-chat-modal .modal-body, .ch-phone-modal .modal-body, .ch-mail-modal .modal-body { flex: 1 1 auto !important; min-height: 0 !important; height: auto !important; max-height: none !important; overflow-y: auto; }
+.ch-chat-modal .modal-body { display: flex; flex-direction: column; overflow: hidden; }
+.ch-chat-modal .ch-chat { flex: 1 1 auto; height: auto; min-height: 0; }
 .ch-phone-modal .modal-body, .ch-mail-modal .modal-body { padding: 14px 16px 18px; }
+
+/* encabezado de cada página siempre a la vista; el desplazamiento es del contenido */
+.page-header { position: sticky; top: var(--top-bar-height, 52px); z-index: 90; background: var(--ch-bg); margin-top: 0; padding-top: 10px; padding-bottom: 8px; }
+.ch-lead-hero { position: sticky; top: calc(var(--top-bar-height, 52px) + var(--ch-ph-h, 56px)); z-index: 80; transition: padding .15s, gap .15s; }
+.ch-lead-hero.ch-compact { padding: 8px 16px; gap: 8px 14px; }
+.ch-lead-hero.ch-compact .ch-avatar-lg { width: 40px; height: 40px; font-size: 15px; }
+.ch-lead-hero.ch-compact .ch-lh-name { font-size: 17px; }
+.ch-lead-hero.ch-compact .ch-lh-chips { margin-top: 3px; } .ch-lead-hero.ch-compact .ch-lh-meta { margin-top: 3px; }
+.ch-lead-hero.ch-compact .ch-lh-kpi { padding: 4px 10px; } .ch-lead-hero.ch-compact .ch-lh-kpi b { font-size: 13.5px; }
+.ch-drawer .ch-lead-hero { top: 0; margin-top: 14px; }
+.ch-drawer .modal-body { padding-top: 0; }
+
+/* barra de acciones del registro (Editar / Guardar): se apila bajo el encabezado y el resumen en lugar de tapar */
+.ch-lead-hero { margin-bottom: 0; }
+.detail-button-container, .detail-button-container.stick-sub { position: sticky !important; top: calc(var(--top-bar-height, 52px) + var(--ch-ph-h, 56px) + var(--ch-hero-h, 0px)) !important; left: auto !important; right: auto !important; width: auto !important; z-index: 75; background: var(--ch-bg) !important; padding: 10px 0 8px !important; box-shadow: none !important; margin: 0 !important; }
+.ch-chat-modal .modal-dialog, .ch-phone-modal .modal-dialog, .ch-mail-modal .modal-dialog { height: 100% !important; margin-top: 0 !important; margin-bottom: 0 !important; max-height: none !important; }

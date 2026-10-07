@@ -276,12 +276,29 @@
     }
 
     /* ---------------- Observador: el DOM de la app se pinta después ---------------- */
+    // Encabezado fijo: la altura real del encabezado de página se publica como variable para apilar debajo el resumen del lead.
+    function syncSticky() {
+        var ph = document.querySelector('#main .page-header, .page-header');
+        var h = ph ? Math.round(ph.getBoundingClientRect().height) : 0;
+        if (h && document.documentElement.style.getPropertyValue('--ch-ph-h') !== h + 'px') { document.documentElement.style.setProperty('--ch-ph-h', h + 'px'); }
+        var hero = document.querySelector('.ch-lead-hero:not(.ch-in-modal)');
+        if (!hero) { document.documentElement.style.setProperty('--ch-hero-h', '0px'); }
+        else if (!hero._chRo && window.ResizeObserver) {
+            hero._chRo = new ResizeObserver(function () { document.documentElement.style.setProperty('--ch-hero-h', hero.offsetHeight + 'px'); });
+            hero._chRo.observe(hero);
+        }
+    }
+    window.addEventListener('scroll', function () {
+        var c = window.scrollY > 60;
+        document.querySelectorAll('.ch-lead-hero:not(.ch-in-modal)').forEach(function (e) { e.classList.toggle('ch-compact', c); });
+    }, {passive: true});
+    window.addEventListener('resize', syncSticky);
     var pending = false;
     function onDom() {
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu();
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky();
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });

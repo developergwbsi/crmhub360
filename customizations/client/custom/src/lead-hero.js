@@ -42,6 +42,12 @@ define('custom:lead-hero', [], function () {
                 view.el.insertBefore(el, view.el.firstChild);
             }
             el.innerHTML = html(view);
+            // dentro del panel lateral el que se desplaza es el cuerpo del modal
+            const body = view.el.closest('.modal-body');
+            if (body && !el._chScroll) {
+                el._chScroll = true; el.classList.add('ch-in-modal');
+                body.addEventListener('scroll', () => el.classList.toggle('ch-compact', body.scrollTop > 40), {passive: true});
+            }
         };
         paint();
         if (!view._chHero) {
