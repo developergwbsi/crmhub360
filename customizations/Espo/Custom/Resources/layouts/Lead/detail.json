@@ -1,0 +1,111 @@
+[
+    {
+        "label": "Overview",
+        "rows": [
+            [
+                {
+                    "name": "name"
+                },
+                {
+                    "name": "accountName"
+                }
+            ],
+            [
+                {
+                    "name": "emailAddress"
+                },
+                {
+                    "name": "phoneNumber"
+                }
+            ],
+            [
+                {
+                    "name": "title"
+                },
+                {
+                    "name": "website"
+                }
+            ],
+            [
+                {
+                    "name": "address"
+                },
+                false
+            ]
+        ]
+    },
+    {
+        "label": "Evaluación de crédito",
+        "rows": [
+            [
+                {
+                    "name": "creditPdf"
+                },
+                {
+                    "name": "creditParseStatus"
+                }
+            ],
+            [
+                {
+                    "name": "creditScore"
+                },
+                {
+                    "name": "preApprovalStatus"
+                }
+            ],
+            [
+                {
+                    "name": "totalDebt"
+                },
+                {
+                    "name": "overdueDebt"
+                }
+            ],
+            [
+                {
+                    "name": "creditSummary",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "defaultHistory",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Details",
+        "rows": [
+            [
+                {
+                    "name": "status"
+                },
+                {
+                    "name": "source"
+                }
+            ],
+            [
+                {
+                    "name": "opportunityAmount"
+                },
+                {
+                    "name": "campaign"
+                }
+            ],
+            [
+                {
+                    "name": "industry"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "description",
+                    "fullWidth": true
+                }
+            ]
+        ]
+    }
+]

@@ -1,0 +1,43 @@
+[
+    {
+        "name": "name",
+        "link": true,
+        "width": 20
+    },
+    {
+        "name": "status",
+        "width": 12
+    },
+    {
+        "name": "preApprovalStatus",
+        "width": 13
+    },
+    {
+        "name": "creditScore",
+        "width": 8
+    },
+    {
+        "name": "emailAddress",
+        "notSortable": true,
+        "width": 14
+    },
+    {
+        "name": "phoneNumber",
+        "notSortable": true,
+        "width": 11
+    },
+    {
+        "name": "source",
+        "notSortable": true,
+        "width": 12,
+        "hidden": true
+    },
+    {
+        "name": "assignedUser",
+        "width": 11
+    },
+    {
+        "name": "createdAt",
+        "width": 10
+    }
+]

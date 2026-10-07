@@ -195,3 +195,18 @@ body[data-navbar=side] #navbar .navbar-right li.global-search-container a.global
     padding: 0 !important; display: flex !important; align-items: center; justify-content: center; border-radius: 10px;
 }
 body[data-navbar=side] #navbar .navbar-right li.global-search-container a.global-search-button:hover { background: hsl(231 60% 96%); }
+
+/* ---------- Homogeneidad: títulos de panel, cabecera de lista, tarjetas Kanban ---------- */
+.panel-heading .panel-title, .panel-heading h4, .panel-heading h4 > a { color: var(--ch-ink); font-size: 15px; font-weight: 600; letter-spacing: -.005em; }
+.panel-heading { padding-top: 12px; padding-bottom: 8px; }
+.cell > .control-label, .cell > label.control-label, .field-label, .label-text { color: var(--ch-muted); font-size: 12.5px; font-weight: 500; }
+
+/* Casilla "seleccionar todo" + menú: en una sola fila, sin tapar el título de la primera columna */
+table.table thead th.checkbox-cell { white-space: nowrap; width: 56px !important; }
+table.table thead th.checkbox-cell .select-all-container { display: inline-block; vertical-align: middle; }
+table.table thead th.checkbox-cell .checkbox-dropdown { display: inline-block !important; position: static !important; vertical-align: middle; margin-left: 2px; }
+table.table thead th.checkbox-cell .checkbox-dropdown > a { padding: 0 4px !important; }
+
+/* Tarjetas Kanban */
+.list-kanban .kanban-item, .kanban-item, td.group-column .item { border-radius: 12px; border: 1px solid var(--ch-line); box-shadow: var(--default-box-shadow); }
+.list-kanban .group-header, .kanban-head-container .group-header { border-radius: 10px; font-weight: 600; }

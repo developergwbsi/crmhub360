@@ -2,7 +2,7 @@
 <div class="ch-manual">
   <div class="ch-hero"><h2>Guía práctica de {{appName}}</h2><p>Para comerciales, directores de equipo y gerentes.</p></div>
   <div class="ch-manual-layout">
-    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline">3. Pipeline (Kanban)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq">10. Preguntas frecuentes</a></div></div>
+    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq">10. Preguntas frecuentes</a></div></div>
     <div class="ch-manual-body">
 <div class="panel panel-default" id="ch-m-inicio">
   <div class="panel-heading"><h4 class="panel-title">1. Ingreso y navegación</h4></div>
@@ -10,7 +10,7 @@
 <ol>
 <li>Entra a la dirección de tu empresa e inicia sesión con tu usuario y contraseña.</li>
 <li>Cambia tu contraseña la primera vez: menú de tu usuario (arriba a la derecha) → <b>Preferencias</b>.</li>
-<li>El menú lateral izquierdo da acceso a <b>Leads</b>, <b>Pipeline</b>, cuentas, contactos, oportunidades, tareas y calendario.</li>
+<li>El menú lateral izquierdo da acceso a <b>Leads</b>, cuentas, contactos, oportunidades, tareas y calendario.</li>
 <li>Usa la lupa superior para buscar cualquier registro por nombre, teléfono o correo.</li>
 </ol>
 <div class="ch-tip">La pantalla de inicio es tu panel: muestra tus leads recientes, tareas pendientes, actividades y la actividad del equipo.</div>
@@ -21,7 +21,7 @@
   <div class="panel-body">
 <p>Un <b>lead</b> es una persona interesada en un crédito. Verás solo los leads que tu rol permite (ver sección 7).</p>
 <h3>Crear un lead manualmente</h3>
-<ol><li><b>Leads</b> → botón <b>Crear lead</b>.</li><li>Completa nombre, teléfono (con indicativo; si no lo pones se asume +57), correo y origen.</li><li>Guarda. El estado inicial es <span class="ch-pill">Nuevo Lead</span>.</li></ol>
+<ol><li><b>Leads</b> → botón <b>Crear lead</b> (arriba a la derecha).</li><li>Completa nombre, teléfono (con indicativo; si no lo pones se asume +57), correo y origen.</li><li>Guarda. El estado inicial es <span class="ch-pill">Nuevo Lead</span>.</li></ol>
 <h3>Estados del lead</h3>
 <table class="table table-bordered ch-table"><tr><th>Estado</th><th>Significado</th></tr>
 <tr><td>Nuevo Lead</td><td>Recién captado, sin gestionar.</td></tr>
@@ -34,9 +34,9 @@
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-pipeline">
-  <div class="panel-heading"><h4 class="panel-title">3. Pipeline (Kanban)</h4></div>
+  <div class="panel-heading"><h4 class="panel-title">3. Tablero Kanban</h4></div>
   <div class="panel-body">
-<p>Entra por <b>Pipeline</b> en el menú lateral (o <b>Leads</b> → icono de tablero arriba a la derecha). Cada columna es un estado.</p>
+<p>Al entrar a <b>Leads</b> verás el tablero Kanban: cada columna es un estado. Con los iconos de arriba a la derecha alternas entre el tablero y la lista.</p>
 <ul><li><b>Arrastra</b> una tarjeta a otra columna para cambiar su estado.</li><li>Cada columna muestra el número de leads.</li><li>Usa los filtros para ver solo los tuyos o los de tu equipo.</li><li>Vuelve a la lista con el icono de lista.</li></ul>
 </div>
 </div>
@@ -84,7 +84,7 @@
   <div class="panel-heading"><h4 class="panel-title">7. Roles y equipos</h4></div>
   <div class="panel-body">
 <table class="table table-bordered ch-table"><tr><th>Rol</th><th>Qué puede ver</th><th>Qué puede hacer</th></tr>
-<tr><td><b>Comercial</b></td><td>Solo los leads asignados a él.</td><td>Crear y editar sus leads; usar IA y Pipeline.</td></tr>
+<tr><td><b>Comercial</b></td><td>Solo los leads asignados a él.</td><td>Crear y editar sus leads; usar IA y el tablero Kanban.</td></tr>
 <tr><td><b>Director de Equipo</b></td><td>Los leads de su equipo.</td><td>Reasignar leads del equipo, ver el rendimiento del equipo y paneles.</td></tr>
 <tr><td><b>Gerente General</b></td><td>Todo el sistema.</td><td>Gestión completa, analítica global y métricas.</td></tr></table>
 <div class="ch-tip">Si no ves un lead que esperabas, normalmente está asignado a otro usuario o equipo. Pide a tu director que lo reasigne.</div>

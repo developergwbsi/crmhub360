@@ -13,13 +13,14 @@ TABS = [
     {"type": "url", "id": "t6", "text": "Integraciones", "url": "#CrmHub/integrations", "iconClass": "fas fa-plug", "onlyAdmin": True},
 ]
 DASH_LAYOUT = [{"name": "Inicio", "layout": [
-    {"id": "d-leads", "name": "Leads", "x": 0, "y": 0, "width": 3, "height": 5},
-    {"id": "d-tasks", "name": "Tasks", "x": 3, "y": 0, "width": 1, "height": 5},
-    {"id": "d-activities", "name": "Activities", "x": 0, "y": 5, "width": 2, "height": 4},
-    {"id": "d-stream", "name": "Stream", "x": 2, "y": 5, "width": 2, "height": 4},
+    {"id": "d-leads", "name": "Records", "x": 0, "y": 0, "width": 3, "height": 2},
+    {"id": "d-tasks", "name": "Tasks", "x": 3, "y": 0, "width": 1, "height": 2},
+    {"id": "d-activities", "name": "Activities", "x": 0, "y": 2, "width": 2, "height": 2},
+    {"id": "d-stream", "name": "Stream", "x": 2, "y": 2, "width": 2, "height": 2},
 ]}]
-DASH_OPTIONS = {"d-leads": {"title": "Leads recientes", "entityType": "Lead", "sortBy": "createdAt", "asc": False,
-                            "displayRecords": 10, "expandedLayout": {"rows": [[{"name": "name", "link": True}, {"name": "status"}, {"name": "preApprovalStatus"}]]}}}
+DASH_OPTIONS = {"d-leads": {"title": "Leads recientes", "entityType": "Lead", "displayRecords": 10, "sortBy": "createdAt", "sortDirection": "desc",
+                            "expandedLayout": {"rows": [[{"name": "name", "link": True}, {"name": "status"}], [{"name": "preApprovalStatus"}, {"name": "creditScore"}]]}},
+                "d-tasks": {"title": "Mis tareas"}}
 
 UI_SETTINGS = {
     "theme": "CrmHub", "tabList": TABS, "quickCreateList": ["Lead", "Task", "Meeting", "Call"],

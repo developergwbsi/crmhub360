@@ -19,12 +19,22 @@
             "Converted": "Convertido",
             "Dead": "Perdido"
         },
-        "preApprovalStatus": {"Pre-Aprobado": "Pre-Aprobado", "Rechazado": "Rechazado", "Revisión Manual": "Revisión Manual"},
-        "creditParseStatus": {"Procesando": "Procesando", "Completado": "Completado", "Error": "Error"}
+        "preApprovalStatus": {
+            "Pre-Aprobado": "Pre-Aprobado",
+            "Rechazado": "Rechazado",
+            "Revisión Manual": "Revisión Manual"
+        },
+        "creditParseStatus": {
+            "Procesando": "Procesando",
+            "Completado": "Completado",
+            "Error": "Error"
+        }
     },
     "labels": {
         "IA: Resumir conversación": "IA: Resumir conversación",
         "IA: Redactar respuesta": "IA: Redactar respuesta",
-        "IA: Analizar sentimiento": "IA: Analizar sentimiento"
+        "IA: Analizar sentimiento": "IA: Analizar sentimiento",
+        "Create Lead": "Crear lead",
+        "Evaluación de crédito": "Evaluación de crédito"
     }
 }

@@ -1,0 +1,15 @@
+[
+    {
+        "name": "name",
+        "link": true
+    },
+    {
+        "name": "preApprovalStatus"
+    },
+    {
+        "name": "creditScore"
+    },
+    {
+        "name": "assignedUser"
+    }
+]
