@@ -145,6 +145,9 @@
     window.addEventListener('online', function () { setOnline(true); });
     if (!online) { online = true; setOnline(false); }
 
+    // mientras no haya red, el aviso se mantiene aunque EspoCRM reconstruya la página
+    setInterval(function () { if (!online && document.body && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); } }, 1500);
+
     // «latido»: detecta redes que dicen estar conectadas pero no dejan salir
     function heartbeat() {
         fetch(BASE + 'version.json?hb=' + Date.now(), {cache: 'no-store'}).then(function (r) { setOnline(r.ok || r.status < 500); }).catch(function () { setOnline(false); });
