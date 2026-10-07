@@ -13,19 +13,18 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui'], function (Dep,
 
         setup() {
             this.buttonList = [];
-            this.headerHtml = '<span class="fas fa-phone"></span> Llamadas';
+            this.headerHtml = '<span class="ch-phone-bar"><span>Crm Hub 360</span><span class="fas fa-signal"></span></span>';
             this.listenTo(this.options.model, 'sync', () => this.load());
         }
 
         afterRender() {
             const initials = (this.options.name || '?').split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
             this.el.querySelector('.ch-phone').innerHTML =
-                `<div class="ch-phone-device"><div class="ch-phone-screen"><div class="ch-phone-status"><span>Crm Hub</span><span class="fas fa-signal"></span></div>` +
-                `<span class="ch-avatar ch-avatar-lg ch-phone-av">${ChUi.esc(initials)}</span><div class="ch-phone-name">${ChUi.esc(this.options.name || '')}</div>` +
-                `<div class="ch-phone-num">${ChUi.esc(this.options.phone || '')}</div><div class="ch-phone-hint" data-role="hint">Listo para llamar</div>` +
+                `<div class="ch-phone-top"><span class="ch-avatar ch-avatar-lg ch-phone-av">${ChUi.esc(initials)}</span><div class="ch-phone-name">${ChUi.esc(this.options.name || '')}</div>` +
+                `<div class="ch-phone-num">${ChUi.esc(this.options.phone || '')}</div><div class="ch-phone-hint">Listo para llamar</div>` +
                 `<button type="button" class="ch-phone-call" data-action="dial" title="Llamar"><span class="fas fa-phone"></span></button>` +
-                `<div class="ch-phone-links"><a role="button" data-action="dialer">Usar el marcador del equipo</a><a role="button" data-action="manual">Registrar llamada hecha</a></div></div></div>` +
-                `<div class="ch-phone-hist"><h5>Historial de llamadas</h5><div data-role="list" class="ch-phone-list"><div class="ch-chat-empty">Cargando…</div></div></div>`;
+                `<div class="ch-phone-links"><a role="button" data-action="dialer">Usar el marcador del equipo</a><a role="button" data-action="manual">Registrar llamada hecha</a></div></div>` +
+                `<div class="ch-phone-hist"><h5>Recientes</h5><div data-role="list" class="ch-phone-list"><div class="ch-chat-empty">Cargando…</div></div></div>`;
             this.load();
             this.timer = setInterval(() => this.load(), 8000);
         }
