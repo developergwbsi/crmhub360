@@ -1,7 +1,7 @@
 // Panel lateral con la ficha del lead: deja ver el tablero y, si se necesita todo, «Abrir completo» lleva a pantalla completa.
-define('custom:views/modals/lead-drawer', ['views/modals/detail', 'custom:handlers/lead-contact'], function (Dep, ContactHandler) {
+define('custom:views/modals/lead-drawer', ['views/modals/detail', 'custom:handlers/lead-contact', 'custom:split'], function (Dep, ContactHandler, Split) {
     return class extends Dep {
-        className = 'dialog dialog-record ch-drawer'
+        className = 'dialog dialog-record ch-drawer ch-lead-drawer'
         backdrop = false
         fitHeight = false
         navigateButtonsDisabled = true
@@ -18,6 +18,16 @@ define('custom:views/modals/lead-drawer', ['views/modals/detail', 'custom:handle
             contact.slice().reverse().forEach(([name, icon, label, fn]) => {
                 this.buttonList.unshift({name, html: `<span class="${icon}"></span> ${label}`, className: 'ch-contact-btn ch-contact-' + name, onClick: () => new ContactHandler(this)[fn]()});
             });
+        }
+
+        afterRender() {
+            super.afterRender();
+            if (!this._chSplit) { this._chSplit = true; Split.open('lead'); }
+        }
+
+        onRemove() {
+            if (this._chSplit) { this._chSplit = false; Split.close('lead'); }
+            super.onRemove && super.onRemove();
         }
 
         // El título del panel es el propio nombre: el encabezado visual del registro ya muestra los datos.

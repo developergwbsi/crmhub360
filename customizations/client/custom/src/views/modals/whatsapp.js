@@ -1,13 +1,13 @@
 // Conversación con el lead por WhatsApp, Telegram o SMS, con aspecto de app de mensajería.
-define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui'], function (Dep, ChUi) {
+define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:split'], function (Dep, ChUi, Split) {
     const META = {
         whatsapp: {title: 'WhatsApp', icon: 'fab fa-whatsapp', color: '#25d366'},
         telegram: {title: 'Telegram', icon: 'fab fa-telegram', color: '#229ed9'},
         sms: {title: 'SMS', icon: 'fas fa-comment-sms', color: '#0ea5e9'},
     };
     return class extends Dep {
-        className = 'dialog ch-chat-modal'
-        backdrop = true
+        className = 'dialog ch-ch-panel ch-chat-modal'
+        backdrop = false
         templateContent = '<div class="ch-chat"></div>'
 
         events = {
@@ -28,10 +28,11 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui'], function (D
         }
 
         afterRender() {
+            if (!this._chSplit) { this._chSplit = true; Split.open('ch'); }
             const root = this.el.querySelector('.ch-chat');
             root.innerHTML = '<div class="ch-chat-thread" tabindex="0" aria-live="polite"><div class="ch-chat-empty">Cargando conversación…</div></div>' +
                 '<div class="ch-chat-composer"><div class="ch-chat-err" hidden></div>' +
-                '<div class="ch-chat-row"><textarea name="text" rows="1" maxlength="4000" placeholder="Escribe un mensaje…  (Enter envía · Shift+Enter nueva línea)"></textarea>' +
+                '<div class="ch-chat-row"><textarea name="text" rows="1" maxlength="4000" placeholder="Escribe un mensaje…"></textarea>' +
                 '<button type="button" class="ch-chat-send" data-action="send" title="Enviar" style="background:' + this.meta.color + '"><span class="fas fa-paper-plane"></span></button></div>' +
                 '<div class="ch-chat-tools"><button type="button" class="btn btn-default btn-xs" data-action="aiDraft"><span class="fas fa-wand-magic-sparkles"></span> Sugerir con IA</button>' +
                 '<span class="ch-chat-counter"></span></div></div>';
@@ -40,7 +41,7 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui'], function (D
             setTimeout(() => { const t = this.el.querySelector('[name="text"]'); t && t.focus(); }, 150);
         }
 
-        onRemove() { clearInterval(this.timer); }
+        onRemove() { clearInterval(this.timer); if (this._chSplit) { this._chSplit = false; Split.close('ch'); } }
 
         load(first) {
             return Espo.Ajax.getRequest('CrmHub/leadTimeline', {leadId: this.options.leadId, kind: 'chat', channel: this.channel}).then(r => {

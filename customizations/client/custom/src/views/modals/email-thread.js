@@ -1,7 +1,8 @@
 // Correos con el lead: historial tipo bandeja y botón para redactar.
-define('custom:views/modals/email-thread', ['views/modal', 'custom:ui'], function (Dep, ChUi) {
+define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:split'], function (Dep, ChUi, Split) {
     return class extends Dep {
-        className = 'dialog ch-mail-modal'
+        className = 'dialog ch-ch-panel ch-mail-modal'
+        backdrop = false
         templateContent = '<div class="ch-mail"></div>'
 
         events = {
@@ -14,7 +15,10 @@ define('custom:views/modals/email-thread', ['views/modal', 'custom:ui'], functio
             this.headerHtml = `<span class="fas fa-envelope"></span> <span class="ch-chat-title"><b>${ChUi.esc(this.options.name || '')}</b><small>${ChUi.esc(this.options.email || '')} · Correos</small></span>`;
         }
 
+        onRemove() { if (this._chSplit) { this._chSplit = false; Split.close('ch'); } }
+
         afterRender() {
+            if (!this._chSplit) { this._chSplit = true; Split.open('ch'); }
             this.el.querySelector('.ch-mail').innerHTML = '<div class="ch-mail-bar"><button type="button" class="btn btn-primary" data-action="compose"><span class="fas fa-pen"></span> Redactar correo</button></div><div class="ch-mail-list" data-role="list"><div class="ch-chat-empty">Cargando…</div></div>';
             this.load();
         }

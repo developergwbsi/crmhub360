@@ -1,5 +1,11 @@
 define('custom:handlers/lead-contact', ['action-handler'], function (Dep) {
     return class extends Dep {
+        // Solo hay un panel de canal abierto; la ficha del lead queda al lado.
+        openChannel(view, options, cb) {
+            if (this.view.hasView('channelPanel')) { this.view.getView('channelPanel').close(); this.view.clearView('channelPanel'); }
+            this.view.createView('channelPanel', view, options, v => { v.render(); cb && cb(v); });
+        }
+
         phone() {
             const m = this.view.model;
             return (m.get('phoneNumber') || '').trim();
@@ -10,7 +16,7 @@ define('custom:handlers/lead-contact', ['action-handler'], function (Dep) {
             const phone = this.phone();
             if (!phone) { Espo.Ui.warning('Este lead no tiene teléfono.'); return; }
             const m = this.view.model;
-            this.view.createView('phone', 'custom:views/modals/phone', {leadId: m.id, model: m, name: m.get('name'), phone, handler: this}, v => v.render());
+            this.openChannel('custom:views/modals/phone', {leadId: m.id, model: m, name: m.get('name'), phone, handler: this});
         }
 
         // Si la empresa configuró telefonía (Integraciones → SMS y llamadas), la central llama primero al asesor y luego lo conecta con el cliente.
@@ -31,7 +37,7 @@ define('custom:handlers/lead-contact', ['action-handler'], function (Dep) {
         actionEmail() {
             const m = this.view.model, email = (m.get('emailAddress') || '').trim();
             if (!email) { Espo.Ui.warning('Este lead no tiene correo.'); return; }
-            this.view.createView('emailThread', 'custom:views/modals/email-thread', {leadId: m.id, name: m.get('name'), email}, v => { v.render(); v.once('done', () => m.fetch()); });
+            this.openChannel('custom:views/modals/email-thread', {leadId: m.id, name: m.get('name'), email}, v => v.once('done', () => m.fetch()));
         }
 
         clickToCall(phone) {
@@ -52,20 +58,14 @@ define('custom:handlers/lead-contact', ['action-handler'], function (Dep) {
 
         actionSms() {
             if (!this.phone()) { Espo.Ui.warning('Este lead no tiene teléfono.'); return; }
-            this.view.createView('sms', 'custom:views/modals/whatsapp', {channel: 'sms', leadId: this.view.model.id, name: this.view.model.get('name'), phone: this.phone()}, v => {
-                v.render();
-                v.once('done', () => this.view.model.fetch());
-            });
+            this.openChannel('custom:views/modals/whatsapp', {channel: 'sms', leadId: this.view.model.id, name: this.view.model.get('name'), phone: this.phone()}, v => v.once('done', () => this.view.model.fetch()));
         }
 
         // Con chat abierto: escribe por Telegram. Sin chat: genera el enlace de invitación (t.me) para que el cliente abra el bot.
         actionTelegram() {
             const m = this.view.model;
             if (!m.get('telegramChatId')) { this.actionTelegramInvite(); return; }
-            this.view.createView('telegram', 'custom:views/modals/whatsapp', {channel: 'telegram', leadId: m.id, name: m.get('name'), phone: m.get('telegramUsername') ? '@' + m.get('telegramUsername') : 'Telegram'}, v => {
-                v.render();
-                v.once('done', () => m.fetch());
-            });
+            this.openChannel('custom:views/modals/whatsapp', {channel: 'telegram', leadId: m.id, name: m.get('name'), phone: m.get('telegramUsername') ? '@' + m.get('telegramUsername') : 'Telegram'}, v => v.once('done', () => m.fetch()));
         }
 
         actionTelegramInvite() {
@@ -74,10 +74,7 @@ define('custom:handlers/lead-contact', ['action-handler'], function (Dep) {
 
         actionWhatsapp() {
             if (!this.phone()) { Espo.Ui.warning('Este lead no tiene teléfono.'); return; }
-            this.view.createView('whatsapp', 'custom:views/modals/whatsapp', {leadId: this.view.model.id, name: this.view.model.get('name'), phone: this.phone()}, v => {
-                v.render();
-                v.once('done', () => this.view.model.fetch());
-            });
+            this.openChannel('custom:views/modals/whatsapp', {leadId: this.view.model.id, name: this.view.model.get('name'), phone: this.phone()}, v => v.once('done', () => this.view.model.fetch()));
         }
     };
 });

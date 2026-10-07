@@ -1,8 +1,9 @@
 // Teléfono del lead: marcador estilo celular + historial de llamadas.
-define('custom:views/modals/phone', ['views/modal', 'custom:ui'], function (Dep, ChUi) {
+define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split'], function (Dep, ChUi, Split) {
     const STATUS = {Held: ['Realizada', 'ok'], 'Not Held': ['No contestada', 'bad'], Planned: ['En curso / pendiente', 'warn']};
     return class extends Dep {
-        className = 'dialog ch-phone-modal'
+        className = 'dialog ch-ch-panel ch-phone-modal'
+        backdrop = false
         templateContent = '<div class="ch-phone"></div>'
 
         events = {
@@ -18,6 +19,7 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui'], function (Dep,
         }
 
         afterRender() {
+            if (!this._chSplit) { this._chSplit = true; Split.open('ch'); }
             const initials = (this.options.name || '?').split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
             this.el.querySelector('.ch-phone').innerHTML =
                 `<div class="ch-phone-top"><span class="ch-avatar ch-avatar-lg ch-phone-av">${ChUi.esc(initials)}</span><div class="ch-phone-name">${ChUi.esc(this.options.name || '')}</div>` +
@@ -29,7 +31,7 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui'], function (Dep,
             this.timer = setInterval(() => this.load(), 8000);
         }
 
-        onRemove() { clearInterval(this.timer); }
+        onRemove() { clearInterval(this.timer); if (this._chSplit) { this._chSplit = false; Split.close('ch'); } }
 
         load() {
             Espo.Ajax.getRequest('CrmHub/leadTimeline', {leadId: this.options.leadId, kind: 'calls'}).then(r => {
