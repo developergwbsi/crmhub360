@@ -2,6 +2,27 @@
     {
         "route": "/Lead/:id/ai/:action",
         "method": "post",
-        "params": {"controller": "Lead", "action": "aiAssist", "id": ":id", "aiAction": ":action"}
+        "params": {
+            "controller": "Lead",
+            "action": "aiAssist",
+            "id": ":id",
+            "aiAction": ":action"
+        }
+    },
+    {
+        "route": "/CrmHub/integrations",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "integrations"
+        }
+    },
+    {
+        "route": "/CrmHub/integrations",
+        "method": "put",
+        "params": {
+            "controller": "CrmHub",
+            "action": "integrations"
+        }
     }
 ]

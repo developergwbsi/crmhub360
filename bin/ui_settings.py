@@ -5,13 +5,12 @@ import base64, json, sys, urllib.request
 TABS = [
     {"type": "divider", "id": "t1", "text": "Comercial"},
     "Lead",
-    {"type": "url", "id": "t2", "text": "Pipeline", "url": "#Lead/kanban", "iconClass": "fas fa-columns", "aclScope": "Lead"},
     "Account", "Contact", "Opportunity",
     {"type": "divider", "id": "t3", "text": "Actividad"},
     "Task", "Meeting", "Call", "Calendar", "Email",
     {"type": "divider", "id": "t4", "text": "Ayuda"},
-    {"type": "url", "id": "t5", "text": "Manual de usuario", "url": "client/custom/manual/index.html",
-     "iconClass": "fas fa-book", "openInNewTab": True},
+    {"type": "url", "id": "t5", "text": "Manual de usuario", "url": "#CrmHub/manual", "iconClass": "fas fa-book"},
+    {"type": "url", "id": "t6", "text": "Integraciones", "url": "#CrmHub/integrations", "iconClass": "fas fa-plug", "onlyAdmin": True},
 ]
 DASH_LAYOUT = [{"name": "Inicio", "layout": [
     {"id": "d-leads", "name": "Leads", "x": 0, "y": 0, "width": 3, "height": 5},

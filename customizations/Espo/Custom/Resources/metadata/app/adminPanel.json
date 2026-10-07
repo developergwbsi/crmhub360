@@ -1,0 +1,9 @@
+{
+    "crmhub": {
+        "label": "Crm Hub 360",
+        "order": 1,
+        "itemList": [
+            {"url": "#CrmHub/integrations", "label": "Integraciones", "iconClass": "fas fa-plug", "description": "crmhubIntegrations"}
+        ]
+    }
+}

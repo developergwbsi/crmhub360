@@ -41,6 +41,7 @@ wait_http() { # url user pass
 
 install_custom() { # slug
   local c="crmhub-$1"
+  docker exec "$c" rm -rf /var/www/html/client/custom/manual
   docker exec "$c" mkdir -p /var/www/html/custom/Espo/Custom /var/www/html/client/custom
   docker cp "$ROOT/customizations/Espo/Custom/." "$c:/var/www/html/custom/Espo/Custom/"
   docker cp "$ROOT/customizations/client/custom/." "$c:/var/www/html/client/custom/"

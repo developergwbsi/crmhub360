@@ -1,11 +1,14 @@
 import asyncio
 import hmac
+import json
 import logging
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel
+
+import httpx
 
 from . import assistant, config, credit, db, ingest
 
@@ -118,6 +121,52 @@ async def web_ingest(slug: str, request: Request):
     lead = await ingest.upsert_lead(tenant, name=b.get("name", ""), phone=b.get("phone"), email=b.get("email"),
                                     source=b.get("source", "Formulario Web"))
     return {"lead": lead}
+
+
+# --- Integraciones del tenant (las consume el panel de administración de EspoCRM) ---
+EDITABLE = {"fb_page_token": str, "approve_min_score": int, "reject_max_score": int, "reject_overdue_ratio": float}
+
+
+class SettingsReq(BaseModel):
+    fb_page_token: str | None = None
+    approve_min_score: int | None = None
+    reject_max_score: int | None = None
+    reject_overdue_ratio: float | None = None
+
+
+@app.get("/v1/tenant/settings")
+async def tenant_settings(tenant: dict = Depends(tenant_auth)):
+    st = tenant.get("settings") or {}
+    ai_ok = False
+    try:
+        async with httpx.AsyncClient(timeout=5) as c:
+            tags = (await c.get(f"{config.OLLAMA_URL}/api/tags")).json()
+            ai_ok = any(m["name"] == config.OLLAMA_MODEL for m in tags.get("models", []))
+    except Exception:
+        pass
+    with db.pool.connection() as c:
+        jobs = c.execute("SELECT kind, status, count(*) n FROM ai_jobs WHERE tenant=%s GROUP BY 1,2", (tenant["slug"],)).fetchall()
+    fb = st.get("fb_page_token") or ""
+    return {
+        "host": tenant["host"], "token": tenant["hub_token"], "plan": tenant["plan"], "maxUsers": tenant["max_users"],
+        "status": tenant["status"], "licenseUntil": str(tenant["license_until"]) if tenant["license_until"] else None,
+        "model": config.OLLAMA_MODEL, "aiReachable": ai_ok, "thresholds": credit.thresholds(tenant),
+        "fbPageTokenSet": bool(fb), "fbPageTokenHint": ("…" + fb[-4:]) if fb else "", "jobs": jobs,
+    }
+
+
+@app.put("/v1/tenant/settings")
+def tenant_settings_update(req: SettingsReq, tenant: dict = Depends(tenant_auth)):
+    patch = {k: v for k, v in req.model_dump().items() if v is not None}
+    if "approve_min_score" in patch or "reject_max_score" in patch:
+        t = credit.thresholds({"settings": {**(tenant.get("settings") or {}), **patch}})
+        if not (0 <= t["reject_max_score"] < t["approve_min_score"] <= 999):
+            raise HTTPException(422, "Se requiere 0 <= puntaje de rechazo < puntaje de aprobación <= 999")
+    if "reject_overdue_ratio" in patch and not 0 <= patch["reject_overdue_ratio"] <= 1:
+        raise HTTPException(422, "La proporción de mora debe estar entre 0 y 1")
+    with db.pool.connection() as c:
+        c.execute("UPDATE tenants SET settings = settings || %s::jsonb WHERE slug = %s", (json.dumps(patch), tenant["slug"]))
+    return {"ok": True}
 
 
 # --- Métricas de licenciamiento (Gerente General / operador de plataforma) ---

@@ -4,6 +4,7 @@
 body {
     --theme-name: CrmHub;
     --font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-feature-settings: "cv11", "ss01"; /* igual que Core360 */
 
     /* Identidad */
     --ch-primary: hsl(231 70% 52%);
@@ -24,7 +25,7 @@ body {
     --panel-bg: #fff;
     --panel-default-bg: #fff;
     --panel-default-border: var(--ch-line);
-    --panel-border-radius: 14px;
+    --panel-border-radius: 12px;
     --border-radius: 10px;
     --border-radius-small: 8px;
     --default-border-color: var(--ch-line);
@@ -141,3 +142,56 @@ body[data-navbar=side] input.global-search-input {
     border: 1px solid var(--ch-line); border-radius: 10px !important;
 }
 body[data-navbar=side] input.global-search-input:focus { background: #fff; border-color: var(--ch-primary); }
+
+/* ---------- Pantallas propias (Manual / Integraciones): mismos paneles y botones que el resto ---------- */
+.ch-muted { color: var(--ch-muted); }
+.ch-small { font-size: 12.5px; margin-top: 2px; }
+.ch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: var(--vertical-gap, 16px); align-items: start; }
+.ch-grid > .panel { margin-bottom: 0; }
+.ch-span-2 { grid-column: 1 / -1; }
+.ch-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.ch-url { display: inline-block; max-width: 520px; overflow-wrap: anywhere; background: hsl(231 60% 97%); border: 1px solid var(--ch-line); color: var(--ch-ink); border-radius: 8px; padding: 4px 8px; }
+.ch-table > thead > tr > th { background: hsl(210 22% 97%); }
+.ch-kv td { border-top: 0 !important; padding: 8px 4px !important; }
+.ch-kv td:first-child { color: var(--ch-muted); width: 46%; }
+.ch-tip { background: hsl(231 80% 96%); border-left: 4px solid var(--ch-primary); border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+.ch-warn { background: hsl(38 90% 94%); border-left: 4px solid #f59e0b; color: #5b3d00; border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+.ch-pill { display: inline-block; border-radius: 999px; padding: 1px 10px; font-size: 12.5px; font-weight: 600; background: hsl(231 80% 96%); color: var(--ch-primary); }
+
+.ch-hero { background: linear-gradient(160deg, hsl(231 55% 22%), hsl(224 45% 11%)); color: #fff; border-radius: 14px; padding: 26px 30px; margin-bottom: 16px; }
+.ch-hero h2 { margin: 0 0 4px; font-size: 24px; font-weight: 700; letter-spacing: -.02em; color: #fff; }
+.ch-hero p { margin: 0; color: rgba(255,255,255,.78); }
+.ch-manual-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
+.ch-manual-toc { position: sticky; top: calc(var(--top-bar-height, 52px) + 12px); }
+.ch-toc-link { display: block; padding: 8px 12px; border-radius: 9px; color: var(--ch-ink); cursor: pointer; text-decoration: none; }
+.ch-toc-link:hover { background: hsl(231 60% 96%); color: var(--ch-primary); text-decoration: none; }
+.ch-manual-body .panel { scroll-margin-top: calc(var(--top-bar-height, 52px) + 12px); }
+.ch-manual-body ul, .ch-manual-body ol { padding-left: 22px; }
+.ch-manual-body h3 { font-size: 15px; font-weight: 600; margin: 18px 0 6px; }
+@media (max-width: 991px) { .ch-manual-layout { grid-template-columns: 1fr; } .ch-manual-toc { position: static; } }
+
+/* ---------- Íconos que no deben montarse sobre los campos ---------- */
+/* Ojo de la contraseña: dentro del campo, centrado verticalmente */
+[data-role=password-input-container] input.form-control { padding-right: 44px !important; }
+[data-role=password-input-container] a[data-action=toggleShowPassword] {
+    top: 50% !important; right: 6px !important; transform: translateY(-50%) !important;
+    width: 32px !important; height: 32px; display: flex !important; align-items: center; justify-content: center;
+    border-radius: 8px; color: var(--ch-muted); text-decoration: none;
+}
+[data-role=password-input-container] a[data-action=toggleShowPassword]:hover { background: hsl(231 60% 96%); color: var(--ch-primary); }
+
+/* Buscador global del header: campo + botón en fila, sin superponerse */
+body[data-navbar=side] #navbar .navbar-right li.global-search-container {
+    display: flex !important; align-items: center; padding: 0 8px; float: none;
+}
+body[data-navbar=side] #navbar .navbar-right li.global-search-container .input-group {
+    display: flex !important; align-items: center; gap: 6px; width: auto; margin: 0 !important; float: none;
+}
+body[data-navbar=side] #navbar .navbar-right li.global-search-container input.global-search-input {
+    float: none; flex: 1 1 auto; width: 280px !important; max-width: 40vw !important; margin: 0 !important;
+}
+body[data-navbar=side] #navbar .navbar-right li.global-search-container a.global-search-button {
+    position: static !important; margin: 0 !important; float: none; width: 36px !important; height: 36px !important;
+    padding: 0 !important; display: flex !important; align-items: center; justify-content: center; border-radius: 10px;
+}
+body[data-navbar=side] #navbar .navbar-right li.global-search-container a.global-search-button:hover { background: hsl(231 60% 96%); }

@@ -1,0 +1,120 @@
+<div class="page-header"><h3>Manual de usuario</h3></div>
+<div class="ch-manual">
+  <div class="ch-hero"><h2>Guía práctica de {{appName}}</h2><p>Para comerciales, directores de equipo y gerentes.</p></div>
+  <div class="ch-manual-layout">
+    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline">3. Pipeline (Kanban)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq">10. Preguntas frecuentes</a></div></div>
+    <div class="ch-manual-body">
+<div class="panel panel-default" id="ch-m-inicio">
+  <div class="panel-heading"><h4 class="panel-title">1. Ingreso y navegación</h4></div>
+  <div class="panel-body">
+<ol>
+<li>Entra a la dirección de tu empresa e inicia sesión con tu usuario y contraseña.</li>
+<li>Cambia tu contraseña la primera vez: menú de tu usuario (arriba a la derecha) → <b>Preferencias</b>.</li>
+<li>El menú lateral izquierdo da acceso a <b>Leads</b>, <b>Pipeline</b>, cuentas, contactos, oportunidades, tareas y calendario.</li>
+<li>Usa la lupa superior para buscar cualquier registro por nombre, teléfono o correo.</li>
+</ol>
+<div class="ch-tip">La pantalla de inicio es tu panel: muestra tus leads recientes, tareas pendientes, actividades y la actividad del equipo.</div>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-leads">
+  <div class="panel-heading"><h4 class="panel-title">2. Leads</h4></div>
+  <div class="panel-body">
+<p>Un <b>lead</b> es una persona interesada en un crédito. Verás solo los leads que tu rol permite (ver sección 7).</p>
+<h3>Crear un lead manualmente</h3>
+<ol><li><b>Leads</b> → botón <b>Crear lead</b>.</li><li>Completa nombre, teléfono (con indicativo; si no lo pones se asume +57), correo y origen.</li><li>Guarda. El estado inicial es <span class="ch-pill">Nuevo Lead</span>.</li></ol>
+<h3>Estados del lead</h3>
+<table class="table table-bordered ch-table"><tr><th>Estado</th><th>Significado</th></tr>
+<tr><td>Nuevo Lead</td><td>Recién captado, sin gestionar.</td></tr>
+<tr><td>Consulta de Crédito</td><td>Se autorizó y se está evaluando el reporte de crédito.</td></tr>
+<tr><td>Pre-Aprobado</td><td>El análisis permite avanzar con la solicitud.</td></tr>
+<tr><td>En Enfriamiento/Contactado</td><td>Contactado; se espera respuesta o decisión del cliente.</td></tr>
+<tr><td>Cierre Exitoso</td><td>El cliente tomó el crédito.</td></tr>
+<tr><td>Perdido / Convertido</td><td>Descartado, o convertido en cuenta/contacto/oportunidad.</td></tr></table>
+<p>En el detalle del lead, el <b>flujo</b> (<i>stream</i>) guarda notas, mensajes de WhatsApp y cambios. Documenta cada contacto allí.</p>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-pipeline">
+  <div class="panel-heading"><h4 class="panel-title">3. Pipeline (Kanban)</h4></div>
+  <div class="panel-body">
+<p>Entra por <b>Pipeline</b> en el menú lateral (o <b>Leads</b> → icono de tablero arriba a la derecha). Cada columna es un estado.</p>
+<ul><li><b>Arrastra</b> una tarjeta a otra columna para cambiar su estado.</li><li>Cada columna muestra el número de leads.</li><li>Usa los filtros para ver solo los tuyos o los de tu equipo.</li><li>Vuelve a la lista con el icono de lista.</li></ul>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-credito">
+  <div class="panel-heading"><h4 class="panel-title">4. Reporte de crédito con IA</h4></div>
+  <div class="panel-body">
+<p>Con la autorización del cliente, sube su historia de crédito en PDF y el sistema extrae los datos automáticamente.</p>
+<ol>
+<li>Abre el lead y edítalo.</li>
+<li>En <b>Reporte de crédito (PDF)</b> adjunta el archivo y guarda.</li>
+<li>El campo <b>Procesamiento del reporte</b> pasa a <i>Procesando</i> y, en uno o dos minutos, a <i>Completado</i> (recarga el lead).</li>
+</ol>
+<h3>Qué se completa solo</h3>
+<ul><li><b>Puntaje de crédito</b>, <b>deuda total</b> y <b>deuda en mora</b>.</li><li><b>Historial de incumplimientos</b> y un <b>resumen financiero</b> en español.</li><li><b>Estado de Pre-Aprobación</b>.</li></ul>
+<h3>Cómo se decide la pre-aprobación</h3>
+<table class="table table-bordered ch-table"><tr><th>Resultado</th><th>Regla</th></tr>
+<tr><td><span class="ch-pill">Pre-Aprobado</span></td><td>Puntaje de 650 o más y sin deuda en mora. El lead pasa a la etapa Pre-Aprobado.</td></tr>
+<tr><td><span class="ch-pill">Rechazado</span></td><td>Puntaje menor a 500, o mora superior al 30 % de la deuda total.</td></tr>
+<tr><td><span class="ch-pill">Revisión Manual</span></td><td>Cualquier otro caso, o si falta el puntaje.</td></tr></table>
+<div class="ch-warn"><b>Importante:</b> la IA ayuda, no decide por ti. Verifica siempre las cifras contra el PDF antes de comunicar una decisión. Los PDF escaneados (imagen) no se pueden leer: el lead queda en <i>Revisión Manual</i> con el motivo en el resumen. Sube el PDF original descargado del buró.</div>
+<p>Los umbrales (650, 500 y 30 %) los puede ajustar el administrador de la plataforma.</p>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-asistente">
+  <div class="panel-heading"><h4 class="panel-title">5. Asistente IA</h4></div>
+  <div class="panel-body">
+<p>En el detalle de un lead, abre el menú de acciones (⋯ junto a <b>Editar</b>):</p>
+<ul><li><b>IA: Resumir conversación</b> — viñetas con necesidad, objeciones y próximo paso.</li><li><b>IA: Redactar respuesta</b> — borrador de mensaje de WhatsApp en español.</li><li><b>IA: Analizar sentimiento</b> — sentimiento e interés de compra.</li></ul>
+<p>Trabaja sobre la conversación registrada en el flujo del lead. Puede tardar de 15 a 60 segundos.</p>
+<div class="ch-warn">Revisa y edita el texto antes de enviarlo. El asistente puede equivocarse; no uses sus resultados como única base de una decisión.</div>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-canales">
+  <div class="panel-heading"><h4 class="panel-title">6. Canales de captación</h4></div>
+  <div class="panel-body">
+<table class="table table-bordered ch-table"><tr><th>Canal</th><th>Qué ocurre</th></tr>
+<tr><td>Facebook / Instagram Ads</td><td>Cada formulario de anuncio crea un lead con origen Facebook Ads o Instagram Ads.</td></tr>
+<tr><td>WhatsApp</td><td>Cada mensaje entrante se registra en el flujo del lead (se crea si no existía). Los números se unifican por teléfono, así que no se duplican.</td></tr>
+<tr><td>Formulario web</td><td>Los envíos de la página web crean leads con origen Formulario Web.</td></tr>
+<tr><td>Manual</td><td>Lo creas tú desde Leads.</td></tr></table>
+<p>La conexión de cada canal la configura el administrador (ver sección 9).</p>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-roles">
+  <div class="panel-heading"><h4 class="panel-title">7. Roles y equipos</h4></div>
+  <div class="panel-body">
+<table class="table table-bordered ch-table"><tr><th>Rol</th><th>Qué puede ver</th><th>Qué puede hacer</th></tr>
+<tr><td><b>Comercial</b></td><td>Solo los leads asignados a él.</td><td>Crear y editar sus leads; usar IA y Pipeline.</td></tr>
+<tr><td><b>Director de Equipo</b></td><td>Los leads de su equipo.</td><td>Reasignar leads del equipo, ver el rendimiento del equipo y paneles.</td></tr>
+<tr><td><b>Gerente General</b></td><td>Todo el sistema.</td><td>Gestión completa, analítica global y métricas.</td></tr></table>
+<div class="ch-tip">Si no ves un lead que esperabas, normalmente está asignado a otro usuario o equipo. Pide a tu director que lo reasigne.</div>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-actividades">
+  <div class="panel-heading"><h4 class="panel-title">8. Tareas y calendario</h4></div>
+  <div class="panel-body">
+<ul><li><b>Tareas:</b> crea recordatorios ligados a un lead (por ejemplo "Llamar el viernes") con fecha de vencimiento.</li><li><b>Calendario:</b> muestra tus llamadas, reuniones y tareas; haz clic en un hueco para agendar.</li><li>Las actividades pendientes aparecen en el panel de inicio.</li></ul>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-admin">
+  <div class="panel-heading"><h4 class="panel-title">9. Administración (solo administradores)</h4></div>
+  <div class="panel-body">
+<h3>Crear un usuario</h3>
+<ol><li>Menú de usuario → <b>Administración</b> → <b>Usuarios</b> → <b>Crear usuario</b>.</li><li>Define usuario, contraseña y correo.</li><li>Asigna el <b>rol</b> (Comercial, Director de Equipo o Gerente General) y su <b>equipo</b>.</li></ol>
+<h3>Webhooks de captación</h3>
+<p>Los datos de conexión de tu empresa (dirección y token) los entrega el equipo de plataforma. Rutas:</p>
+<ul><li><code>/hub/facebook?token=…</code> — Facebook e Instagram Leads</li><li><code>/hub/evolution</code> — WhatsApp (Evolution API, cabecera <code>apikey</code>)</li><li><code>/hub/web?token=…</code> — formularios web</li></ul>
+<p>No compartas el token fuera de la empresa.</p>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-faq">
+  <div class="panel-heading"><h4 class="panel-title">10. Preguntas frecuentes</h4></div>
+  <div class="panel-body">
+<h3>El reporte quedó en "Error"</h3><p>Lo más común: PDF escaneado o protegido. Descarga de nuevo el PDF original del buró y vuelve a adjuntarlo.</p>
+<h3>El asistente IA no responde</h3><p>Puede estar ocupado procesando otro reporte. Espera un minuto y reintenta; si persiste, avisa al administrador.</p>
+<h3>Mi licencia aparece vencida o suspendida</h3><p>Las funciones de IA y la captación automática se pausan. Contacta al administrador de tu empresa.</p>
+<h3>¿Cómo cambio mi contraseña?</h3><p>Menú de usuario → Preferencias → Cambiar contraseña.</p>
+</div>
+</div></div>
+  </div>
+</div>

@@ -31,14 +31,25 @@ def extract_text(pdf: bytes) -> str:
     return text.strip()
 
 
-def decide(score, total_debt, overdue_debt) -> str:
+def thresholds(tenant: dict | None) -> dict:
+    """Umbrales por empresa (tenants.settings) con respaldo en los valores globales."""
+    st = (tenant or {}).get("settings") or {}
+    return {
+        "approve_min_score": int(st.get("approve_min_score", config.APPROVE_MIN_SCORE)),
+        "reject_max_score": int(st.get("reject_max_score", config.REJECT_MAX_SCORE)),
+        "reject_overdue_ratio": float(st.get("reject_overdue_ratio", config.REJECT_OVERDUE_RATIO)),
+    }
+
+
+def decide(score, total_debt, overdue_debt, tenant: dict | None = None) -> str:
     """Reglas deterministas de pre-aprobación; sin datos suficientes -> revisión manual."""
+    t = thresholds(tenant)
     if score is None:
         return "Revisión Manual"
     ratio = (overdue_debt or 0) / total_debt if total_debt else 0
-    if score < config.REJECT_MAX_SCORE or ratio > config.REJECT_OVERDUE_RATIO:
+    if score < t["reject_max_score"] or ratio > t["reject_overdue_ratio"]:
         return "Rechazado"
-    if score >= config.APPROVE_MIN_SCORE and not overdue_debt:
+    if score >= t["approve_min_score"] and not overdue_debt:
         return "Pre-Aprobado"
     return "Revisión Manual"
 
@@ -55,7 +66,7 @@ async def process(tenant: dict, lead_id: str, attachment_id: str) -> None:
         await espo.put(f"Lead/{lead_id}", {"creditParseStatus": "Error", "preApprovalStatus": "Revisión Manual",
                                            "creditSummary": f"No se pudo procesar el reporte: {e}"})
         raise
-    verdict = decide(data.get("score"), data.get("total_debt"), data.get("overdue_debt"))
+    verdict = decide(data.get("score"), data.get("total_debt"), data.get("overdue_debt"), tenant)
     update = {
         "creditScore": data.get("score"),
         "totalDebt": data.get("total_debt"),

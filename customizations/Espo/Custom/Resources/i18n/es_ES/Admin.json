@@ -1,0 +1,9 @@
+{
+    "labels": {
+        "Crm Hub 360": "Crm Hub 360",
+        "Integraciones": "Integraciones"
+    },
+    "descriptions": {
+        "crmhubIntegrations": "Webhooks de captación, WhatsApp, Facebook/Instagram, reglas de crédito, IA y licencia."
+    }
+}
