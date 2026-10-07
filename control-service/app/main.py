@@ -641,6 +641,7 @@ KINDS = {
     "generic_whatsapp": {"label": "Otro proveedor de WhatsApp (API HTTP)", "channels": ["whatsapp"], "secrets": ["auth_secret"]},
     "generic_sms": {"label": "Proveedor de SMS (API HTTP)", "channels": ["sms"], "secrets": ["auth_secret"]},
     "generic_voice": {"label": "Central / proveedor de llamadas (API HTTP)", "channels": ["voice"], "secrets": ["auth_secret"]},
+    "email": {"label": "Proveedor de correo (SMTP: Gmail, Outlook, SendGrid…)", "channels": ["email"], "secrets": ["password"]},
 }
 
 
@@ -670,6 +671,8 @@ def list_providers(actor: str = Depends(me)):
         for ch, v in services_of(sl).items():
             if isinstance(v, dict) and v.get("provider"):
                 uses.setdefault(v["provider"], []).append(sl)
+            elif ch == "mail" and isinstance(v, str) and v.startswith("p"):
+                uses.setdefault(v, []).append(sl)
     return {"kinds": {k: {"label": v["label"], "channels": v["channels"]} for k, v in KINDS.items()},
             "items": [dict(mask_provider(p), companies=sorted(set(uses.get(p["id"], [])))) for p in providers_list()]}
 
@@ -692,6 +695,14 @@ def _clean_fields(kind: str, fields: dict, old: dict) -> dict:
     for k in KINDS[kind]["secrets"]:
         if not out.get(k):
             out[k] = old.get(k, "")
+    if kind == "email":
+        if not out.get("host") or not re.match(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$", str(out.get("from_address") or out.get("user") or "")):
+            raise HTTPException(400, "Escribe el servidor SMTP y un correo remitente válido")
+        out["host"] = str(out["host"]).strip()
+        out["security"] = "" if out.get("security") in ("NONE", "", None) else out["security"]
+        out["from_address"] = str(out.get("from_address") or out.get("user")).strip()
+        if "gmail" in out["host"] or "google" in out["host"]:
+            out["password"] = str(out.get("password", "")).replace(" ", "")
     return out
 
 
@@ -720,11 +731,27 @@ def save_provider(pid: str, req: ProviderReq, actor: str = Depends(me)):
 def delete_provider(pid: str, actor: str = Depends(me)):
     with db() as c:
         slugs = [r["slug"] for r in c.execute("SELECT slug FROM tenants").fetchall()]
-    used = [sl for sl in slugs for v in services_of(sl).values() if isinstance(v, dict) and v.get("provider") == pid]
+    used = [sl for sl in slugs for v in services_of(sl).values() if (isinstance(v, dict) and v.get("provider") == pid) or v == pid]
     if used:
         raise HTTPException(409, "Está asignado a: " + ", ".join(sorted(set(used))) + ". Quítalo primero de esas empresas.")
     put_setting("providers", [p for p in providers_list() if p["id"] != pid])
     audit(actor, "borrar_proveedor", pid)
+    return {"ok": True}
+
+
+@app.post("/api/providers/{pid}/test")
+async def test_provider_mail(pid: str, req: MailTestReq, actor: str = Depends(me)):
+    p = next((x for x in providers_list() if x["id"] == pid and x["kind"] == "email"), None)
+    if not p:
+        raise HTTPException(404, "Proveedor de correo no encontrado")
+    f = p["fields"]
+    cfg = {"host": f["host"], "port": int(f.get("port") or 587), "security": f.get("security", "TLS"), "user": f.get("user", ""), "password": f.get("password", ""),
+           "from_address": f["from_address"], "from_name": f.get("from_name") or "Crm Hub 360"}
+    try:
+        await asyncio.to_thread(smtp_send, cfg, req.to.strip(), "Prueba de correo · Crm Hub 360", f"Prueba del proveedor «{p['name']}».\n\nCrm Hub 360")
+    except Exception as e:
+        raise HTTPException(502, "No se pudo enviar: " + str(e)[:200])
+    audit(actor, "probar_proveedor_correo", pid, {"para": req.to})
     return {"ok": True}
 
 
@@ -802,6 +829,14 @@ async def tenant_mail_state(t: dict) -> dict:
 
 async def set_company_mail(t: dict, mode: str) -> None:
     mail = get_setting("mail") or {}
+    if mode.startswith("p"):   # un proveedor de correo de la lista de proveedores aliados
+        p = next((x for x in providers_list() if x["id"] == mode and x["kind"] == "email"), None)
+        if not p:
+            raise HTTPException(400, "Proveedor de correo inexistente")
+        f = p["fields"]
+        mail = {"host": f["host"], "port": f.get("port") or 587, "security": f.get("security", "TLS"), "user": f.get("user", ""), "password": f.get("password", ""),
+                "from_address": f["from_address"], "enabled": True}
+        mode = "shared"
     async with espo(t) as c:
         if mode == "shared":
             if not mail.get("host") or not mail.get("enabled", True):
@@ -820,7 +855,7 @@ async def set_company_mail(t: dict, mode: str) -> None:
 async def get_services(slug: str, actor: str = Depends(me)):
     t = get_tenant(slug)
     sv = services_of(slug)
-    return {"whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", **(await tenant_mail_state(t))},
+    return {"whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
             "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
 
 
@@ -860,7 +895,7 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
     with db() as c:
         c.execute("UPDATE tenants SET settings=%s WHERE slug=%s", (json.dumps(settings), slug))
     # correo
-    if req.mail in ("shared", "own"):
+    if req.mail in ("shared", "own") or (req.mail or "").startswith("p"):
         await set_company_mail(t, req.mail)
         sv["mail"] = req.mail
     put_setting("services:" + slug, sv)

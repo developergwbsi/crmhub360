@@ -362,6 +362,7 @@
     evolution: [['url', 'URL del servidor Evolution', 'https://evolution.tudominio.com'], ['apikey', 'API key global', '', 1]],
     gupshup: [['api_key', 'API key', '', 1], ['source', 'Número de origen', '57300…'], ['app_name', 'Nombre de la app', '']],
     twilio: [['account_sid', 'Account SID', 'AC…'], ['auth_token', 'Auth token', '', 1], ['sms_from', 'Remitente de SMS (número, código corto o MG…)', ''], ['wa_from', 'Número de WhatsApp (whatsapp:+…)', ''], ['voice_from', 'Número para llamadas (caller ID)', '']],
+    email: [['host', 'Servidor SMTP', 'smtp.gmail.com'], ['port', 'Puerto', '587'], ['security', 'Seguridad', '', 0, ['TLS', 'SSL', 'NONE']], ['user', 'Usuario (correo completo)', 'tucuenta@gmail.com'], ['password', 'Contraseña (en Gmail: contraseña de aplicación)', '', 1], ['from_address', 'Correo remitente', 'tucuenta@gmail.com'], ['from_name', 'Nombre del remitente', 'Crm Hub 360']],
     generic: [['url', 'URL de la API', 'https://api.proveedor.com/v1/…'], ['method', 'Método', '', 0, ['POST', 'GET']], ['auth_type', 'Autenticación', '', 0, ['none', 'bearer', 'basic', 'header']], ['auth_user', 'Usuario / nombre de la cabecera', ''], ['auth_secret', 'Token o clave', '', 1], ['body_type', 'Formato del cuerpo', '', 0, ['json', 'form', 'query']], ['body', 'Plantilla del cuerpo', '{"to":"{{to}}","text":"{{text}}"}', 0, 'area'], ['sender', 'Remitente / caller ID', '']],
   };
   const fieldsFor = kind => FIELDS[kind.startsWith('generic') ? 'generic' : kind];
@@ -371,9 +372,14 @@
     let r; try { r = await api('GET', '/providers'); } catch (e) { main.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
     state.providers = r;
     main.innerHTML = `<h2>Proveedores aliados</h2><p class="sub">Servicios que nosotros contratamos para revenderlos a las empresas: WhatsApp, SMS, llamadas. Se configuran una sola vez aquí y se asignan a cada empresa desde su panel (Servicios); la empresa no ve nuestras claves.</p>
-      <div class="bar"><button class="btn primary" id="np">+ Agregar proveedor</button></div><div class="card">${r.items.length ? `<table><thead><tr><th>Proveedor</th><th>Tipo</th><th>Canales</th><th>Empresas que lo usan</th><th></th></tr></thead><tbody>${r.items.map(p => `<tr><td><div class="name">${esc(p.name)}</div><div class="mut">${esc(p.notes || '')}</div></td><td>${esc(r.kinds[p.kind].label)}</td><td>${r.kinds[p.kind].channels.map(c => `<span class="chip info">${esc({whatsapp: 'WhatsApp', sms: 'SMS', voice: 'Llamadas'}[c])}</span>`).join(' ')}</td><td>${p.companies.length ? p.companies.map(esc).join(', ') : '<span class="mut">Ninguna</span>'}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-ed="${esc(p.id)}">Editar</button> <button class="btn sm danger" data-del="${esc(p.id)}">Eliminar</button></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Aún no hay proveedores. Agrega el primero (por ejemplo, tu cuenta de Twilio o tu servidor Evolution).</div>'}</div>`;
+      <div class="bar"><button class="btn primary" id="np">+ Agregar proveedor</button></div><div class="card">${r.items.length ? `<table><thead><tr><th>Proveedor</th><th>Tipo</th><th>Canales</th><th>Empresas que lo usan</th><th></th></tr></thead><tbody>${r.items.map(p => `<tr><td><div class="name">${esc(p.name)}</div><div class="mut">${esc(p.notes || '')}</div></td><td>${esc(r.kinds[p.kind].label)}</td><td>${r.kinds[p.kind].channels.map(c => `<span class="chip info">${esc({whatsapp: 'WhatsApp', sms: 'SMS', voice: 'Llamadas', email: 'Correo'}[c])}</span>`).join(' ')}</td><td>${p.companies.length ? p.companies.map(esc).join(', ') : '<span class="mut">Ninguna</span>'}</td><td style="text-align:right;white-space:nowrap">${p.kind === 'email' ? `<button class="btn sm" data-pt="${esc(p.id)}">Probar</button> ` : ''}<button class="btn sm" data-ed="${esc(p.id)}">Editar</button> <button class="btn sm danger" data-del="${esc(p.id)}">Eliminar</button></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Aún no hay proveedores. Agrega el primero (por ejemplo, tu cuenta de Twilio o tu servidor Evolution).</div>'}</div>`;
     document.getElementById('np').onclick = () => providerDialog(null);
     main.querySelectorAll('[data-ed]').forEach(b => b.onclick = () => providerDialog(r.items.find(x => x.id === b.dataset.ed)));
+    main.querySelectorAll('[data-pt]').forEach(b => b.onclick = async () => {
+      const to = await inputBox('Correo de prueba', 'Enviar a', {required: true, ok: 'Enviar', placeholder: (state.me && state.me.email) || 'tu@correo.com', validate: v => (/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(v) ? '' : 'Escribe un correo válido.')});
+      if (to === null) { return; }
+      try { await api('POST', `/providers/${b.dataset.pt}/test`, {to}); toast('Correo enviado a ' + to); } catch (e) { modal(`<h3>No se pudo enviar</h3><p>${esc(e.message)}</p><div class="foot"><button class="btn primary" data-x="k">Cerrar</button></div>`).el.querySelector('[data-x=k]').onclick = ev => ev.target.closest('.back').remove(); }
+    });
     main.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
       if (!await confirmBox('Eliminar proveedor', 'Se borra este proveedor del Centro. Las empresas que lo usan deben quitarlo primero.', 'Eliminar', true)) { return; }
       try { await api('DELETE', '/providers/' + b.dataset.del); toast('Proveedor eliminado'); drawProviders(); } catch (e) { toast(e.message); }
@@ -387,13 +393,21 @@
     const ff = m.el.querySelector('#ff');
     const draw = () => {
       const kind = m.el.querySelector('#k').value, f = (p && p.kind === kind) ? p.fields : {};
-      ff.innerHTML = fieldsFor(kind).map(([key, label, ph, secret, opts]) => {
+      const presetHtml = kind === 'email' ? `<label>Proveedor de correo</label><select id="mp"><option value="">Elige un proveedor…</option>${Object.keys(MAIL_PRESETS).map(k => `<option value="${k}" ${presetOf(f.host || '') === k ? 'selected' : ''}>${esc(MAIL_PRESETS[k].label)}</option>`).join('')}</select><div class="notice" id="mh" hidden></div>` : '';
+      ff.innerHTML = presetHtml + fieldsFor(kind).map(([key, label, ph, secret, opts]) => {
         const v = f[key] == null ? '' : f[key];
         if (opts === 'area') { return `<label>${esc(label)}</label><textarea data-f="${key}" rows="3" placeholder="${esc(ph)}">${esc(v)}</textarea>`; }
         if (opts) { return `<label>${esc(label)}</label><select data-f="${key}">${opts.map(o => `<option ${o === (v || opts[0]) ? 'selected' : ''}>${o}</option>`).join('')}</select>`; }
         const set = secret && f[key + '_set'];
         return `<label>${esc(label)} ${set ? `<span class="mut">(guardada ${esc(f[key + '_hint'])}; vacía = conservar)</span>` : ''}</label><input data-f="${key}" ${secret ? 'type="password" autocomplete="new-password"' : ''} value="${secret ? '' : esc(v)}" placeholder="${esc(ph)}">`;
       }).join('');
+      const mp = ff.querySelector('#mp');
+      if (mp) {
+        const fld = n => ff.querySelector(`[data-f="${n}"]`), help = () => { const pr = MAIL_PRESETS[mp.value] || {}, h = ff.querySelector('#mh'); h.innerHTML = pr.help || ''; h.hidden = !pr.help; };
+        help();
+        mp.onchange = () => { const pr = MAIL_PRESETS[mp.value] || {}; help(); if (pr.host) { fld('host').value = pr.host; fld('port').value = pr.port; fld('security').value = pr.security || 'NONE'; } if (pr.user) { fld('user').value = pr.user; } };
+        fld('user').addEventListener('blur', () => { const pr = MAIL_PRESETS[mp.value] || {}; if (pr.userIsFrom && !fld('from_address').value && /@/.test(fld('user').value)) { fld('from_address').value = fld('user').value.trim(); } });
+      }
     };
     draw(); m.el.querySelector('#k').onchange = draw;
     m.el.querySelector('[data-x=n]').onclick = m.close;
@@ -413,7 +427,7 @@
       return `<div class="svc" data-ch="${ch}"><label>${label}</label><div class="grid2"><select data-p><option value="">Propio de la empresa (sin nuestro servicio)</option>${opts.map(p => `<option value="${esc(p.id)}" ${cur.provider === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
         <input data-x placeholder="${ch === 'whatsapp' ? 'Instancia (Evolution) o número' : 'Remitente / caller ID (opcional)'}" value="${esc(cur.instance || cur.from || '')}"></div></div>`;
     }).join('');
-    box.innerHTML = `${rows}<div class="svc"><label>Correo de salida</label><select id="ml"><option value="own">Propio de la empresa${r.mail.hasOwn ? ' (tiene SMTP configurado)' : ' (aún sin configurar)'}</option><option value="shared" ${r.mail.mode === 'shared' ? 'selected' : ''}>Prestado: correo general del sistema</option></select></div>
+    box.innerHTML = `${rows}<div class="svc"><label>Correo de salida</label><select id="ml"><option value="own">Propio de la empresa${r.mail.hasOwn ? ' (tiene SMTP configurado)' : ' (aún sin configurar)'}</option>${r.mail.systemReady ? `<option value="shared" ${r.mail.mode === 'shared' ? 'selected' : ''}>Prestado: correo general del sistema</option>` : ''}${r.providers.filter(p => p.kind === 'email').map(p => `<option value="${esc(p.id)}" ${r.mail.mode === p.id ? 'selected' : ''}>Prestado: ${esc(p.name)}</option>`).join('')}</select></div>
       <div class="acts"><button class="btn primary sm" id="sv">Aplicar servicios</button></div><div class="mut">Al aplicar, la empresa recibe las credenciales en su configuración; no las puede ver. Quitar el servicio las retira.</div>`;
     box.querySelector('#sv').onclick = async () => {
       const body = {mail: box.querySelector('#ml').value};
