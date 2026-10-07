@@ -48,6 +48,7 @@ install_custom() { # slug
   docker exec "$c" chown -R www-data:www-data /var/www/html/custom /var/www/html/client/custom
   # versión de la app: cambia cuando cambia cualquier archivo; el navegador la compara para avisar de una nueva versión
   local ver; ver="$(cd "$ROOT/customizations" && find . -type f -not -name version.json | sort | xargs md5sum | md5sum | cut -c1-12)"
+  PREV_VERSION="$(docker exec "$c" cat /var/www/html/client/custom/version.json 2>/dev/null | jq -r .version 2>/dev/null || true)"; NEW_VERSION="$ver"
   docker exec "$c" sh -c "printf '{\"version\":\"$ver\",\"built\":\"$(date -u +%FT%TZ)\"}' > /var/www/html/client/custom/version.json && chown www-data:www-data /var/www/html/client/custom/version.json"
   docker exec -u www-data "$c" php command.php rebuild >/dev/null
   docker exec -u www-data "$c" php command.php clear-cache >/dev/null
@@ -142,6 +143,14 @@ cmd_tenant_upgrade() {
   docker compose -f "tenants/$1/docker-compose.yml" pull
   docker compose -f "tenants/$1/docker-compose.yml" up -d
   install_custom "$1"
+  notify_update "$1"
+}
+
+# Aviso push de «nueva versión» a los dispositivos suscritos del tenant (solo si el contenido cambió)
+notify_update() {
+  [[ "${NO_PUSH:-}" == 1 || "${PREV_VERSION:-}" == "${NEW_VERSION:-}" ]] && return 0
+  local r; r="$(curl -s -m 30 -X POST "http://172.28.0.1:$HUB_PORT/v1/admin/push/broadcast" -H "X-Admin-Token: $HUB_ADMIN_TOKEN" -H 'Content-Type: application/json' -d "{\"tenant\":\"$1\"}" || true)"
+  echo "push de nueva versión → ${r:-sin respuesta}"
 }
 
 cmd_tenant_ui() {

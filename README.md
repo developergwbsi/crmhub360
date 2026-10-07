@@ -61,7 +61,7 @@ Teléfonos se normalizan a E.164 (sin prefijo se asume +57).
 
 - **Tema claro/oscuro**: `crmhub-theme.css` (claro, sobre `espo.css`) y `crmhub-theme-dark.css` (sobre `dark.css` de Espo); ambos importan `crmhub-base.css` (reglas) y un archivo de tokens `--ch-*`. `src/crmhub-boot.js` cambia el `<link id="main-stylesheet">` y guarda la elección en `localStorage`.
 - **PWA**: `manifest.webmanifest`, `sw.js` (alcance `/`, requiere las cabeceras `Service-Worker-Allowed` del vhost, ya en `templates/apache-vhost.conf.tpl`). Caché: `/client/*` primero caché; API GET red primero con copia **por usuario** (no se guardan `CrmHub/integrations`, adjuntos ni administración); escrituras sin red -> 503 claro.
-- **Nueva versión**: `bin/crmhub` escribe `client/custom/version.json` (hash del contenido) en cada despliegue; el navegador lo consulta cada 5 min y al volver a la pestaña, y muestra el aviso + notificación de escritorio si se concedió el permiso. No hay Web Push con la app cerrada.
+- **Nueva versión**: `bin/crmhub` escribe `client/custom/version.json` (hash del contenido) en cada despliegue; el navegador lo consulta cada 5 min y al volver a la pestaña, y muestra el aviso + notificación de escritorio si se concedió el permiso. **Web Push con la app cerrada**: `hub-service/app/push.py` (VAPID RFC 8292, `pywebpush`; claves en la tabla `kv`, suscripciones en `push_subscriptions`). El navegador se suscribe desde el botón del megáfono; `bin/crmhub tenant:upgrade` envía el aviso «nueva versión» a los dispositivos del tenant solo si cambió el contenido (`NO_PUSH=1` lo omite). iOS exige la app instalada.
 - Íconos de la app: `client/custom/img/pwa-*.png`.
 
 ## Entornos y paso a producción

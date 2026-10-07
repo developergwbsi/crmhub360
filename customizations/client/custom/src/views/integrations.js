@@ -69,6 +69,13 @@ define('custom:views/integrations', ['view'], function (Dep) {
                         if (xhr) { xhr.errorIsHandled = true; }
                     });
             },
+            'click [data-action="pushTest"]': function () {
+                const $s = this.$el.find('[data-role="pushStatus"]');
+                $s.text('Enviando…').removeClass('text-danger text-success');
+                Espo.Ajax.postRequest('CrmHub/push/test', {})
+                    .then(r => $s.text(r.devices ? `Enviada a ${r.sent} de ${r.devices} dispositivo(s)` : 'No tienes dispositivos suscritos: activa el botón de la barra superior primero.').addClass(r.sent ? 'text-success' : 'text-danger'))
+                    .catch(xhr => { $s.text('No se pudo enviar').addClass('text-danger'); if (xhr) { xhr.errorIsHandled = true; } });
+            },
             'click [data-action="addService"]': function () {
                 this.services.push({key: '', name: 'Nuevo servicio', enabled: true, conditions: []});
                 this.renderServices();

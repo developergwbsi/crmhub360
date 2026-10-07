@@ -28,12 +28,23 @@ self.addEventListener('message', e => {
     }
 });
 
+self.addEventListener('push', e => {
+    let d = {};
+    try { d = e.data ? e.data.json() : {}; } catch (err) { d = {body: e.data && e.data.text()}; }
+    e.waitUntil(self.registration.showNotification(d.title || 'Crm Hub 360', {
+        body: d.body || '', icon: '/client/custom/img/pwa-192.png', badge: '/client/custom/img/pwa-192.png',
+        tag: d.tag || 'crmhub', renotify: false, requireInteraction: d.type === 'update', data: {url: d.url || '/', type: d.type || ''},
+    }));
+});
+
 self.addEventListener('notificationclick', e => {
     e.notification.close();
+    const d = e.notification.data || {};
     e.waitUntil((async () => {
         const all = await self.clients.matchAll({type: 'window', includeUncontrolled: true});
-        const c = all[0] || await self.clients.openWindow('/');
-        if (c) { c.postMessage({type: 'apply-update'}); if (c.focus) { await c.focus(); } }
+        let c = all[0];
+        if (c) { if (c.focus) { await c.focus(); } } else { c = await self.clients.openWindow(d.url || '/'); }
+        if (c && c.postMessage) { c.postMessage(d.type === 'update' ? {type: 'apply-update'} : {type: 'goto', url: d.url}); }
     })());
 });
 
@@ -55,8 +66,21 @@ self.addEventListener('fetch', e => {
     if (p === '/client/custom/sw.js' || p === '/client/custom/version.json' || p.startsWith('/hub/')) { return; }
     if (p.startsWith('/api/')) { e.respondWith(handleApi(req, url)); return; }
     if (req.mode === 'navigate') { e.respondWith(handleNavigate(req, url)); return; }
+    if (req.method === 'GET' && p.startsWith('/client/custom/')) { e.respondWith(networkFirst(req)); return; }   // nuestro código: siempre lo último
     if (req.method === 'GET' && p.startsWith('/client/')) { e.respondWith(cacheFirst(req)); }
 });
+
+// Archivos propios (/client/custom/*): la URL no cambia entre despliegues, así que se pide a la red y la copia solo sirve sin conexión.
+async function networkFirst(req) {
+    const cache = await caches.open(STATIC);
+    try {
+        const res = await withTimeout(fetch(req), 4000);
+        if (res.ok) { cache.put(req, res.clone()); }
+        return res;
+    } catch (err) {
+        return (await cache.match(req)) || new Response('', {status: 504, statusText: 'Sin conexión'});
+    }
+}
 
 async function cacheFirst(req) {
     const cache = await caches.open(STATIC);

@@ -371,3 +371,5 @@ body[data-navbar=side].minimized.side-menu-opened #navbar .navbar-right > li > a
 #ch-update { right: 16px; bottom: 16px; flex-wrap: wrap; border-color: var(--ch-primary); }
 #ch-update [data-ch-dismiss] { cursor: pointer; font-size: 20px; line-height: 1; color: var(--ch-muted); padding: 0 4px; }
 .ch-banner b { white-space: nowrap; }
+
+.ch-tool.ch-on { color: #2fa36b !important; }

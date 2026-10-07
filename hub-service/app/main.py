@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, config, credit, db, ingest, qualify, whatsapp
+from . import assistant, config, credit, db, ingest, push, qualify, whatsapp
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +21,7 @@ _llm_lock = asyncio.Semaphore(1)
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     db.pool.open()
+    push.keys()  # crea las claves VAPID la primera vez
     yield
     db.pool.close()
 
@@ -138,6 +139,30 @@ class SendReq(BaseModel):
     agent: str = 'Asesor'
 
 
+class PushSubReq(BaseModel):
+    userId: str
+    subscription: dict
+    userAgent: str | None = None
+
+
+class PushUnsubReq(BaseModel):
+    endpoint: str
+
+
+class PushSendReq(BaseModel):
+    userId: str | None = None
+    title: str = "Crm Hub 360"
+    body: str
+    url: str = "/"
+
+
+class BroadcastReq(BaseModel):
+    tenant: str
+    title: str = "Crm Hub 360 — nueva versión"
+    body: str = "Hay una versión nueva disponible. Ábrela para actualizar."
+    url: str = "/"
+
+
 class QualifyReq(BaseModel):
     leadId: str
 
@@ -162,7 +187,7 @@ async def tenant_settings(tenant: dict = Depends(tenant_auth)):
         "fbPageTokenSet": bool(fb), "fbPageTokenHint": ("…" + fb[-4:]) if fb else "",
         "wa": {"url": st.get("evolution_url") or "", "instance": st.get("evolution_instance") or "",
                "keySet": bool(st.get("evolution_apikey")), "keyHint": ("…" + st["evolution_apikey"][-4:]) if st.get("evolution_apikey") else ""},
-        "services": qualify.services_for(tenant), "servicesCustomized": bool(st.get("services")),
+        "services": qualify.services_for(tenant), "servicesCustomized": bool(st.get("services")), "pushDevices": push.count(tenant["slug"]),
         "metrics": [{"key": k, "label": v[0], "unit": v[2]} for k, v in qualify.METRICS.items()],
         "ops": qualify.OPS,
     }
@@ -197,6 +222,41 @@ def reset_services(tenant: dict = Depends(tenant_auth)):
     with db.pool.connection() as c:
         c.execute("UPDATE tenants SET settings = settings - 'services' WHERE slug = %s", (tenant["slug"],))
     return {"ok": True}
+
+
+@app.get("/v1/push/key")
+def push_key(tenant: dict = Depends(tenant_auth)):
+    return {"publicKey": push.keys()["public"]}
+
+
+@app.post("/v1/push/subscribe")
+def push_subscribe(req: PushSubReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        push.save(tenant["slug"], req.userId, req.subscription, req.userAgent)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
+
+
+@app.post("/v1/push/unsubscribe")
+def push_unsubscribe(req: PushUnsubReq, tenant: dict = Depends(tenant_auth)):
+    push.remove(req.endpoint)
+    return {"ok": True}
+
+
+@app.post("/v1/push/send")
+async def push_send(req: PushSendReq, tenant: dict = Depends(tenant_auth)):
+    return await push.send(tenant["slug"], title=req.title, body=req.body, url=req.url, kind="info", tag="crmhub-test", user_id=req.userId)
+
+
+@app.post("/v1/admin/push/broadcast")
+async def push_broadcast(req: BroadcastReq, x_admin_token: str = Header(...)):
+    """Lo llama el despliegue (bin/crmhub) cuando cambia la versión de un tenant."""
+    if not hmac.compare_digest(x_admin_token, config.HUB_ADMIN_TOKEN):
+        raise HTTPException(401)
+    if not db.get_tenant(req.tenant):
+        raise HTTPException(404, "Tenant desconocido")
+    return await push.send(req.tenant, title=req.title, body=req.body, url=req.url, tag="crmhub-update", kind="update")
 
 
 @app.post("/v1/whatsapp/test")

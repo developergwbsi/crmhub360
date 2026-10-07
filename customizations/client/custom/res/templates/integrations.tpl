@@ -85,6 +85,17 @@
   </div>
 
   <div class="panel panel-default">
+    <div class="panel-heading"><h4 class="panel-title">Notificaciones push</h4></div>
+    <div class="panel-body">
+      <p class="ch-muted">Avisos que llegan al dispositivo <b>aunque la app esté cerrada</b> (hoy: nueva versión disponible). Cada persona los activa con el botón
+        <span class="fas fa-bullhorn"></span> de la barra superior.</p>
+      <table class="table ch-kv"><tr><td>Dispositivos suscritos</td><td><b>{{s.pushDevices}}</b></td></tr></table>
+      <div class="ch-row"><button class="btn btn-default" data-action="pushTest"><span class="fas fa-paper-plane"></span> Enviarme una prueba</button>
+        <span class="ch-small" data-role="pushStatus"></span></div>
+    </div>
+  </div>
+
+  <div class="panel panel-default">
     <div class="panel-heading"><h4 class="panel-title">Inteligencia artificial</h4></div>
     <div class="panel-body">
       <table class="table ch-kv">

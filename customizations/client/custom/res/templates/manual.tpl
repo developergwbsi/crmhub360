@@ -35,8 +35,16 @@
 <li><b>Los cambios no se guardan sin internet</b> (crear, editar, enviar WhatsApp, registrar llamadas): el sistema te lo dirá. Cuando vuelva la conexión verás <b>«Conexión restablecida»</b> y podrás repetirlos.</li>
 <li>La primera vez que abres la app necesitas internet. Los datos guardados son solo tuyos y de ese dispositivo; no uses esta función en equipos compartidos sin cerrar sesión.</li>
 </ul>
-<h3>Avisos de nueva versión</h3>
-<p>Cuando hay una versión nueva aparece abajo a la derecha <b>«Nueva versión disponible»</b> con el botón <b>Actualizar ahora</b>. Puedes pulsar <b>«Avisarme en el escritorio»</b> para recibir además una notificación del navegador (si has aceptado los permisos).</p>
+<h3>Notificaciones push (aunque la app esté cerrada)</h3>
+<ol>
+<li>Pulsa el botón del <b>megáfono</b> en la barra superior (junto al de luna/sol) y acepta el permiso del navegador. Verde = activado en este dispositivo; púlsalo de nuevo para desactivarlo.</li>
+<li>Actívalo en cada dispositivo donde quieras recibir avisos (computador, celular).</li>
+<li>Hoy llega el aviso de <b>nueva versión</b>: cuando se publica una actualización recibes una notificación en el dispositivo aunque no tengas la app abierta; al tocarla, la app se abre ya actualizada.</li>
+<li><b>iPhone / iPad:</b> funciona solo si primero <b>instalas la app</b> (Compartir → Añadir a pantalla de inicio), con iOS 16.4 o superior.</li>
+<li>Si no llegan: revisa que el navegador tenga permiso de notificaciones para este sitio y que el sistema no esté en «No molestar». Los administradores pueden enviarse una prueba en <b>Integraciones → Notificaciones push</b>.</li>
+</ol>
+<h3>Avisos de nueva versión con la app abierta</h3>
+<p>Si estás usando la app cuando sale una versión nueva, aparece abajo a la derecha <b>«Nueva versión disponible»</b> con el botón <b>Actualizar ahora</b>.</p>
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-leads" data-roles="comercial director gerente">

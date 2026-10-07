@@ -468,4 +468,42 @@ class CrmHub
         }
         return (object) ['isAdmin' => $this->user->isAdmin(), 'roles' => $names];
     }
+
+    // ---------- Web Push (notificaciones con la app cerrada) ----------
+    private function hubAny(string $method, string $path, ?array $body = null): array
+    {
+        try {
+            return (new HubClient($this->config))->request($method, $path, $body, 20);
+        } catch (\RuntimeException $e) {
+            preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
+            throw new BadRequest($m[1] ?? 'El servicio de notificaciones no está disponible.');
+        }
+    }
+
+    public function getActionPushKey(Request $request): \stdClass
+    {
+        return (object) $this->hubAny('GET', '/v1/push/key');
+    }
+
+    public function postActionPushSubscribe(Request $request): \stdClass
+    {
+        $d = json_decode(json_encode($request->getParsedBody()), true) ?: [];
+        return (object) $this->hubAny('POST', '/v1/push/subscribe', [
+            'userId' => $this->user->getId(), 'subscription' => $d['subscription'] ?? [], 'userAgent' => (string) ($d['userAgent'] ?? ''),
+        ]);
+    }
+
+    public function postActionPushUnsubscribe(Request $request): \stdClass
+    {
+        $d = json_decode(json_encode($request->getParsedBody()), true) ?: [];
+        return (object) $this->hubAny('POST', '/v1/push/unsubscribe', ['endpoint' => (string) ($d['endpoint'] ?? '')]);
+    }
+
+    /** Envía una notificación de prueba a los dispositivos del propio usuario. */
+    public function postActionPushTest(Request $request): \stdClass
+    {
+        return (object) $this->hubAny('POST', '/v1/push/send', [
+            'userId' => $this->user->getId(), 'title' => 'Crm Hub 360', 'body' => 'Notificación de prueba: tu dispositivo recibirá avisos aunque la app esté cerrada.', 'url' => '/',
+        ]);
+    }
 }

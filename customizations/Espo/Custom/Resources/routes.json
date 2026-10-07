@@ -128,5 +128,37 @@
             "controller": "CrmHub",
             "action": "myroles"
         }
+    },
+    {
+        "route": "/CrmHub/push/key",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "pushKey"
+        }
+    },
+    {
+        "route": "/CrmHub/push/subscribe",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "pushSubscribe"
+        }
+    },
+    {
+        "route": "/CrmHub/push/unsubscribe",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "pushUnsubscribe"
+        }
+    },
+    {
+        "route": "/CrmHub/push/test",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "pushTest"
+        }
     }
 ]

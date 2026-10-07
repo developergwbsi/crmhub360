@@ -64,7 +64,7 @@
         if (bar) {
             var f = document.getElementById('ch-float-tools'); if (f) { f.remove(); }
             if (!bar.querySelector('[data-ch-theme-toggle]')) {
-                var li = el('<li class="ch-tools-li">' + toggleButton() + '<a role="button" tabindex="0" class="ch-tool ch-install" data-ch-install title="Instalar la aplicación" style="display:none"><span class="fas fa-download"></span></a></li>');
+                var li = el('<li class="ch-tools-li">' + toggleButton() + '<a role="button" tabindex="0" class="ch-tool" data-ch-push style="display:none"><span class="fas fa-bullhorn"></span></a><a role="button" tabindex="0" class="ch-tool ch-install" data-ch-install title="Instalar la aplicación" style="display:none"><span class="fas fa-download"></span></a></li>');
                 var anchor = bar.querySelector('li.notifications-badge-container') || bar.firstElementChild;
                 bar.insertBefore(li, anchor);
             }
@@ -72,12 +72,16 @@
             document.body.appendChild(el('<div id="ch-float-tools">' + toggleButton() + '</div>'));
         }
         refreshInstallButton();
+        refreshPushButton();
+        if (!pushSynced && window.Espo && Espo.Ajax && document.querySelector('#navbar .navbar-right')) { pushSynced = true; syncPush(); }
         applyTheme();
     }
 
     document.addEventListener('click', function (e) {
         var t = e.target.closest && e.target.closest('[data-ch-theme-toggle]');
         if (t) { e.preventDefault(); toggleTheme(); return; }
+        var pb = e.target.closest && e.target.closest('[data-ch-push]');
+        if (pb) { e.preventDefault(); pushOn ? disablePush() : enablePush(); return; }
         var i = e.target.closest && e.target.closest('[data-ch-install]');
         if (i && installEvent) { e.preventDefault(); installEvent.prompt(); installEvent.userChoice.then(function () { installEvent = null; refreshInstallButton(); }); }
     });
@@ -97,6 +101,55 @@
                 li.className = li.className.replace(/\bch-sec-\d+\b/g, '').trim() + ' ' + cls;
             }
         });
+    }
+
+    /* ---------------- Notificaciones push (llegan con la app cerrada) ---------------- */
+    var pushOn = false, pushSynced = false;
+    function pushSupported() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext; }
+    function api(method, url, data) {
+        return (window.Espo && Espo.Ajax) ? Espo.Ajax[method + 'Request'](url, data) : Promise.reject(new Error('app no lista'));
+    }
+    function b64uToU8(b) {
+        var p = (b + '='.repeat((4 - b.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'), r = atob(p), o = new Uint8Array(r.length);
+        for (var i = 0; i < r.length; i++) { o[i] = r.charCodeAt(i); }
+        return o;
+    }
+    function say(ok, msg) { if (window.Espo && Espo.Ui) { (ok ? Espo.Ui.success : Espo.Ui.warning)(msg); } }
+    function refreshPushButton() {
+        document.querySelectorAll('[data-ch-push]').forEach(function (a) {
+            a.style.display = pushSupported() ? '' : 'none';
+            a.classList.toggle('ch-on', pushOn);
+            a.setAttribute('title', pushOn ? 'Notificaciones push activadas en este dispositivo (clic para desactivar)' : 'Activar notificaciones push (avisos aunque la app esté cerrada)');
+        });
+    }
+    function enablePush() {
+        if (!pushSupported()) { say(false, 'Este navegador no admite notificaciones push. En iPhone, instala primero la app (Compartir → Añadir a pantalla de inicio).'); return Promise.resolve(); }
+        return Notification.requestPermission().then(function (perm) {
+            if (perm !== 'granted') { say(false, 'No diste permiso para notificaciones. Puedes activarlo en la configuración del sitio del navegador.'); return; }
+            return navigator.serviceWorker.ready.then(function (reg) {
+                return api('get', 'CrmHub/push/key').then(function (k) {
+                    return reg.pushManager.getSubscription().then(function (sub) {
+                        return sub || reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: b64uToU8(k.publicKey)});
+                    });
+                }).then(function (sub) {
+                    return api('post', 'CrmHub/push/subscribe', {subscription: sub.toJSON(), userAgent: navigator.userAgent});
+                }).then(function () { pushOn = true; refreshPushButton(); say(true, 'Notificaciones push activadas en este dispositivo'); });
+            });
+        }).catch(function (err) { console.warn('[crmhub] push:', err); say(false, 'No se pudo activar el push: ' + ((err && err.message) || 'error desconocido')); });
+    }
+    function disablePush() {
+        return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+            if (!sub) { return; }
+            return api('post', 'CrmHub/push/unsubscribe', {endpoint: sub.endpoint}).catch(function () {}).then(function () { return sub.unsubscribe(); });
+        }).then(function () { pushOn = false; refreshPushButton(); say(true, 'Notificaciones push desactivadas'); });
+    }
+    // al abrir la app con una sesión: si el dispositivo ya está suscrito, se vincula al usuario actual (por si cambió de usuario)
+    function syncPush() {
+        if (!pushSupported() || Notification.permission !== 'granted') { return; }
+        navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+            pushOn = !!sub; refreshPushButton();
+            if (sub) { api('post', 'CrmHub/push/subscribe', {subscription: sub.toJSON(), userAgent: navigator.userAgent}).catch(function () {}); }
+        }).catch(function () {});
     }
 
     /* ---------------- Instalación (PWA) ---------------- */
@@ -184,7 +237,7 @@
         banner('ch-update', 'ch-banner-info',
             '<span class="fas fa-cloud-arrow-down"></span><b>Nueva versión disponible</b>' +
             '<button class="btn btn-primary btn-sm" data-ch-apply>Actualizar ahora</button>' +
-            (canAsk ? '<button class="btn btn-default btn-sm" data-ch-notify>Avisarme en el escritorio</button>' : '') +
+            (canAsk ? '<button class="btn btn-default btn-sm" data-ch-notify>Activar avisos aunque la app esté cerrada</button>' : '') +
             '<a role="button" data-ch-dismiss title="Cerrar">×</a>');
         if ('Notification' in window && Notification.permission === 'granted') { tellWorker({type: 'notify-update', version: v.version}); }
     }
@@ -194,8 +247,8 @@
         if (t.closest && t.closest('[data-ch-apply]')) { applyUpdate(); }
         if (t.closest && t.closest('[data-ch-dismiss]')) { hideBanner('ch-update'); }
         if (t.closest && t.closest('[data-ch-notify]')) {
-            Notification.requestPermission().then(function (p) {
-                if (p === 'granted') { tellWorker({type: 'notify-update', version: announced}); }
+            enablePush().then(function () {
+                if (Notification.permission === 'granted') { tellWorker({type: 'notify-update', version: announced}); }
                 var b = document.querySelector('[data-ch-notify]'); if (b) { b.remove(); }
             });
         }
@@ -208,7 +261,11 @@
     }
 
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.type === 'apply-update') { applyUpdate(); } });
+        navigator.serviceWorker.addEventListener('message', function (e) {
+            if (!e.data) { return; }
+            if (e.data.type === 'apply-update') { applyUpdate(); }
+            if (e.data.type === 'goto' && e.data.url && e.data.url.indexOf('#') > -1) { location.hash = e.data.url.slice(e.data.url.indexOf('#')); }
+        });
     }
 
     function startWorker() {
