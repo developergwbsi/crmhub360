@@ -13,7 +13,11 @@
         "creditorCount": "Cantidad de acreedores",
         "maxDaysOverdue": "Máx. días de mora",
         "defaultCount": "Obligaciones castigadas",
-        "monthlyIncome": "Ingresos mensuales"
+        "monthlyIncome": "Ingresos mensuales",
+        "preferredChannel": "Canal preferido",
+        "telegramUsername": "Usuario de Telegram",
+        "telegramChatId": "Chat de Telegram",
+        "telegramStartToken": "Código de invitación de Telegram"
     },
     "options": {
         "status": {
@@ -34,6 +38,21 @@
             "Califica": "Califica",
             "No califica": "No califica",
             "Revisión Manual": "Revisión Manual"
+        },
+        "preferredChannel": {
+            "Teléfono": "Teléfono",
+            "WhatsApp": "WhatsApp",
+            "Telegram": "Telegram",
+            "Correo": "Correo"
+        },
+        "source": {
+            "Facebook Ads": "Facebook Ads",
+            "Instagram Ads": "Instagram Ads",
+            "Formulario Web": "Formulario Web",
+            "WhatsApp": "WhatsApp",
+            "Telegram": "Telegram",
+            "Manual": "Manual",
+            "Referido": "Referido"
         }
     },
     "labels": {

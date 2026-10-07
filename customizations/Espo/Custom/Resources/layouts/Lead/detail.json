@@ -20,6 +20,14 @@
             ],
             [
                 {
+                    "name": "preferredChannel"
+                },
+                {
+                    "name": "telegramUsername"
+                }
+            ],
+            [
+                {
                     "name": "title"
                 },
                 {

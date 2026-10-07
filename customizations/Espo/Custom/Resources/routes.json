@@ -160,5 +160,37 @@
             "controller": "CrmHub",
             "action": "pushTest"
         }
+    },
+    {
+        "route": "/CrmHub/telegram/setup",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "telegramSetup"
+        }
+    },
+    {
+        "route": "/CrmHub/telegram/test",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "telegramTest"
+        }
+    },
+    {
+        "route": "/CrmHub/telegram/send",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "telegramSend"
+        }
+    },
+    {
+        "route": "/CrmHub/telegram/invite",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "telegramInvite"
+        }
     }
 ]

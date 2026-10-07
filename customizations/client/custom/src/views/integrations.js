@@ -4,16 +4,25 @@ define('custom:views/integrations', ['view'], function (Dep) {
 
         state = null
         services = null
+        forms = null
+        editing = null
         showToken = false
+        tab = (function () { try { return sessionStorage.getItem('crmhub-int-tab') || 'canales'; } catch (e) { return 'canales'; } })()
 
         setup() {
             this.getHelper().pageTitle.setTitle('Integraciones');
             this.load();
         }
 
-        load() {
+        load(keepLocal) {
             Espo.Ajax.getRequest('CrmHub/integrations')
-                .then(s => { this.state = s; this.services = JSON.parse(JSON.stringify(s.services)); this.reRender(); })
+                .then(s => {
+                    this.state = s;
+                    // al guardar un panel no se pierden las ediciones sin guardar de los demás
+                    if (!keepLocal || !this.services) { this.services = JSON.parse(JSON.stringify(s.services)); }
+                    if (!keepLocal || !this.forms) { this.forms = JSON.parse(JSON.stringify(s.forms)).map(f => ({...f, _saved: true})); }
+                    this.reRender();
+                })
                 .catch(xhr => { this.state = {error: true}; this.reRender(); if (xhr) { xhr.errorIsHandled = true; } });
         }
 
@@ -26,20 +35,31 @@ define('custom:views/integrations', ['view'], function (Dep) {
             const tk = this.showToken ? s.token : '••••••••••••••••';
             const real = s.token;
             const rows = [
-                {name: 'Facebook / Instagram Leads', icon: 'fab fa-facebook', method: 'GET + POST',
-                 url: `${base}/facebook?token=${tk}`, copy: `${base}/facebook?token=${real}`,
-                 note: 'URL de devolución de llamada del webhook de Meta. Token de verificación: el mismo token.'},
-                {name: 'WhatsApp (Evolution API)', icon: 'fab fa-whatsapp', method: 'POST',
-                 url: `${base}/evolution`, copy: `${base}/evolution`,
+                {name: 'Facebook / Instagram · Lead Ads', icon: 'fab fa-facebook', method: 'GET + POST', url: `${base}/facebook?token=${tk}`, copy: `${base}/facebook?token=${real}`,
+                 note: 'Webhook de Meta (campo leadgen). Token de verificación: el mismo token.'},
+                {name: 'WhatsApp · Evolution API', icon: 'fab fa-whatsapp', method: 'POST', url: `${base}/evolution`, copy: `${base}/evolution`,
                  note: 'Evento MESSAGES_UPSERT. Agrega el encabezado apikey con el token.'},
-                {name: 'Formulario web', icon: 'fas fa-globe', method: 'POST (JSON)',
-                 url: `${base}/web?token=${tk}`, copy: `${base}/web?token=${real}`,
-                 note: 'Cuerpo: {"name","phone","email","source"}.'},
+                {name: 'WhatsApp · Meta Cloud API', icon: 'fab fa-whatsapp', method: 'GET + POST', url: `${base}/whatsapp-cloud?token=${tk}`, copy: `${base}/whatsapp-cloud?token=${real}`,
+                 note: 'Campo messages. Token de verificación: el mismo token.'},
+                {name: 'WhatsApp · Gupshup', icon: 'fab fa-whatsapp', method: 'POST', url: `${base}/gupshup?token=${tk}`, copy: `${base}/gupshup?token=${real}`,
+                 note: 'Webhook de mensajes entrantes de tu app en Gupshup.'},
+                {name: 'Telegram', icon: 'fab fa-telegram', method: 'POST', url: `${base}/telegram`, copy: '',
+                 note: 'Se registra solo al pulsar «Guardar y conectar» en el panel de Telegram.'},
+                {name: 'Formulario externo (JSON)', icon: 'fas fa-globe', method: 'POST (JSON)', url: `${base}/web?token=${tk}`, copy: `${base}/web?token=${real}`,
+                 note: 'Para formularios propios: {"name","phone","email","source","campaign"}. Los formularios del constructor no lo necesitan.'},
             ];
             const jobs = {};
             (s.jobs || []).forEach(j => { jobs[j.status] = (jobs[j.status] || 0) + j.n; });
+            const prov = s.wa.provider || '';
+            const provOptions = [{value: '', label: 'Sin configurar'}].concat(Object.keys(s.wa.providers).map(k => ({value: k, label: s.wa.providers[k]})))
+                .map(o => ({...o, selected: o.value === prov}));
+            const tabs = [
+                {key: 'canales', icon: 'fas fa-comments', label: 'Canales de mensajería'}, {key: 'formularios', icon: 'fas fa-file-lines', label: 'Formularios web'},
+                {key: 'meta', icon: 'fab fa-facebook', label: 'Meta'}, {key: 'reglas', icon: 'fas fa-sliders', label: 'Servicios y filtros'},
+                {key: 'sistema', icon: 'fas fa-gear', label: 'Sistema'},
+            ].map(t => ({...t, active: t.key === this.tab}));
             return {
-                loading: false, rows, s, showToken: this.showToken,
+                loading: false, rows, s, showToken: this.showToken, hub: base, tabs, provOptions,
                 active: s.status === 'active', jobsDone: jobs.done || 0, jobsError: jobs.error || 0,
                 license: s.licenseUntil || 'Sin vencimiento',
             };
@@ -53,22 +73,80 @@ define('custom:views/integrations', ['view'], function (Dep) {
                     .then(() => Espo.Ui.success('Copiado'))
                     .catch(() => Espo.Ui.warning('No se pudo copiar; selecciónalo manualmente'));
             },
+            'click [data-action="tab"]': function (e) { this.tab = e.currentTarget.dataset.tab; try { sessionStorage.setItem('crmhub-int-tab', this.tab); } catch (x) { /* privado */ } this.applyTab(); },
+            'change [name="wa_provider"]': function () { this.applyProvider(); },
             'click [data-action="saveWhatsapp"]': function () {
                 const v = n => (this.$el.find(`[name="${n}"]`).val() || '').trim();
-                this.save({evolution_url: v('wa_url'), evolution_instance: v('wa_instance'), evolution_apikey: v('wa_key')});
+                this.save({wa_provider: v('wa_provider'), evolution_url: v('wa_url'), evolution_instance: v('wa_instance'), evolution_apikey: v('wa_key'),
+                    meta_phone_number_id: v('meta_pid'), meta_access_token: v('meta_token'),
+                    gupshup_source: v('gs_source'), gupshup_app_name: v('gs_app'), gupshup_api_key: v('gs_key')});
             },
             'click [data-action="testWhatsapp"]': function () {
                 const $s = this.$el.find('[data-role="waStatus"]');
                 $s.text('Probando…').removeClass('text-danger text-success');
                 Espo.Ajax.postRequest('CrmHub/whatsapp/test', {})
-                    .then(r => $s.text(r.connected ? 'Conectado ✔ (WhatsApp vinculado)' : 'Instancia encontrada, pero el estado es «' + r.state + '». Vincula el teléfono en Evolution.')
+                    .then(r => $s.text(r.connected ? 'Conectado ✔ ' + (r.state || '') + (r.note ? ' — ' + r.note : '') : 'Conectado, pero el estado es «' + r.state + '». Vincula el teléfono.')
                         .addClass(r.connected ? 'text-success' : 'text-danger'))
-                    .catch(xhr => {
-                        const reason = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason');
-                        $s.text(reason || 'No se pudo probar').addClass('text-danger');
-                        if (xhr) { xhr.errorIsHandled = true; }
-                    });
+                    .catch(xhr => this.showError($s, xhr, 'No se pudo probar'));
             },
+            'click [data-action="saveTelegram"]': function () {
+                const v = n => (this.$el.find(`[name="${n}"]`).val() || '').trim();
+                const $s = this.$el.find('[data-role="tgStatus"]').text('Guardando y conectando…').removeClass('text-danger text-success');
+                Espo.Ajax.putRequest('CrmHub/integrations', {telegram_bot_token: v('tg_token'), telegram_welcome: v('tg_welcome')})
+                    .then(() => Espo.Ajax.postRequest('CrmHub/telegram/setup', {}))
+                    .then(r => { Espo.Ui.success('Bot conectado: @' + r.bot); this.load(true); })
+                    .catch(xhr => this.showError($s, xhr, 'No se pudo conectar el bot'));
+            },
+            'click [data-action="testTelegram"]': function () {
+                const $s = this.$el.find('[data-role="tgStatus"]').text('Probando…').removeClass('text-danger text-success');
+                Espo.Ajax.postRequest('CrmHub/telegram/test', {})
+                    .then(r => $s.text(`@${r.bot} ✔ · webhook ${r.webhook ? 'registrado' : 'SIN registrar'}${r.pending ? ' · ' + r.pending + ' pendientes' : ''}${r.lastError ? ' · último error: ' + r.lastError : ''}`)
+                        .addClass(r.webhook && !r.lastError ? 'text-success' : 'text-danger'))
+                    .catch(xhr => this.showError($s, xhr, 'No se pudo probar'));
+            },
+            'click [data-action="saveMeta"]': function () {
+                const v = n => (this.$el.find(`[name="${n}"]`).val() || '').trim();
+                if (!v('fb_token') && !v('meta_secret')) { Espo.Ui.warning('Escribe el token o el App Secret que quieras guardar.'); return; }
+                this.save({fb_page_token: v('fb_token'), meta_app_secret: v('meta_secret')});
+            },
+            'click [data-action="addForm"]': function () {
+                const f = JSON.parse(JSON.stringify(this.state.formDefault));
+                f.slug = this.uniqueSlug(f.slug); f.id = Math.random().toString(16).slice(2, 10); f._saved = false;
+                this.forms.push(f); this.editing = this.forms.length - 1; this.renderForms();
+            },
+            'click [data-action="editForm"]': function (e) { const i = +e.currentTarget.dataset.i; this.editing = this.editing === i ? null : i; this.renderForms(); },
+            'click [data-action="removeForm"]': function (e) {
+                const i = +e.currentTarget.dataset.i;
+                if (confirm('¿Eliminar el formulario «' + this.forms[i].name + '»? Su dirección dejará de funcionar al guardar.')) { this.forms.splice(i, 1); this.editing = null; this.renderForms(); }
+            },
+            'click [data-action="copyEmbed"]': function (e) {
+                const f = this.forms[+e.currentTarget.dataset.i];
+                this.copyText(`<iframe src="${this.formUrl(f)}" style="width:100%;max-width:520px;height:720px;border:0" loading="lazy" title="${f.name.replace(/"/g, '')}"></iframe>`);
+            },
+            'click [data-action="addField"]': function (e) {
+                const f = this.forms[+e.currentTarget.dataset.i];
+                f.fields.push({key: this.uniqueKey(f, 'campo'), label: 'Nuevo campo', type: 'text', required: false, maps_to: '', placeholder: '', options: []});
+                this.renderForms();
+            },
+            'click [data-action="removeField"]': function (e) { this.forms[+e.currentTarget.dataset.i].fields.splice(+e.currentTarget.dataset.k, 1); this.renderForms(); },
+            'click [data-action="moveField"]': function (e) {
+                const f = this.forms[+e.currentTarget.dataset.i], k = +e.currentTarget.dataset.k, j = k + +e.currentTarget.dataset.d;
+                if (j < 0 || j >= f.fields.length) { return; }
+                [f.fields[k], f.fields[j]] = [f.fields[j], f.fields[k]]; this.renderForms();
+            },
+            'change [data-fbind]': function (e) {
+                const el = e.currentTarget, f = this.forms[+el.dataset.i], w = el.dataset.fbind;
+                if (el.dataset.k !== undefined) {
+                    const fd = f.fields[+el.dataset.k];
+                    if (w === 'required') { fd.required = el.checked; }
+                    else if (w === 'options') { fd.options = el.value.split(',').map(x => x.trim()).filter(Boolean); }
+                    else { fd[w] = el.value; if (w === 'type' || w === 'maps_to') { this.renderForms(); } }
+                    if (w === 'label' && /^campo\d*$/.test(fd.key)) { fd.key = this.uniqueKey(f, this.slugify(el.value).replace(/-/g, '_') || 'campo', fd); }
+                } else if (w === 'enabled' || w === 'consent_required') { f[w] = el.checked; if (w === 'enabled') { this.renderForms(); } }
+                else if (w === 'slug') { f.slug = this.slugify(el.value); el.value = f.slug; this.renderForms(); }
+                else { f[w] = el.value; if (w === 'name') { this.renderForms(); } }
+            },
+            'click [data-action="saveForms"]': function () { this.save({forms: this.forms}, true); },
             'click [data-action="pushTest"]': function () {
                 const $s = this.$el.find('[data-role="pushStatus"]');
                 $s.text('Enviando…').removeClass('text-danger text-success');
@@ -125,16 +203,105 @@ define('custom:views/integrations', ['view'], function (Dep) {
                 Espo.Ajax.postRequest('CrmHub/integrations/reset-services', {})
                     .then(() => { Espo.Ui.success('Valores iniciales restaurados'); this.load(); });
             },
-            'click [data-action="saveFacebook"]': function () {
-                const t = (this.$el.find('[name="fb_page_token"]').val() || '').trim();
-                if (!t) { Espo.Ui.warning('Ingresa el token de página'); return; }
-                this.save({fb_page_token: t});
-            },
         }
 
         afterRender() {
             super.afterRender();
+            if (!this.state || this.state.error) { return; }
+            this.applyTab(); this.applyProvider();
             if (this.services) { this.renderServices(); }
+            if (this.forms) { this.renderForms(); }
+        }
+
+        applyTab() {
+            this.$el.find('.ch-tabbtn').each((i, b) => b.classList.toggle('active', b.dataset.tab === this.tab));
+            this.$el.find('.ch-pane').each((i, p) => { p.style.display = p.dataset.pane === this.tab ? '' : 'none'; });
+        }
+
+        applyProvider() {
+            const prov = this.$el.find('[name="wa_provider"]').val();
+            this.$el.find('.ch-prov').each((i, d) => { d.style.display = d.dataset.prov === prov ? '' : 'none'; });
+        }
+
+        showError($el, xhr, fallback) {
+            const reason = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason');
+            $el.text(reason || fallback).removeClass('text-success').addClass('text-danger');
+            if (xhr) { xhr.errorIsHandled = true; }
+        }
+
+        copyText(v) {
+            (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject())
+                .then(() => Espo.Ui.success('Copiado')).catch(() => Espo.Ui.warning('No se pudo copiar; selecciónalo manualmente'));
+        }
+
+        slugify(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40); }
+
+        uniqueSlug(base) {
+            let s = base, n = 1;
+            while (this.forms.some(f => f.slug === s)) { n++; s = base.replace(/-\d+$/, '') + '-' + n; }
+            return s;
+        }
+
+        uniqueKey(form, base, self) {
+            let k = base.slice(0, 28), n = 1;
+            while (form.fields.some(f => f !== self && f.key === k)) { n++; k = base.slice(0, 26) + n; }
+            return k;
+        }
+
+        formUrl(f) { return 'https://' + this.state.host + '/f/' + f.slug; }
+
+        // Constructor de formularios web: lista, dirección pública, código para incrustar y editor de campos
+        renderForms() {
+            const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+            const st = this.state, maps = st.fieldMaps, types = {text: 'Texto', email: 'Correo', tel: 'Teléfono', textarea: 'Texto largo', select: 'Lista', number: 'Número', checkbox: 'Casilla', channel: 'Canal preferido'};
+            const inp = (i, w, v, ph) => `<input class="form-control" data-fbind="${w}" data-i="${i}" value="${esc(v)}" ${ph ? `placeholder="${esc(ph)}"` : ''}>`;
+            const html = this.forms.map((f, i) => {
+                const url = this.formUrl(f);
+                const fields = f.fields.map((fd, k) => `<div class="ch-ffield">
+                    <input class="form-control" data-fbind="label" data-i="${i}" data-k="${k}" value="${esc(fd.label)}" placeholder="Pregunta">
+                    <select class="form-control" data-fbind="type" data-i="${i}" data-k="${k}">${Object.keys(types).map(t => `<option value="${t}" ${fd.type === t ? 'selected' : ''}>${types[t]}</option>`).join('')}</select>
+                    <select class="form-control" data-fbind="maps_to" data-i="${i}" data-k="${k}" title="Dónde se guarda la respuesta en el lead"><option value="">→ Notas del lead</option>${Object.keys(maps).map(m => `<option value="${m}" ${fd.maps_to === m ? 'selected' : ''}>→ ${esc(maps[m])}</option>`).join('')}</select>
+                    <label class="ch-switch"><input type="checkbox" data-fbind="required" data-i="${i}" data-k="${k}" ${fd.required ? 'checked' : ''}> Obligatorio</label>
+                    <button class="btn btn-link" title="Subir" data-action="moveField" data-i="${i}" data-k="${k}" data-d="-1"><span class="fas fa-arrow-up"></span></button>
+                    <button class="btn btn-link" title="Bajar" data-action="moveField" data-i="${i}" data-k="${k}" data-d="1"><span class="fas fa-arrow-down"></span></button>
+                    <button class="btn btn-link text-danger" title="Quitar" data-action="removeField" data-i="${i}" data-k="${k}"><span class="far fa-trash-alt"></span></button>
+                    ${fd.type === 'select' ? `<input class="form-control ch-fopts" data-fbind="options" data-i="${i}" data-k="${k}" value="${esc(fd.options.join(', '))}" placeholder="Opciones separadas por coma">` : ''}
+                </div>`).join('');
+                const editor = this.editing !== i ? '' : `<div class="ch-feditor">
+                    <div class="ch-cols2">
+                        <div><label>Nombre interno</label>${inp(i, 'name', f.name)}</div>
+                        <div><label>Dirección (parte final de la URL)</label>${inp(i, 'slug', f.slug)}</div>
+                        <div><label>Título</label>${inp(i, 'title', f.title)}</div>
+                        <div><label>Color del botón</label><input type="color" class="form-control" data-fbind="color" data-i="${i}" value="${esc(f.color)}" style="height:36px;padding:2px"></div>
+                    </div>
+                    <label>Texto de introducción</label>${inp(i, 'intro', f.intro)}
+                    <div class="ch-cols2">
+                        <div><label>Texto del botón</label>${inp(i, 'button', f.button)}</div>
+                        <div><label>Origen del lead</label>${inp(i, 'source', f.source)}</div>
+                        <div><label>Campaña (nombre exacto, opcional)</label>${inp(i, 'campaign', f.campaign, 'Se liga al lead y define quién lo atiende')}</div>
+                        <div><label>Redirigir tras enviar (URL, opcional)</label>${inp(i, 'redirect_url', f.redirect_url, 'https://…')}</div>
+                    </div>
+                    <label>Mensaje de éxito</label>${inp(i, 'success_message', f.success_message)}
+                    <label>Autorización de tratamiento de datos (habeas data)</label>
+                    <textarea class="form-control" rows="3" data-fbind="consent_text" data-i="${i}">${esc(f.consent_text)}</textarea>
+                    <label class="ch-switch" style="margin-top:6px"><input type="checkbox" data-fbind="consent_required" data-i="${i}" ${f.consent_required ? 'checked' : ''}> Es obligatorio aceptarla para enviar</label>
+                    <h5 class="ch-subtitle">Campos del formulario</h5>${fields}
+                    <button class="btn btn-default btn-sm" data-action="addField" data-i="${i}"><span class="fas fa-plus"></span> Agregar campo</button>
+                    <div class="ch-small ch-muted" style="margin-top:8px">Necesita un campo para el nombre y otro para teléfono o correo. «Canal preferido» deja al cliente elegir cómo contactarlo (si elige Telegram recibe el enlace a tu bot al enviar).</div>
+                </div>`;
+                return `<div class="ch-form-card ${f.enabled ? '' : 'ch-off'}">
+                    <div class="ch-form-head"><b>${esc(f.name)}</b><span class="ch-pill">${f.fields.length} campos</span>
+                        <label class="ch-switch"><input type="checkbox" data-fbind="enabled" data-i="${i}" ${f.enabled ? 'checked' : ''}> Activo</label><span class="ch-spacer"></span>
+                        <button class="btn btn-default btn-sm" data-action="editForm" data-i="${i}">${this.editing === i ? 'Cerrar' : 'Editar'}</button>
+                        <button class="btn btn-link text-danger" title="Eliminar" data-action="removeForm" data-i="${i}"><span class="far fa-trash-alt"></span></button></div>
+                    <div class="ch-form-urls"><code class="ch-url">${esc(url)}</code>
+                        <button class="btn btn-default btn-sm" data-action="copy" data-value="${esc(url)}"><span class="far fa-copy"></span> Copiar URL</button>
+                        <button class="btn btn-default btn-sm" data-action="copyEmbed" data-i="${i}"><span class="fas fa-code"></span> Código para incrustar</button>
+                        ${f._saved ? `<a class="btn btn-default btn-sm" href="${esc(url)}" target="_blank" rel="noopener"><span class="fas fa-up-right-from-square"></span> Abrir</a>` : '<span class="ch-muted ch-small">Guarda para publicarlo</span>'}</div>
+                    ${editor}
+                </div>`;
+            }).join('') || '<div class="ch-muted">Aún no tienes formularios. Pulsa «Nuevo formulario» para crear el primero con una plantilla lista.</div>';
+            this.$el.find('.ch-forms').html(html);
         }
 
         renderServices() {
@@ -171,10 +338,10 @@ define('custom:views/integrations', ['view'], function (Dep) {
             this.$el.find('.ch-services').html(html);
         }
 
-        save(body) {
+        save(body, reloadAll) {
             Espo.Ui.notify('Guardando…');
             Espo.Ajax.putRequest('CrmHub/integrations', body)
-                .then(() => { Espo.Ui.success('Guardado'); this.load(); })
+                .then(() => { Espo.Ui.success('Guardado'); if (reloadAll || body.services) { this.forms = body.forms ? null : this.forms; this.services = body.services ? null : this.services; this.load(true); } else { this.load(true); } })
                 .catch(xhr => {
                     const reason = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason');
                     Espo.Ui.error(reason || 'No se pudo guardar');

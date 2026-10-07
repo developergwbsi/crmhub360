@@ -53,3 +53,6 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL}
       OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT}
       VAPID_SUBJECT: mailto:${CERTBOT_EMAIL}
+      TELEGRAM_API_BASE: ${TELEGRAM_API_BASE:-https://api.telegram.org}
+      META_GRAPH_BASE: ${META_GRAPH_BASE:-https://graph.facebook.com/v21.0}
+      GUPSHUP_BASE: ${GUPSHUP_BASE:-https://api.gupshup.io}

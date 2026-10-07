@@ -21,7 +21,8 @@ define('custom:views/modals/whatsapp', ['views/modal'], function (Dep) {
         }
 
         setup() {
-            this.headerText = 'Enviar WhatsApp';
+            this.channel = this.options.channel === 'telegram' ? 'telegram' : 'whatsapp';
+            this.headerText = this.channel === 'telegram' ? 'Enviar Telegram' : 'Enviar WhatsApp';
             this.buttonList = [{name: 'save', label: 'Enviar', style: 'primary'}, {name: 'cancel', label: 'Cancelar'}];
         }
 
@@ -31,7 +32,7 @@ define('custom:views/modals/whatsapp', ['views/modal'], function (Dep) {
             const text = (this.$el.find('[name="text"]').val() || '').trim();
             if (!text) { Espo.Ui.warning('Escribe un mensaje.'); return; }
             Espo.Ui.notify('Enviando…');
-            Espo.Ajax.postRequest('CrmHub/whatsapp/send', {leadId: this.options.leadId, text})
+            Espo.Ajax.postRequest('CrmHub/' + this.channel + '/send', {leadId: this.options.leadId, text})
                 .then(() => { Espo.Ui.success('Mensaje enviado'); this.trigger('done'); this.close(); })
                 .catch(xhr => {
                     const reason = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason');

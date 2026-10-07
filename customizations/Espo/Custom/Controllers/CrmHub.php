@@ -19,6 +19,9 @@ use Espo\ORM\EntityManager;
 class CrmHub
 {
     private const REASSIGNABLE = ['Lead', 'Contact', 'Account', 'Opportunity'];
+    private const SETTING_KEYS = ['fb_page_token', 'services', 'forms', 'wa_provider', 'evolution_url', 'evolution_apikey', 'evolution_instance',
+        'meta_phone_number_id', 'meta_access_token', 'meta_app_secret', 'gupshup_api_key', 'gupshup_source', 'gupshup_app_name',
+        'telegram_bot_token', 'telegram_welcome'];
 
     public function __construct(
         private User $user,
@@ -58,7 +61,7 @@ class CrmHub
     public function putActionIntegrations(Request $request): \stdClass
     {
         $data = json_decode(json_encode($request->getParsedBody()), true) ?: [];
-        $allowed = array_intersect_key($data, array_flip(['fb_page_token', 'services', 'evolution_url', 'evolution_apikey', 'evolution_instance']));
+        $allowed = array_intersect_key($data, array_flip(self::SETTING_KEYS));
         try {
             return (object) $this->hub()->request('PUT', '/v1/tenant/settings', $allowed);
         } catch (\RuntimeException $e) {
@@ -505,5 +508,41 @@ class CrmHub
         return (object) $this->hubAny('POST', '/v1/push/send', [
             'userId' => $this->user->getId(), 'title' => 'Crm Hub 360', 'body' => 'Notificación de prueba: tu dispositivo recibirá avisos aunque la app esté cerrada.', 'url' => '/',
         ]);
+    }
+
+    // ---------- Telegram ----------
+    public function postActionTelegramSetup(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubAny('POST', '/v1/telegram/setup', []);
+    }
+
+    public function postActionTelegramTest(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubAny('POST', '/v1/telegram/test', []);
+    }
+
+    public function postActionTelegramSend(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->em->getEntityById('Lead', (string) ($d->leadId ?? ''));
+        if (!$lead || !$this->acl->checkEntityEdit($lead)) {
+            throw new Forbidden();
+        }
+        return (object) $this->hubAny('POST', '/v1/telegram/send', [
+            'leadId' => $lead->getId(), 'text' => (string) ($d->text ?? ''), 'agent' => $this->user->get('name') ?: $this->user->get('userName'),
+        ]);
+    }
+
+    /** Enlace t.me de un solo uso para que el cliente abra el chat con el bot y quede ligado a este lead. */
+    public function postActionTelegramInvite(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->em->getEntityById('Lead', (string) ($d->leadId ?? ''));
+        if (!$lead || !$this->acl->checkEntityEdit($lead)) {
+            throw new Forbidden();
+        }
+        return (object) $this->hubAny('POST', '/v1/telegram/invite', ['leadId' => $lead->getId()]);
     }
 }

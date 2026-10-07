@@ -28,6 +28,7 @@
                 "Instagram Ads",
                 "Formulario Web",
                 "WhatsApp",
+                "Telegram",
                 "Manual",
                 "Referido"
             ]
@@ -121,6 +122,40 @@
         "monthlyIncome": {
             "type": "currency",
             "audited": true
+        },
+        "preferredChannel": {
+            "type": "enum",
+            "options": [
+                "",
+                "Teléfono",
+                "WhatsApp",
+                "Telegram",
+                "Correo"
+            ],
+            "audited": true,
+            "isSorted": false
+        },
+        "telegramUsername": {
+            "type": "varchar",
+            "maxLength": 64
+        },
+        "telegramChatId": {
+            "type": "varchar",
+            "maxLength": 32,
+            "index": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
+        },
+        "telegramStartToken": {
+            "type": "varchar",
+            "maxLength": 32,
+            "index": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
         }
     }
 }

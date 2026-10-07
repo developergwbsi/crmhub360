@@ -5,12 +5,13 @@ import logging
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
+from fastapi import BackgroundTasks, Body, Depends, FastAPI, Header, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, config, credit, db, ingest, push, qualify, whatsapp
+from . import assistant, config, credit, db, forms, ingest, push, qualify, telegram, whatsapp
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -106,7 +107,58 @@ def fb_verify(slug: str, request: Request):
 @app.post("/v1/ingest/{slug}/facebook")
 async def fb_ingest(slug: str, request: Request):
     tenant = _ingest_tenant(slug, request)
-    return {"leads": await ingest.from_facebook(tenant, await request.json())}
+    raw = await request.body()
+    _verify_signature(tenant, raw, request.headers.get("x-hub-signature-256"))
+    return {"leads": await ingest.from_facebook(tenant, json.loads(raw or b"{}"))}
+
+
+def _verify_signature(tenant: dict, raw: bytes, header: str | None) -> None:
+    """Si la empresa guardó el App Secret de Meta, exige la firma X-Hub-Signature-256."""
+    secret = (tenant.get("settings") or {}).get("meta_app_secret")
+    if not secret:
+        return
+    import hashlib
+    expected = "sha256=" + hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+    if not (header and hmac.compare_digest(expected, header)):
+        raise HTTPException(401, "Firma inválida")
+
+
+@app.get("/v1/ingest/{slug}/whatsapp-cloud")
+def meta_wa_verify(slug: str, request: Request):
+    q = request.query_params
+    t = db.get_tenant(slug)
+    if t and q.get("hub.mode") == "subscribe" and hmac.compare_digest(q.get("hub.verify_token", ""), t["hub_token"]):
+        return int(q["hub.challenge"])
+    raise HTTPException(403)
+
+
+@app.post("/v1/ingest/{slug}/whatsapp-cloud")
+async def meta_wa_ingest(slug: str, request: Request):
+    tenant = _ingest_tenant(slug, request)
+    raw = await request.body()
+    _verify_signature(tenant, raw, request.headers.get("x-hub-signature-256"))
+    return {"leads": await ingest.from_meta_whatsapp(tenant, json.loads(raw or b"{}"))}
+
+
+@app.post("/v1/ingest/{slug}/gupshup")
+async def gupshup_ingest(slug: str, request: Request):
+    tenant = _ingest_tenant(slug, request)
+    return {"lead": await ingest.from_gupshup(tenant, await request.json())}
+
+
+@app.post("/v1/ingest/{slug}/telegram")
+async def telegram_ingest(slug: str, request: Request):
+    tenant = db.get_tenant(slug)
+    secret = ((tenant or {}).get("settings") or {}).get("telegram_secret") or ""
+    if not tenant or not secret or not hmac.compare_digest(request.headers.get("x-telegram-bot-api-secret-token", ""), secret):
+        raise HTTPException(401, "No autorizado")
+    if tenant["status"] != "active":
+        raise HTTPException(403, "Licencia suspendida o vencida")
+    try:
+        return {"lead": await ingest.from_telegram(tenant, await request.json())}
+    except Exception:
+        log.exception("fallo al procesar un mensaje de Telegram")
+        return {"lead": None}  # 200: Telegram reintenta indefinidamente si respondemos error
 
 
 @app.post("/v1/ingest/{slug}/evolution")
@@ -185,31 +237,54 @@ async def tenant_settings(tenant: dict = Depends(tenant_auth)):
         "status": tenant["status"], "licenseUntil": str(tenant["license_until"]) if tenant["license_until"] else None,
         "model": config.OLLAMA_MODEL, "aiReachable": ai_ok, "jobs": jobs,
         "fbPageTokenSet": bool(fb), "fbPageTokenHint": ("…" + fb[-4:]) if fb else "",
-        "wa": {"url": st.get("evolution_url") or "", "instance": st.get("evolution_instance") or "",
-               "keySet": bool(st.get("evolution_apikey")), "keyHint": ("…" + st["evolution_apikey"][-4:]) if st.get("evolution_apikey") else ""},
+        "wa": {"provider": whatsapp.provider(tenant), "providers": whatsapp.PROVIDERS,
+               "evolution": {"url": st.get("evolution_url") or "", "instance": st.get("evolution_instance") or "", "keySet": bool(st.get("evolution_apikey")),
+                             "keyHint": ("…" + st["evolution_apikey"][-4:]) if st.get("evolution_apikey") else ""},
+               "meta": {"phoneNumberId": st.get("meta_phone_number_id") or "", "tokenSet": bool(st.get("meta_access_token")),
+                        "tokenHint": ("…" + st["meta_access_token"][-4:]) if st.get("meta_access_token") else ""},
+               "gupshup": {"source": st.get("gupshup_source") or "", "appName": st.get("gupshup_app_name") or "", "keySet": bool(st.get("gupshup_api_key")),
+                           "keyHint": ("…" + st["gupshup_api_key"][-4:]) if st.get("gupshup_api_key") else ""}},
+        "metaAppSecretSet": bool(st.get("meta_app_secret")),
+        "telegram": {"tokenSet": bool(st.get("telegram_bot_token")), "tokenHint": ("…" + st["telegram_bot_token"][-4:]) if st.get("telegram_bot_token") else "",
+                     "bot": st.get("telegram_bot_username") or "", "welcome": st.get("telegram_welcome") or ""},
+        "forms": st.get("forms") or [], "formDefault": forms.default_form(len(st.get("forms") or []) + 1),
+        "fieldTypes": forms.FIELD_TYPES, "fieldMaps": forms.MAPS,
         "services": qualify.services_for(tenant), "servicesCustomized": bool(st.get("services")), "pushDevices": push.count(tenant["slug"]),
         "metrics": [{"key": k, "label": v[0], "unit": v[2]} for k, v in qualify.METRICS.items()],
         "ops": qualify.OPS,
     }
 
 
+SECRET_KEYS = {"fb_page_token", "evolution_apikey", "meta_access_token", "meta_app_secret", "gupshup_api_key", "telegram_bot_token"}
+PLAIN_KEYS = {"evolution_instance", "meta_phone_number_id", "gupshup_source", "gupshup_app_name", "telegram_welcome"}
+
+
 @app.put("/v1/tenant/settings")
-def tenant_settings_update(req: SettingsReq, tenant: dict = Depends(tenant_auth)):
+def tenant_settings_update(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
     patch = {}
-    if req.fb_page_token is not None:
-        patch["fb_page_token"] = req.fb_page_token
-    if req.evolution_url is not None:
-        u = req.evolution_url.strip().rstrip("/")
+    for k in SECRET_KEYS:  # un valor vacío conserva el secreto actual
+        if isinstance(body.get(k), str) and body[k].strip():
+            patch[k] = body[k].strip()
+    for k in PLAIN_KEYS:
+        if isinstance(body.get(k), str):
+            patch[k] = body[k].strip()[:500]
+    if isinstance(body.get("evolution_url"), str):
+        u = body["evolution_url"].strip().rstrip("/")
         if u and not u.startswith(("http://", "https://")):
             raise HTTPException(422, "La URL de Evolution API debe empezar por http:// o https://")
         patch["evolution_url"] = u
-    if req.evolution_instance is not None:
-        patch["evolution_instance"] = req.evolution_instance.strip()
-    if req.evolution_apikey:  # vacío = conservar la clave actual
-        patch["evolution_apikey"] = req.evolution_apikey.strip()
-    if req.services is not None:
+    if "wa_provider" in body:
+        if body["wa_provider"] not in ("", *whatsapp.PROVIDERS):
+            raise HTTPException(422, "Proveedor de WhatsApp desconocido")
+        patch["wa_provider"] = body["wa_provider"]
+    if body.get("services") is not None:
         try:
-            patch["services"] = qualify.validate_services(req.services)
+            patch["services"] = qualify.validate_services(body["services"])
+        except ValueError as e:
+            raise HTTPException(422, str(e))
+    if body.get("forms") is not None:
+        try:
+            patch["forms"] = forms.validate(body["forms"])
         except ValueError as e:
             raise HTTPException(422, str(e))
     with db.pool.connection() as c:
@@ -222,6 +297,92 @@ def reset_services(tenant: dict = Depends(tenant_auth)):
     with db.pool.connection() as c:
         c.execute("UPDATE tenants SET settings = settings - 'services' WHERE slug = %s", (tenant["slug"],))
     return {"ok": True}
+
+
+@app.post("/v1/telegram/setup")
+async def tg_setup(tenant: dict = Depends(tenant_auth)):
+    try:
+        return await telegram.setup(tenant)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo contactar a Telegram: {e}")
+
+
+@app.post("/v1/telegram/test")
+async def tg_test(tenant: dict = Depends(tenant_auth)):
+    try:
+        return await telegram.test(tenant)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo contactar a Telegram: {e}")
+
+
+@app.post("/v1/telegram/send")
+async def tg_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
+    text = req.text.strip()
+    if not text or len(text) > 4000:
+        raise HTTPException(422, "El mensaje debe tener entre 1 y 4000 caracteres")
+    job = db.log_job(tenant["slug"], "telegram_send", req.leadId)
+    try:
+        res = await telegram.send(tenant, req.leadId, text, req.agent); db.finish_job(job); return res
+    except ValueError as e:
+        db.finish_job(job, str(e)[:500]); raise HTTPException(422, str(e))
+    except Exception as e:
+        db.finish_job(job, str(e)[:500]); raise HTTPException(502, f"No se pudo enviar: {e}")
+
+
+@app.post("/v1/telegram/invite")
+async def tg_invite(req: QualifyReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return await telegram.invite(tenant, req.leadId)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+# --- Formularios web públicos (los publica el vhost como https://<dominio>/f/<slug>) ---
+def _public_tenant(slug: str) -> dict:
+    t = db.get_tenant(slug)
+    if not t or t["status"] != "active":
+        raise HTTPException(404, "No encontrado")
+    return t
+
+
+_FORM_HEADERS = {"Cache-Control": "no-store", "Content-Security-Policy": "frame-ancestors *", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff"}
+
+
+@app.get("/v1/public/{slug}/forms/{form_slug}", response_class=HTMLResponse)
+def form_page(slug: str, form_slug: str):
+    t = _public_tenant(slug)
+    f = forms.find(t, form_slug)
+    if not f:
+        return HTMLResponse("<!doctype html><meta charset=utf-8><p style='font:16px sans-serif;padding:2rem'>Este formulario no está disponible.</p>", 404, _FORM_HEADERS)
+    return HTMLResponse(forms.page(f), headers=_FORM_HEADERS)
+
+
+@app.post("/v1/public/{slug}/forms/{form_slug}", response_class=HTMLResponse)
+async def form_submit(slug: str, form_slug: str, request: Request):
+    from urllib.parse import parse_qs
+    t = _public_tenant(slug)
+    f = forms.find(t, form_slug)
+    if not f:
+        return HTMLResponse("<p>Este formulario no está disponible.</p>", 404, _FORM_HEADERS)
+    raw = await request.body()
+    if len(raw) > 40_000:
+        return HTMLResponse(forms.page(f, error="El envío es demasiado grande."), 413, _FORM_HEADERS)
+    data = {k: v[0] for k, v in parse_qs(raw.decode("utf-8", "replace"), keep_blank_values=True).items()}
+    ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (request.client.host if request.client else "?"))
+    try:
+        res = await forms.submit(t, f, data, ip)
+    except forms.FormError as e:
+        return HTMLResponse(forms.page(f, error=str(e), values=data), 400, _FORM_HEADERS)
+    except Exception:
+        log.exception("fallo al procesar el formulario %s", form_slug)
+        return HTMLResponse(forms.page(f, error="No pudimos registrar tus datos. Intenta de nuevo en un momento.", values=data), 500, _FORM_HEADERS)
+    if f.get("redirect_url") and not res.get("telegram"):
+        return RedirectResponse(f["redirect_url"], status_code=303)
+    return HTMLResponse(forms.page(f, done=res), headers=_FORM_HEADERS)
 
 
 @app.get("/v1/push/key")

@@ -24,7 +24,9 @@ class Espo:
         return (await self._req("PUT", path, json=data)).json()
 
     async def post(self, path: str, data: dict) -> dict:
-        return (await self._req("POST", path, json=data)).json()
+        # La deduplicación por teléfono/correo la hacemos nosotros; EspoCRM además rechaza (409) a quien comparte nombre y apellido
+        # con otro lead aunque sea otra persona, y eso no debe impedir registrar a un cliente.
+        return (await self._req("POST", path, json=data, headers={"X-Skip-Duplicate-Check": "true"})).json()
 
     async def note(self, lead_id: str, text: str) -> None:
         await self.post("Note", {"type": "Post", "parentType": "Lead", "parentId": lead_id, "post": text})

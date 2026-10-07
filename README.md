@@ -64,6 +64,13 @@ Teléfonos se normalizan a E.164 (sin prefijo se asume +57).
 - **Nueva versión**: `bin/crmhub` escribe `client/custom/version.json` (hash del contenido) en cada despliegue; el navegador lo consulta cada 5 min y al volver a la pestaña, y muestra el aviso + notificación de escritorio si se concedió el permiso. **Web Push con la app cerrada**: `hub-service/app/push.py` (VAPID RFC 8292, `pywebpush`; claves en la tabla `kv`, suscripciones en `push_subscriptions`). El navegador se suscribe desde el botón del megáfono; `bin/crmhub tenant:upgrade` envía el aviso «nueva versión» a los dispositivos del tenant solo si cambió el contenido (`NO_PUSH=1` lo omite). iOS exige la app instalada.
 - Íconos de la app: `client/custom/img/pwa-*.png`.
 
+## Canales, formularios y Telegram
+
+- **WhatsApp multi-proveedor** (`hub-service/app/whatsapp.py`): Evolution API, Meta Cloud API y Gupshup; uno activo por empresa. Entrantes: `/hub/evolution`, `/hub/whatsapp-cloud` (verificación GET + firma `X-Hub-Signature-256` si hay App Secret), `/hub/gupshup`.
+- **Telegram** (`telegram.py`): `Guardar y conectar` hace `getMe` + `setWebhook` con secreto propio (`/hub/telegram`); enlace `t.me/<bot>?start=<código>` de un solo uso liga el chat a un lead; envío desde el CRM.
+- **Formularios web** (`forms.py`): configuración en `tenants.settings.forms`; páginas públicas `https://<dominio>/f/<slug>` (el vhost las proxea a `/v1/public/<tenant>/forms/`); honeypot, tiempo mínimo, límite por IP, escape de HTML, consentimiento en nota, deduplicación por teléfono/correo.
+- Las URLs base de Telegram/Meta/Gupshup son variables de entorno (`TELEGRAM_API_BASE`, `META_GRAPH_BASE`, `GUPSHUP_BASE`) solo para poder probar con servidores simulados.
+
 ## Entornos y paso a producción
 
 | Entorno | Host | Tenant | Puerto local |

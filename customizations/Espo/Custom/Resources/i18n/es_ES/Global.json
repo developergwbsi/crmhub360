@@ -15,7 +15,9 @@
         "Manual de usuario": "Manual de usuario",
         "Reasignar": "Reasignar",
         "Llamar": "Llamar",
-        "WhatsApp": "WhatsApp"
+        "WhatsApp": "WhatsApp",
+        "Telegram": "Telegram",
+        "Invitar por Telegram": "Invitar por Telegram"
     },
     "massActions": {
         "reassign": "Reasignar"

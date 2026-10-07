@@ -4,7 +4,7 @@
   <div class="ch-rolebar"><span>Manual para: <b>{{roleLabel}}</b></span>
     {{#if canToggle}}<button class="btn btn-default btn-sm" data-action="toggleAll">{{#if showAll}}Ver solo mi rol{{else}}Ver todo el manual{{/if}}</button>{{/if}}</div>
   <div class="ch-manual-layout">
-    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio" data-roles="comercial director gerente">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="app" data-roles="comercial director gerente">1b. Modo oscuro, instalar y sin internet</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads" data-roles="comercial director gerente">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline" data-roles="comercial director gerente">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito" data-roles="comercial director gerente">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente" data-roles="comercial director gerente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="contacto" data-roles="comercial director gerente">5b. Llamar y WhatsApp</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales" data-roles="gerente">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles" data-roles="director gerente">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asignacion" data-roles="director gerente">7b. Asignación y reasignación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="organizacion" data-roles="director gerente">7c. Equipos, campañas y organigrama</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="config" data-roles="">7d. Estados y balanceo (configuración)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="configcomm" data-roles="">7e. Configurar WhatsApp y llamadas</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades" data-roles="comercial director gerente">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin" data-roles="">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq" data-roles="comercial director gerente">10. Preguntas frecuentes</a></div></div>
+    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio" data-roles="comercial director gerente">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="app" data-roles="comercial director gerente">1b. Modo oscuro, instalar y sin internet</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads" data-roles="comercial director gerente">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline" data-roles="comercial director gerente">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito" data-roles="comercial director gerente">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente" data-roles="comercial director gerente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="contacto" data-roles="comercial director gerente">5b. Llamar y WhatsApp</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales" data-roles="gerente">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles" data-roles="director gerente">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asignacion" data-roles="director gerente">7b. Asignación y reasignación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="organizacion" data-roles="director gerente">7c. Equipos, campañas y organigrama</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="config" data-roles="">7d. Estados y balanceo (configuración)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="configcomm" data-roles="">7e. Canales: WhatsApp, Telegram y Meta</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="formularios" data-roles="">7f. Formularios web</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades" data-roles="comercial director gerente">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin" data-roles="">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq" data-roles="comercial director gerente">10. Preguntas frecuentes</a></div></div>
     <div class="ch-manual-body">
 <div class="panel panel-default" id="ch-m-inicio" data-roles="comercial director gerente">
   <div class="panel-heading"><h4 class="panel-title">1. Ingreso y navegación</h4></div>
@@ -114,6 +114,13 @@
 <li>Pulsa <b>Enviar</b>. Sale desde el WhatsApp conectado de la empresa y queda en el flujo del lead.</li>
 <li>Las respuestas del cliente aparecen solas en el flujo del lead.</li>
 </ol>
+<h3>Telegram</h3>
+<p>Si el cliente prefiere Telegram (aparece en <b>Canal preferido</b> del lead):</p>
+<ol>
+<li>Si ya te escribió al bot, pulsa <b>Telegram</b> y responde igual que por WhatsApp.</li>
+<li>Si aún no ha abierto el chat, pulsa <b>Telegram</b> (o <b>⋯ → Invitar por Telegram</b>): se genera un <b>enlace de un solo uso</b>. Envíaselo por WhatsApp, correo o llamada; al abrirlo y pulsar <i>Iniciar</i>, el chat queda ligado a ese lead.</li>
+<li>Los mensajes del cliente aparecen solos en el flujo del lead.</li>
+</ol>
 <div class="ch-tip">Si WhatsApp responde «no está configurado» o falla el envío, avisa a tu administrador: él lo conecta en Integraciones.</div>
 </div>
 </div>
@@ -191,18 +198,41 @@
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-configcomm" data-roles="">
-  <div class="panel-heading"><h4 class="panel-title">7e. Configurar WhatsApp y llamadas (administradores)</h4></div>
+  <div class="panel-heading"><h4 class="panel-title">7e. Canales: WhatsApp, Telegram, Meta y llamadas (administradores)</h4></div>
   <div class="panel-body">
-<h3>WhatsApp</h3>
+<p>Todo se configura en <b>Integraciones</b> (pestañas <i>Canales de mensajería</i> y <i>Meta</i>). La tabla de arriba lista las <b>direcciones (webhooks)</b> que pegas en cada proveedor; usa «Mostrar token» y «Copiar».</p>
+<h3>WhatsApp: elige un proveedor</h3>
+<table class="table table-bordered ch-table"><tr><th>Proveedor</th><th>Qué necesitas</th><th>Para recibir mensajes</th></tr>
+<tr><td><b>Evolution API</b></td><td>URL, nombre de la instancia y API key. Teléfono vinculado por QR en Evolution.</td><td>Webhook de la instancia → <code>/hub/evolution</code>, evento <code>MESSAGES_UPSERT</code>, encabezado <code>apikey</code> = token.</td></tr>
+<tr><td><b>Meta WhatsApp Cloud API</b></td><td><i>Phone Number ID</i> y token de acceso permanente (usuario del sistema). En la pestaña Meta, el <i>App Secret</i>.</td><td>En tu app de Meta → WhatsApp → Webhooks: URL <code>/hub/whatsapp-cloud?token=…</code>, token de verificación = token, campo <code>messages</code>.</td></tr>
+<tr><td><b>Gupshup</b></td><td>API key, número de origen y nombre de la app.</td><td>Webhook entrante de tu app → <code>/hub/gupshup?token=…</code>.</td></tr></table>
+<p>Guarda y pulsa <b>Probar conexión</b>. Solo un proveedor está activo a la vez. Con Meta Cloud API, fuera de las 24 h de una conversación solo se pueden enviar plantillas aprobadas por Meta.</p>
+<h3>Telegram</h3>
 <ol>
-<li>Necesitas una instancia de <b>Evolution API</b> con el WhatsApp de la empresa vinculado (QR escaneado en Evolution).</li>
-<li>Entra a <b>Integraciones → WhatsApp · envío de mensajes</b> y completa: <b>URL de Evolution API</b>, <b>nombre de la instancia</b> y <b>API key</b>. Guarda.</li>
-<li>Pulsa <b>Probar conexión</b>: debe decir <i>Conectado</i>. Si dice otro estado, vincula el teléfono en Evolution.</li>
-<li>Para <b>recibir</b> los mensajes: en Evolution configura el webhook de la instancia hacia la dirección <code>/hub/evolution</code> que aparece en Integraciones (evento <code>MESSAGES_UPSERT</code>) y agrega el encabezado <code>apikey</code> con el token de tu empresa.</li>
+<li>En Telegram habla con <b>@BotFather</b> → <code>/newbot</code> y copia el token.</li>
+<li>Pégalo en <b>Telegram · bot</b> y pulsa <b>Guardar y conectar</b>: el webhook se registra solo y aparece el enlace de tu bot.</li>
+<li>Puedes cambiar el <b>mensaje de bienvenida</b>. Quien escriba al bot queda como un lead nuevo (origen Telegram) y se le pide su teléfono con un botón.</li>
 </ol>
+<h3>Meta: anuncios de Facebook e Instagram</h3>
+<p>Pestaña <b>Meta</b>: guarda el token de la página (permiso <code>leads_retrieval</code>) y el <b>App Secret</b> (con él se rechazan los webhooks sin firma válida). En tu app de Meta suscribe el campo <code>leadgen</code> a <code>/hub/facebook?token=…</code>.</p>
 <h3>Llamadas</h3>
-<p>El botón <b>Llamar</b> abre el marcador del equipo del asesor (enlace <code>tel:</code>) y registra el resultado. Para que marque, cada asesor necesita en su computador o teléfono un <b>softphone o app de telefonía</b> (por ejemplo Zoiper, Linphone, MicroSIP o la app de teléfono vinculada al celular) conectado a tu proveedor SIP o central telefónica, y configurado como aplicación predeterminada para enlaces de teléfono.</p>
-<div class="ch-warn">La marcación directa desde el CRM con grabación, o llamadas por navegador (Twilio, Asterisk/WebRTC), <b>no están incluidas</b>: requieren contratar un proveedor y configurarlo con sus credenciales. Hoy el CRM registra el resultado de cada llamada, no el audio.</div>
+<p>El botón <b>Llamar</b> abre el marcador del asesor (enlace <code>tel:</code>) y registra el resultado. Cada asesor necesita un <b>softphone o app de telefonía</b> (Zoiper, Linphone, MicroSIP o la app del celular vinculado) conectado a tu central o proveedor SIP.</p>
+<div class="ch-warn">La marcación directa desde el CRM con grabación o llamadas por navegador (Twilio, Asterisk/WebRTC) <b>no están incluidas</b>: requieren un proveedor y sus credenciales. Hoy el CRM registra el resultado de cada llamada, no el audio.</div>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-formularios" data-roles="">
+  <div class="panel-heading"><h4 class="panel-title">7f. Formularios web de captación (administradores)</h4></div>
+  <div class="panel-body">
+<p>En <b>Integraciones → Formularios web</b> diseñas tus propios formularios. Cada uno tiene una <b>dirección pública</b> (<code>https://tu-dominio/f/nombre</code>) para enlazarla en anuncios, redes o un QR, o <b>incrustarla</b> en tu página con el botón <i>Código para incrustar</i> (iframe).</p>
+<ol>
+<li><b>Nuevo formulario</b> arranca con una plantilla (nombre, teléfono, correo, deuda aproximada y canal preferido). Pulsa <b>Editar</b> para ajustar título, texto, color, botón y mensaje de éxito.</li>
+<li><b>Campos:</b> agrega, ordena y marca como obligatorios. Cada campo se guarda donde elijas: nombre, teléfono, correo, ingresos, deuda total, deuda en mora, acreedores, o en las notas del lead. Si hay datos de deuda, el lead se <b>califica solo</b> con tus servicios y filtros.</li>
+<li><b>Campaña:</b> escribe el nombre exacto de una campaña para ligar los leads y que se repartan entre sus equipos. Si el enlace trae <code>?utm_campaign=nombre</code> y coincide con una campaña, también se liga.</li>
+<li><b>Autorización de datos (habeas data):</b> el texto que aceptan queda en el historial del lead junto con la fecha. Puedes hacerla obligatoria.</li>
+<li><b>Telegram:</b> si el cliente elige ese canal, al enviar ve un botón para abrir tu bot y queda ligado a su lead.</li>
+<li>Pulsa <b>Guardar formularios</b> para publicar. Un formulario <i>apagado</i> deja de responder. Los parámetros <code>utm_source</code>, <code>utm_medium</code>… de la URL se guardan en las notas del lead.</li>
+</ol>
+<div class="ch-tip">Protección: el formulario rechaza envíos instantáneos de robots y repetidos desde la misma conexión (8 por 10 minutos). Si un cliente ya existe (mismo teléfono o correo), se actualiza su lead y se anota que volvió a escribir, sin duplicarlo.</div>
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-actividades" data-roles="comercial director gerente">

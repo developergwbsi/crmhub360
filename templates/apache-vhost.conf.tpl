@@ -12,6 +12,10 @@
     ProxyPass        /hub/ http://172.28.0.1:${HUB_PORT}/v1/ingest/${SLUG}/ retry=0
     ProxyPassReverse /hub/ http://172.28.0.1:${HUB_PORT}/v1/ingest/${SLUG}/
 
+    # Formularios web públicos de captación: https://<dominio>/f/<nombre-del-formulario>
+    ProxyPass        /f/ http://172.28.0.1:${HUB_PORT}/v1/public/${SLUG}/forms/ retry=0
+    ProxyPassReverse /f/ http://172.28.0.1:${HUB_PORT}/v1/public/${SLUG}/forms/
+
     ProxyPass        / http://127.0.0.1:${WEB_PORT}/ timeout=300
     ProxyPassReverse / http://127.0.0.1:${WEB_PORT}/
     # X-Forwarded-Proto lo fija el vhost SSL generado por certbot (https)

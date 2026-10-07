@@ -17,6 +17,14 @@
                     "style": "default",
                     "handler": "custom:handlers/lead-contact",
                     "actionFunction": "actionWhatsapp"
+                },
+                {
+                    "name": "telegramLead",
+                    "label": "Telegram",
+                    "iconClass": "fab fa-telegram",
+                    "style": "default",
+                    "handler": "custom:handlers/lead-contact",
+                    "actionFunction": "actionTelegram"
                 }
             ],
             "dropdown": [
@@ -44,6 +52,12 @@
                     "handler": "custom:handlers/reassign",
                     "actionFunction": "actionReassign",
                     "checkVisibilityFunction": "canReassign"
+                },
+                {
+                    "name": "inviteTelegram",
+                    "label": "Invitar por Telegram",
+                    "handler": "custom:handlers/lead-contact",
+                    "actionFunction": "actionTelegramInvite"
                 }
             ]
         }

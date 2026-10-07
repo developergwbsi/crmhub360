@@ -1,12 +1,16 @@
-"""Envío de WhatsApp vía Evolution API (instancia propia de cada empresa; credenciales en tenants.settings)."""
+"""WhatsApp con varios proveedores: Evolution API, Meta WhatsApp Cloud API y Gupshup.
+Cada empresa elige uno (tenants.settings.wa_provider). Las credenciales viven en tenants.settings y nunca se devuelven a la interfaz."""
+import json
 import time
 
 import httpx
 
+from . import config
 from .espo import Espo
 from .ingest import normalize_phone
 
-_sent: dict[tuple[str, str], float] = {}  # (lead_id, texto) -> instante de envío: evita duplicar la nota al llegar el eco del webhook
+PROVIDERS = {"evolution": "Evolution API", "meta": "Meta WhatsApp Cloud API", "gupshup": "Gupshup"}
+_sent: dict[tuple[str, str], float] = {}  # (lead_id, texto) -> instante: evita duplicar la nota cuando llega el eco del webhook
 
 
 def recently_sent(lead_id: str, text: str, window: float = 180.0) -> bool:
@@ -16,35 +20,88 @@ def recently_sent(lead_id: str, text: str, window: float = 180.0) -> bool:
     return (lead_id, text) in _sent
 
 
-def config(tenant: dict) -> tuple[str, str, str]:
-    st = tenant.get("settings") or {}
-    url, key, inst = (st.get("evolution_url") or "").rstrip("/"), st.get("evolution_apikey") or "", st.get("evolution_instance") or ""
-    if not (url and key and inst):
-        raise ValueError("WhatsApp no está configurado (Integraciones → WhatsApp).")
-    return url, key, inst
+def _st(tenant: dict) -> dict:
+    return tenant.get("settings") or {}
 
 
+def provider(tenant: dict) -> str:
+    st = _st(tenant)
+    p = st.get("wa_provider")
+    if p in PROVIDERS:
+        return p
+    return "evolution" if st.get("evolution_url") else ""
+
+
+def _need(tenant: dict, *keys: str) -> list[str]:
+    st = _st(tenant)
+    vals = [(st.get(k) or "").strip() for k in keys]
+    if not all(vals):
+        raise ValueError("WhatsApp no está configurado (Integraciones → Mensajería).")
+    return vals
+
+
+# ---------------- prueba de conexión ----------------
 async def test(tenant: dict) -> dict:
-    url, key, inst = config(tenant)
-    async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.get(f"{url}/instance/connectionState/{inst}", headers={"apikey": key})
-        r.raise_for_status()
-    data = r.json()
-    state = (data.get("instance") or data).get("state")
-    return {"state": state, "connected": state == "open"}
+    p = provider(tenant)
+    async with httpx.AsyncClient(timeout=12) as c:
+        if p == "evolution":
+            url, key, inst = _need(tenant, "evolution_url", "evolution_apikey", "evolution_instance")
+            r = await c.get(f"{url.rstrip('/')}/instance/connectionState/{inst}", headers={"apikey": key}); r.raise_for_status()
+            data = r.json(); state = (data.get("instance") or data).get("state")
+            return {"provider": p, "state": state, "connected": state == "open"}
+        if p == "meta":
+            pid, tok = _need(tenant, "meta_phone_number_id", "meta_access_token")
+            r = await c.get(f"{config.META_GRAPH_BASE}/{pid}", params={"fields": "display_phone_number,verified_name"}, headers={"Authorization": f"Bearer {tok}"})
+            if r.status_code >= 400:
+                raise ValueError(f"Meta rechazó las credenciales: {_err(r)}")
+            d = r.json()
+            return {"provider": p, "state": f"{d.get('verified_name', '')} {d.get('display_phone_number', '')}".strip() or "ok", "connected": True}
+        if p == "gupshup":
+            key, src = _need(tenant, "gupshup_api_key", "gupshup_source")
+            return {"provider": p, "state": f"guardado para {src}", "connected": True,
+                    "note": "Gupshup no ofrece una prueba de conexión sin enviar un mensaje; envía uno a un lead de prueba."}
+    raise ValueError("Elige un proveedor de WhatsApp y guarda sus credenciales.")
+
+
+def _err(r: httpx.Response) -> str:
+    try:
+        j = r.json()
+        e = j.get("error") or j
+        return (e.get("message") if isinstance(e, dict) else str(e))[:240]
+    except Exception:
+        return r.text[:240]
+
+
+# ---------------- envío ----------------
+async def send_text(tenant: dict, phone: str, text: str) -> None:
+    p = provider(tenant)
+    number = phone.lstrip("+")
+    async with httpx.AsyncClient(timeout=25) as c:
+        if p == "evolution":
+            url, key, inst = _need(tenant, "evolution_url", "evolution_apikey", "evolution_instance")
+            r = await c.post(f"{url.rstrip('/')}/message/sendText/{inst}", headers={"apikey": key}, json={"number": number, "text": text})
+        elif p == "meta":
+            pid, tok = _need(tenant, "meta_phone_number_id", "meta_access_token")
+            r = await c.post(f"{config.META_GRAPH_BASE}/{pid}/messages", headers={"Authorization": f"Bearer {tok}"},
+                             json={"messaging_product": "whatsapp", "to": number, "type": "text", "text": {"body": text, "preview_url": False}})
+        elif p == "gupshup":
+            key, src, app = _need(tenant, "gupshup_api_key", "gupshup_source", "gupshup_app_name")
+            r = await c.post(f"{config.GUPSHUP_BASE}/wa/api/v1/msg", headers={"apikey": key},
+                             data={"channel": "whatsapp", "source": src.lstrip("+"), "destination": number, "src.name": app,
+                                   "message": json.dumps({"type": "text", "text": text})})
+        else:
+            raise ValueError("WhatsApp no está configurado (Integraciones → Mensajería).")
+    if r.status_code >= 400:
+        raise ValueError(f"{PROVIDERS[p]} rechazó el mensaje ({r.status_code}): {_err(r)}")
 
 
 async def send(tenant: dict, lead_id: str, text: str, agent: str) -> dict:
-    url, key, inst = config(tenant)
     espo = Espo(tenant)
     lead = await espo.get(f"Lead/{lead_id}")
     phone = normalize_phone(lead.get("phoneNumber"))
     if not phone:
         raise ValueError("El lead no tiene teléfono.")
-    async with httpx.AsyncClient(timeout=20) as c:
-        r = await c.post(f"{url}/message/sendText/{inst}", headers={"apikey": key}, json={"number": phone.lstrip("+"), "text": text})
-    if r.status_code >= 400:
-        raise ValueError(f"WhatsApp rechazó el mensaje ({r.status_code}): {r.text[:200]}")
+    await send_text(tenant, phone, text)
     _sent[(lead_id, text)] = time.time()
     await espo.note(lead_id, f"[WhatsApp] {agent}: {text}")
     return {"ok": True}

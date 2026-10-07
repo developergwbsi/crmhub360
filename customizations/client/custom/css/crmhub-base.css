@@ -332,7 +332,7 @@ body[data-navbar=side].minimized.side-menu-opened #navbar .navbar-right > li > a
   border: 1px solid var(--ch-tint-line); background: var(--ch-tint2); border-radius: 12px; }
 
 /* Íconos de marca: la fuente de marcas de EspoCRM está recortada (sin estos glifos); se dibujan como máscara SVG y toman el color del texto */
-.fa-whatsapp::before, .fa-facebook::before {
+.fa-whatsapp::before, .fa-facebook::before, .fa-telegram::before {
     content: "" !important; display: inline-block; width: 1.05em; height: 1.05em; vertical-align: -0.15em;
     background-color: currentColor; -webkit-mask: var(--ch-brand) center / contain no-repeat; mask: var(--ch-brand) center / contain no-repeat; }
 .fa-whatsapp { --ch-brand: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M17.472%2014.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94%201.164-.173.199-.347.223-.644.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.484-1.77-1.66-2.07-.174-.3-.019-.465.13-.615.136-.135.301-.345.451-.523.146-.181.194-.301.297-.496.1-.21.049-.375-.025-.524-.075-.15-.672-1.62-.922-2.206-.24-.584-.487-.51-.672-.51-.172-.015-.371-.015-.571-.015-.2%200-.523.074-.797.359-.273.3-1.045%201.02-1.045%202.475s1.07%202.865%201.219%203.075c.149.18%202.095%203.195%205.076%204.483.709.306%201.262.489%201.694.625.712.227%201.36.195%201.871.118.571-.085%201.758-.719%202.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421%207.403h-.004a9.87%209.87%200%2001-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86%209.86%200%2001-1.51-5.26c.001-5.45%204.436-9.884%209.888-9.884%202.64%200%205.122%201.03%206.988%202.898a9.825%209.825%200%20012.893%206.994c-.003%205.45-4.437%209.884-9.885%209.884m8.413-18.297A11.815%2011.815%200%200012.05%200C5.495%200%20.16%205.335.157%2011.892c0%202.096.547%204.142%201.588%205.945L.057%2024l6.305-1.654a11.882%2011.882%200%20005.683%201.448h.005c6.554%200%2011.89-5.335%2011.893-11.893a11.821%2011.821%200%2000-3.48-8.413z%27/%3E%3C/svg%3E"); }
@@ -373,3 +373,28 @@ body[data-navbar=side].minimized.side-menu-opened #navbar .navbar-right > li > a
 .ch-banner b { white-space: nowrap; }
 
 .ch-tool.ch-on { color: #2fa36b !important; }
+
+.fa-telegram { --ch-brand: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cpath%20d%3D%27M11.944%200A12%2012%200%200%200%200%2012a12%2012%200%200%200%2012%2012%2012%2012%200%200%200%2012-12A12%2012%200%200%200%2012%200a12%2012%200%200%200-.056%200zm4.962%207.224c.1-.002.321.023.465.14a.506.506%200%200%201%20.171.325c.016.093.036.306.02.472-.18%201.898-.962%206.502-1.36%208.627-.168.9-.499%201.201-.82%201.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184%203.247-2.977%203.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793%201.14-5.061%203.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663%203.498-1.524%205.83-2.529%206.998-3.014%203.332-1.386%204.025-1.627%204.476-1.635z%27/%3E%3C/svg%3E"); }
+.fab.fa-telegram { color: #27a7e7; }
+
+/* ======================= Integraciones: pestañas, formularios, ayudas ======================= */
+.ch-tabbar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; border-bottom: 1px solid var(--ch-line); }
+.ch-tabbtn { border: 0; background: transparent; padding: 10px 14px; font: inherit; font-weight: 500; color: var(--ch-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; border-radius: 8px 8px 0 0; }
+.ch-tabbtn:hover { color: var(--ch-ink); background: var(--ch-tint); }
+.ch-tabbtn.active { color: var(--ch-primary); border-bottom-color: var(--ch-primary); font-weight: 600; }
+.ch-cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 18px; }
+.ch-help { background: var(--ch-soft); border: 1px solid var(--ch-line); border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--ch-muted); margin-top: 10px; line-height: 1.55; }
+.ch-help code { font-size: 12px; }
+.ch-form-card { border: 1px solid var(--ch-line); border-radius: 12px; margin-bottom: 12px; background: var(--ch-surface); }
+.ch-form-card.ch-off { opacity: .65; }
+.ch-form-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--ch-soft); border-radius: 12px 12px 0 0; flex-wrap: wrap; }
+.ch-spacer { flex: 1; }
+.ch-form-urls { display: flex; align-items: center; gap: 8px; padding: 10px 14px; flex-wrap: wrap; }
+.ch-feditor { padding: 4px 14px 14px; border-top: 1px solid var(--ch-line); }
+.ch-feditor label { margin-top: 10px; }
+.ch-ffield { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; padding: 8px; border: 1px dashed var(--ch-line); border-radius: 10px; }
+.ch-ffield > input.form-control:first-child { flex: 2 1 200px; }
+.ch-ffield > select.form-control { flex: 1 1 150px; }
+.ch-ffield .ch-fopts { flex: 1 1 100%; }
+.panel-title .fab, .panel-title .fas { margin-right: 8px; }
+input[type=color].form-control { width: 96px; cursor: pointer; }
