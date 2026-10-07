@@ -621,3 +621,8 @@ body.ch-split .page-header { margin-right: 0; }
 .ch-mail-compose label { display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ch-muted); margin: 8px 0 3px; }
 .ch-mail-compose input, .ch-mail-compose textarea { width: 100%; border: 1px solid var(--ch-line-strong); border-radius: 10px; padding: 7px 10px; background: var(--ch-soft); color: var(--ch-ink); font: inherit; outline: 0; }
 .ch-mail-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+/* ===== Modo lectura (soporte) ===== */
+.ch-ro-banner { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 2500; background: #1c2240; color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.35); pointer-events: none; }
+body.ch-readonly .detail-button-container, body.ch-readonly [data-action="create"], body.ch-readonly .ch-contact-btn, body.ch-readonly [data-name="edit"],
+body.ch-readonly .list-row-buttons, body.ch-readonly .actions-btn-group { display: none !important; }

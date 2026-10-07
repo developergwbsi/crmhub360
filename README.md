@@ -119,3 +119,11 @@ No hay scraping del portal: iniciar sesión automatizada con credenciales en un 
 - PDFs escaneados: requieren OCR (hoy se marca el lead como "Revisión Manual" con el motivo).
 - Límite `max_users` aún no se aplica dentro de EspoCRM.
 - La regla UFW `172.28.0.0/24 -> 172.28.0.1:8190` es necesaria para que los tenants lleguen al Hub Service.
+
+## Centro de control (empresas, claves y modo lectura)
+Landing propia (`https://control.<dominio>`) para operar sin pasar por la consola: crear empresas nuevas **solo en producción**, ver su estado, cambiar contraseñas de usuarios y entrar en **modo lectura**.
+- **Desarrollo es la base.** `bin/crmhub release:publish` (o el botón «Publicar desde desarrollo») congela una copia del código y las semillas en `releases/<id>/`; esa copia es la réplica con la que se crean las empresas nuevas (`tenant:create --release current`). Las empresas existentes solo cambian cuando se pulsa «Actualizar a la base actual».
+- **Servicios:** `control-service/` (FastAPI, contenedor `crmhub-control`, solo 127.0.0.1:8195 detrás de Apache + SSL) y `bin/control-worker` (servicio systemd en el servidor). La web **no ejecuta nada**: encola trabajos en `control_jobs` y el ejecutor solo corre una lista cerrada (crear, actualizar, publicar base, suspender, reactivar) con parámetros validados y sin shell.
+- **Instalación:** `bin/crmhub control:install` (contenedor + Apache + ejecutor; imprime la clave inicial) y luego certbot para el host. Cambiar clave: `bin/crmhub control:password`.
+- **Seguridad:** clave con scrypt, sesión firmada (12 h, HttpOnly/Secure/SameSite=Strict), cabecera anti-CSRF, 5 intentos fallidos = bloqueo de 10 min por IP, auditoría en `control_audit`.
+- **Modo lectura:** el Centro crea (si falta) el rol «Soporte (solo lectura)» y el usuario `soporte-lectura` en la empresa, le pone una clave nueva y emite un código de un solo uso (90 s). `/?support=<código>` en el sitio de la empresa lo canjea (`CrmHubSupport/exchange` → hub `/v1/support/exchange`) e inicia sesión solo; el rol impide cualquier escritura (el API responde 403) y un aviso fijo lo indica.

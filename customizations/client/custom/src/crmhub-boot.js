@@ -293,12 +293,28 @@
         document.querySelectorAll('.ch-lead-hero:not(.ch-in-modal)').forEach(function (e) { e.classList.toggle('ch-compact', c); });
     }, {passive: true});
     window.addEventListener('resize', syncSticky);
+    // Modo lectura (soporte): aviso permanente y botones de edición ocultos; los permisos del rol lo impiden de todos modos
+    var roChecked = false;
+    function checkReadOnly() {
+        if (roChecked || !document.body.classList.contains('has-navbar') || !window.Espo || !Espo.Ajax) { return; }
+        roChecked = true;
+        Espo.Ajax.getRequest('App/user').then(function (r) {
+            if (r && r.user && r.user.userName === 'soporte-lectura') {
+                document.body.classList.add('ch-readonly');
+                if (!document.getElementById('ch-ro')) {
+                    var d = document.createElement('div'); d.id = 'ch-ro'; d.className = 'ch-ro-banner';
+                    d.innerHTML = '<span class="fas fa-eye"></span> Modo lectura (soporte): puedes ver la información, pero no modificarla.';
+                    document.body.appendChild(d);
+                }
+            }
+        }).catch(function () { roChecked = false; });
+    }
     var pending = false;
     function onDom() {
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });

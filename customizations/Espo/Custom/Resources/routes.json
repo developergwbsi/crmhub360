@@ -291,5 +291,14 @@
             "controller": "CrmHub",
             "action": "statusGuard"
         }
+    },
+    {
+        "route": "/CrmHubSupport/exchange",
+        "method": "post",
+        "params": {
+            "controller": "CrmHubSupport",
+            "action": "exchange"
+        },
+        "noAuth": true
     }
 ]

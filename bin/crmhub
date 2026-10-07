@@ -20,8 +20,13 @@ Uso: bin/crmhub <comando>
   tenant:upgrade <slug>         reaplica customizaciones y reconstruye
   tenant:delete <slug> --yes    elimina contenedores, volumen y BD
   tenant:ui <slug>              reaplica tema, menú y dashboard
+  release:publish [--note t]    congela el código de desarrollo como «base de producción» (réplica para nuevas empresas)
+  release:list | release:current
+  control:install               instala el Centro de control (contenedor + Apache + ejecutor); imprime la clave inicial
+  control:password [clave]      cambia la clave del Centro de control (genera una si no se indica)
+  (tenant:create/upgrade/ui aceptan --release current|<id>|repo)
   vhost:render <slug>           imprime el VirtualHost de Apache del tenant
-  vhost:install <slug> --env dev|prod   instala el vhost en Apache (requiere root)
+  vhost:install <slug> --env dev|prod|client   instala el vhost en Apache (requiere root)
 USG
 }
 
@@ -33,6 +38,75 @@ cmd_init() {
 
 cmd_up() { load_env; docker compose up -d --build; }
 
+
+# ---- Base de producción (releases): copia congelada del código de desarrollo, usada para crear/actualizar empresas ----
+SRC="$ROOT"; RELEASE_ID=""
+release_current() { sql "SELECT id FROM control_releases WHERE is_current ORDER BY created_at DESC LIMIT 1" 2>/dev/null || true; }
+use_release() { # current|repo|<id>
+  case "${1:-repo}" in
+    repo|"") SRC="$ROOT"; RELEASE_ID="";;
+    current) RELEASE_ID="$(release_current)"; [[ -n "$RELEASE_ID" ]] || die "no hay base de producción publicada (usa release:publish)"; SRC="$ROOT/releases/$RELEASE_ID";;
+    *) [[ "$1" =~ ^[0-9]{8}-[0-9]{6}$ ]] || die "release inválido"; RELEASE_ID="$1"; SRC="$ROOT/releases/$RELEASE_ID";;
+  esac
+  [[ -d "$SRC/customizations" ]] || die "la base $RELEASE_ID no existe en disco"
+}
+parse_release() { # extrae --release X del resto de argumentos; deja REST con lo demás
+  REST=(); local rel=""
+  while [[ $# -gt 0 ]]; do case "$1" in --release) rel="$2"; shift 2;; *) REST+=("$1"); shift;; esac; done
+  REL_ARG="$rel"
+}
+
+cmd_release_publish() {
+  load_env
+  local note=""; while [[ $# -gt 0 ]]; do case "$1" in --note) note="$2"; shift 2;; *) die "opción desconocida: $1";; esac; done
+  [[ "$note" != *"'"* ]] || die "no se permiten comillas simples en la nota"
+  local id ref; id="$(date +%Y%m%d-%H%M%S)"; ref="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo sin-git)"
+  git -C "$ROOT" diff --quiet 2>/dev/null || ref="$ref+cambios-sin-commit"
+  local d="$ROOT/releases/$id"; mkdir -p "$d/bin"
+  cp -a "$ROOT/customizations" "$d/customizations"
+  cp -a "$ROOT/bin/seed_tenant.py" "$ROOT/bin/ui_settings.py" "$d/bin/"
+  sql "UPDATE control_releases SET is_current=FALSE"
+  sql "INSERT INTO control_releases (id,note,commit_ref,is_current) VALUES ('$id','$note','$ref',TRUE)"
+  echo "Base de producción publicada: $id ($ref)"
+}
+cmd_release_list() { load_env; sql "SELECT id||' | '||CASE WHEN is_current THEN 'ACTUAL' ELSE '      ' END||' | '||COALESCE(commit_ref,'')||' | '||note FROM control_releases ORDER BY created_at DESC"; }
+
+# ---- Centro de control ----
+set_env() { # clave valor  (reemplaza o agrega en .env)
+  if grep -q "^$1=" .env; then sed -i "s|^$1=.*|$1=$2|" .env; else echo "$1=$2" >> .env; fi
+}
+control_hash() { python3 -c 'import base64,hashlib,os,sys
+salt=os.urandom(16); h=hashlib.scrypt(sys.argv[1].encode(),salt=salt,n=2**14,r=8,p=1,dklen=32)
+print("scrypt:"+base64.b64encode(salt).decode()+":"+base64.b64encode(h).decode())' "$1"; }
+cmd_control_password() {
+  load_env; local pw="${1:-$(rand 8)}"
+  [[ ${#pw} -ge 10 ]] || die "la clave debe tener al menos 10 caracteres"
+  set_env CONTROL_PASSWORD_HASH "$(control_hash "$pw")"
+  docker compose up -d --force-recreate control >/dev/null
+  echo "Clave del Centro de control (usuario: ${CONTROL_USER:-superadmin}): $pw"
+}
+cmd_control_install() {
+  load_env
+  [[ -n "${CONTROL_HOST:-}" ]] || { set_env CONTROL_HOST "control.${BASE_DOMAIN}"; }
+  [[ -n "${CONTROL_PORT:-}" ]] || set_env CONTROL_PORT 8195
+  [[ -n "${CONTROL_USER:-}" ]] || set_env CONTROL_USER superadmin
+  [[ -n "${CONTROL_SESSION_SECRET:-}" ]] || set_env CONTROL_SESSION_SECRET "$(rand 32)"
+  local newpw=""
+  if [[ -z "${CONTROL_PASSWORD_HASH:-}" ]]; then newpw="$(rand 8)"; set_env CONTROL_PASSWORD_HASH "$(control_hash "$newpw")"; fi
+  load_env
+  docker exec -i "$PSQL_C" psql -U "$PG_ADMIN_USER" -d "$PG_MASTER_DB" -v ON_ERROR_STOP=1 -q < hub-service/sql/004_control.sql
+  docker compose up -d --build control
+  export CONTROL_HOST CONTROL_PORT
+  envsubst '${CONTROL_HOST} ${CONTROL_PORT}' < templates/apache-control.conf.tpl | sed "s|@@LOGDIR@@|\${APACHE_LOG_DIR}|g" > /etc/apache2/sites-available/crmhub-control.conf
+  a2enmod proxy proxy_http rewrite headers >/dev/null; a2ensite crmhub-control >/dev/null
+  apache2ctl configtest && systemctl reload apache2
+  ROOT="$ROOT" envsubst '${ROOT}' < templates/crmhub-control-worker.service.tpl > /etc/systemd/system/crmhub-control-worker.service
+  systemctl daemon-reload && systemctl enable --now crmhub-control-worker >/dev/null
+  echo "Centro de control instalado: http://$CONTROL_HOST  (usuario: $CONTROL_USER)"
+  [[ -z "$newpw" ]] || echo "Clave inicial: $newpw   (cámbiala con: bin/crmhub control:password)"
+  echo "Certificado SSL:  certbot --apache -d $CONTROL_HOST --non-interactive --agree-tos -m $CERTBOT_EMAIL --redirect"
+}
+
 wait_http() { # url user pass
   for _ in $(seq 1 90); do
     curl -fsS -u "$2:$3" "$1" >/dev/null 2>&1 && return 0; sleep 4
@@ -43,11 +117,11 @@ install_custom() { # slug
   local c="crmhub-$1"
   docker exec "$c" rm -rf /var/www/html/client/custom/manual
   docker exec "$c" mkdir -p /var/www/html/custom/Espo/Custom /var/www/html/client/custom
-  docker cp "$ROOT/customizations/Espo/Custom/." "$c:/var/www/html/custom/Espo/Custom/"
-  docker cp "$ROOT/customizations/client/custom/." "$c:/var/www/html/client/custom/"
+  docker cp "$SRC/customizations/Espo/Custom/." "$c:/var/www/html/custom/Espo/Custom/"
+  docker cp "$SRC/customizations/client/custom/." "$c:/var/www/html/client/custom/"
   docker exec "$c" chown -R www-data:www-data /var/www/html/custom /var/www/html/client/custom
   # versión de la app: cambia cuando cambia cualquier archivo; el navegador la compara para avisar de una nueva versión
-  local ver; ver="$(cd "$ROOT/customizations" && find . -type f -not -name version.json | sort | xargs md5sum | md5sum | cut -c1-12)"
+  local ver; ver="$(cd "$SRC/customizations" && find . -type f -not -name version.json | sort | xargs md5sum | md5sum | cut -c1-12)"
   PREV_VERSION="$(docker exec "$c" cat /var/www/html/client/custom/version.json 2>/dev/null | jq -r .version 2>/dev/null || true)"; NEW_VERSION="$ver"
   docker exec "$c" sh -c "printf '{\"version\":\"$ver\",\"built\":\"$(date -u +%FT%TZ)\"}' > /var/www/html/client/custom/version.json && chown www-data:www-data /var/www/html/client/custom/version.json"
   docker exec -u www-data "$c" php command.php rebuild >/dev/null
@@ -63,6 +137,9 @@ render_compose() { # slug -> escribe tenants/<slug>/docker-compose.yml con .env 
 cmd_tenant_create() {
   load_env
   local slug="${1:-}"; shift || true
+  parse_release "$@"; set -- "${REST[@]}"
+  if [[ -z "$REL_ARG" ]]; then [[ -n "$(release_current)" ]] && REL_ARG=current || REL_ARG=repo; fi
+  use_release "$REL_ARG"
   [[ "$slug" =~ ^[a-z][a-z0-9-]{1,30}$ ]] || die "slug inválido (minúsculas, dígitos y guiones, 2-31 caracteres)"
   local name="" email="" host="" plan="standard" maxu=10 until=""
   while [[ $# -gt 0 ]]; do case "$1" in
@@ -113,12 +190,12 @@ ENV
 
   echo "==> Semilla: ajustes es_ES/COP, roles, equipos, usuario API"
   local api_key
-  api_key="$(python3 bin/seed_tenant.py "http://127.0.0.1:$web_port" admin "$admin_pass" "$email" | jq -r .api_key)"
+  api_key="$(python3 "$SRC/bin/seed_tenant.py" "http://127.0.0.1:$web_port" admin "$admin_pass" "$email" | jq -r .api_key)"
   [[ -n "$api_key" && "$api_key" != null ]] || die "falló la semilla"
 
   local lic="NULL"; [[ -z "$until" ]] || lic="'$until'"
-  sql "INSERT INTO tenants (slug,name,db_name,web_port,ws_port,host,plan,max_users,license_until,espo_api_key,hub_token)
-       VALUES ('$slug','$name','$db_name',$web_port,$ws_port,'$host','$plan',$maxu,$lic,'$api_key','$hub_token')"
+  sql "INSERT INTO tenants (slug,name,db_name,web_port,ws_port,host,plan,max_users,license_until,espo_api_key,hub_token,kind,release_id)
+       VALUES ('$slug','$name','$db_name',$web_port,$ws_port,'$host','$plan',$maxu,$lic,'$api_key','$hub_token','client',$([[ -n "$RELEASE_ID" ]] && echo "'$RELEASE_ID'" || echo NULL))"
 
   cat <<OUT
 
@@ -126,7 +203,7 @@ Tenant '$slug' listo.
   URL:        https://$host   (local: http://127.0.0.1:$web_port)
   Admin:      admin / $admin_pass   (guarda esta contraseña; no se vuelve a mostrar)
   Webhooks:   https://$host/hub/facebook?token=$hub_token | /hub/evolution | /hub/web
-  Siguiente:  bin/crmhub vhost:install $slug --env dev
+  Siguiente:  bin/crmhub vhost:install $slug --env client
 OUT
 }
 
@@ -138,11 +215,14 @@ cmd_tenant_list() {
 cmd_tenant_status() { load_env; sql "UPDATE tenants SET status='$2' WHERE slug='$1'"; echo "$1 -> $2"; }
 
 cmd_tenant_upgrade() {
-  load_env; [[ -d "tenants/${1:?slug}" ]] || die "tenant inexistente"
+  load_env; local slug="${1:?slug}"; shift || true; parse_release "$@"; use_release "${REL_ARG:-repo}"
+  set -- "$slug"
+  [[ -d "tenants/${1:?slug}" ]] || die "tenant inexistente"
   render_compose "$1"
   docker compose -f "tenants/$1/docker-compose.yml" pull
   docker compose -f "tenants/$1/docker-compose.yml" up -d
   install_custom "$1"
+  [[ -z "$RELEASE_ID" ]] || sql "UPDATE tenants SET release_id='$RELEASE_ID' WHERE slug='$1'"
   notify_update "$1"
 }
 
@@ -154,9 +234,10 @@ notify_update() {
 }
 
 cmd_tenant_ui() {
-  load_env; local slug="${1:?slug}"; [[ -d "tenants/$slug" ]] || die "tenant inexistente"
+  load_env; local slug="${1:?slug}"; shift || true; parse_release "$@"; use_release "${REL_ARG:-repo}"
+  [[ -d "tenants/$slug" ]] || die "tenant inexistente"
   set -a; . "tenants/$slug/.env"; set +a
-  python3 bin/ui_settings.py "http://127.0.0.1:$WEB_PORT" admin "$ADMIN_PASSWORD"
+  python3 "$SRC/bin/ui_settings.py" "http://127.0.0.1:$WEB_PORT" admin "$ADMIN_PASSWORD"
 }
 
 cmd_tenant_delete() {
@@ -179,19 +260,22 @@ cmd_vhost_render() { # slug [label] [server_name]
 
 cmd_vhost_install() {
   load_env; local slug="${1:?slug}"; shift
-  [[ "${1:-}" == "--env" ]] || die "uso: vhost:install <slug> --env dev|prod"
-  local name
-  case "${2:-}" in dev) name="$DEV_HOST";; prod) name="$PROD_HOST";; *) die "--env debe ser dev o prod";; esac
-  local file="/etc/apache2/sites-available/crmhub-${2}.conf"
+  [[ "${1:-}" == "--env" ]] || die "uso: vhost:install <slug> --env dev|prod|client"
+  local name label="${2:-}" fname="${2:-}"
+  case "${2:-}" in
+    dev) name="$DEV_HOST";; prod) name="$PROD_HOST";;
+    client) name="$(sql "SELECT host FROM tenants WHERE slug='$slug'")"; [[ -n "$name" ]] || die "tenant inexistente"; label="$slug"; fname="$slug";;
+    *) die "--env debe ser dev, prod o client";; esac
+  local file="/etc/apache2/sites-available/crmhub-${fname}.conf"
   [[ ! -e "$file" ]] || die "$file ya existe; revísalo antes de sobrescribir"
-  cmd_vhost_render "$slug" "$2" "$name" > "$file"
+  cmd_vhost_render "$slug" "$label" "$name" > "$file"
   sed -i "s|^\(\s*ServerName\).*|\1 $name|" "$file"
   # el tenant debe usar ese host como SITE_URL / WS_URL
   sql "UPDATE tenants SET host='$name' WHERE slug='$slug'"
   sed -i -e "s|^SITE_URL=.*|SITE_URL=https://$name|" -e "s|^WS_URL=.*|WS_URL=wss://$name/ws|" "tenants/$slug/.env"
   render_compose "$slug"; docker compose -f "tenants/$slug/docker-compose.yml" up -d
   a2enmod proxy proxy_http proxy_wstunnel rewrite headers >/dev/null
-  a2ensite "crmhub-$2" >/dev/null
+  a2ensite "crmhub-$fname" >/dev/null
   apache2ctl configtest && systemctl reload apache2
   cat <<OUT
 Vhost activo en HTTP. Emite el certificado SOLO para este host:
@@ -205,8 +289,13 @@ case "${1:-}" in
   tenant:list) cmd_tenant_list;;
   tenant:suspend) cmd_tenant_status "${2:?slug}" suspended;;
   tenant:resume) cmd_tenant_status "${2:?slug}" active;;
-  tenant:upgrade) cmd_tenant_upgrade "${2:-}";;
-  tenant:ui) cmd_tenant_ui "${2:-}";;
+  tenant:upgrade) shift; cmd_tenant_upgrade "$@";;
+  tenant:ui) shift; cmd_tenant_ui "$@";;
+  release:publish) shift; cmd_release_publish "$@";;
+  release:list) cmd_release_list;;
+  control:install) cmd_control_install;;
+  control:password) shift; cmd_control_password "$@";;
+  release:current) load_env; release_current;;
   tenant:delete) shift; cmd_tenant_delete "$@";;
   vhost:render) shift; cmd_vhost_render "$@";;
   vhost:install) shift; cmd_vhost_install "$@";;

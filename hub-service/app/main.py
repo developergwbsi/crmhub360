@@ -435,6 +435,22 @@ async def twilio_test(tenant: dict = Depends(tenant_auth)):
         raise HTTPException(422, str(e))
 
 
+
+class SupportExchangeReq(BaseModel):
+    code: str
+
+
+@app.post("/v1/support/exchange")
+def support_exchange(req: SupportExchangeReq, tenant: dict = Depends(tenant_auth)):
+    """Canje de un código de acceso de soporte (un solo uso, 90 s) por las credenciales del usuario de solo lectura."""
+    code = (req.code or "")[:80]
+    with db.pool.connection() as c:
+        row = c.execute("DELETE FROM support_codes WHERE code = %s AND slug = %s AND expires_at > now() RETURNING user_name, password", (code, tenant["slug"])).fetchone()
+    if not row:
+        raise HTTPException(404, "Código inválido o vencido")
+    return {"userName": row["user_name"], "password": row["password"]}
+
+
 @app.post("/v1/voice/call")
 async def voice_call(req: CallReq, tenant: dict = Depends(tenant_auth)):
     job = db.log_job(tenant["slug"], "voice_call", req.leadId)

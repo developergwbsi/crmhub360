@@ -58,3 +58,24 @@ services:
       GUPSHUP_BASE: ${GUPSHUP_BASE:-https://api.gupshup.io}
       TWILIO_BASE: ${TWILIO_BASE:-https://api.twilio.com}
       ALLOW_LOOPBACK_URLS: ${ALLOW_LOOPBACK_URLS:-0}
+
+  # Centro de control: crear/vigilar empresas, restablecer claves y entrar en modo lectura.
+  # Solo escucha en 127.0.0.1; Apache lo publica con SSL. Los trabajos privilegiados los ejecuta bin/control-worker.
+  control:
+    build: ./control-service
+    container_name: crmhub-control
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./tenants:/tenants
+    environment:
+      DATABASE_URL: postgresql://${PG_ADMIN_USER}:${PG_ADMIN_PASSWORD}@127.0.0.1:${PG_HOST_PORT}/${PG_MASTER_DB}
+      CONTROL_USER: ${CONTROL_USER:-superadmin}
+      CONTROL_PASSWORD_HASH: ${CONTROL_PASSWORD_HASH:-}
+      CONTROL_SESSION_SECRET: ${CONTROL_SESSION_SECRET:-}
+      BASE_DOMAIN: ${BASE_DOMAIN}
+      CONTROL_BIND_HOST: 127.0.0.1
+      CONTROL_PORT: ${CONTROL_PORT:-8195}

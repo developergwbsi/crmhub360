@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""Crm Hub 360 - ejecutor de trabajos privilegiados del Centro de control.
+Lee la cola `control_jobs` (PostgreSQL maestro) y ejecuta SOLO operaciones de una lista cerrada, con parámetros validados y sin shell.
+Corre como servicio systemd en el servidor (necesita docker, apache y certbot)."""
+import json, os, re, subprocess, sys, time
+from datetime import datetime
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(ROOT)
+
+
+def load_env():
+    out = subprocess.check_output(["bash", "-c", 'set -a; . ./.env; printf "%s\\0" "$PG_ADMIN_USER" "$PG_MASTER_DB" "$BASE_DOMAIN" "$CERTBOT_EMAIL"'])
+    u, db, base, email = out.decode().split("\0")[:4]
+    return {"user": u, "db": db, "base": base, "email": email}
+
+
+ENV = load_env()
+
+
+def psql(sql, **vars_):
+    """SQL por stdin con variables psql (:'nombre') para que los valores se escapen solos."""
+    cmd = ["docker", "exec", "-i", "crmhub-postgres", "psql", "-U", ENV["user"], "-d", ENV["db"], "-v", "ON_ERROR_STOP=1", "-qtA", "-F", "\t"]
+    for k, v in vars_.items():
+        cmd += ["-v", f"{k}={v}"]
+    r = subprocess.run(cmd, input=sql, capture_output=True, text=True, timeout=60)
+    if r.returncode:
+        raise RuntimeError(r.stderr.strip()[:400])
+    return r.stdout.strip()
+
+
+def append_log(job_id, text):
+    if text:
+        psql("UPDATE control_jobs SET log = log || :'t' WHERE id = :id", t=text, id=job_id)
+
+
+def run(job_id, argv, env_extra=None, mask=None):
+    """Ejecuta un comando (sin shell) volcando su salida al log del trabajo. Devuelve (código, salida completa)."""
+    env = dict(os.environ, **(env_extra or {}))
+    append_log(job_id, f"$ {' '.join(a if ' ' not in a else repr(a) for a in argv)}\n")
+    p = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env, cwd=ROOT)
+    buf, full, last = [], [], time.time()
+    for line in p.stdout:
+        full.append(line)
+        buf.append(re.sub(mask, "••••••••", line) if mask else line)
+        if time.time() - last > 1.5:
+            append_log(job_id, "".join(buf)); buf, last = [], time.time()
+    p.wait()
+    append_log(job_id, "".join(buf))
+    return p.returncode, "".join(full)
+
+
+SLUG = re.compile(r"^[a-z][a-z0-9-]{1,30}$")
+EMAIL = re.compile(r"^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,120}\.[A-Za-z]{2,}$")
+NAME = re.compile(r"^[^'\"\;`$<>\n\r]{2,80}$")
+PLANS = {"standard", "pro", "enterprise", "trial"}
+DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def need(cond, msg):
+    if not cond:
+        raise ValueError(msg)
+
+
+def tenant_row(slug):
+    row = psql("SELECT kind FROM tenants WHERE slug = :'s'", s=slug)
+    return row or None
+
+
+def job_create(jid, p):
+    slug, name, email, host = p.get("slug", ""), p.get("name", ""), p.get("email", ""), p.get("host", "")
+    plan, maxu, lic = p.get("plan", "standard"), int(p.get("max_users", 10)), p.get("license_until") or ""
+    need(SLUG.match(slug) and slug not in ("dev", "prod", "control", "admin", "www"), "slug inválido")
+    need(NAME.match(name), "nombre inválido")
+    need(EMAIL.match(email), "correo inválido")
+    need(re.match(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$", host) and host.endswith("." + ENV["base"]), f"el dominio debe terminar en .{ENV['base']}")
+    need(plan in PLANS, "plan inválido")
+    need(1 <= maxu <= 500, "máximo de usuarios inválido")
+    need(not lic or DATE.match(lic), "fecha de licencia inválida")
+    need(tenant_row(slug) is None, f"la empresa '{slug}' ya existe")
+    need(not psql("SELECT 1 FROM tenants WHERE host = :'h'", h=host), "ese dominio ya está en uso")
+    argv = ["bin/crmhub", "tenant:create", slug, "--name", name, "--admin-email", email, "--host", host, "--plan", plan, "--max-users", str(maxu), "--release", "current"]
+    if lic:
+        argv += ["--license-until", lic]
+    code, _ = run(jid, argv, mask=r"(?<=Admin:\s{6}admin / )\S+")
+    need(code == 0, "falló la creación de la empresa")
+    code, _ = run(jid, ["bin/crmhub", "vhost:install", slug, "--env", "client"])
+    need(code == 0, "falló la instalación del sitio en Apache")
+    ssl = False
+    code, _ = run(jid, ["certbot", "--apache", "-d", host, "--non-interactive", "--agree-tos", "-m", ENV["email"], "--redirect"])
+    if code == 0:
+        ssl = True
+    else:
+        append_log(jid, "AVISO: no se pudo emitir el certificado SSL (revisa que el DNS de " + host + " apunte a este servidor). La empresa quedó creada en HTTP.\n")
+    code, _ = run(jid, ["bin/crmhub", "tenant:ui", slug, "--release", "current"])
+    need(code == 0, "falló la aplicación del tema y menús")
+    return {"slug": slug, "url": f"{'https' if ssl else 'http'}://{host}", "ssl": ssl}
+
+
+def job_upgrade(jid, p):
+    slug = p.get("slug", "")
+    need(SLUG.match(slug), "slug inválido")
+    need(tenant_row(slug) == "client", "solo se actualizan empresas creadas desde el Centro de control")
+    code, _ = run(jid, ["bin/crmhub", "tenant:upgrade", slug, "--release", "current"])
+    need(code == 0, "falló la actualización")
+    code, _ = run(jid, ["bin/crmhub", "tenant:ui", slug, "--release", "current"])
+    need(code == 0, "falló la aplicación del tema y menús")
+    return {"slug": slug}
+
+
+def job_release(jid, p):
+    note = (p.get("note") or "").strip()[:120]
+    need("'" not in note and "\n" not in note, "nota inválida")
+    code, out = run(jid, ["bin/crmhub", "release:publish", "--note", note])
+    need(code == 0, "falló la publicación de la base")
+    m = re.search(r"publicada: (\S+)", out)
+    return {"release": m.group(1) if m else None}
+
+
+def job_power(jid, p, action):
+    slug = p.get("slug", "")
+    need(SLUG.match(slug), "slug inválido")
+    need(tenant_row(slug) == "client", "solo se suspenden empresas creadas desde el Centro de control")
+    code, _ = run(jid, ["docker", "compose", "-f", f"tenants/{slug}/docker-compose.yml", "stop" if action == "suspend" else "start"])
+    need(code == 0, "falló el cambio de estado de los contenedores")
+    run(jid, ["bin/crmhub", "tenant:suspend" if action == "suspend" else "tenant:resume", slug])
+    return {"slug": slug, "status": "suspended" if action == "suspend" else "active"}
+
+
+HANDLERS = {"create": job_create, "upgrade": job_upgrade, "release": job_release,
+            "suspend": lambda j, p: job_power(j, p, "suspend"), "resume": lambda j, p: job_power(j, p, "resume")}
+
+
+def claim():
+    row = psql("""UPDATE control_jobs SET status='running', started_at=now()
+                  WHERE id = (SELECT id FROM control_jobs WHERE status='queued' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED)
+                  RETURNING id, kind, params::text""")
+    if not row:
+        return None
+    jid, kind, params = row.split("\t", 2)
+    return int(jid), kind, json.loads(params)
+
+
+def main():
+    print("control-worker listo", flush=True)
+    psql("UPDATE control_jobs SET status='error', finished_at=now(), log = log || E'\\nInterrumpido por reinicio del ejecutor.\\n' WHERE status='running'")
+    while True:
+        try:
+            job = claim()
+        except Exception as e:  # BD no disponible momentáneamente
+            print("error de cola:", e, flush=True); time.sleep(5); continue
+        if not job:
+            time.sleep(2); continue
+        jid, kind, params = job
+        print(f"[{datetime.now():%H:%M:%S}] trabajo {jid} {kind}", flush=True)
+        try:
+            h = HANDLERS.get(kind)
+            need(h, f"tipo de trabajo desconocido: {kind}")
+            result = h(jid, params)
+            psql("UPDATE control_jobs SET status='done', finished_at=now(), result=:'r'::jsonb WHERE id=:id", r=json.dumps(result), id=jid)
+        except Exception as e:
+            append_log(jid, f"\nERROR: {e}\n")
+            psql("UPDATE control_jobs SET status='error', finished_at=now() WHERE id=:id", id=jid)
+
+
+if __name__ == "__main__":
+    main()
