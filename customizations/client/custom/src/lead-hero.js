@@ -1,0 +1,54 @@
+// Encabezado visual del lead (avatar, estado, contacto y cifras clave). Lo usan la vista completa y el panel lateral.
+define('custom:lead-hero', [], function () {
+    const COLORS = ['#4f63e8', '#8b5cf6', '#0ea5e9', '#2fa36b', '#f59e0b', '#ef5b5b', '#14b8a6', '#d4729b'];
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    const money = n => (n === null || n === undefined || n === '') ? '—' : new Intl.NumberFormat('es-CO', {style: 'currency', currency: 'COP', maximumFractionDigits: 0}).format(n);
+    const QUAL = {'Califica': 'ok', 'No califica': 'bad', 'Revisión Manual': 'warn'};
+
+    function html(view) {
+        const a = view.model.attributes, lang = view.getLanguage();
+        const first = (a.firstName || '').trim(), last = (a.lastName || '').trim();
+        const initials = ((first[0] || '') + (last[0] || (first ? '' : (a.name || '?')[0]))).toUpperCase() || '?';
+        let h = 0;
+        String(view.model.id || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; });
+        const chips = [];
+        if (a.status) { chips.push(`<span class="ch-chip ch-chip-main">${esc(lang.translateOption(a.status, 'status', 'Lead'))}</span>`); }
+        if (a.qualificationStatus) { chips.push(`<span class="ch-chip ch-chip-${QUAL[a.qualificationStatus] || 'info'}">${esc(lang.translateOption(a.qualificationStatus, 'qualificationStatus', 'Lead'))}</span>`); }
+        if (a.source) { chips.push(`<span class="ch-chip">${esc(lang.translateOption(a.source, 'source', 'Lead'))}</span>`); }
+        if (a.doNotContact) { chips.push('<span class="ch-chip ch-chip-bad"><span class="fas fa-ban"></span> No contactar</span>'); }
+        const meta = [];
+        if (a.phoneNumber) { meta.push(`<span><span class="fas fa-phone"></span>${esc(a.phoneNumber)}</span>`); }
+        if (a.emailAddress) { meta.push(`<span><span class="fas fa-envelope"></span>${esc(a.emailAddress)}</span>`); }
+        if (a.assignedUserName) { meta.push(`<span><span class="fas fa-user-tie"></span>${esc(a.assignedUserName)}</span>`); }
+        if (a.suggestedService) { meta.push(`<span><span class="fas fa-tag"></span>${esc(a.suggestedService)}</span>`); }
+        const kpi = (label, value) => `<div class="ch-lh-kpi"><span>${label}</span><b>${value}</b></div>`;
+        const kpis = (a.totalDebt || a.overdueDebt || a.creditScore || a.monthlyIncome)
+            ? kpi('Deuda total', money(a.totalDebt)) + kpi('En mora', money(a.overdueDebt)) + kpi('Ingresos', money(a.monthlyIncome)) + kpi('Puntaje', a.creditScore != null ? esc(a.creditScore) : '—')
+            : '';
+        const avatar = `<span class="ch-avatar ch-avatar-lg" style="background:${COLORS[h % COLORS.length]}"><span class="ch-initials">${esc(initials)}</span>` +
+            (a.avatarUrl ? `<img src="${esc(a.avatarUrl)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : '') + '</span>';
+        return `${avatar}<div class="ch-lh-main"><div class="ch-lh-name">${esc(a.name || '')}</div><div class="ch-lh-chips">${chips.join('')}</div>` +
+            `<div class="ch-lh-meta">${meta.join('')}</div></div>${kpis ? `<div class="ch-lh-kpis">${kpis}</div>` : ''}`;
+    }
+
+    // Inserta (o refresca) el encabezado al inicio del registro y lo mantiene al día cuando el modelo cambia.
+    function mount(view) {
+        const paint = () => {
+            if (!view.model.get('name') && !view.model.id) { return; }
+            let el = view.el.querySelector(':scope > .ch-lead-hero');
+            if (!el) {
+                el = document.createElement('div');
+                el.className = 'ch-lead-hero';
+                view.el.insertBefore(el, view.el.firstChild);
+            }
+            el.innerHTML = html(view);
+        };
+        paint();
+        if (!view._chHero) {
+            view._chHero = true;
+            view.listenTo(view.model, 'sync change:status change:qualificationStatus change:assignedUserName change:phoneNumber', paint);
+        }
+    }
+
+    return {html, mount};
+});

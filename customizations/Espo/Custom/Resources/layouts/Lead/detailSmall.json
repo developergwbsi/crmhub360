@@ -1,0 +1,91 @@
+[
+    {
+        "label": "Contacto",
+        "rows": [
+            [
+                {
+                    "name": "phoneNumber"
+                },
+                {
+                    "name": "emailAddress"
+                }
+            ],
+            [
+                {
+                    "name": "preferredChannel"
+                },
+                {
+                    "name": "telegramUsername"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Gestión",
+        "rows": [
+            [
+                {
+                    "name": "status"
+                },
+                {
+                    "name": "assignedUser"
+                }
+            ],
+            [
+                {
+                    "name": "source"
+                },
+                {
+                    "name": "campaign"
+                }
+            ],
+            [
+                {
+                    "name": "qualificationStatus"
+                },
+                {
+                    "name": "suggestedService"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Crédito",
+        "rows": [
+            [
+                {
+                    "name": "totalDebt"
+                },
+                {
+                    "name": "overdueDebt"
+                }
+            ],
+            [
+                {
+                    "name": "creditScore"
+                },
+                {
+                    "name": "creditorCount"
+                }
+            ],
+            [
+                {
+                    "name": "monthlyIncome"
+                },
+                {
+                    "name": "maxDaysOverdue"
+                }
+            ]
+        ]
+    },
+    {
+        "label": "Notas",
+        "rows": [
+            [
+                {
+                    "name": "description"
+                }
+            ]
+        ]
+    }
+]

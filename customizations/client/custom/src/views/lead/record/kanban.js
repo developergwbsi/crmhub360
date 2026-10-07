@@ -8,6 +8,31 @@ define('custom:views/lead/record/kanban', ['views/record/kanban'], function (Dep
         afterRender() {
             super.afterRender();
             this.setupColumnSearch();
+            this.setupCardOpen();
+        }
+
+        // Al pulsar una tarjeta se abre la ficha en un panel lateral (el tablero sigue visible); «Abrir completo» va a pantalla completa.
+        setupCardOpen() {
+            if (this._chOpenBound) { return; }
+            this._chOpenBound = true;
+            let down = null;
+            this.el.addEventListener('mousedown', e => { down = {x: e.clientX, y: e.clientY}; }, true);
+            this.el.addEventListener('click', e => {
+                const t = e.target;
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) { return; }
+                if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) { return; } // fue un arrastre
+                if (t.closest('.item-menu-container, .ch-col-search, input, select, textarea, button, a[href^="tel:"], a[href^="mailto:"], .dropdown-menu')) { return; }
+                const item = t.closest('.group-column-list .item');
+                if (!item || !item.dataset.id) { return; }
+                e.preventDefault(); e.stopPropagation();
+                this.openDrawer(item.dataset.id);
+            }, true);
+        }
+
+        openDrawer(id) {
+            if (this.hasView('drawer')) { this.getView('drawer').close(); this.clearView('drawer'); }
+            const model = this.collection.get(id);
+            this.createView('drawer', 'custom:views/modals/lead-drawer', {scope: 'Lead', entityType: 'Lead', id, model}, v => v.render());
         }
 
         // Un buscador por estado: filtra las tarjetas ya cargadas de esa columna (nombre, teléfono, servicio, asesor…).

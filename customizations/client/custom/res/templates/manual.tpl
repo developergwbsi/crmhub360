@@ -67,6 +67,7 @@
 <div class="panel panel-default" id="ch-m-pipeline" data-roles="comercial director gerente">
   <div class="panel-heading"><h4 class="panel-title">3. Tablero Kanban</h4></div>
   <div class="panel-body">
+<div class="ch-tip"><b>Ficha rápida:</b> al pulsar una tarjeta se abre la ficha del lead en un <b>panel lateral</b> (el tablero sigue visible para pasar a otro lead). Desde ahí puedes llamar, escribir por WhatsApp, SMS o Telegram, editar, o pulsar <b>Abrir completo</b> para ver toda la información en pantalla completa.</div>
 <p>Al entrar a <b>Leads</b> verás el tablero Kanban: cada columna es un estado. Con los iconos de arriba a la derecha alternas entre el tablero y la lista.</p>
 <ul><li><b>Arrastra</b> una tarjeta a otra columna para cambiar su estado.</li><li>Cada tarjeta muestra el avatar (foto de WhatsApp si existe, o las iniciales), el resultado del filtro, el servicio sugerido, la deuda, el teléfono, el asesor y la antigüedad.</li><li>Cada columna tiene su propio <b>buscador</b>: escribe un nombre, teléfono, servicio o asesor y se filtran solo las tarjetas de ese estado (aparece <i>n/total</i>). Si hay más tarjetas sin cargar, usa «Mostrar más» primero.</li>
 <li>Usa los filtros de arriba para ver solo los tuyos o los de tu equipo.</li><li>Vuelve a la lista con el icono de lista.</li></ul>

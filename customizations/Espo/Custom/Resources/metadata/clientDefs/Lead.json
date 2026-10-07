@@ -73,7 +73,9 @@
     "kanbanViewMode": true,
     "listDefaultViewMode": "kanban",
     "recordViews": {
-        "kanban": "custom:views/lead/record/kanban"
+        "kanban": "custom:views/lead/record/kanban",
+        "detail": "custom:views/lead/record/detail",
+        "detailSmall": "custom:views/lead/record/detail-small"
     },
     "massActionList": [
         "reassign"
