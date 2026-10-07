@@ -25,6 +25,39 @@ define('custom:views/modals/lead-drawer', ['views/modals/detail', 'custom:handle
             });
         }
 
+        // Editar dentro del mismo panel (sin abrir otra ventana encima): la ficha pasa a modo edición con Guardar y Cancelar.
+        actionEdit() {
+            const rv = this.getRecordView();
+            if (!rv || this.editing) { return; }
+            this.editing = true;
+            this._chBtns = this.buttonList.map(b => b.name);
+            this._chBtns.forEach(n => this.hideButton(n));
+            this.addButton({name: 'saveEdit', label: 'Guardar', style: 'primary'});
+            this.addButton({name: 'cancelEdit', label: 'Cancelar'});
+            rv.setEditMode();
+            this.listenToOnce(rv, 'after:save', () => this.leaveEdit());
+        }
+
+        actionSaveEdit() {
+            const rv = this.getRecordView();
+            Promise.resolve(rv.save()).then(() => this.leaveEdit()).catch(() => { /* validación o sin cambios: se queda editando */ });
+        }
+
+        actionCancelEdit() {
+            const rv = this.getRecordView();
+            rv.cancelEdit();
+            this.leaveEdit();
+        }
+
+        leaveEdit() {
+            if (!this.editing) { return; }
+            this.editing = false;
+            this.removeButton('saveEdit'); this.removeButton('cancelEdit');
+            (this._chBtns || []).forEach(n => this.showButton(n));
+            const rv = this.getRecordView();
+            rv && rv.setDetailMode && rv.setDetailMode();
+        }
+
         afterRender() {
             super.afterRender();
             if (!this._chSplit) { this._chSplit = true; Split.open('lead'); }
