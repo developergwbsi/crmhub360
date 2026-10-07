@@ -54,10 +54,10 @@ class LeadTimeline
         return $out;
     }
 
-    public function calls(string $leadId): array
+    public function calls(string $leadId, string $scope = 'Lead'): array
     {
         $out = [];
-        $list = $this->em->getRDBRepository('Call')->where(['parentType' => 'Lead', 'parentId' => $leadId])->order('dateStart', 'DESC')->limit(0, 100)->find();
+        $list = $this->em->getRDBRepository('Call')->where(['parentType' => $scope, 'parentId' => $leadId])->order('dateStart', 'DESC')->limit(0, 100)->find();
         foreach ($list as $c) {
             $out[] = ['id' => $c->getId(), 'at' => $c->get('dateStart') ?: $c->get('createdAt'), 'dir' => strtolower((string) $c->get('direction')) === 'inbound' ? 'in' : 'out',
                 'status' => $c->get('status'), 'duration' => (int) $c->get('duration'), 'who' => $this->userName($c->get('assignedUserId')),
@@ -66,10 +66,10 @@ class LeadTimeline
         return $out;
     }
 
-    public function emails(string $leadId): array
+    public function emails(string $leadId, string $scope = 'Lead'): array
     {
         $out = [];
-        $list = $this->em->getRDBRepository('Email')->where(['parentType' => 'Lead', 'parentId' => $leadId])->order('createdAt', 'DESC')->limit(0, 100)->find();
+        $list = $this->em->getRDBRepository('Email')->where(['parentType' => $scope, 'parentId' => $leadId])->order('createdAt', 'DESC')->limit(0, 100)->find();
         foreach ($list as $e) {
             $body = (string) ($e->get('bodyPlain') ?: strip_tags((string) $e->get('body')));
             $sent = in_array($e->get('status'), ['Sent', 'Sending'], true);

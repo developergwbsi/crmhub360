@@ -83,7 +83,8 @@
     "recordViews": {
         "kanban": "custom:views/lead/record/kanban",
         "detail": "custom:views/lead/record/detail",
-        "detailSmall": "custom:views/lead/record/detail-small"
+        "detailSmall": "custom:views/lead/record/detail-small",
+        "list": "custom:views/record/list-drawer"
     },
     "massActionList": [
         "reassign"

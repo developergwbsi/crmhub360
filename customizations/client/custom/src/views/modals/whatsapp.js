@@ -15,6 +15,9 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
             'keydown [name="text"]': function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); this.send(); } },
             'click [data-action="send"]': function () { this.send(); },
             'click [data-action="aiDraft"]': function () { this.aiDraft(); },
+            'click [data-action="copyLink"]': function () {
+                (navigator.clipboard ? navigator.clipboard.writeText(this.inviteLink) : Promise.reject()).then(() => Espo.Ui.success('Enlace copiado')).catch(() => { const i = this.el.querySelector('.ch-chat-invite input'); i && i.select(); Espo.Ui.warning('Cópialo manualmente (Ctrl+C)'); });
+            },
         }
 
         setup() {
@@ -30,15 +33,10 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
         afterRender() {
             if (!this._chSplit) { this._chSplit = true; Split.open('ch'); }
             const root = this.el.querySelector('.ch-chat');
-            root.innerHTML = '<div class="ch-chat-thread" tabindex="0" aria-live="polite"><div class="ch-chat-empty">Cargando conversación…</div></div>' +
-                '<div class="ch-chat-composer"><div class="ch-chat-err" hidden></div>' +
-                '<div class="ch-chat-row"><textarea name="text" rows="1" maxlength="4000" placeholder="Escribe un mensaje…"></textarea>' +
-                '<button type="button" class="ch-chat-send" data-action="send" title="Enviar" style="background:' + this.meta.color + '"><span class="fas fa-paper-plane"></span></button></div>' +
-                '<div class="ch-chat-tools"><button type="button" class="btn btn-default btn-xs" data-action="aiDraft"><span class="fas fa-wand-magic-sparkles"></span> Sugerir con IA</button>' +
-                '<span class="ch-chat-counter"></span></div></div>';
+            root.innerHTML = '<div class="ch-chat-thread" tabindex="0" aria-live="polite"><div class="ch-chat-empty">Cargando conversación…</div></div><div class="ch-chat-foot"></div>';
             this.load(true);
             this.timer = setInterval(() => this.load(false), 6000);
-            setTimeout(() => { const t = this.el.querySelector('[name="text"]'); t && t.focus(); }, 150);
+            Espo.Ajax.getRequest('CrmHub/channels').catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } return {}; }).then(ch => { this.channels = ch || {}; this.paintFoot(); });
         }
 
         onRemove() { clearInterval(this.timer); if (this._chSplit) { this._chSplit = false; Split.close('ch'); } }
@@ -66,6 +64,40 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
             if (near || this.justSent) { th.scrollTop = th.scrollHeight; this.justSent = false; }
         }
 
+        // Pie del panel: caja para escribir, aviso de canal sin configurar o invitación de Telegram. Nunca un modal aparte.
+        paintFoot() {
+            const foot = this.el.querySelector('.ch-chat-foot');
+            if (!foot) { return; }
+            const key = this.channel, ready = !!this.channels[key];
+            const needInvite = this.channel === 'telegram' && ready && (this.options.mode === 'invite' || !this.options.hasChat);
+            if (!ready) {
+                foot.innerHTML = `<div class="ch-chat-state"><span class="${this.meta.icon}" style="color:${this.meta.color}"></span><b>${this.meta.title} no está configurado</b>` +
+                    (this.channels.admin ? `<p>Conéctalo en Integraciones para poder escribir desde aquí.</p><a class="btn btn-primary btn-sm" href="#CrmHub/integrations">Ir a Integraciones</a>` : '<p>Pídele a tu administrador que lo conecte en Integraciones.</p>') + '</div>';
+                return;
+            }
+            if (needInvite) {
+                foot.innerHTML = '<div class="ch-chat-state"><span class="fab fa-telegram" style="color:#229ed9"></span><b>Este contacto aún no abre el chat con tu bot</b>' +
+                    '<p>Envíale este enlace (por WhatsApp, correo o llamada). Al abrirlo y pulsar <i>Iniciar</i>, la conversación queda aquí.</p>' +
+                    '<div class="ch-chat-invite" data-role="invite">Generando enlace…</div></div>';
+                Espo.Ajax.postRequest('CrmHub/telegram/invite', {leadId: this.options.leadId}).then(r => {
+                    const box = foot.querySelector('[data-role="invite"]'); if (!box) { return; }
+                    box.innerHTML = `<input class="form-control" readonly value="${ChUi.esc(r.link)}"><button type="button" class="btn btn-primary btn-sm" data-action="copyLink">Copiar</button>`;
+                    this.inviteLink = r.link; this.trigger('done');
+                }).catch(xhr => {
+                    const box = foot.querySelector('[data-role="invite"]');
+                    if (box) { box.textContent = (xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || 'No se pudo generar el enlace.'; }
+                    if (xhr) { xhr.errorIsHandled = true; }
+                });
+                return;
+            }
+            foot.innerHTML = '<div class="ch-chat-composer"><div class="ch-chat-err" hidden></div>' +
+                '<div class="ch-chat-row"><textarea name="text" rows="1" maxlength="4000" placeholder="Escribe un mensaje…"></textarea>' +
+                '<button type="button" class="ch-chat-send" data-action="send" title="Enviar" style="background:' + this.meta.color + '"><span class="fas fa-paper-plane"></span></button></div>' +
+                '<div class="ch-chat-tools"><button type="button" class="btn btn-default btn-xs" data-action="aiDraft"><span class="fas fa-wand-magic-sparkles"></span> Sugerir con IA</button>' +
+                '<span class="ch-chat-counter"></span></div></div>';
+            setTimeout(() => { const t = this.el.querySelector('[name="text"]'); t && t.focus(); }, 100);
+        }
+
         autosize() { const t = this.el.querySelector('[name="text"]'); t.style.height = 'auto'; t.style.height = Math.min(140, t.scrollHeight) + 'px'; }
 
         counter() {
@@ -77,7 +109,7 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
             c.textContent = v.length ? `${v.length} caracteres · ${seg} SMS${uni ? ' (caracteres especiales: caben menos)' : ''}` : '';
         }
 
-        error(msg) { const e = this.el.querySelector('.ch-chat-err'); e.hidden = !msg; e.textContent = msg || ''; }
+        error(msg) { const e = this.el.querySelector('.ch-chat-err'); if (!e) { return; } e.hidden = !msg; e.textContent = msg || ''; }
 
         aiDraft() {
             this.error('');

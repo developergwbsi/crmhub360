@@ -11,5 +11,11 @@
             "initFunction": "initReassign",
             "groupIndex": 2
         }
+    },
+    "recordViews": {
+        "list": "custom:views/record/list-drawer",
+        "detail": "custom:views/lead/record/detail",
+        "detailSmall": "custom:views/lead/record/detail-small",
+        "kanban": "custom:views/record/kanban-drawer"
     }
 }

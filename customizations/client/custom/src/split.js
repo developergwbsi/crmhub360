@@ -17,11 +17,21 @@ define('custom:split', [], function () {
         const minimized = document.body.classList.contains('minimized');
         if (total > 0 && !minimized && !minimizedByUs && window.innerWidth < 1900) { sidebarToggle(); minimizedByUs = true; }
         else if (total === 0 && minimizedByUs) { sidebarToggle(); minimizedByUs = false; }
-        [60, 350].forEach(ms => setTimeout(() => window.dispatchEvent(new Event('resize')), ms));
+        // Espo recalcula anchos al «resize» y vuelve a fijar los encabezados con el «scroll»
+        [60, 350, 700].forEach(ms => setTimeout(() => { window.dispatchEvent(new Event('resize')); window.dispatchEvent(new Event('scroll')); }, ms));
     }
 
-    return {
+    const api = {
         open(kind) { open[kind] += 1; apply(); },
         close(kind) { open[kind] = Math.max(0, open[kind] - 1); apply(); },
+        // Si un panel desapareció sin avisar (cambio de pantalla, recarga parcial), el contenido recupera todo su ancho.
+        reconcile() {
+            const lead = document.querySelectorAll('.ch-lead-drawer').length, ch = document.querySelectorAll('.ch-ch-panel').length;
+            if ((open.lead > 0 && !lead) || (open.ch > 0 && !ch) || (document.body.classList.contains('ch-split') && !lead && !ch)) {
+                open.lead = lead ? open.lead : 0; open.ch = ch ? open.ch : 0; apply();
+            }
+        },
     };
+    window.ChSplit = api;
+    return api;
 });

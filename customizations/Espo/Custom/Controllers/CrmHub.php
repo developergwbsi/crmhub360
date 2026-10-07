@@ -439,7 +439,8 @@ class CrmHub
     public function postActionLogCall(Request $request): \stdClass
     {
         $d = $request->getParsedBody();
-        $lead = $this->em->getEntityById('Lead', (string) ($d->leadId ?? ''));
+        $scope = $this->scopeOf($d->entityType ?? null);
+        $lead = $this->em->getEntityById($scope, (string) ($d->leadId ?? ''));
         if (!$lead || !$this->acl->checkEntityEdit($lead)) {
             throw new Forbidden();
         }
@@ -451,20 +452,27 @@ class CrmHub
         $this->em->createEntity('Call', [
             'name' => "Llamada a {$name} — {$result}", 'status' => 'Held', 'direction' => 'Outbound',
             'dateStart' => gmdate('Y-m-d H:i:s', time() - $minutes * 60), 'duration' => $minutes * 60,
-            'parentType' => 'Lead', 'parentId' => $lead->getId(), 'assignedUserId' => $this->user->getId(),
+            'parentType' => $scope, 'parentId' => $lead->getId(), 'assignedUserId' => $this->user->getId(),
             'description' => $note,
         ]);
         $this->em->createEntity('Note', [
-            'type' => 'Post', 'parentType' => 'Lead', 'parentId' => $lead->getId(),
+            'type' => 'Post', 'parentType' => $scope, 'parentId' => $lead->getId(),
             'post' => "[Llamada] {$result}" . ($minutes ? " ({$minutes} min)" : '') . ($note !== '' ? ": {$note}" : '') ,
         ]);
         return (object) ['ok' => true];
     }
 
     // ---------- Historial del lead (chat, llamadas, correos, estados) ----------
+    private const RECORD_SCOPES = ['Lead', 'Account', 'Contact', 'Opportunity'];
+
+    private function scopeOf(?string $s): string
+    {
+        return in_array($s, self::RECORD_SCOPES, true) ? $s : 'Lead';
+    }
+
     private function leadFor(Request $request): \Espo\ORM\Entity
     {
-        $lead = $this->em->getEntityById('Lead', (string) $request->getQueryParam('leadId'));
+        $lead = $this->em->getEntityById($this->scopeOf($request->getQueryParam('scope')), (string) $request->getQueryParam('leadId'));
         if (!$lead || !$this->acl->checkEntityRead($lead)) {
             throw new Forbidden();
         }
@@ -476,11 +484,12 @@ class CrmHub
         $lead = $this->leadFor($request);
         $t = new \Espo\Custom\Services\LeadTimeline($this->em);
         $kind = (string) $request->getQueryParam('kind');
+        $scope = $lead->getEntityType();
         $items = match ($kind) {
-            'calls' => $t->calls($lead->getId()),
-            'emails' => $t->emails($lead->getId()),
-            'status' => $t->statusLog($lead->getId()),
-            default => $t->chat($lead->getId(), (string) $request->getQueryParam('channel')),
+            'calls' => $t->calls($lead->getId(), $scope),
+            'emails' => $t->emails($lead->getId(), $scope),
+            'status' => $scope === 'Lead' ? $t->statusLog($lead->getId()) : [],
+            default => $scope === 'Lead' ? $t->chat($lead->getId(), (string) $request->getQueryParam('channel')) : [],
         };
         return (object) ['items' => $items];
     }
@@ -621,7 +630,8 @@ class CrmHub
     {
         $s = $this->hubAny('GET', '/v1/tenant/settings');
         return (object) ['whatsapp' => !empty($s['wa']['provider']), 'sms' => !empty($s['sms']['provider']), 'voice' => !empty($s['voice']['provider']),
-                         'telegram' => !empty($s['telegram']['tokenSet'])];
+                         'telegram' => !empty($s['telegram']['tokenSet']), 'email' => !empty($this->config->get('smtpServer')),
+                         'admin' => $this->user->isAdmin()];
     }
 
     // ---------- Campañas de mensajes masivos ----------

@@ -604,3 +604,20 @@ body.ch-split .page-header { margin-right: 0; }
 .ch-phone-modal.ch-ch-panel .modal-dialog { width: var(--ch-ch-w, 380px) !important; }
 .ch-drawer .modal-content { border-radius: 18px 0 0 0; }
 .ch-ch-panel .modal-backdrop, .ch-drawer .modal-backdrop { display: none; }
+
+/* ===== Paneles de canal: avisos, invitación, formularios y botones de solo icono ===== */
+.ch-contact-btn { padding: 6px 11px; }
+.ch-contact-btn > span { margin: 0; font-size: 15px; }
+.ch-chat-foot { flex: none; }
+.ch-chat-state { padding: 18px 16px 20px; text-align: center; background: var(--ch-surface); border-top: 1px solid var(--ch-line); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.ch-chat-state > span { font-size: 28px; } .ch-chat-state p { margin: 0; color: var(--ch-muted); font-size: 13.5px; }
+.ch-chat-invite { display: flex; gap: 8px; width: 100%; align-items: center; } .ch-chat-invite input { flex: 1; min-width: 0; }
+.ch-phone-form { width: 100%; margin-top: 16px; padding: 14px; border-radius: 16px; background: rgba(255, 255, 255, .08); text-align: left; }
+.ch-phone-form p { margin: 0 0 8px; font-size: 13px; opacity: .85; } .ch-phone-form label { display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; opacity: .65; margin: 8px 0 3px; }
+.ch-phone-form input, .ch-phone-form select, .ch-phone-form textarea { width: 100%; border: 1px solid rgba(255, 255, 255, .18); border-radius: 10px; padding: 7px 10px; background: rgba(255, 255, 255, .1); color: #fff; font: inherit; outline: 0; }
+.ch-phone-form select option { color: #111; } .ch-phone-form input:focus, .ch-phone-form textarea:focus, .ch-phone-form select:focus { border-color: #8da2ff; }
+.ch-phone-actions { display: flex; gap: 8px; margin-top: 12px; } .ch-phone-err { margin-top: 8px; color: #ff9a9a; font-size: 13px; }
+.ch-mail-compose { border: 1px solid var(--ch-line); border-radius: 14px; background: var(--ch-surface); padding: 12px; margin-bottom: 10px; }
+.ch-mail-compose label { display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ch-muted); margin: 8px 0 3px; }
+.ch-mail-compose input, .ch-mail-compose textarea { width: 100%; border: 1px solid var(--ch-line-strong); border-radius: 10px; padding: 7px 10px; background: var(--ch-soft); color: var(--ch-ink); font: inherit; outline: 0; }
+.ch-mail-actions { display: flex; gap: 8px; margin-top: 10px; }

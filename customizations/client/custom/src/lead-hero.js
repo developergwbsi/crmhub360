@@ -6,25 +6,32 @@ define('custom:lead-hero', [], function () {
     const QUAL = {'Califica': 'ok', 'No califica': 'bad', 'Revisión Manual': 'warn'};
 
     function html(view) {
-        const a = view.model.attributes, lang = view.getLanguage();
+        const a = view.model.attributes, lang = view.getLanguage(), scope = view.model.entityType || 'Lead';
         const first = (a.firstName || '').trim(), last = (a.lastName || '').trim();
         const initials = ((first[0] || '') + (last[0] || (first ? '' : (a.name || '?')[0]))).toUpperCase() || '?';
         let h = 0;
         String(view.model.id || '').split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; });
+        const tr = (field, v) => esc(lang.translateOption(v, field, scope));
         const chips = [];
-        if (a.status) { chips.push(`<span class="ch-chip ch-chip-main">${esc(lang.translateOption(a.status, 'status', 'Lead'))}</span>`); }
-        if (a.qualificationStatus) { chips.push(`<span class="ch-chip ch-chip-${QUAL[a.qualificationStatus] || 'info'}">${esc(lang.translateOption(a.qualificationStatus, 'qualificationStatus', 'Lead'))}</span>`); }
-        if (a.source) { chips.push(`<span class="ch-chip">${esc(lang.translateOption(a.source, 'source', 'Lead'))}</span>`); }
+        const stage = a.status || a.stage;
+        if (stage) { chips.push(`<span class="ch-chip ch-chip-main">${tr(a.status ? 'status' : 'stage', stage)}</span>`); }
+        if (a.qualificationStatus) { chips.push(`<span class="ch-chip ch-chip-${QUAL[a.qualificationStatus] || 'info'}">${tr('qualificationStatus', a.qualificationStatus)}</span>`); }
+        if (a.type) { chips.push(`<span class="ch-chip">${tr('type', a.type)}</span>`); }
+        if (a.source || a.leadSource) { chips.push(`<span class="ch-chip">${tr(a.source ? 'source' : 'leadSource', a.source || a.leadSource)}</span>`); }
         if (a.doNotContact) { chips.push('<span class="ch-chip ch-chip-bad"><span class="fas fa-ban"></span> No contactar</span>'); }
         const meta = [];
         if (a.phoneNumber) { meta.push(`<span><span class="fas fa-phone"></span>${esc(a.phoneNumber)}</span>`); }
         if (a.emailAddress) { meta.push(`<span><span class="fas fa-envelope"></span>${esc(a.emailAddress)}</span>`); }
+        if (a.accountName && scope !== 'Account') { meta.push(`<span><span class="fas fa-building"></span>${esc(a.accountName)}</span>`); }
         if (a.assignedUserName) { meta.push(`<span><span class="fas fa-user-tie"></span>${esc(a.assignedUserName)}</span>`); }
         if (a.suggestedService) { meta.push(`<span><span class="fas fa-tag"></span>${esc(a.suggestedService)}</span>`); }
         const kpi = (label, value) => `<div class="ch-lh-kpi"><span>${label}</span><b>${value}</b></div>`;
-        const kpis = (a.totalDebt || a.overdueDebt || a.creditScore || a.monthlyIncome)
-            ? kpi('Deuda total', money(a.totalDebt)) + kpi('En mora', money(a.overdueDebt)) + kpi('Ingresos', money(a.monthlyIncome)) + kpi('Puntaje', a.creditScore != null ? esc(a.creditScore) : '—')
-            : '';
+        let kpis = '';
+        if (scope === 'Opportunity') {
+            kpis = kpi('Monto', money(a.amount)) + kpi('Cierre', a.closeDate ? esc(a.closeDate) : '—') + kpi('Probabilidad', a.probability != null ? esc(a.probability) + '%' : '—');
+        } else if (a.totalDebt || a.overdueDebt || a.creditScore || a.monthlyIncome) {
+            kpis = kpi('Deuda total', money(a.totalDebt)) + kpi('En mora', money(a.overdueDebt)) + kpi('Ingresos', money(a.monthlyIncome)) + kpi('Puntaje', a.creditScore != null ? esc(a.creditScore) : '—');
+        }
         const avatar = `<span class="ch-avatar ch-avatar-lg" style="background:${COLORS[h % COLORS.length]}"><span class="ch-initials">${esc(initials)}</span>` +
             (a.avatarUrl ? `<img src="${esc(a.avatarUrl)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : '') + '</span>';
         return `${avatar}<div class="ch-lh-main"><div class="ch-lh-name">${esc(a.name || '')}</div><div class="ch-lh-chips">${chips.join('')}</div>` +
@@ -52,7 +59,7 @@ define('custom:lead-hero', [], function () {
         paint();
         if (!view._chHero) {
             view._chHero = true;
-            view.listenTo(view.model, 'sync change:status change:qualificationStatus change:assignedUserName change:phoneNumber', paint);
+            view.listenTo(view.model, 'sync change:status change:stage change:qualificationStatus change:assignedUserName change:phoneNumber', paint);
         }
     }
 

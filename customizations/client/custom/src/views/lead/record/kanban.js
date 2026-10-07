@@ -1,4 +1,4 @@
-define('custom:views/lead/record/kanban', ['views/record/kanban'], function (Dep) {
+define('custom:views/lead/record/kanban', ['custom:views/record/kanban-drawer'], function (Dep) {
     const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
     return class extends Dep {
@@ -8,38 +8,6 @@ define('custom:views/lead/record/kanban', ['views/record/kanban'], function (Dep
         afterRender() {
             super.afterRender();
             this.setupColumnSearch();
-            this.setupCardOpen();
-        }
-
-        // Al pulsar una tarjeta se abre la ficha en un panel lateral (el tablero sigue visible); «Abrir completo» va a pantalla completa.
-        setupCardOpen() {
-            if (this._chOpenBound) { return; }
-            this._chOpenBound = true;
-            const SKIP = '.item-menu-container, .ch-col-search, input, select, textarea, button, a[href^="tel:"], a[href^="mailto:"], .dropdown-menu';
-            let down = null;
-            this.el.addEventListener('mousedown', e => {
-                const it = e.target.closest('.group-column-list .item');
-                down = (it && !e.target.closest(SKIP) && !e.button && !e.ctrlKey && !e.metaKey && !e.shiftKey) ? {id: it.dataset.id, x: e.clientX, y: e.clientY} : null;
-            }, true);
-            // Se abre al soltar el botón (no con «click»): el arrastre de tarjetas de Espo a veces se come el click aunque solo se mueva un poco el ratón.
-            this.el.addEventListener('mouseup', e => {
-                const d = down; down = null;
-                if (!d || !d.id || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 12) { return; } // fue un arrastre
-                const it = e.target.closest('.group-column-list .item');
-                if (!it || it.dataset.id !== d.id || e.target.closest(SKIP)) { return; }
-                this.openDrawer(d.id);
-            }, true);
-            // el enlace del nombre no debe navegar a pantalla completa
-            this.el.addEventListener('click', e => {
-                if (e.ctrlKey || e.metaKey || e.shiftKey || e.button || e.target.closest(SKIP)) { return; }
-                if (e.target.closest('.group-column-list .item')) { e.preventDefault(); e.stopPropagation(); }
-            }, true);
-        }
-
-        openDrawer(id) {
-            if (this.hasView('drawer')) { this.getView('drawer').close(); this.clearView('drawer'); }
-            const model = this.collection.get(id);
-            this.createView('drawer', 'custom:views/modals/lead-drawer', {scope: 'Lead', entityType: 'Lead', id, model}, v => v.render());
         }
 
         // Un buscador por estado: filtra las tarjetas ya cargadas de esa columna (nombre, teléfono, servicio, asesor…).
