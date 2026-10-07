@@ -582,3 +582,9 @@ body.modal-open:has(.ch-drawer) { overflow: auto !important; padding-right: 0 !i
 .ch-lead-hero { margin-bottom: 0; }
 .detail-button-container, .detail-button-container.stick-sub { position: sticky !important; top: calc(var(--top-bar-height, 52px) + var(--ch-ph-h, 56px) + var(--ch-hero-h, 0px)) !important; left: auto !important; right: auto !important; width: auto !important; z-index: 75; background: var(--ch-bg) !important; padding: 10px 0 8px !important; box-shadow: none !important; margin: 0 !important; }
 .ch-chat-modal .modal-dialog, .ch-phone-modal .modal-dialog, .ch-mail-modal .modal-dialog { height: 100% !important; margin-top: 0 !important; margin-bottom: 0 !important; max-height: none !important; }
+
+/* kanban: contador por columna y «Mostrar más» visible */
+.ch-col-count { font-size: 12px; font-weight: 600; color: var(--ch-muted); white-space: nowrap; }
+td.group-column .show-more > a.btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 8px; margin-top: 6px; border: 1px dashed var(--ch-line-strong); border-radius: 10px; color: var(--ch-primary); font-weight: 600; }
+td.group-column .show-more > a.btn::after { content: "Mostrar más"; }
+td.group-column .show-more > a.btn.hidden { display: none; }

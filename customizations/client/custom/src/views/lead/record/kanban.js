@@ -15,17 +15,24 @@ define('custom:views/lead/record/kanban', ['views/record/kanban'], function (Dep
         setupCardOpen() {
             if (this._chOpenBound) { return; }
             this._chOpenBound = true;
+            const SKIP = '.item-menu-container, .ch-col-search, input, select, textarea, button, a[href^="tel:"], a[href^="mailto:"], .dropdown-menu';
             let down = null;
-            this.el.addEventListener('mousedown', e => { down = {x: e.clientX, y: e.clientY}; }, true);
+            this.el.addEventListener('mousedown', e => {
+                const it = e.target.closest('.group-column-list .item');
+                down = (it && !e.target.closest(SKIP) && !e.button && !e.ctrlKey && !e.metaKey && !e.shiftKey) ? {id: it.dataset.id, x: e.clientX, y: e.clientY} : null;
+            }, true);
+            // Se abre al soltar el botón (no con «click»): el arrastre de tarjetas de Espo a veces se come el click aunque solo se mueva un poco el ratón.
+            this.el.addEventListener('mouseup', e => {
+                const d = down; down = null;
+                if (!d || !d.id || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 12) { return; } // fue un arrastre
+                const it = e.target.closest('.group-column-list .item');
+                if (!it || it.dataset.id !== d.id || e.target.closest(SKIP)) { return; }
+                this.openDrawer(d.id);
+            }, true);
+            // el enlace del nombre no debe navegar a pantalla completa
             this.el.addEventListener('click', e => {
-                const t = e.target;
-                if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) { return; }
-                if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) { return; } // fue un arrastre
-                if (t.closest('.item-menu-container, .ch-col-search, input, select, textarea, button, a[href^="tel:"], a[href^="mailto:"], .dropdown-menu')) { return; }
-                const item = t.closest('.group-column-list .item');
-                if (!item || !item.dataset.id) { return; }
-                e.preventDefault(); e.stopPropagation();
-                this.openDrawer(item.dataset.id);
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.button || e.target.closest(SKIP)) { return; }
+                if (e.target.closest('.group-column-list .item')) { e.preventDefault(); e.stopPropagation(); }
             }, true);
         }
 
@@ -44,7 +51,7 @@ define('custom:views/lead/record/kanban', ['views/record/kanban'], function (Dep
                 const box = document.createElement('div');
                 box.className = 'ch-col-search';
                 box.innerHTML = '<span class="fas fa-magnifying-glass"></span>' +
-                    '<input type="search" placeholder="Buscar en esta columna…" autocomplete="off" spellcheck="false">' +
+                    '<input type="search" placeholder="Buscar…" title="Buscar en esta columna" autocomplete="off" spellcheck="false">' +
                     '<span class="ch-col-count"></span>';
                 list.parentNode.insertBefore(box, list);
                 const input = box.querySelector('input');
@@ -66,7 +73,13 @@ define('custom:views/lead/record/kanban', ['views/record/kanban'], function (Dep
                 shown += ok ? 1 : 0;
             });
             const count = td.querySelector('.ch-col-count');
-            if (count) { count.textContent = q ? `${shown}/${items.length}` : ''; }
+            if (count) {
+                const g = (this.groupDataList || [])[i], total = g && g.collection ? g.collection.total : -1;
+                const more = total > items.length ? total - items.length : 0;
+                count.textContent = q ? `${shown} de ${items.length} cargados` : (total >= 0 ? (more ? `${items.length} de ${total}` : `${total}`) : '');
+                td.classList.toggle('ch-has-more', more > 0);
+                td.dataset.chMore = more || '';
+            }
         }
     };
 });
