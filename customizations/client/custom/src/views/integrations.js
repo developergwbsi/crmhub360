@@ -247,7 +247,7 @@ define('custom:views/integrations', ['view'], function (Dep) {
         }
 
         applyTab() {
-            this.$el.find('.ch-tabbtn').each((i, b) => b.classList.toggle('active', b.dataset.tab === this.tab));
+            this.$el.find('.ch-tabbtn').each((i, b) => { b.classList.toggle('active', b.dataset.tab === this.tab); });
             this.$el.find('.ch-pane').each((i, p) => { p.style.display = p.dataset.pane === this.tab ? '' : 'none'; });
         }
 
