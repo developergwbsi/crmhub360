@@ -73,7 +73,8 @@ body {
     --input-border: hsl(214 20% 85%);
     --input-border-focus: var(--ch-primary);
     --input-border-focus-rgba: hsl(231 70% 52% / .28);
-    --input-height-base: 38px;
+    --input-height-base: 36px;
+    --top-bar-height: 52px;
     --select-item-active-bg: var(--ch-primary);
 
     /* Barra lateral oscura */
@@ -121,3 +122,22 @@ body {
 footer#footer .credit { opacity: .55; font-size: 11.5px; }
 #navbar .navbar .navbar-brand img.logo { padding: 8px 14px; }
 #navbar .tab > a.active, #navbar .tab > a:hover { border-radius: 10px; }
+
+/* Barra superior (layout lateral): clara, alta y con buscador que cabe dentro */
+body[data-navbar=side] #navbar .navbar-right {
+    background-color: #fff;
+    border-bottom: 1px solid var(--ch-line);
+    box-shadow: none;
+    align-items: center;
+}
+body[data-navbar=side] #navbar .navbar-right > li > a,
+body[data-navbar=side] #navbar .navbar-right .global-search-container a.global-search-button { color: var(--ch-muted); }
+body[data-navbar=side] #navbar .navbar-right > li > a:hover,
+body[data-navbar=side] #navbar .navbar-right .global-search-container a.global-search-button:hover { color: var(--ch-primary); }
+body[data-navbar=side] #navbar .navbar-right > li.open > a { background-color: hsl(231 60% 96%); color: var(--ch-primary); }
+body[data-navbar=side] input.global-search-input {
+    height: 36px; min-height: 36px; max-height: 36px; margin: 8px 0 !important;
+    background: hsl(210 22% 96%); color: var(--ch-ink);
+    border: 1px solid var(--ch-line); border-radius: 10px !important;
+}
+body[data-navbar=side] input.global-search-input:focus { background: #fff; border-color: var(--ch-primary); }
