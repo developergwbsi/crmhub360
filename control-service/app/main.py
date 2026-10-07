@@ -575,6 +575,9 @@ def put_mail(req: MailReq, actor: str = Depends(me)):
         raise HTTPException(400, "Correo remitente inválido")
     old = get_setting("mail", {}) or {}
     d = req.model_dump()
+    d["host"] = d["host"].strip()
+    if "gmail" in d["host"] or "google" in d["host"]:   # Google muestra la contraseña de aplicación en bloques con espacios
+        d[MAIL_SECRET] = d[MAIL_SECRET].replace(" ", "")
     if not d[MAIL_SECRET]:
         d[MAIL_SECRET] = old.get(MAIL_SECRET, "")
     put_setting("mail", d)

@@ -285,24 +285,56 @@
   }
 
   // ---------- correo general
+  const MAIL_PRESETS = {
+    gmail: {label: 'Gmail / Google Workspace', host: 'smtp.gmail.com', port: 587, security: 'TLS', userIsFrom: true,
+      help: 'Usa tu correo completo como usuario y una <b>contraseña de aplicación</b> (no tu clave normal): activa la verificación en 2 pasos y créala en <b>myaccount.google.com/apppasswords</b>. Se pega con o sin espacios.'},
+    outlook: {label: 'Outlook / Microsoft 365', host: 'smtp.office365.com', port: 587, security: 'TLS', userIsFrom: true,
+      help: 'Usa tu correo completo. En Microsoft 365 el administrador debe tener activado «SMTP autenticado» para el buzón; con verificación en 2 pasos usa una contraseña de aplicación.'},
+    yahoo: {label: 'Yahoo Mail', host: 'smtp.mail.yahoo.com', port: 465, security: 'SSL', userIsFrom: true, help: 'Genera una contraseña de aplicación en la seguridad de tu cuenta Yahoo.'},
+    zoho: {label: 'Zoho Mail', host: 'smtp.zoho.com', port: 465, security: 'SSL', userIsFrom: true, help: 'Usa tu correo completo; con 2 pasos crea una contraseña de aplicación.'},
+    sendgrid: {label: 'SendGrid', host: 'smtp.sendgrid.net', port: 587, security: 'TLS', user: 'apikey', help: 'El usuario es literalmente «apikey» y la contraseña es tu API key. El remitente debe estar verificado en SendGrid.'},
+    mailgun: {label: 'Mailgun', host: 'smtp.mailgun.org', port: 587, security: 'TLS', help: 'Usuario y contraseña SMTP de tu dominio en Mailgun (postmaster@tu-dominio).'},
+    ses: {label: 'Amazon SES', host: 'email-smtp.us-east-1.amazonaws.com', port: 587, security: 'TLS', help: 'Usa las credenciales SMTP de SES (no las de IAM) y ajusta la región en el servidor si no es us-east-1.'},
+    other: {label: 'Otro servidor SMTP', help: 'Escribe los datos que te dio tu proveedor de correo.'},
+  };
+  const presetOf = h => Object.keys(MAIL_PRESETS).find(k => MAIL_PRESETS[k].host && MAIL_PRESETS[k].host === h) || (h ? 'other' : 'gmail');
   async function drawMail() {
     const main = document.getElementById('main');
     main.innerHTML = '<h2>Correo general</h2><p class="sub">Cargando…</p>';
     let m; try { m = await api('GET', '/settings/mail'); } catch (e) { main.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
-    main.innerHTML = `<h2>Correo general</h2><p class="sub">Servidor de correo (SMTP) del sistema. Se usa para recuperar tu contraseña del Centro y para las empresas a las que decidas prestarles el servicio de correo (se activa en el panel de cada empresa → Servicios).</p>
-      <div class="card" style="padding:18px 20px;max-width:760px"><div class="grid2"><div><label>Servidor SMTP</label><input id="h" value="${esc(m.host || '')}" placeholder="smtp.proveedor.com"></div><div><label>Puerto</label><input id="po" type="number" value="${esc(m.port || 587)}"></div></div>
-      <div class="grid2"><div><label>Seguridad</label><select id="se"><option value="TLS">STARTTLS (587)</option><option value="SSL">SSL/TLS (465)</option><option value="">Ninguna</option></select></div><div><label>Usuario</label><input id="us" value="${esc(m.user || '')}" autocomplete="off"></div></div>
-      <label>Contraseña ${m.passwordSet ? `<span class="mut">(guardada ${esc(m.passwordHint)}; déjala vacía para conservarla)</span>` : ''}</label><input id="pw" type="password" autocomplete="new-password">
-      <div class="grid2"><div><label>Correo remitente</label><input id="fa" value="${esc(m.from_address || '')}" placeholder="no-responder@tudominio.com"></div><div><label>Nombre del remitente</label><input id="fn" value="${esc(m.from_name || 'Crm Hub 360')}"></div></div>
-      <div class="err" id="er" hidden></div><div class="acts"><button class="btn primary" id="sv">Guardar</button><button class="btn" id="ts">Enviar correo de prueba</button></div></div>`;
-    document.getElementById('se').value = m.security == null ? 'TLS' : m.security;
-    const val = id => document.getElementById(id).value.trim();
-    const body = () => ({host: val('h'), port: +val('po') || 587, security: document.getElementById('se').value, user: val('us'), password: document.getElementById('pw').value, from_address: val('fa'), from_name: val('fn') || 'Crm Hub 360'});
-    document.getElementById('sv').onclick = async () => { const er = document.getElementById('er'); er.hidden = true; try { await api('PUT', '/settings/mail', body()); toast('Correo guardado'); drawMail(); } catch (e) { er.hidden = false; er.textContent = e.message; } };
-    document.getElementById('ts').onclick = async () => {
+    main.innerHTML = `<h2>Correo general</h2><p class="sub">Cuenta de correo (SMTP) del sistema. Se usa para recuperar tu contraseña del Centro y para las empresas a las que decidas prestarles el correo (se activa en el panel de cada empresa → Servicios).</p>
+      <div class="card" style="padding:18px 20px;max-width:760px"><label>Proveedor de correo</label><select id="pr">${Object.keys(MAIL_PRESETS).map(k => `<option value="${k}">${esc(MAIL_PRESETS[k].label)}</option>`).join('')}</select>
+      <div class="notice" id="hp"></div>
+      <div class="grid2"><div><label>Servidor SMTP</label><input id="h" value="${esc(m.host || '')}" placeholder="smtp.proveedor.com"></div><div><label>Puerto</label><input id="po" type="number" value="${esc(m.port || 587)}"></div></div>
+      <div class="grid2"><div><label>Seguridad</label><select id="se"><option value="TLS">STARTTLS (587)</option><option value="SSL">SSL/TLS (465)</option><option value="">Ninguna</option></select></div><div><label>Usuario (correo completo)</label><input id="us" value="${esc(m.user || '')}" autocomplete="off" placeholder="tucuenta@gmail.com"></div></div>
+      <label>Contraseña ${m.passwordSet ? `<span class="mut">(guardada ${esc(m.passwordHint)}; déjala vacía para conservarla)</span>` : '<span class="mut">(en Gmail: contraseña de aplicación)</span>'}</label><input id="pw" type="password" autocomplete="new-password">
+      <div class="grid2"><div><label>Correo remitente</label><input id="fa" value="${esc(m.from_address || '')}" placeholder="tucuenta@gmail.com"></div><div><label>Nombre del remitente</label><input id="fn" value="${esc(m.from_name || 'Crm Hub 360')}"></div></div>
+      <div class="err" id="er" hidden></div><div class="ok" id="okm" hidden></div><div class="acts"><button class="btn primary" id="sv">Guardar</button><button class="btn" id="ts">Enviar correo de prueba</button></div></div>`;
+    const $ = id => document.getElementById(id), val = id => $(id).value.trim();
+    $('se').value = m.security == null ? 'TLS' : m.security;
+    const showHelp = () => { const p = MAIL_PRESETS[$('pr').value]; $('hp').innerHTML = p.help || ''; $('hp').hidden = !p.help; };
+    $('pr').value = presetOf(m.host); showHelp();
+    $('pr').onchange = () => {   // al elegir un proveedor se rellenan servidor, puerto y seguridad
+      const p = MAIL_PRESETS[$('pr').value]; showHelp();
+      if (p.host) { $('h').value = p.host; $('po').value = p.port; $('se').value = p.security; }
+      if (p.user) { $('us').value = p.user; }
+    };
+    $('us').addEventListener('blur', () => { const p = MAIL_PRESETS[$('pr').value]; if (p.userIsFrom && !val('fa') && /@/.test(val('us'))) { $('fa').value = val('us'); } });
+    $('h').addEventListener('input', () => { const k = presetOf(val('h')); if ($('pr').value !== k) { $('pr').value = k; showHelp(); } });
+    const body = () => ({host: val('h'), port: +val('po') || 587, security: $('se').value, user: val('us'), password: $('pw').value, from_address: val('fa') || val('us'), from_name: val('fn') || 'Crm Hub 360'});
+    const save = async () => {   // se guarda sin recargar la página: lo escrito se conserva
+      const er = $('er'), ok = $('okm'); er.hidden = true; ok.hidden = true;
+      const saved = await api('PUT', '/settings/mail', body());
+      $('pw').value = ''; $('fa').value = saved.from_address;
+      const lab = $('pw').previousElementSibling; if (lab) { lab.innerHTML = `Contraseña <span class="mut">(guardada ${esc(saved.passwordHint)}; déjala vacía para conservarla)</span>`; }
+      return saved;
+    };
+    $('sv').onclick = async () => { try { await save(); const ok = $('okm'); ok.hidden = false; ok.textContent = 'Correo guardado. Usa «Enviar correo de prueba» para comprobarlo.'; toast('Correo guardado'); } catch (e) { const er = $('er'); er.hidden = false; er.textContent = e.message; } };
+    $('ts').onclick = async () => {
       const to = await inputBox('Correo de prueba', 'Enviar a', {required: true, ok: 'Enviar', placeholder: (state.me && state.me.email) || 'tu@correo.com', validate: v => (/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(v) ? '' : 'Escribe un correo válido.')});
       if (to === null) { return; }
-      try { await api('PUT', '/settings/mail', body()); await api('POST', '/settings/mail/test', {to}); toast('Correo enviado a ' + to); } catch (e) { modal(`<h3>No se pudo enviar</h3><p>${esc(e.message)}</p><div class="foot"><button class="btn primary" data-x="k">Cerrar</button></div>`).el.querySelector('[data-x=k]').onclick = ev => ev.target.closest('.back').remove(); }
+      try { await save(); await api('POST', '/settings/mail/test', {to}); toast('Correo enviado a ' + to); }
+      catch (e) { modal(`<h3>No se pudo enviar</h3><p>${esc(e.message)}</p><div class="foot"><button class="btn primary" data-x="k">Cerrar</button></div>`).el.querySelector('[data-x=k]').onclick = ev => ev.target.closest('.back').remove(); }
     };
   }
 
