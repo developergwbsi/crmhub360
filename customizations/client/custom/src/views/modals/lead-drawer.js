@@ -9,6 +9,8 @@ define('custom:views/modals/lead-drawer', ['views/modals/detail', 'custom:handle
 
         setup() {
             super.setup();
+            // la X de la cabecera ya cierra el panel: se quita el botón «Cerrar»
+            this.buttonList = this.buttonList.filter(b => b.name !== 'cancel');
             const full = this.buttonList.find(b => b.name === 'fullForm');
             if (full) { delete full.label; full.html = '<span class="fas fa-up-right-and-down-left-from-center"></span> Abrir completo'; full.style = 'primary'; }
             const scope = this.scope || this.options.scope || 'Lead';
