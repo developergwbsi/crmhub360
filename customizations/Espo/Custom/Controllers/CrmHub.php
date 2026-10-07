@@ -58,7 +58,7 @@ class CrmHub
     public function putActionIntegrations(Request $request): \stdClass
     {
         $data = json_decode(json_encode($request->getParsedBody()), true) ?: [];
-        $allowed = array_intersect_key($data, array_flip(['fb_page_token', 'services']));
+        $allowed = array_intersect_key($data, array_flip(['fb_page_token', 'services', 'evolution_url', 'evolution_apikey', 'evolution_instance']));
         try {
             return (object) $this->hub()->request('PUT', '/v1/tenant/settings', $allowed);
         } catch (\RuntimeException $e) {
@@ -400,5 +400,72 @@ class CrmHub
         }
         return (object) ['managers' => $managers, 'teams' => $teams, 'unassigned' => $unassigned,
                          'canManage' => $this->user->isAdmin()];
+    }
+
+    // ---------- WhatsApp (envío) y llamadas ----------
+    public function postActionWhatsappTest(Request $request): \stdClass
+    {
+        try {
+            return (object) $this->hub()->request('POST', '/v1/whatsapp/test', []);
+        } catch (\RuntimeException $e) {
+            preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
+            throw new BadRequest($m[1] ?? 'No se pudo probar la conexión.');
+        }
+    }
+
+    public function postActionWhatsappSend(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->em->getEntityById('Lead', (string) ($d->leadId ?? ''));
+        if (!$lead || !$this->acl->checkEntityEdit($lead)) {
+            throw new Forbidden();
+        }
+        try {
+            return (object) (new HubClient($this->config))->request('POST', '/v1/whatsapp/send', [
+                'leadId' => $lead->getId(), 'text' => (string) ($d->text ?? ''),
+                'agent' => $this->user->get('name') ?: $this->user->get('userName'),
+            ], 30);
+        } catch (\RuntimeException $e) {
+            preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
+            throw new BadRequest($m[1] ?? 'No se pudo enviar el mensaje.');
+        }
+    }
+
+    /** Registra una llamada saliente hecha desde el lead (queda en Llamadas y en el historial). */
+    public function postActionLogCall(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->em->getEntityById('Lead', (string) ($d->leadId ?? ''));
+        if (!$lead || !$this->acl->checkEntityEdit($lead)) {
+            throw new Forbidden();
+        }
+        $results = ['Contactado', 'No contesta', 'Buzón de voz', 'Número equivocado', 'Reagendar'];
+        $result = in_array($d->result ?? '', $results, true) ? $d->result : 'Contactado';
+        $minutes = max(0, min(600, (int) ($d->minutes ?? 0)));
+        $note = trim((string) ($d->note ?? ''));
+        $name = $lead->get('name') ?: 'lead';
+        $this->em->createEntity('Call', [
+            'name' => "Llamada a {$name} — {$result}", 'status' => 'Held', 'direction' => 'Outbound',
+            'dateStart' => gmdate('Y-m-d H:i:s', time() - $minutes * 60), 'duration' => $minutes * 60,
+            'parentType' => 'Lead', 'parentId' => $lead->getId(), 'assignedUserId' => $this->user->getId(),
+            'description' => $note,
+        ]);
+        $this->em->createEntity('Note', [
+            'type' => 'Post', 'parentType' => 'Lead', 'parentId' => $lead->getId(),
+            'post' => "[Llamada] {$result}" . ($minutes ? " ({$minutes} min)" : '') . ($note !== '' ? ": {$note}" : '') ,
+        ]);
+        return (object) ['ok' => true];
+    }
+
+    /** Roles del usuario actual: el manual muestra solo lo que le corresponde. */
+    public function getActionMyroles(Request $request): \stdClass
+    {
+        $names = [];
+        foreach ($this->user->getLinkMultipleIdList('roles') as $rid) {
+            if ($r = $this->em->getEntityById('Role', $rid)) {
+                $names[] = $r->get('name');
+            }
+        }
+        return (object) ['isAdmin' => $this->user->isAdmin(), 'roles' => $names];
     }
 }

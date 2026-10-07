@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, config, credit, db, ingest, qualify
+from . import assistant, config, credit, db, ingest, qualify, whatsapp
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -127,6 +127,15 @@ async def web_ingest(slug: str, request: Request):
 class SettingsReq(BaseModel):
     fb_page_token: str | None = None
     services: list[dict] | None = None
+    evolution_url: str | None = None
+    evolution_apikey: str | None = None
+    evolution_instance: str | None = None
+
+
+class SendReq(BaseModel):
+    leadId: str
+    text: str
+    agent: str = 'Asesor'
 
 
 class QualifyReq(BaseModel):
@@ -151,6 +160,8 @@ async def tenant_settings(tenant: dict = Depends(tenant_auth)):
         "status": tenant["status"], "licenseUntil": str(tenant["license_until"]) if tenant["license_until"] else None,
         "model": config.OLLAMA_MODEL, "aiReachable": ai_ok, "jobs": jobs,
         "fbPageTokenSet": bool(fb), "fbPageTokenHint": ("…" + fb[-4:]) if fb else "",
+        "wa": {"url": st.get("evolution_url") or "", "instance": st.get("evolution_instance") or "",
+               "keySet": bool(st.get("evolution_apikey")), "keyHint": ("…" + st["evolution_apikey"][-4:]) if st.get("evolution_apikey") else ""},
         "services": qualify.services_for(tenant), "servicesCustomized": bool(st.get("services")),
         "metrics": [{"key": k, "label": v[0], "unit": v[2]} for k, v in qualify.METRICS.items()],
         "ops": qualify.OPS,
@@ -162,6 +173,15 @@ def tenant_settings_update(req: SettingsReq, tenant: dict = Depends(tenant_auth)
     patch = {}
     if req.fb_page_token is not None:
         patch["fb_page_token"] = req.fb_page_token
+    if req.evolution_url is not None:
+        u = req.evolution_url.strip().rstrip("/")
+        if u and not u.startswith(("http://", "https://")):
+            raise HTTPException(422, "La URL de Evolution API debe empezar por http:// o https://")
+        patch["evolution_url"] = u
+    if req.evolution_instance is not None:
+        patch["evolution_instance"] = req.evolution_instance.strip()
+    if req.evolution_apikey:  # vacío = conservar la clave actual
+        patch["evolution_apikey"] = req.evolution_apikey.strip()
     if req.services is not None:
         try:
             patch["services"] = qualify.validate_services(req.services)
@@ -177,6 +197,34 @@ def reset_services(tenant: dict = Depends(tenant_auth)):
     with db.pool.connection() as c:
         c.execute("UPDATE tenants SET settings = settings - 'services' WHERE slug = %s", (tenant["slug"],))
     return {"ok": True}
+
+
+@app.post("/v1/whatsapp/test")
+async def wa_test(tenant: dict = Depends(tenant_auth)):
+    try:
+        return await whatsapp.test(tenant)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo conectar con Evolution API: {e}")
+
+
+@app.post("/v1/whatsapp/send")
+async def wa_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
+    text = req.text.strip()
+    if not text or len(text) > 4000:
+        raise HTTPException(422, "El mensaje debe tener entre 1 y 4000 caracteres")
+    job = db.log_job(tenant["slug"], "whatsapp_send", req.leadId)
+    try:
+        res = await whatsapp.send(tenant, req.leadId, text, req.agent)
+        db.finish_job(job)
+        return res
+    except ValueError as e:
+        db.finish_job(job, str(e)[:500])
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        db.finish_job(job, str(e)[:500])
+        raise HTTPException(502, f"No se pudo enviar: {e}")
 
 
 @app.post("/v1/leads/qualify")

@@ -13,7 +13,9 @@
     "labels": {
         "Pipeline": "Pipeline",
         "Manual de usuario": "Manual de usuario",
-        "Reasignar": "Reasignar"
+        "Reasignar": "Reasignar",
+        "Llamar": "Llamar",
+        "WhatsApp": "WhatsApp"
     },
     "massActions": {
         "reassign": "Reasignar"

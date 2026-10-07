@@ -28,6 +28,26 @@
   </div>
 
   <div class="panel panel-default">
+    <div class="panel-heading"><h4 class="panel-title">WhatsApp · envío de mensajes</h4></div>
+    <div class="panel-body">
+      <p class="ch-muted">Conecta tu instancia de <b>Evolution API</b> para que los asesores envíen WhatsApp desde el lead (botón <b>WhatsApp</b>).
+        La recepción de mensajes se configura con la dirección <code>/hub/evolution</code> de arriba.</p>
+      <div class="form-group"><label>URL de Evolution API</label>
+        <input name="wa_url" class="form-control" value="{{s.wa.url}}" placeholder="https://evolution.tuempresa.com"></div>
+      <div class="form-group"><label>Nombre de la instancia</label>
+        <input name="wa_instance" class="form-control" value="{{s.wa.instance}}" placeholder="mi-instancia"></div>
+      <div class="form-group"><label>API key de la instancia</label>
+        <input type="password" name="wa_key" class="form-control" autocomplete="off"
+               placeholder="{{#if s.wa.keySet}}Configurada {{s.wa.keyHint}} · escribe una nueva para reemplazarla{{else}}Pega aquí la clave{{/if}}"></div>
+      <div class="ch-row">
+        <button class="btn btn-primary" data-action="saveWhatsapp">Guardar</button>
+        <button class="btn btn-default" data-action="testWhatsapp"><span class="fas fa-plug"></span> Probar conexión</button>
+        <span class="ch-small" data-role="waStatus"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel panel-default">
     <div class="panel-heading"><h4 class="panel-title">Facebook / Instagram</h4></div>
     <div class="panel-body">
       <p class="ch-muted">Token de acceso de la página (permiso <code>leads_retrieval</code>) para consultar los datos del formulario.</p>

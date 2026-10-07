@@ -62,7 +62,7 @@ def campaign_perm(role: str) -> dict:
 
 
 for name, level in LEVELS.items():
-    api("POST", "Role", {"name": name, "data": {**role_data(level), "Campaign": campaign_perm(name)},
+    api("POST", "Role", {"name": name, "data": {**role_data(level), "Campaign": campaign_perm(name), "Calendar": True},
                          "assignmentPermission": {"Comercial": "no", "Director de Equipo": "team", "Gerente General": "all"}[name],
                          "userPermission": {"Comercial": "no", "Director de Equipo": "team", "Gerente General": "all"}[name],
                          "dashboardPermission": "yes" if name != "Comercial" else "no"})

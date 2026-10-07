@@ -381,3 +381,13 @@ body[data-navbar=side] #navbar .navbar-right li.global-search-container a.global
 body[data-navbar=side].minimized.side-menu-opened #navbar .navbar-right {
     background-color: #fff !important; border-bottom: 1px solid var(--ch-line); box-shadow: none; }
 body[data-navbar=side].minimized.side-menu-opened #navbar .navbar-right > li > a { color: var(--ch-muted); }
+
+/* ======================= Íconos unificados ======================= */
+/* Cada entidad traía su propio color (Leads rosa, Cuentas amarillo, Contactos azul…); el resto del menú era gris. Todo monocromo. */
+#navbar .tabs li > a { border-color: transparent !important; }
+#navbar .tabs li > a .short-label, #navbar .tabs li > a .short-label > span { color: var(--navbar-inverse-link-icon-color) !important; }
+#navbar .tabs li > a:hover .short-label, #navbar .tabs li > a:hover .short-label > span,
+#navbar .tabs li.active > a .short-label, #navbar .tabs li.active > a .short-label > span { color: #fff !important; }
+.page-header .color-icon, .panel-title .color-icon, .kanban-group-label .color-icon, .record-header .color-icon { color: var(--ch-primary) !important; }
+.ch-rolebar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 12px;
+  border: 1px solid hsl(231 50% 85%); background: hsl(231 80% 97%); border-radius: 12px; }

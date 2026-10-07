@@ -53,6 +53,22 @@ define('custom:views/integrations', ['view'], function (Dep) {
                     .then(() => Espo.Ui.success('Copiado'))
                     .catch(() => Espo.Ui.warning('No se pudo copiar; selecciónalo manualmente'));
             },
+            'click [data-action="saveWhatsapp"]': function () {
+                const v = n => (this.$el.find(`[name="${n}"]`).val() || '').trim();
+                this.save({evolution_url: v('wa_url'), evolution_instance: v('wa_instance'), evolution_apikey: v('wa_key')});
+            },
+            'click [data-action="testWhatsapp"]': function () {
+                const $s = this.$el.find('[data-role="waStatus"]');
+                $s.text('Probando…').removeClass('text-danger text-success');
+                Espo.Ajax.postRequest('CrmHub/whatsapp/test', {})
+                    .then(r => $s.text(r.connected ? 'Conectado ✔ (WhatsApp vinculado)' : 'Instancia encontrada, pero el estado es «' + r.state + '». Vincula el teléfono en Evolution.')
+                        .addClass(r.connected ? 'text-success' : 'text-danger'))
+                    .catch(xhr => {
+                        const reason = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason');
+                        $s.text(reason || 'No se pudo probar').addClass('text-danger');
+                        if (xhr) { xhr.errorIsHandled = true; }
+                    });
+            },
             'click [data-action="addService"]': function () {
                 this.services.push({key: '', name: 'Nuevo servicio', enabled: true, conditions: []});
                 this.renderServices();

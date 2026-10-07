@@ -57,6 +57,12 @@ if __name__ == "__main__":  # python3 ui_settings.py <base_url> <admin_user> <ad
     # el administrador ya tiene Preferencias propias: se reinician el dashboard y el tema para que hereden lo nuevo
     call("PUT", f"Preferences/{me}", {"dashboardLayout": DASH_LAYOUT, "dashletsOptions": DASH_OPTIONS, "useCustomTabList": False, "theme": ""})
     roles = call("GET", "Role?maxSize=50&select=id,name")["list"]
+    # el calendario debe estar disponible para los tres roles
+    for r in roles:
+        if r["name"] in ("Comercial", "Director de Equipo", "Gerente General"):
+            data = call("GET", f"Role/{r['id']}")["data"]
+            data["Calendar"] = True
+            call("PUT", f"Role/{r['id']}", {"data": data})
     # campañas: gerente gestiona, director las ve (de su equipo), comercial no
     CAMP = {"Gerente General": ("yes", "all", "all", "all"), "Director de Equipo": ("no", "team", "no", "no")}
     for r in roles:

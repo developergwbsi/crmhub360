@@ -96,5 +96,37 @@
             "controller": "CrmHub",
             "action": "pipeline"
         }
+    },
+    {
+        "route": "/CrmHub/whatsapp/test",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "whatsappTest"
+        }
+    },
+    {
+        "route": "/CrmHub/whatsapp/send",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "whatsappSend"
+        }
+    },
+    {
+        "route": "/CrmHub/call",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "logCall"
+        }
+    },
+    {
+        "route": "/CrmHub/myroles",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "myroles"
+        }
     }
 ]

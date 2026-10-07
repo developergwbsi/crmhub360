@@ -109,6 +109,9 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
         avatar = await fetch_avatar(payload, phone)
         lead_id = await upsert_lead(tenant, name=d.get("pushName") or phone, phone=phone, email=None,
                                     source="WhatsApp", extra={"avatarUrl": avatar} if avatar else None)
+    from . import whatsapp  # import tardío: whatsapp importa este módulo
+    if key.get("fromMe") and whatsapp.recently_sent(lead_id, text):
+        return lead_id  # eco del mensaje que acabamos de enviar desde el CRM; ya tiene su nota
     who = "Asesor" if key.get("fromMe") else (d.get("pushName") or "Cliente")
     await Espo(tenant).note(lead_id, f"[WhatsApp] {who}: {text}")
     return lead_id

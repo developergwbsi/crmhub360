@@ -50,6 +50,13 @@ Teléfonos se normalizan a E.164 (sin prefijo se asume +57).
 - **Config del balanceo y de estados** (pantallas `#CrmHub/asignacion` y `#CrmHub/pipeline`, guardadas en la config de EspoCRM como `crmhubAssignMethod`, `crmhubAssignCap`, `crmhubStatusNew|Review|Qualified`, `crmhubClosedStatuses`).
 - **Reasignación**: `POST /CrmHub/reassign` (admin, o rol con permiso de asignación; *team* = solo usuarios de sus equipos). Deja nota en el historial.
 
+## WhatsApp (envío) y llamadas
+
+- **WhatsApp**: Integraciones → *WhatsApp · envío de mensajes* (URL de Evolution API, instancia, API key; las credenciales viven en `tenants.settings`, nunca se devuelven a la interfaz).
+  El botón **WhatsApp** del lead envía por `POST {url}/message/sendText/{instancia}` (`hub-service/app/whatsapp.py`) y registra la nota; el eco del webhook (`fromMe`) se ignora para no duplicarla.
+- **Llamadas**: el botón **Llamar** abre `tel:` (softphone/teléfono del asesor) y luego registra el resultado como `Call` (Held, saliente) + nota. No hay marcación ni grabación integradas (requieren proveedor SIP/Twilio).
+- **Manual por rol**: cada sección lleva `data-roles`; `GET /CrmHub/myroles` decide qué ve cada usuario (admin ve todo; los demás pueden alternar «Ver todo el manual»).
+
 ## Entornos y paso a producción
 
 | Entorno | Host | Tenant | Puerto local |
