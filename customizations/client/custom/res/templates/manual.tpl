@@ -2,7 +2,7 @@
 <div class="ch-manual">
   <div class="ch-hero"><h2>Guía práctica de {{appName}}</h2><p>Para comerciales, directores de equipo y gerentes.</p></div>
   <div class="ch-manual-layout">
-    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asignacion">7b. Asignación y reasignación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="organizacion">7c. Equipos, campañas y organigrama</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq">10. Preguntas frecuentes</a></div></div>
+    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asignacion">7b. Asignación y reasignación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="organizacion">7c. Equipos, campañas y organigrama</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="config">7d. Estados y balanceo (configuración)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq">10. Preguntas frecuentes</a></div></div>
     <div class="ch-manual-body">
 <div class="panel panel-default" id="ch-m-inicio">
   <div class="panel-heading"><h4 class="panel-title">1. Ingreso y navegación</h4></div>
@@ -12,7 +12,7 @@
 <li>Cambia tu contraseña la primera vez: menú de tu usuario (arriba a la derecha) → <b>Preferencias</b>.</li>
 <li>El menú lateral izquierdo da acceso a <b>Leads</b>, cuentas, contactos, oportunidades, tareas y calendario.</li>
 <li>Usa la lupa superior para buscar cualquier registro por nombre, teléfono o correo.</li>
-<li>Con la flecha de abajo a la izquierda puedes <b>contraer el menú</b>; al pasar el mouse sobre cada ícono verás su nombre.</li>
+<li>Con la flecha de abajo a la izquierda puedes <b>contraer el menú</b>; al pasar el mouse sobre cada ícono verás su nombre. Si lo abres desde el modo contraído (☰), el contenido se desplaza en vez de taparse.</li>
 </ol>
 <div class="ch-tip">El inicio tiene dos pestañas: <b>Panel gerencial</b> (indicadores, embudo, servicios, tendencia, origen, rendimiento por asesor y campañas, según tu alcance; puedes cambiar el periodo de 7 días a 12 meses) y <b>Mi día</b> (leads recientes, tareas, actividades y la actividad del equipo).</div>
 </div>
@@ -38,7 +38,8 @@
   <div class="panel-heading"><h4 class="panel-title">3. Tablero Kanban</h4></div>
   <div class="panel-body">
 <p>Al entrar a <b>Leads</b> verás el tablero Kanban: cada columna es un estado. Con los iconos de arriba a la derecha alternas entre el tablero y la lista.</p>
-<ul><li><b>Arrastra</b> una tarjeta a otra columna para cambiar su estado.</li><li>Cada tarjeta muestra el avatar (foto de WhatsApp si existe, o las iniciales), el resultado del filtro, el servicio sugerido, la deuda, el teléfono, el asesor y la antigüedad.</li><li>Usa los filtros para ver solo los tuyos o los de tu equipo.</li><li>Vuelve a la lista con el icono de lista.</li></ul>
+<ul><li><b>Arrastra</b> una tarjeta a otra columna para cambiar su estado.</li><li>Cada tarjeta muestra el avatar (foto de WhatsApp si existe, o las iniciales), el resultado del filtro, el servicio sugerido, la deuda, el teléfono, el asesor y la antigüedad.</li><li>Cada columna tiene su propio <b>buscador</b>: escribe un nombre, teléfono, servicio o asesor y se filtran solo las tarjetas de ese estado (aparece <i>n/total</i>). Si hay más tarjetas sin cargar, usa «Mostrar más» primero.</li>
+<li>Usa los filtros de arriba para ver solo los tuyos o los de tu equipo.</li><li>Vuelve a la lista con el icono de lista.</li></ul>
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-credito">
@@ -125,6 +126,19 @@
 <li><b>Campaña:</b> se liga a uno o más equipos. Un mismo equipo puede atender varias campañas.</li>
 </ul>
 <div class="ch-tip">El organigrama no se dibuja a mano: se arma solo con los roles y equipos de cada usuario. Si alguien no aparece, revisa que tenga equipo (si no, sale en «Sin equipo»).</div>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-config">
+  <div class="panel-heading"><h4 class="panel-title">7d. Dónde se configuran los estados y el balanceo</h4></div>
+  <div class="panel-body">
+<p>Solo los administradores. Están en el grupo <b>Organización</b> del menú lateral.</p>
+<table class="table table-bordered ch-table"><tr><th>Qué quiero hacer</th><th>Dónde</th></tr>
+<tr><td><b>Crear, renombrar, ordenar o dar color a los estados de los leads</b> (las columnas del Kanban)</td><td><b>Estados del pipeline</b> → botón <i>Crear, renombrar u ordenar estados</i>. Es la pantalla Administración → Entidades → Lead → Campos → Estado.</td></tr>
+<tr><td><b>Decir cuál estado usa el sistema</b> para leads nuevos, «en calificación», «calificado» y los que ya no cuentan como abiertos</td><td><b>Estados del pipeline</b> (panel derecho). Si renombras un estado, vuelve a elegirlo aquí.</td></tr>
+<tr><td><b>Elegir cómo se reparten los leads</b> (balanceado o rotación) y poner un tope de leads abiertos por asesor</td><td><b>Asignación de leads</b> → <i>Cómo se reparten los leads nuevos</i>.</td></tr>
+<tr><td><b>Ver y cambiar quién recibe leads</b>, y qué equipos atiende cada campaña</td><td><b>Asignación de leads</b> → <i>Quién recibe leads</i> y <i>Campañas activas</i>.</td></tr>
+<tr><td><b>Definir los servicios y sus condiciones</b></td><td><b>Integraciones</b> → Servicios y filtros.</td></tr></table>
+<div class="ch-warn"><b>Antes de renombrar o eliminar un estado</b> mueve los leads que lo tienen (<i>Acciones → Actualización masiva</i>); EspoCRM no los cambia solo.</div>
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-actividades">

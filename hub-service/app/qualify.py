@@ -136,11 +136,21 @@ def evaluate(lead: dict, services: list[dict]) -> dict:
     return {"qualificationStatus": status, "suggestedService": suggested[:250], "qualificationReasons": "\n\n".join(lines)}
 
 
+async def pipeline(espo: Espo) -> dict:
+    """Estados configurados por la empresa (Integraciones > Estados del pipeline); valores por defecto si falla."""
+    try:
+        p = await espo.get("CrmHub/pipeline")
+        return {"new": p["new"], "review": p["review"], "qualified": p["qualified"]}
+    except Exception:
+        return {"new": "Nuevo Lead", "review": "En Calificación", "qualified": "Calificado"}
+
+
 async def run(tenant: dict, lead_id: str) -> dict:
     espo = Espo(tenant)
     lead = await espo.get(f"Lead/{lead_id}")
     result = evaluate(lead, services_for(tenant))
-    if result["qualificationStatus"] == "Califica" and lead.get("status") in ("Nuevo Lead", "En Calificación"):
-        result["status"] = "Calificado"
+    pipe = await pipeline(espo)
+    if result["qualificationStatus"] == "Califica" and lead.get("status") in (pipe["new"], pipe["review"]):
+        result["status"] = pipe["qualified"]
     await espo.put(f"Lead/{lead_id}", result)
     return result

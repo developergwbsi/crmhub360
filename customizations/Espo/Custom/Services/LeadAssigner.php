@@ -2,6 +2,7 @@
 
 namespace Espo\Custom\Services;
 
+use Espo\Core\Utils\Config;
 use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -14,9 +15,28 @@ use Espo\ORM\EntityManager;
  */
 class LeadAssigner
 {
-    private const CLOSED = ['Cierre Exitoso', 'Converted', 'Dead'];
+    public const DEFAULT_CLOSED = ['Cierre Exitoso', 'Converted', 'Dead'];
 
-    public function __construct(private EntityManager $em) {}
+    public function __construct(private EntityManager $em, private ?Config $config = null) {}
+
+    /** @return string[] estados que ya no cuentan como «lead abierto» */
+    public function closedStatuses(): array
+    {
+        $c = $this->config ? $this->config->get('crmhubClosedStatuses') : null;
+        return is_array($c) && $c ? array_values($c) : self::DEFAULT_CLOSED;
+    }
+
+    /** 'balanced' (menos leads abiertos) | 'roundrobin' (quien lleva más tiempo sin recibir) */
+    public function method(): string
+    {
+        return $this->config && $this->config->get('crmhubAssignMethod') === 'roundrobin' ? 'roundrobin' : 'balanced';
+    }
+
+    /** Tope de leads abiertos por asesor; 0 = sin tope. */
+    public function cap(): int
+    {
+        return $this->config ? max(0, (int) $this->config->get('crmhubAssignCap')) : 0;
+    }
 
     /** @return User[] usuarios activos habilitados para recibir leads */
     public function eligibleUsers(): array
@@ -30,7 +50,7 @@ class LeadAssigner
     public function openLeads(string $userId): int
     {
         return $this->em->getRDBRepository('Lead')
-            ->where(['assignedUserId' => $userId, 'status!=' => self::CLOSED])
+            ->where(['assignedUserId' => $userId, 'status!=' => $this->closedStatuses()])
             ->count();
     }
 
@@ -50,16 +70,21 @@ class LeadAssigner
                 }
             }
         }
-        if (!$pool) {
-            return null;
-        }
         $load = [];
         foreach ($pool as $u) {
             $load[$u->getId()] = $this->openLeads($u->getId());
         }
-        usort($pool, function (User $a, User $b) use ($load) {
-            return [$load[$a->getId()], (string) $a->get('lastLeadAssignedAt')]
-               <=> [$load[$b->getId()], (string) $b->get('lastLeadAssignedAt')];
+        if ($this->cap() > 0) {
+            $pool = array_values(array_filter($pool, fn (User $u) => $load[$u->getId()] < $this->cap()));
+        }
+        if (!$pool) {
+            return null;
+        }
+        $rr = $this->method() === 'roundrobin';
+        usort($pool, function (User $a, User $b) use ($load, $rr) {
+            $ka = $rr ? [(string) $a->get('lastLeadAssignedAt')] : [$load[$a->getId()], (string) $a->get('lastLeadAssignedAt')];
+            $kb = $rr ? [(string) $b->get('lastLeadAssignedAt')] : [$load[$b->getId()], (string) $b->get('lastLeadAssignedAt')];
+            return $ka <=> $kb;
         });
         return $pool[0];
     }

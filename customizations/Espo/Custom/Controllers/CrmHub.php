@@ -8,6 +8,8 @@ use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\Config;
+use Espo\Core\Utils\Config\ConfigWriter;
+use Espo\Core\Utils\Metadata;
 use Espo\Custom\Services\HubClient;
 use Espo\Custom\Services\LeadAssigner;
 use Espo\Entities\User;
@@ -23,7 +25,9 @@ class CrmHub
         private Config $config,
         private Acl $acl,
         private EntityManager $em,
-        private SelectBuilderFactory $selectBuilderFactory
+        private SelectBuilderFactory $selectBuilderFactory,
+        private Metadata $metadata,
+        private ConfigWriter $configWriter
     ) {}
 
     private function admin(): void
@@ -75,7 +79,7 @@ class CrmHub
     public function getActionAssignment(Request $request): \stdClass
     {
         $this->admin();
-        $assigner = new LeadAssigner($this->em);
+        $assigner = new LeadAssigner($this->em, $this->config);
         $teamName = [];
         foreach ($this->em->getRDBRepository('Team')->find() as $t) {
             $teamName[$t->getId()] = $t->get('name');
@@ -98,7 +102,59 @@ class CrmHub
                 'eligible' => count(array_filter($eligible, fn (User $u) => array_intersect($tids, $u->getLinkMultipleIdList('teams')))),
             ];
         }
-        return (object) ['users' => $users, 'campaigns' => $campaigns, 'eligibleTotal' => count($eligible)];
+        return (object) ['users' => $users, 'campaigns' => $campaigns, 'eligibleTotal' => count($eligible),
+                         'method' => $assigner->method(), 'cap' => $assigner->cap()];
+    }
+
+    public function putActionAssignment(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        $method = (string) ($d->method ?? 'balanced');
+        $cap = (int) ($d->cap ?? 0);
+        if (!in_array($method, ['balanced', 'roundrobin'], true) || $cap < 0 || $cap > 10000) {
+            throw new BadRequest('Valores inválidos.');
+        }
+        $this->configWriter->setMultiple(['crmhubAssignMethod' => $method, 'crmhubAssignCap' => $cap]);
+        $this->configWriter->save();
+        return (object) ['ok' => true];
+    }
+
+    // ---------- Estados del pipeline de leads ----------
+    private const PIPELINE_DEFAULTS = ['new' => 'Nuevo Lead', 'review' => 'En Calificación', 'qualified' => 'Calificado'];
+
+    /** Lo lee cualquier usuario autenticado (incluido el usuario API del Hub). */
+    public function getActionPipeline(Request $request): \stdClass
+    {
+        $options = array_values($this->metadata->get(['entityDefs', 'Lead', 'fields', 'status', 'options'], []));
+        $closed = $this->config->get('crmhubClosedStatuses');
+        $assigner = new LeadAssigner($this->em, $this->config);
+        return (object) [
+            'options' => $options,
+            'new' => $this->config->get('crmhubStatusNew') ?: self::PIPELINE_DEFAULTS['new'],
+            'review' => $this->config->get('crmhubStatusReview') ?: self::PIPELINE_DEFAULTS['review'],
+            'qualified' => $this->config->get('crmhubStatusQualified') ?: self::PIPELINE_DEFAULTS['qualified'],
+            'closed' => is_array($closed) && $closed ? array_values($closed) : LeadAssigner::DEFAULT_CLOSED,
+            'ignored' => $this->metadata->get(['scopes', 'Lead', 'kanbanStatusIgnoreList'], []),
+        ];
+    }
+
+    public function putActionPipeline(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        $options = $this->metadata->get(['entityDefs', 'Lead', 'fields', 'status', 'options'], []);
+        $new = (string) ($d->new ?? ''); $review = (string) ($d->review ?? ''); $qualified = (string) ($d->qualified ?? '');
+        $closed = array_values(array_filter((array) ($d->closed ?? [])));
+        foreach (array_merge([$new, $review, $qualified], $closed) as $st) {
+            if (!in_array($st, $options, true)) {
+                throw new BadRequest("El estado «{$st}» no existe en la lista de estados de Lead.");
+            }
+        }
+        $this->configWriter->setMultiple(['crmhubStatusNew' => $new, 'crmhubStatusReview' => $review,
+                                          'crmhubStatusQualified' => $qualified, 'crmhubClosedStatuses' => $closed]);
+        $this->configWriter->save();
+        return (object) ['ok' => true];
     }
 
     // ---------- Reasignación (admin, directores y gerentes según su permiso de asignación) ----------
@@ -108,7 +164,7 @@ class CrmHub
         if ($level === 'no') {
             throw new Forbidden('No tienes permiso para reasignar.');
         }
-        $assigner = new LeadAssigner($this->em);
+        $assigner = new LeadAssigner($this->em, $this->config);
         $myTeams = $this->user->getLinkMultipleIdList('teams');
         $out = [];
         foreach ($this->em->getRDBRepository(User::ENTITY_TYPE)->where(['isActive' => true, 'type' => ['regular', 'admin']])->find() as $u) {
@@ -136,7 +192,7 @@ class CrmHub
         if (!in_array($type, self::REASSIGNABLE, true) || !$ids || $target === '') {
             throw new BadRequest('Selecciona los registros y el destinatario.');
         }
-        $assigner = new LeadAssigner($this->em);
+        $assigner = new LeadAssigner($this->em, $this->config);
         $fixed = null;
         if ($target !== 'auto') {
             $fixed = $this->em->getEntityById(User::ENTITY_TYPE, $target);
@@ -199,9 +255,13 @@ class CrmHub
             $camps[$c->getId()] = $c->get('name');
         }
 
+        $assigner = new LeadAssigner($this->em, $this->config);
+        $closedList = $assigner->closedStatuses();
+        $ignored = $this->metadata->get(['scopes', 'Lead', 'kanbanStatusIgnoreList'], []);
+        $stages = array_values(array_diff($this->metadata->get(['entityDefs', 'Lead', 'fields', 'status', 'options'], self::PIPELINE), $ignored));
         $k = ['leads' => 0, 'nuevosHoy' => 0, 'sinAsesor' => 0, 'evaluados' => 0, 'califican' => 0, 'cierres' => 0,
               'deudaTotal' => 0, 'deudaMora' => 0, 'abiertos' => 0];
-        $estado = array_fill_keys(self::PIPELINE, 0);
+        $estado = array_fill_keys($stages, 0);
         $servicio = $origen = $campana = $asesor = [];
         $bucket = max(1, (int) ceil($days / 30));
         $trend = [];
@@ -212,7 +272,7 @@ class CrmHub
 
         foreach ($leads as $l) {
             $status = (string) $l->get('status');
-            $closed = in_array($status, ['Cierre Exitoso', 'Converted', 'Dead'], true);
+            $closed = in_array($status, $closedList, true);
             if (!$closed) {
                 $k['abiertos']++;
             }
@@ -242,7 +302,7 @@ class CrmHub
                     $servicio[$svc ?: 'Sin servicio'] = ($servicio[$svc ?: 'Sin servicio'] ?? 0) + 1;
                 }
             }
-            $won = $status === 'Cierre Exitoso';
+            $won = $status === ($closedList[0] ?? 'Cierre Exitoso');
             $k['cierres'] += $won ? 1 : 0;
             $src = (string) ($l->get('source') ?: 'Sin origen');
             $origen[$src] = ($origen[$src] ?? 0) + 1;
@@ -289,7 +349,7 @@ class CrmHub
         if ($level === 'no') {
             throw new Forbidden();
         }
-        $assigner = new LeadAssigner($this->em);
+        $assigner = new LeadAssigner($this->em, $this->config);
         $roleName = [];
         foreach ($this->em->getRDBRepository('Role')->find() as $r) {
             $roleName[$r->getId()] = $r->get('name');

@@ -2,6 +2,7 @@
 
 namespace Espo\Custom\Hooks\Lead;
 
+use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Log;
 use Espo\Custom\Services\LeadAssigner;
 use Espo\ORM\Entity;
@@ -12,7 +13,7 @@ class AutoAssign
 {
     public static int $order = 5;
 
-    public function __construct(private EntityManager $em, private Log $log) {}
+    public function __construct(private EntityManager $em, private Log $log, private Config $config) {}
 
     public function beforeSave(Entity $entity, array $options): void
     {
@@ -20,7 +21,7 @@ class AutoAssign
             return;
         }
         try {
-            $assigner = new LeadAssigner($this->em);
+            $assigner = new LeadAssigner($this->em, $this->config);
             $user = $assigner->pick($entity->get('campaignId'));
             if ($user) {
                 $assigner->assign($entity, $user);

@@ -322,3 +322,62 @@ body.minimized #navbar .tabs li > a:focus-visible .short-label::after {
 .ch-org-mgr { width: 260px; border: 1px solid hsl(231 50% 80%); background: hsl(231 80% 97%); border-radius: 14px; }
 .ch-org-help { margin-top: 18px; }
 .ch-org-help li { margin: 5px 0; }
+
+/* ======================= Menú lateral: abrir sin tapar el contenido ======================= */
+/* Contraído + abierto con la hamburguesa: antes se montaba sobre la página con un velo borroso y ocultaba la barra superior. */
+body[data-navbar=side].minimized.side-menu-opened .side-menu-backdrop,
+body[data-navbar=side].minimized.side-menu-opened #navbar .side-menu-backdrop { display: none !important; backdrop-filter: none !important; }
+body[data-navbar=side].minimized.side-menu-opened #navbar > .navbar { box-shadow: none; border-right: 1px solid hsl(224 30% 16%); }
+body[data-navbar=side].minimized.side-menu-opened #navbar > .navbar .navbar-right { display: flex !important; }
+body[data-navbar=side].minimized.side-menu-opened #content { padding-left: calc(var(--navbar-width) + var(--container-padding)); }
+body[data-navbar=side].minimized.side-menu-opened #footer { margin-left: var(--navbar-width); }
+body[data-navbar=side] #content, body[data-navbar=side] #footer, body[data-navbar=side] #navbar .navbar-right { transition: padding-left .18s ease, margin-left .18s ease; }
+/* Ítems más compactos: caben más en pantalla y el menú no se desborda */
+body { --navbar-height: 36px; --navbar-tab-vertical-padding: 7px; }
+
+/* ======================= Listas como tarjetas (usuarios, campañas, equipos, roles…) ======================= */
+#main .list-container > .list, #main .list-container .list { margin-left: 0 !important; margin-right: 0 !important; }
+#main .list-container > .list { background: #fff; border: 1px solid var(--ch-line) !important; border-radius: 12px !important; overflow: hidden; box-shadow: var(--default-box-shadow); }
+#main .list-container > .list > table, #main .list-container > .list > table.table { margin-bottom: 0; border-radius: 12px; }
+#main .list-container > .list > table thead th { background: hsl(210 22% 98%); border-bottom: 1px solid var(--ch-line); }
+#main .list-container > .list tr:last-child > td { border-bottom: 0; }
+.list-row .cell[data-name="name"] a.link, .list-row .cell[data-name="name"] a { color: var(--ch-ink); font-weight: 500; }
+.list-row .cell[data-name="name"] a:hover { color: var(--ch-primary); }
+
+/* ======================= Buscadores ======================= */
+/* Barra de búsqueda de las listas: una sola pieza redondeada, con el filtro a la izquierda y la lupa a la derecha */
+.search-container .search-row .input-group { display: flex; align-items: stretch; flex-wrap: nowrap; border: 1px solid var(--ch-line); border-radius: 12px; background: #fff; overflow: hidden; transition: box-shadow .15s, border-color .15s; }
+.search-container .search-row .input-group:focus-within { border-color: var(--ch-primary); box-shadow: 0 0 0 3px var(--input-border-focus-rgba); }
+.search-container .input-group > .input-group-btn { width: auto; display: flex; position: static; }
+.search-container .input-group .btn { border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; height: 40px; color: var(--ch-ink); }
+.search-container .input-group .btn:hover { background: hsl(231 60% 97%) !important; color: var(--ch-primary); }
+.search-container .input-group .left-dropdown { border-right: 1px solid var(--ch-line); background: hsl(210 22% 98%); }
+.search-container .input-group .form-control.text-filter { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; height: 40px; flex: 1 1 auto; background: transparent; padding: 0 14px; font-size: 14px; }
+.search-container .input-group .form-control.text-filter:focus { background: transparent; box-shadow: none !important; }
+.search-container .input-group > .input-group-btn:last-child .btn { width: 46px; color: var(--ch-muted); border-left: 1px solid var(--ch-line) !important; }
+.search-container .search-row .input-group + .btn, .search-container .search-row .btn-icon.btn-default { border-radius: 10px; }
+
+/* Búsqueda global (barra superior): campo con la lupa dentro, sin superponerse */
+body[data-navbar=side] #navbar .navbar-right li.global-search-container .input-group { position: relative; }
+body[data-navbar=side] #navbar .navbar-right li.global-search-container input.global-search-input { padding-right: 42px !important; width: 300px !important; max-width: 36vw !important; }
+body[data-navbar=side] #navbar .navbar-right li.global-search-container a.global-search-button {
+    position: absolute !important; right: 4px; top: 50%; transform: translateY(-50%); width: 30px !important; height: 30px !important; margin: 0 !important;
+    color: var(--ch-muted); background: transparent; }
+body[data-navbar=side] #navbar .navbar-right li.global-search-container a.global-search-button:hover { background: hsl(231 60% 95%); color: var(--ch-primary); }
+
+/* Buscador por columna del Kanban */
+.ch-col-search { position: relative; margin: 0 0 8px; }
+.ch-col-search > .fa-magnifying-glass { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--ch-muted); pointer-events: none; }
+.ch-col-search input { width: 100%; height: 32px; border: 1px solid var(--ch-line); border-radius: 9px; background: #fff; padding: 0 44px 0 30px; font-size: 13px; outline: none; }
+.ch-col-search input:focus { border-color: var(--ch-primary); box-shadow: 0 0 0 3px var(--input-border-focus-rgba); }
+.ch-col-count { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 11.5px; color: var(--ch-primary); font-weight: 600; }
+
+/* Pantallas de configuración comercial */
+.ch-radio { margin: 6px 0; } .ch-radio label { font-weight: 400; display: flex; gap: 8px; align-items: flex-start; }
+.ch-stages { padding-left: 20px; } .ch-stages li { margin: 8px 0; display: list-item; } .ch-stages .label { font-size: 13px; padding: .35em .8em; }
+.ch-checks { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+
+/* Barra superior clara también con el menú abierto desde el modo contraído */
+body[data-navbar=side].minimized.side-menu-opened #navbar .navbar-right {
+    background-color: #fff !important; border-bottom: 1px solid var(--ch-line); box-shadow: none; }
+body[data-navbar=side].minimized.side-menu-opened #navbar .navbar-right > li > a { color: var(--ch-muted); }

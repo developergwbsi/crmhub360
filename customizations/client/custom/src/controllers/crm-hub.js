@@ -10,6 +10,16 @@ define('custom:controllers/crm-hub', ['controller'], function (Dep) {
             this.main('custom:views/orgchart', {});
         }
 
+        actionAsignacion() {
+            if (!this.getUser().isAdmin()) { this.error403(); return; }
+            this.main('custom:views/assignment', {});
+        }
+
+        actionPipeline() {
+            if (!this.getUser().isAdmin()) { this.error403(); return; }
+            this.main('custom:views/pipeline', {});
+        }
+
         actionIntegrations() {
             if (!this.getUser().isAdmin()) {
                 this.error403();

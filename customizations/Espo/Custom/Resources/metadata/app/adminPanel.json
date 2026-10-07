@@ -3,7 +3,30 @@
         "label": "Crm Hub 360",
         "order": 1,
         "itemList": [
-            {"url": "#CrmHub/integrations", "label": "Integraciones", "iconClass": "fas fa-plug", "description": "crmhubIntegrations"}
+            {
+                "url": "#CrmHub/integrations",
+                "label": "Integraciones",
+                "iconClass": "fas fa-plug",
+                "description": "crmhubIntegrations"
+            },
+            {
+                "url": "#CrmHub/asignacion",
+                "label": "Asignación de leads",
+                "iconClass": "fas fa-shuffle",
+                "description": "crmhubAsignacion"
+            },
+            {
+                "url": "#CrmHub/pipeline",
+                "label": "Estados del pipeline",
+                "iconClass": "fas fa-timeline",
+                "description": "crmhubPipeline"
+            },
+            {
+                "url": "#CrmHub/organigrama",
+                "label": "Organigrama",
+                "iconClass": "fas fa-sitemap",
+                "description": "crmhubOrganigrama"
+            }
         ]
     }
 }

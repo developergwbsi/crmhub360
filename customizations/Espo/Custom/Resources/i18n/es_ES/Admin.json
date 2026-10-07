@@ -1,9 +1,15 @@
 {
     "labels": {
         "Crm Hub 360": "Crm Hub 360",
-        "Integraciones": "Integraciones"
+        "Integraciones": "Integraciones",
+        "Asignación de leads": "Asignación de leads",
+        "Estados del pipeline": "Estados del pipeline",
+        "Organigrama": "Organigrama"
     },
     "descriptions": {
-        "crmhubIntegrations": "Webhooks de captación, WhatsApp, Facebook/Instagram, reglas de crédito, IA y licencia."
+        "crmhubIntegrations": "Webhooks de captación, WhatsApp, Facebook/Instagram, reglas de crédito, IA y licencia.",
+        "crmhubAsignacion": "Cómo se reparten los leads nuevos: balanceo, tope por asesor y quién recibe.",
+        "crmhubPipeline": "Estados de los leads: dónde crearlos y cuáles usa el sistema.",
+        "crmhubOrganigrama": "Dirección, equipos, directores y asesores."
     }
 }

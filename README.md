@@ -47,6 +47,7 @@ Teléfonos se normalizan a E.164 (sin prefijo se asume +57).
   los valores iniciales (`DEFAULT_SERVICES`) son solo de partida. El lead queda con *Resultado del filtro*, *Servicio sugerido* y *Motivos*.
 - **Asignación automática** (`customizations/.../Services/LeadAssigner.php`, hook `AutoAssign`): campaña → usuarios habilitados de sus equipos;
   si no hay, todos los habilitados; siempre al de menos leads abiertos. Habilitación por usuario: campo `receivesLeads`.
+- **Config del balanceo y de estados** (pantallas `#CrmHub/asignacion` y `#CrmHub/pipeline`, guardadas en la config de EspoCRM como `crmhubAssignMethod`, `crmhubAssignCap`, `crmhubStatusNew|Review|Qualified`, `crmhubClosedStatuses`).
 - **Reasignación**: `POST /CrmHub/reassign` (admin, o rol con permiso de asignación; *team* = solo usuarios de sus equipos). Deja nota en el historial.
 
 ## Entornos y paso a producción

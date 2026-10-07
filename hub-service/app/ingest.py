@@ -2,6 +2,7 @@ import logging
 
 import httpx
 
+from . import qualify
 from .espo import Espo
 
 
@@ -25,7 +26,7 @@ async def upsert_lead(tenant: dict, *, name: str, phone: str | None, email: str 
     espo = Espo(tenant)
     first, last = _split_name(name)
     data = {"firstName": first, "lastName": last or first or "Sin nombre", "phoneNumber": normalize_phone(phone),
-            "emailAddress": email, "source": source, "status": "Nuevo Lead", **(extra or {})}
+            "emailAddress": email, "source": source, "status": (await qualify.pipeline(espo))["new"], **(extra or {})}
     if camp_id := await find_campaign_id(tenant, campaign):
         data["campaignId"] = camp_id
     return (await espo.post("Lead", data))["id"]

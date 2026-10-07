@@ -72,5 +72,29 @@
             "controller": "CrmHub",
             "action": "orgchart"
         }
+    },
+    {
+        "route": "/CrmHub/assignment",
+        "method": "put",
+        "params": {
+            "controller": "CrmHub",
+            "action": "assignment"
+        }
+    },
+    {
+        "route": "/CrmHub/pipeline",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "pipeline"
+        }
+    },
+    {
+        "route": "/CrmHub/pipeline",
+        "method": "put",
+        "params": {
+            "controller": "CrmHub",
+            "action": "pipeline"
+        }
     }
 ]
