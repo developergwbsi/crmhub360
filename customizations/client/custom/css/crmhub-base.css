@@ -588,3 +588,5 @@ body.modal-open:has(.ch-drawer) { overflow: auto !important; padding-right: 0 !i
 td.group-column .show-more > a.btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 8px; margin-top: 6px; border: 1px dashed var(--ch-line-strong); border-radius: 10px; color: var(--ch-primary); font-weight: 600; }
 td.group-column .show-more > a.btn::after { content: "Mostrar más"; }
 td.group-column .show-more > a.btn.hidden { display: none; }
+/* kanban: la fila de estados que Espo fija al hacer scroll queda justo bajo el encabezado de la página (no detrás) */
+.kanban-head-container.sticked { top: var(--ch-ph-h, 56px) !important; z-index: 85; background: var(--ch-bg); padding: 6px 0 4px; }
