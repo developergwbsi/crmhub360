@@ -57,6 +57,13 @@ Teléfonos se normalizan a E.164 (sin prefijo se asume +57).
 - **Llamadas**: el botón **Llamar** abre `tel:` (softphone/teléfono del asesor) y luego registra el resultado como `Call` (Held, saliente) + nota. No hay marcación ni grabación integradas (requieren proveedor SIP/Twilio).
 - **Manual por rol**: cada sección lleva `data-roles`; `GET /CrmHub/myroles` decide qué ve cada usuario (admin ve todo; los demás pueden alternar «Ver todo el manual»).
 
+## PWA, modo oscuro y versiones
+
+- **Tema claro/oscuro**: `crmhub-theme.css` (claro, sobre `espo.css`) y `crmhub-theme-dark.css` (sobre `dark.css` de Espo); ambos importan `crmhub-base.css` (reglas) y un archivo de tokens `--ch-*`. `src/crmhub-boot.js` cambia el `<link id="main-stylesheet">` y guarda la elección en `localStorage`.
+- **PWA**: `manifest.webmanifest`, `sw.js` (alcance `/`, requiere las cabeceras `Service-Worker-Allowed` del vhost, ya en `templates/apache-vhost.conf.tpl`). Caché: `/client/*` primero caché; API GET red primero con copia **por usuario** (no se guardan `CrmHub/integrations`, adjuntos ni administración); escrituras sin red -> 503 claro.
+- **Nueva versión**: `bin/crmhub` escribe `client/custom/version.json` (hash del contenido) en cada despliegue; el navegador lo consulta cada 5 min y al volver a la pestaña, y muestra el aviso + notificación de escritorio si se concedió el permiso. No hay Web Push con la app cerrada.
+- Íconos de la app: `client/custom/img/pwa-*.png`.
+
 ## Entornos y paso a producción
 
 | Entorno | Host | Tenant | Puerto local |

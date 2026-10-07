@@ -1,0 +1,12 @@
+/* Crm Hub 360 - colores del tema CLARO */
+body {
+    --ch-scheme: light;
+    --ch-primary: hsl(231 70% 52%); --ch-primary-hover: hsl(231 70% 45%); --ch-primary-active: hsl(231 70% 38%); --ch-primary-fg: #fff;
+    --ch-bg: hsl(210 22% 96.5%); --ch-surface: #fff; --ch-soft: hsl(210 22% 97.5%); --ch-soft2: hsl(210 22% 94%);
+    --ch-ink: hsl(222 30% 14%); --ch-muted: hsl(217 12% 42%);
+    --ch-line: hsl(214 20% 90%); --ch-line-strong: hsl(214 20% 85%);
+    --ch-tint: hsl(231 60% 97%); --ch-tint2: hsl(231 80% 96%); --ch-tint-line: hsl(231 60% 86%);
+    --ch-warn-bg: hsl(38 90% 94%); --ch-warn-fg: #5b3d00; --ch-success-fg: hsl(152 60% 26%); --ch-info-fg: hsl(262 45% 42%);
+    --ch-side: hsl(224 34% 10%); --ch-side-hover: hsl(224 30% 16%); --ch-side-active: hsl(231 55% 26%);
+    --ch-shadow: 0 1px 2px rgba(20, 28, 60, .04), 0 4px 14px rgba(20, 28, 60, .05);
+}

@@ -5,11 +5,9 @@
     position: fixed; inset: 0; z-index: 1000; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
     font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ch-fg); background: var(--ch-bg);
 }
-@media (prefers-color-scheme: dark) {
-    .crmhub-login {
-        --ch-bg: hsl(224 28% 9%); --ch-card: hsl(224 26% 13%); --ch-fg: hsl(210 20% 94%); --ch-muted: hsl(215 14% 65%);
-        --ch-border: hsl(224 20% 22%); --ch-primary: hsl(231 85% 68%); --ch-primary-fg: hsl(224 40% 8%); --ch-input: hsl(224 22% 18%);
-    }
+html[data-ch-theme="dark"] .crmhub-login {
+    --ch-bg: hsl(224 28% 9%); --ch-card: hsl(224 26% 13%); --ch-fg: hsl(210 20% 94%); --ch-muted: hsl(215 14% 65%);
+    --ch-border: hsl(224 20% 22%); --ch-primary: hsl(231 85% 68%); --ch-primary-fg: hsl(224 40% 8%); --ch-input: hsl(224 22% 18%);
 }
 .crmhub-hidden-footer { display: none; }
 

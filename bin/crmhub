@@ -46,6 +46,9 @@ install_custom() { # slug
   docker cp "$ROOT/customizations/Espo/Custom/." "$c:/var/www/html/custom/Espo/Custom/"
   docker cp "$ROOT/customizations/client/custom/." "$c:/var/www/html/client/custom/"
   docker exec "$c" chown -R www-data:www-data /var/www/html/custom /var/www/html/client/custom
+  # versión de la app: cambia cuando cambia cualquier archivo; el navegador la compara para avisar de una nueva versión
+  local ver; ver="$(cd "$ROOT/customizations" && find . -type f -not -name version.json | sort | xargs md5sum | md5sum | cut -c1-12)"
+  docker exec "$c" sh -c "printf '{\"version\":\"$ver\",\"built\":\"$(date -u +%FT%TZ)\"}' > /var/www/html/client/custom/version.json && chown www-data:www-data /var/www/html/client/custom/version.json"
   docker exec -u www-data "$c" php command.php rebuild >/dev/null
   docker exec -u www-data "$c" php command.php clear-cache >/dev/null
 }

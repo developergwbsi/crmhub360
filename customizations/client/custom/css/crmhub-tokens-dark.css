@@ -1,0 +1,12 @@
+/* Crm Hub 360 - colores del tema OSCURO (se apoya en el tema Dark de EspoCRM para los componentes que no personalizamos) */
+body {
+    --ch-scheme: dark;
+    --ch-primary: hsl(231 85% 70%); --ch-primary-hover: hsl(231 85% 76%); --ch-primary-active: hsl(231 85% 62%); --ch-primary-fg: hsl(224 40% 8%);
+    --ch-bg: hsl(224 28% 9%); --ch-surface: hsl(224 26% 13%); --ch-soft: hsl(224 24% 16%); --ch-soft2: hsl(224 22% 20%);
+    --ch-ink: hsl(210 20% 94%); --ch-muted: hsl(215 14% 66%);
+    --ch-line: hsl(224 20% 22%); --ch-line-strong: hsl(224 18% 28%);
+    --ch-tint: hsl(231 28% 19%); --ch-tint2: hsl(231 34% 23%); --ch-tint-line: hsl(231 30% 32%);
+    --ch-warn-bg: hsl(38 45% 17%); --ch-warn-fg: hsl(38 85% 78%); --ch-success-fg: hsl(152 55% 62%); --ch-info-fg: hsl(262 80% 80%);
+    --ch-side: hsl(224 34% 7%); --ch-side-hover: hsl(224 30% 13%); --ch-side-active: hsl(231 45% 24%);
+    --ch-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 14px rgba(0, 0, 0, .25);
+}
