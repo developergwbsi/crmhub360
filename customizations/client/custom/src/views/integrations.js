@@ -1,4 +1,4 @@
-define('custom:views/integrations', ['view'], function (Dep) {
+define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) {
     return class extends Dep {
         template = 'custom:integrations'
 
@@ -149,7 +149,8 @@ define('custom:views/integrations', ['view'], function (Dep) {
             'click [data-action="editForm"]': function (e) { const i = +e.currentTarget.dataset.i; this.editing = this.editing === i ? null : i; this.renderForms(); },
             'click [data-action="removeForm"]': function (e) {
                 const i = +e.currentTarget.dataset.i;
-                if (confirm('¿Eliminar el formulario «' + this.forms[i].name + '»? Su dirección dejará de funcionar al guardar.')) { this.forms.splice(i, 1); this.editing = null; this.renderForms(); }
+                ChUi.confirm({title: 'Eliminar formulario', danger: true, ok: 'Eliminar', text: '¿Eliminar el formulario «' + this.forms[i].name + '»? Su dirección dejará de funcionar al guardar.'})
+                    .then(yes => { if (yes) { this.forms.splice(i, 1); this.editing = null; this.renderForms(); } });
             },
             'click [data-action="copyEmbed"]': function (e) {
                 const f = this.forms[+e.currentTarget.dataset.i];
@@ -192,10 +193,8 @@ define('custom:views/integrations', ['view'], function (Dep) {
             },
             'click [data-action="removeService"]': function (e) {
                 const i = +e.currentTarget.dataset.i;
-                if (confirm('¿Eliminar el servicio «' + this.services[i].name + '»?')) {
-                    this.services.splice(i, 1);
-                    this.renderServices();
-                }
+                ChUi.confirm({title: 'Eliminar servicio', danger: true, ok: 'Eliminar', text: '¿Eliminar el servicio «' + this.services[i].name + '»?'})
+                    .then(yes => { if (yes) { this.services.splice(i, 1); this.renderServices(); } });
             },
             'click [data-action="moveService"]': function (e) {
                 const i = +e.currentTarget.dataset.i, d = +e.currentTarget.dataset.d, j = i + d;
@@ -231,9 +230,11 @@ define('custom:views/integrations', ['view'], function (Dep) {
             },
             'click [data-action="saveServices"]': function () { this.save({services: this.services}); },
             'click [data-action="resetServices"]': function () {
-                if (!confirm('Se reemplazarán tus servicios y filtros por los valores iniciales. ¿Continuar?')) { return; }
-                Espo.Ajax.postRequest('CrmHub/integrations/reset-services', {})
-                    .then(() => { Espo.Ui.success('Valores iniciales restaurados'); this.load(); });
+                ChUi.confirm({title: 'Restaurar valores iniciales', danger: true, ok: 'Restaurar', text: 'Se reemplazarán tus servicios y filtros por los valores iniciales. ¿Continuar?'}).then(yes => {
+                    if (!yes) { return; }
+                    Espo.Ajax.postRequest('CrmHub/integrations/reset-services', {})
+                        .then(() => { Espo.Ui.success('Valores iniciales restaurados'); this.load(); });
+                });
             },
         }
 

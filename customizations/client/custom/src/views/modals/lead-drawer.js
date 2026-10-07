@@ -13,7 +13,7 @@ define('custom:views/modals/lead-drawer', ['views/modals/detail', 'custom:handle
             if (full) { delete full.label; full.html = '<span class="fas fa-up-right-and-down-left-from-center"></span> Abrir completo'; full.style = 'primary'; }
             const contact = [
                 ['callLead', 'fas fa-phone', 'Llamar', 'actionCall'], ['whatsappLead', 'fab fa-whatsapp', 'WhatsApp', 'actionWhatsapp'],
-                ['smsLead', 'fas fa-comment-sms', 'SMS', 'actionSms'], ['telegramLead', 'fab fa-telegram', 'Telegram', 'actionTelegram'],
+                ['smsLead', 'fas fa-comment-sms', 'SMS', 'actionSms'], ['telegramLead', 'fab fa-telegram', 'Telegram', 'actionTelegram'], ['emailLead', 'fas fa-envelope', 'Correo', 'actionEmail'],
             ];
             contact.slice().reverse().forEach(([name, icon, label, fn]) => {
                 this.buttonList.unshift({name, html: `<span class="${icon}"></span> ${label}`, className: 'ch-contact-btn ch-contact-' + name, onClick: () => new ContactHandler(this)[fn]()});

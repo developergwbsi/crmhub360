@@ -121,5 +121,5 @@ async def send(tenant: dict, lead_id: str, text: str, agent: str) -> dict:
         raise ValueError("El lead no tiene teléfono.")
     await send_text(tenant, phone, text)
     _sent[(lead_id, text)] = time.time()
-    await espo.note(lead_id, f"[WhatsApp] {agent}: {text}")
+    await espo.note(lead_id, f"[WhatsApp] → {agent}: {text}")
     return {"ok": True}

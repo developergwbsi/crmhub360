@@ -61,7 +61,7 @@ async def send(tenant: dict, lead_id: str, text: str, agent: str) -> dict:
     if not chat:
         raise ValueError("Este lead aún no ha abierto el chat con el bot. Envíale el enlace de invitación (botón «Invitar por Telegram»).")
     await send_text(tenant, chat, text)
-    await espo.note(lead_id, f"[Telegram] {agent}: {text}")
+    await espo.note(lead_id, f"[Telegram] → {agent}: {text}")
     return {"ok": True}
 
 

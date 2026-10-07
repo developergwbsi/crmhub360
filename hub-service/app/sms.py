@@ -40,7 +40,7 @@ async def send(tenant: dict, lead_id: str, text: str, agent: str) -> dict:
         raise ValueError("El lead no tiene teléfono.")
     await send_text(tenant, phone, text, lead, agent)
     i = info(text)
-    await espo.note(lead_id, f"[SMS] {agent}: {text}")
+    await espo.note(lead_id, f"[SMS] → {agent}: {text}")
     return {"ok": True, **i}
 
 

@@ -275,5 +275,21 @@
             "controller": "CrmHub",
             "action": "twilioTest"
         }
+    },
+    {
+        "route": "/CrmHub/leadTimeline",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "leadTimeline"
+        }
+    },
+    {
+        "route": "/CrmHub/statusGuard",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "statusGuard"
+        }
     }
 ]

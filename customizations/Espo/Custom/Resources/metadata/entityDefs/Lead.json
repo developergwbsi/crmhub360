@@ -162,6 +162,19 @@
             "type": "bool",
             "default": false,
             "audited": true
+        },
+        "statusComment": {
+            "type": "text",
+            "notStorable": true,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true,
+            "layoutDetailSmallDisabled": true,
+            "importDisabled": true,
+            "exportDisabled": true,
+            "directAccessDisabled": true,
+            "readOnly": false
         }
     }
 }

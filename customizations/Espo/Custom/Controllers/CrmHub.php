@@ -461,6 +461,38 @@ class CrmHub
         return (object) ['ok' => true];
     }
 
+    // ---------- Historial del lead (chat, llamadas, correos, estados) ----------
+    private function leadFor(Request $request): \Espo\ORM\Entity
+    {
+        $lead = $this->em->getEntityById('Lead', (string) $request->getQueryParam('leadId'));
+        if (!$lead || !$this->acl->checkEntityRead($lead)) {
+            throw new Forbidden();
+        }
+        return $lead;
+    }
+
+    public function getActionLeadTimeline(Request $request): \stdClass
+    {
+        $lead = $this->leadFor($request);
+        $t = new \Espo\Custom\Services\LeadTimeline($this->em);
+        $kind = (string) $request->getQueryParam('kind');
+        $items = match ($kind) {
+            'calls' => $t->calls($lead->getId()),
+            'emails' => $t->emails($lead->getId()),
+            'status' => $t->statusLog($lead->getId()),
+            default => $t->chat($lead->getId(), (string) $request->getQueryParam('channel')),
+        };
+        return (object) ['items' => $items];
+    }
+
+    /** ¿Ya hubo una acción con el lead desde el último cambio de estado? Si no, el cambio exige comentario. */
+    public function getActionStatusGuard(Request $request): \stdClass
+    {
+        $lead = $this->leadFor($request);
+        $a = (new \Espo\Custom\Services\LeadTimeline($this->em))->priorAction($lead);
+        return (object) ['requiresComment' => !$a, 'action' => $a];
+    }
+
     /** Roles del usuario actual: el manual muestra solo lo que le corresponde. */
     public function getActionMyroles(Request $request): \stdClass
     {

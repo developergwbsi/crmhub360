@@ -67,6 +67,7 @@
 <div class="panel panel-default" id="ch-m-pipeline" data-roles="comercial director gerente">
   <div class="panel-heading"><h4 class="panel-title">3. Tablero Kanban</h4></div>
   <div class="panel-body">
+<div class="ch-warn"><b>Cambios de estado:</b> cada vez que cambias el estado de un lead (arrastrando la tarjeta o editándolo) debes escribir un <b>comentario</b>, salvo que ya hayas hecho una <b>acción con ese lead</b> desde el último cambio (una llamada, un mensaje, un correo, una reunión o una tarea). Todo queda en el panel <b>Historial de estados</b> del lead: de qué estado a cuál, quién, cuándo y por qué.</div>
 <div class="ch-tip"><b>Ficha rápida:</b> al pulsar una tarjeta se abre la ficha del lead en un <b>panel lateral</b> (el tablero sigue visible para pasar a otro lead). Desde ahí puedes llamar, escribir por WhatsApp, SMS o Telegram, editar, o pulsar <b>Abrir completo</b> para ver toda la información en pantalla completa.</div>
 <p>Al entrar a <b>Leads</b> verás el tablero Kanban: cada columna es un estado. Con los iconos de arriba a la derecha alternas entre el tablero y la lista.</p>
 <ul><li><b>Arrastra</b> una tarjeta a otra columna para cambiar su estado.</li><li>Cada tarjeta muestra el avatar (foto de WhatsApp si existe, o las iniciales), el resultado del filtro, el servicio sugerido, la deuda, el teléfono, el asesor y la antigüedad.</li><li>Cada columna tiene su propio <b>buscador</b>: escribe un nombre, teléfono, servicio o asesor y se filtran solo las tarjetas de ese estado (aparece <i>n/total</i>). Si hay más tarjetas sin cargar, usa «Mostrar más» primero.</li>
@@ -102,6 +103,7 @@
 <div class="panel panel-default" id="ch-m-contacto" data-roles="comercial director gerente">
   <div class="panel-heading"><h4 class="panel-title">5b. Llamar y enviar WhatsApp a un lead</h4></div>
   <div class="panel-body">
+<div class="ch-tip">Cada botón abre la interfaz de su canal: <b>WhatsApp, Telegram y SMS</b> se ven como una conversación (burbujas, con el historial y la caja para escribir abajo); <b>Llamar</b> abre un teléfono con el historial de llamadas (estado, duración, quién y notas); <b>Correo</b> muestra los correos enviados y recibidos y permite redactar uno.</div>
 <p>Abre el lead: arriba están los botones <b>Llamar</b>, <b>WhatsApp</b> y <b>SMS</b>. Todos necesitan que el lead tenga <b>teléfono</b>.</p>
 <h3>Llamar</h3>
 <ol>

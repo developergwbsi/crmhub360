@@ -119,7 +119,7 @@ async def whatsapp_inbound(tenant: dict, *, phone: str, name: str | None, text: 
                                     extra={"avatarUrl": avatar, "preferredChannel": "WhatsApp"} if avatar else {"preferredChannel": "WhatsApp"})
     if from_me and whatsapp.recently_sent(lead_id, text):
         return lead_id  # eco del mensaje enviado desde el CRM; ya tiene su nota
-    await Espo(tenant).note(lead_id, f"[WhatsApp] {'Asesor' if from_me else (name or 'Cliente')}: {text}")
+    await Espo(tenant).note(lead_id, f"[WhatsApp] {'→ Asesor' if from_me else '← ' + (name or 'Cliente')}: {text}")
     if not from_me and is_optout(text):
         await apply_optout(tenant, lead_id, "WhatsApp")
         try:
@@ -234,7 +234,7 @@ async def from_telegram(tenant: dict, update: dict) -> str | None:
         text = "abrió el chat con el bot" + (" (desde su enlace de invitación)" if linked else "")
     elif not text:
         text = f"[{_media_label(next((k for k in ('photo', 'voice', 'audio', 'video', 'document', 'sticker', 'location') if k in m), 'mensaje'))}]"
-    await espo.note(lead_id, f"[Telegram] {name}: {text}")
+    await espo.note(lead_id, f"[Telegram] ← {name}: {text}")
     if is_optout(m.get("text") or ""):
         await apply_optout(tenant, lead_id, "Telegram")
         try:
@@ -258,7 +258,7 @@ async def sms_inbound(tenant: dict, *, phone: str, text: str, name: str | None =
     from . import sms
     lead_id = await find_lead_by_phone(tenant, phone) or await upsert_lead(
         tenant, name=name or phone, phone=phone, email=None, source="SMS", extra={"preferredChannel": "Teléfono"})
-    await Espo(tenant).note(lead_id, f"[SMS] {name or 'Cliente'}: {text}")
+    await Espo(tenant).note(lead_id, f"[SMS] ← {name or 'Cliente'}: {text}")
     if is_optout(text):
         await apply_optout(tenant, lead_id, "SMS")
         try:

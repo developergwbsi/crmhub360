@@ -33,6 +33,14 @@
                     "style": "default",
                     "handler": "custom:handlers/lead-contact",
                     "actionFunction": "actionTelegram"
+                },
+                {
+                    "name": "emailLead",
+                    "label": "Correo",
+                    "iconClass": "fas fa-envelope",
+                    "style": "default",
+                    "handler": "custom:handlers/lead-contact",
+                    "actionFunction": "actionEmail"
                 }
             ],
             "dropdown": [
@@ -89,5 +97,16 @@
             "initFunction": "initReassign",
             "groupIndex": 2
         }
+    },
+    "model": "custom:models/lead",
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "statusHistory",
+                "label": "Historial de estados",
+                "view": "custom:views/lead/panels/status-history",
+                "order": 3
+            }
+        ]
     }
 }

@@ -5,14 +5,33 @@ define('custom:handlers/lead-contact', ['action-handler'], function (Dep) {
             return (m.get('phoneNumber') || '').trim();
         }
 
-        // Si la empresa configuró telefonía (Integraciones → SMS y llamadas), la central llama primero al asesor y luego lo conecta con el cliente.
-        // Si no, se abre el marcador del equipo (tel:) y luego se registra el resultado a mano.
+        // El botón Llamar abre el teléfono del lead (marcador + historial de llamadas).
         actionCall() {
             const phone = this.phone();
             if (!phone) { Espo.Ui.warning('Este lead no tiene teléfono.'); return; }
+            const m = this.view.model;
+            this.view.createView('phone', 'custom:views/modals/phone', {leadId: m.id, model: m, name: m.get('name'), phone, handler: this}, v => v.render());
+        }
+
+        // Si la empresa configuró telefonía (Integraciones → SMS y llamadas), la central llama primero al asesor y luego lo conecta con el cliente.
+        // Si no, se abre el marcador del equipo (tel:) y luego se registra el resultado a mano.
+        actionCallStart(phone) {
             Espo.Ajax.getRequest('CrmHub/channels')
                 .then(ch => ch.voice ? this.clickToCall(phone) : this.dialerCall(phone))
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } this.dialerCall(phone); });
+        }
+
+        manualCallLog(phone) {
+            this.view.createView('callLog', 'custom:views/modals/call-log', {leadId: this.view.model.id, phone}, v => {
+                v.render();
+                v.once('done', () => this.view.model.fetch());
+            });
+        }
+
+        actionEmail() {
+            const m = this.view.model, email = (m.get('emailAddress') || '').trim();
+            if (!email) { Espo.Ui.warning('Este lead no tiene correo.'); return; }
+            this.view.createView('emailThread', 'custom:views/modals/email-thread', {leadId: m.id, name: m.get('name'), email}, v => { v.render(); v.once('done', () => m.fetch()); });
         }
 
         clickToCall(phone) {

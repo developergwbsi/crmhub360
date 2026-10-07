@@ -1,4 +1,4 @@
-define('custom:views/broadcasts', ['view'], function (Dep) {
+define('custom:views/broadcasts', ['view', 'custom:ui'], function (Dep, ChUi) {
     const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const STATUS = {running: ['En envío', 'info'], scheduled: ['Programada', 'warning'], paused: ['En pausa', 'warning'], done: ['Terminada', 'success'], cancelled: ['Cancelada', 'danger']};
 
@@ -106,20 +106,24 @@ define('custom:views/broadcasts', ['view'], function (Dep) {
                 if (!this.audience) { Espo.Ui.warning('Primero pulsa «Calcular audiencia».'); return; }
                 const when = parseInt(this.$el.find('[name="bc_when"]').val() || '0', 10), per = parseInt(this.$el.find('[name="bc_rate"]').val() || '20', 10);
                 const mins = Math.ceil(this.audience / per);
-                if (!confirm(`Se enviará «${name}» por ${this.channel().toUpperCase()} a ${this.audience} personas, ${per} por minuto (≈ ${mins} min).\n¿Confirmas el envío?`)) { return; }
-                Espo.Ui.notify('Creando campaña…');
-                Espo.Ajax.postRequest('CrmHub/broadcast', {name, channel: this.channel(), text, filters: this.filters(), perMinute: per, footer: this.$el.find('[name="bc_footer"]').is(':checked'), startInMinutes: when})
-                    .then(() => { Espo.Ui.success('Campaña creada'); this.wizard = false; this.load(); })
-                    .catch(xhr => {
-                        const r = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason');
-                        Espo.Ui.error(r || 'No se pudo crear la campaña'); if (xhr) { xhr.errorIsHandled = true; }
-                    });
+                ChUi.confirm({title: 'Confirmar envío masivo', ok: 'Enviar campaña', text: `Se enviará «${name}» por ${this.channel().toUpperCase()} a ${this.audience} personas, ${per} por minuto (≈ ${mins} min). ¿Confirmas el envío?`}).then(yes => {
+                    if (!yes) { return; }
+                    Espo.Ui.notify('Creando campaña…');
+                    Espo.Ajax.postRequest('CrmHub/broadcast', {name, channel: this.channel(), text, filters: this.filters(), perMinute: per, footer: this.$el.find('[name="bc_footer"]').is(':checked'), startInMinutes: when})
+                        .then(() => { Espo.Ui.success('Campaña creada'); this.wizard = false; this.load(); })
+                        .catch(xhr => {
+                            const r = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason');
+                            Espo.Ui.error(r || 'No se pudo crear la campaña'); if (xhr) { xhr.errorIsHandled = true; }
+                        });
+                });
             },
             'click [data-action="bcAct"]': function (e) {
                 const d = e.currentTarget.dataset;
-                if (d.act === 'cancel' && !confirm('¿Cancelar la campaña? Los mensajes pendientes no se enviarán.')) { return; }
-                Espo.Ajax.postRequest(`CrmHub/broadcasts/${d.id}/${d.act}`, {}).then(() => this.load(true))
+                const run = () => Espo.Ajax.postRequest(`CrmHub/broadcasts/${d.id}/${d.act}`, {}).then(() => this.load(true))
                     .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo aplicar la acción'); });
+                if (d.act === 'cancel') {
+                    ChUi.confirm({title: 'Cancelar campaña', danger: true, ok: 'Cancelar campaña', cancel: 'Volver', text: '¿Cancelar la campaña? Los mensajes pendientes no se enviarán.'}).then(yes => { if (yes) { run(); } });
+                } else { run(); }
             },
             'click [data-action="bcDetail"]': function (e) {
                 Espo.Ajax.getRequest('CrmHub/broadcasts/' + e.currentTarget.dataset.id).then(b => {
