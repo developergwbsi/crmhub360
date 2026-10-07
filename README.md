@@ -58,7 +58,17 @@ Teléfonos se normalizan a E.164 (sin prefijo se asume +57).
 
 Flujo: cambiar `customizations/` o `hub-service/` -> probar en `dev` (`bin/crmhub tenant:upgrade dev`) -> commit -> `bin/crmhub tenant:upgrade prod`
 (y `docker compose up -d --build hub-service` si cambió el servicio). Los vhosts versionados están en `apache/` (certbot renueva solo).
-Antes de cargar clientes reales en prod: respaldo de la BD (`docker exec crmhub-postgres pg_dump -U crmhub_admin tenant_prod`) programado en cron.
+## Respaldos y restauración
+
+`bin/backup` (cron diario 02:30 en `/etc/cron.d/crmhub`, log en `/var/log/crmhub-backup.log`) guarda en `/var/backups/crmhub/<fecha>/`:
+BD maestra + una BD por tenant (`*.dump`, formato custom), `config.tar.gz` (`.env` y de cada tenant, con secretos) y los adjuntos de cada tenant. Verifica cada dump y borra lo de más de 14 días.
+Restaurar un tenant (ejemplo prod):
+
+```bash
+docker exec -i crmhub-postgres pg_restore -U crmhub_admin -d tenant_prod --clean --if-exists --no-owner < /var/backups/crmhub/<fecha>/tenant_prod.dump
+tar -xzf /var/backups/crmhub/<fecha>/crmhub_prod_data.tar.gz -C /ruta/temporal   # adjuntos -> volumen crmhub_prod_data
+```
+Las copias están en el mismo servidor: para protegerse de la pérdida del disco, sincroniza `/var/backups/crmhub` a un almacenamiento externo.
 
 ## Selección de modelo (benchmark en `hub-service/bench/`, CPU 6 núcleos, sin GPU)
 

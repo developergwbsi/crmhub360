@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Respaldo de Crm Hub 360: BD maestra + una BD por tenant (formato custom de pg_dump) + configuración (.env).
+# Uso: bin/backup [directorio]   (por defecto /var/backups/crmhub). Conserva RETENTION_DAYS días (14).
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; cd "$ROOT"
+set -a; . ./.env; set +a
+DEST="${1:-/var/backups/crmhub}"; RETENTION_DAYS="${RETENTION_DAYS:-14}"
+STAMP="$(date +%F_%H%M)"; OUT="$DEST/$STAMP"
+umask 077; mkdir -p "$OUT"
+
+dump() { docker exec crmhub-postgres pg_dump -U "$PG_ADMIN_USER" -Fc "$1" > "$OUT/$1.dump"; }
+dump "$PG_MASTER_DB"
+for d in $(docker exec crmhub-postgres psql -U "$PG_ADMIN_USER" -d "$PG_MASTER_DB" -qtA -c "SELECT db_name FROM tenants ORDER BY 1"); do dump "$d"; done
+# configuración con secretos (contraseñas de BD y tokens): sin ella no se puede restaurar un tenant
+tar -czf "$OUT/config.tar.gz" .env tenants/*/.env tenants/*/docker-compose.yml 2>/dev/null
+# archivos subidos (PDF de crédito, adjuntos) viven en el volumen de datos de cada tenant
+for v in $(docker volume ls -q | grep -E '^crmhub_.+_data$'); do
+  docker run --rm -v "$v":/d:ro -v "$OUT":/o alpine tar -czf "/o/$v.tar.gz" -C /d . 
+done
+# verificación: cada dump debe poder listarse
+for f in "$OUT"/*.dump; do docker exec -i crmhub-postgres pg_restore --list < "$f" >/dev/null || { echo "DUMP CORRUPTO: $f" >&2; exit 1; }; done
+find "$DEST" -mindepth 1 -maxdepth 1 -type d -mtime +"$RETENTION_DAYS" -exec rm -rf {} +
+echo "OK $OUT ($(du -sh "$OUT" | cut -f1))"
