@@ -1,0 +1,7 @@
+[
+    {
+        "route": "/Lead/:id/ai/:action",
+        "method": "post",
+        "params": {"controller": "Lead", "action": "aiAssist", "id": ":id", "aiAction": ":action"}
+    }
+]

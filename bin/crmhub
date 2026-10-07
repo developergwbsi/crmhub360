@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+# Crm Hub 360 - CLI de plataforma (infraestructura, tenants, Apache)
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+PSQL_C=crmhub-postgres
+
+die() { echo "error: $*" >&2; exit 1; }
+load_env() { [[ -f .env ]] || die "falta .env (ejecuta: bin/crmhub init)"; set -a; . ./.env; set +a; }
+rand() { openssl rand -hex "${1:-16}"; }
+sql() { docker exec -i "$PSQL_C" psql -U "$PG_ADMIN_USER" -d "${2:-$PG_MASTER_DB}" -v ON_ERROR_STOP=1 -qtA -c "$1"; }
+
+usage() { cat <<USG
+Uso: bin/crmhub <comando>
+  init                          genera .env con secretos aleatorios
+  up                            levanta Postgres + Hub Service
+  tenant:create <slug> --name "Empresa" --admin-email a@b.co [--host h] [--plan p] [--max-users n] [--license-until YYYY-MM-DD]
+  tenant:list
+  tenant:suspend|tenant:resume <slug>
+  tenant:upgrade <slug>         reaplica customizaciones y reconstruye
+  tenant:delete <slug> --yes    elimina contenedores, volumen y BD
+  vhost:render <slug>           imprime el VirtualHost de Apache del tenant
+  vhost:install <slug> --env dev|prod   instala el vhost en Apache (requiere root)
+USG
+}
+
+cmd_init() {
+  [[ ! -f .env ]] || die ".env ya existe"
+  sed -e "s/^PG_ADMIN_PASSWORD=.*/PG_ADMIN_PASSWORD=$(rand 16)/" -e "s/^HUB_ADMIN_TOKEN=.*/HUB_ADMIN_TOKEN=$(rand 24)/" .env.example > .env
+  chmod 600 .env; echo ".env creado"
+}
+
+cmd_up() { load_env; docker compose up -d --build; }
+
+wait_http() { # url user pass
+  for _ in $(seq 1 90); do
+    curl -fsS -u "$2:$3" "$1" >/dev/null 2>&1 && return 0; sleep 4
+  done; return 1
+}
+
+install_custom() { # slug
+  local c="crmhub-$1"
+  docker exec "$c" mkdir -p /var/www/html/custom/Espo/Custom /var/www/html/client/custom
+  docker cp "$ROOT/customizations/Espo/Custom/." "$c:/var/www/html/custom/Espo/Custom/"
+  docker cp "$ROOT/customizations/client/custom/." "$c:/var/www/html/client/custom/"
+  docker exec "$c" chown -R www-data:www-data /var/www/html/custom /var/www/html/client/custom
+  docker exec -u www-data "$c" php command.php rebuild >/dev/null
+  docker exec -u www-data "$c" php command.php clear-cache >/dev/null
+}
+
+render_compose() { # slug -> escribe tenants/<slug>/docker-compose.yml con .env del tenant
+  local d="tenants/$1"
+  set -a; . "$d/.env"; set +a
+  envsubst < templates/tenant-compose.yml.tpl > "$d/docker-compose.yml"
+}
+
+cmd_tenant_create() {
+  load_env
+  local slug="${1:-}"; shift || true
+  [[ "$slug" =~ ^[a-z][a-z0-9-]{1,30}$ ]] || die "slug inválido (minúsculas, dígitos y guiones, 2-31 caracteres)"
+  local name="" email="" host="" plan="standard" maxu=10 until=""
+  while [[ $# -gt 0 ]]; do case "$1" in
+    --name) name="$2"; shift 2;; --admin-email) email="$2"; shift 2;; --host) host="$2"; shift 2;;
+    --plan) plan="$2"; shift 2;; --max-users) maxu="$2"; shift 2;; --license-until) until="$2"; shift 2;;
+    *) die "opción desconocida: $1";; esac; done
+  [[ -n "$name" && -n "$email" ]] || die "--name y --admin-email son obligatorios"
+  [[ -z "$until" ]] || [[ "$until" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die "--license-until debe ser YYYY-MM-DD"
+  [[ "$name$email$host$plan" != *"'"* ]] || die "no se permiten comillas simples en los datos"
+  [[ -n "$host" ]] || host="${slug}.${PROD_HOST}"
+  [[ -z "$(sql "SELECT 1 FROM tenants WHERE slug='$slug'")" ]] || die "el tenant '$slug' ya existe"
+
+  local slug_u="${slug//-/_}" db_name="tenant_${slug//-/_}" db_user="tenant_${slug//-/_}"
+  local db_pass admin_pass hub_token web_port ws_port
+  db_pass="$(rand 16)"; admin_pass="$(rand 9)"; hub_token="$(rand 24)"
+  web_port="$(sql "SELECT COALESCE(MAX(web_port),8199)+1 FROM tenants")"
+  ws_port="$(sql "SELECT COALESCE(MAX(ws_port),8299)+1 FROM tenants")"
+
+  echo "==> BD aislada $db_name"
+  sql "CREATE ROLE $db_user LOGIN PASSWORD '$db_pass'"
+  sql "CREATE DATABASE $db_name OWNER $db_user ENCODING 'UTF8'"
+  sql "REVOKE ALL ON DATABASE $db_name FROM PUBLIC"
+
+  mkdir -p "tenants/$slug"
+  cat > "tenants/$slug/.env" <<ENV
+SLUG=$slug
+SLUG_U=$slug_u
+DB_NAME=$db_name
+DB_USER=$db_user
+DB_PASSWORD=$db_pass
+ADMIN_PASSWORD=$admin_pass
+SITE_URL=https://$host
+WS_URL=wss://$host/ws
+WEB_PORT=$web_port
+WS_PORT=$ws_port
+HUB_PORT=$HUB_PORT
+HUB_TOKEN=$hub_token
+ENV
+  chmod 600 "tenants/$slug/.env"
+  render_compose "$slug"
+
+  echo "==> Contenedores (puerto $web_port)"
+  docker compose -f "tenants/$slug/docker-compose.yml" up -d
+  wait_http "http://127.0.0.1:$web_port/api/v1/App/user" admin "$admin_pass" || die "EspoCRM no respondió a tiempo"
+
+  echo "==> Customizaciones Crm Hub 360 + reconstrucción"
+  install_custom "$slug"
+
+  echo "==> Semilla: ajustes es_ES/COP, roles, equipos, usuario API"
+  local api_key
+  api_key="$(python3 bin/seed_tenant.py "http://127.0.0.1:$web_port" admin "$admin_pass" "$email" | jq -r .api_key)"
+  [[ -n "$api_key" && "$api_key" != null ]] || die "falló la semilla"
+
+  local lic="NULL"; [[ -z "$until" ]] || lic="'$until'"
+  sql "INSERT INTO tenants (slug,name,db_name,web_port,ws_port,host,plan,max_users,license_until,espo_api_key,hub_token)
+       VALUES ('$slug','$name','$db_name',$web_port,$ws_port,'$host','$plan',$maxu,$lic,'$api_key','$hub_token')"
+
+  cat <<OUT
+
+Tenant '$slug' listo.
+  URL:        https://$host   (local: http://127.0.0.1:$web_port)
+  Admin:      admin / $admin_pass   (guarda esta contraseña; no se vuelve a mostrar)
+  Webhooks:   https://$host/hub/facebook?token=$hub_token | /hub/evolution | /hub/web
+  Siguiente:  bin/crmhub vhost:install $slug --env dev
+OUT
+}
+
+cmd_tenant_list() {
+  load_env
+  sql "SELECT slug||' | '||name||' | '||status||' | '||host||' | :'||web_port||' | '||plan||' | max '||max_users||' | '||COALESCE(license_until::text,'sin vencimiento') FROM tenants ORDER BY slug"
+}
+
+cmd_tenant_status() { load_env; sql "UPDATE tenants SET status='$2' WHERE slug='$1'"; echo "$1 -> $2"; }
+
+cmd_tenant_upgrade() {
+  load_env; [[ -d "tenants/${1:?slug}" ]] || die "tenant inexistente"
+  render_compose "$1"
+  docker compose -f "tenants/$1/docker-compose.yml" pull
+  docker compose -f "tenants/$1/docker-compose.yml" up -d
+  install_custom "$1"
+}
+
+cmd_tenant_delete() {
+  load_env; local slug="${1:?slug}"; [[ "${2:-}" == "--yes" ]] || die "agrega --yes para confirmar la eliminación DEFINITIVA de datos"
+  [[ -d "tenants/$slug" ]] || die "tenant inexistente"
+  docker compose -f "tenants/$slug/docker-compose.yml" down -v
+  sql "DROP DATABASE IF EXISTS tenant_${slug//-/_}"; sql "DROP ROLE IF EXISTS tenant_${slug//-/_}"
+  sql "DELETE FROM tenants WHERE slug='$slug'"; rm -rf "tenants/$slug"; echo "eliminado: $slug"
+}
+
+cmd_vhost_render() { # slug [label] [server_name]
+  load_env
+  local row; row="$(sql "SELECT web_port||' '||ws_port||' '||host FROM tenants WHERE slug='${1:?slug}'")"
+  [[ -n "$row" ]] || die "tenant inexistente"
+  read -r WEB_PORT WS_PORT HOST <<<"$row"
+  export SLUG="$1" LABEL="${2:-tenant}" SERVER_NAME="${3:-$HOST}" WEB_PORT WS_PORT HUB_PORT
+  envsubst '${SLUG} ${LABEL} ${SERVER_NAME} ${WEB_PORT} ${WS_PORT} ${HUB_PORT}' < templates/apache-vhost.conf.tpl \
+    | sed "s|@@LOGDIR@@|\${APACHE_LOG_DIR}|g"
+}
+
+cmd_vhost_install() {
+  load_env; local slug="${1:?slug}"; shift
+  [[ "${1:-}" == "--env" ]] || die "uso: vhost:install <slug> --env dev|prod"
+  local name
+  case "${2:-}" in dev) name="$DEV_HOST";; prod) name="$PROD_HOST";; *) die "--env debe ser dev o prod";; esac
+  local file="/etc/apache2/sites-available/crmhub-${2}.conf"
+  [[ ! -e "$file" ]] || die "$file ya existe; revísalo antes de sobrescribir"
+  cmd_vhost_render "$slug" "$2" "$name" > "$file"
+  sed -i "s|^\(\s*ServerName\).*|\1 $name|" "$file"
+  # el tenant debe usar ese host como SITE_URL / WS_URL
+  sql "UPDATE tenants SET host='$name' WHERE slug='$slug'"
+  sed -i -e "s|^SITE_URL=.*|SITE_URL=https://$name|" -e "s|^WS_URL=.*|WS_URL=wss://$name/ws|" "tenants/$slug/.env"
+  render_compose "$slug"; docker compose -f "tenants/$slug/docker-compose.yml" up -d
+  a2enmod proxy proxy_http proxy_wstunnel rewrite headers >/dev/null
+  a2ensite "crmhub-$2" >/dev/null
+  apache2ctl configtest && systemctl reload apache2
+  cat <<OUT
+Vhost activo en HTTP. Emite el certificado SOLO para este host:
+  sudo certbot --apache -d $name --non-interactive --agree-tos -m $CERTBOT_EMAIL
+OUT
+}
+
+case "${1:-}" in
+  init) cmd_init;; up) cmd_up;;
+  tenant:create) shift; cmd_tenant_create "$@";;
+  tenant:list) cmd_tenant_list;;
+  tenant:suspend) cmd_tenant_status "${2:?slug}" suspended;;
+  tenant:resume) cmd_tenant_status "${2:?slug}" active;;
+  tenant:upgrade) cmd_tenant_upgrade "${2:-}";;
+  tenant:delete) shift; cmd_tenant_delete "$@";;
+  vhost:render) shift; cmd_vhost_render "$@";;
+  vhost:install) shift; cmd_vhost_install "$@";;
+  *) usage;;
+esac

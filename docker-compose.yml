@@ -1,0 +1,54 @@
+name: crmhub
+
+networks:
+  crmhub_net:
+    name: crmhub_net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+          gateway: 172.28.0.1
+
+volumes:
+  crmhub_pg:
+    name: crmhub_pg
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: crmhub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PG_ADMIN_USER}
+      POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD}
+      POSTGRES_DB: ${PG_MASTER_DB}
+    volumes:
+      - crmhub_pg:/var/lib/postgresql/data
+      - ./hub-service/sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:${PG_HOST_PORT}:5432"
+    networks: [crmhub_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_ADMIN_USER} -d ${PG_MASTER_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Red host: Ollama solo escucha en 127.0.0.1. El servicio se enlaza al gateway
+  # de crmhub_net (172.28.0.1) para que los tenants lo alcancen sin exponerlo a internet.
+  hub-service:
+    build: ./hub-service
+    container_name: crmhub-hub-service
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${PG_ADMIN_USER}:${PG_ADMIN_PASSWORD}@127.0.0.1:${PG_HOST_PORT}/${PG_MASTER_DB}
+      HUB_BIND_HOST: ${HUB_BIND_HOST}
+      HUB_PORT: ${HUB_PORT}
+      HUB_ADMIN_TOKEN: ${HUB_ADMIN_TOKEN}
+      OLLAMA_URL: ${OLLAMA_URL}
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
+      OLLAMA_TIMEOUT: ${OLLAMA_TIMEOUT}

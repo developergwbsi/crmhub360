@@ -1,0 +1,42 @@
+{
+    "fields": {
+        "status": {
+            "options": ["Nuevo Lead", "Consulta de Crédito", "Pre-Aprobado", "En Enfriamiento/Contactado", "Cierre Exitoso", "Converted", "Dead"],
+            "default": "Nuevo Lead",
+            "style": {
+                "Nuevo Lead": null,
+                "Consulta de Crédito": "primary",
+                "Pre-Aprobado": "info",
+                "En Enfriamiento/Contactado": "warning",
+                "Cierre Exitoso": "success",
+                "Converted": "success",
+                "Dead": "danger"
+            }
+        },
+        "source": {
+            "options": ["", "Facebook Ads", "Instagram Ads", "Formulario Web", "WhatsApp", "Manual", "Referido"]
+        },
+        "creditPdf": {
+            "type": "file",
+            "accept": ["application/pdf"],
+            "audited": true
+        },
+        "creditScore": {"type": "int", "min": 0, "max": 999},
+        "totalDebt": {"type": "currency"},
+        "overdueDebt": {"type": "currency"},
+        "defaultHistory": {"type": "text", "rows": 5},
+        "creditSummary": {"type": "text", "rows": 8},
+        "preApprovalStatus": {
+            "type": "enum",
+            "options": ["", "Pre-Aprobado", "Rechazado", "Revisión Manual"],
+            "style": {"Pre-Aprobado": "success", "Rechazado": "danger", "Revisión Manual": "warning"},
+            "audited": true,
+            "isSorted": false
+        },
+        "creditParseStatus": {
+            "type": "enum",
+            "options": ["", "Procesando", "Completado", "Error"],
+            "style": {"Completado": "success", "Error": "danger", "Procesando": "warning"}
+        }
+    }
+}

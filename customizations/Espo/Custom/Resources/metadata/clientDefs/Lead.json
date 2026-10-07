@@ -1,0 +1,12 @@
+{
+    "menu": {
+        "detail": {
+            "buttons": [],
+            "dropdown": [
+                {"name": "aiSummarize", "label": "IA: Resumir conversación", "handler": "custom:handlers/lead-ai", "actionFunction": "summarize"},
+                {"name": "aiDraft", "label": "IA: Redactar respuesta", "handler": "custom:handlers/lead-ai", "actionFunction": "draft"},
+                {"name": "aiSentiment", "label": "IA: Analizar sentimiento", "handler": "custom:handlers/lead-ai", "actionFunction": "sentiment"}
+            ]
+        }
+    }
+}
