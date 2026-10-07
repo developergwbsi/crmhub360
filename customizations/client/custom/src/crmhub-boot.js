@@ -294,6 +294,18 @@
     }, {passive: true});
     window.addEventListener('resize', syncSticky);
     // Modo lectura (soporte): aviso permanente y botones de edición ocultos; los permisos del rol lo impiden de todos modos
+    // Favicon propio: desarrollo «CD» (ámbar), producción «CP» (azul) y empresas con la marca de Crm Hub 360
+    function paintFavicon() {
+        var h = location.hostname, v = /^dev[-.]/.test(h) ? 'dev' : /^crm\./.test(h) ? 'prod' : 'crm';
+        var head = document.head, key = 'crmhub-fav-' + v;
+        if (head.getAttribute('data-ch-fav') === v) { return; }
+        head.setAttribute('data-ch-fav', v);
+        Array.prototype.slice.call(head.querySelectorAll('link[rel*="icon"]')).forEach(function (n) { n.remove(); });
+        var base = (typeof BASE !== 'undefined' ? BASE : 'client/custom/') + 'img/favicon-' + v;
+        [['icon', 'image/svg+xml', base + '.svg', ''], ['icon', 'image/png', base + '-32.png', '32x32'], ['apple-touch-icon', '', base + '-180.png', '180x180']].forEach(function (a) {
+            var l = document.createElement('link'); l.rel = a[0]; if (a[1]) { l.type = a[1]; } l.href = a[2]; if (a[3]) { l.sizes = a[3]; } head.appendChild(l);
+        });
+    }
     var roChecked = false, SYSTEM = 'Crm Hub 360';
     function companyName() { try { return localStorage.getItem('ch-app-name') || ''; } catch (e) { return ''; } }
     // Marca: la empresa pone su nombre; «Crm Hub 360» (el sistema) se muestra siempre debajo, en el menú, el título y el inicio de sesión
@@ -334,7 +346,7 @@
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });
