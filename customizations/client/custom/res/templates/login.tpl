@@ -76,11 +76,9 @@
 
                 <button type="submit" class="btn btn-primary crmhub-submit" id="btn-login" tabindex="3">{{logInText}}</button>
 
-                {{#if showForgotPassword}}
                 <div class="crmhub-forgot">
-                    <a role="button" data-action="passwordChangeRequest" tabindex="4">{{translate 'Forgot Password?' scope='User'}}</a>
+                    <a role="button" id="ch-forgot" tabindex="4">¿Olvidaste tu contraseña?</a>
                 </div>
-                {{/if}}
             </form>
         </div>
     </main>

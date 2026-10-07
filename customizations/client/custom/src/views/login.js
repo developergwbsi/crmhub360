@@ -1,6 +1,18 @@
-define('custom:views/login', ['views/login'], function (Dep) {
+define('custom:views/login', ['views/login', 'custom:ui'], function (Dep, ChUi) {
     return class extends Dep {
         template = 'custom:login'
+
+        // «¿Olvidaste tu contraseña?» siempre visible: con correo de salida usa la recuperación de Espo (valida usuario y correo y envía el enlace);
+        // sin correo explica qué hacer en vez de esconder la opción.
+        setupForgot() {
+            this.$el.find('#ch-forgot').on('click', () => {
+                if (this.getConfig().get('passwordRecoveryEnabled')) { this.showPasswordChangeRequest(); return; }
+                ChUi.notice({
+                    title: 'Recuperar contraseña', ok: 'Entendido',
+                    html: 'Esta empresa aún no tiene un <b>correo de salida</b> configurado, por eso no podemos enviarte el enlace de recuperación.<br><br>Pídele a tu administrador que restablezca tu contraseña (Usuarios → tu usuario) o que active el correo de la empresa.',
+                });
+            });
+        }
 
         // Recordar usuario: la próxima vez se muestra una bienvenida y solo se pide la contraseña
         setupRemember() {
@@ -30,6 +42,7 @@ define('custom:views/login', ['views/login'], function (Dep) {
         afterRender() {
             super.afterRender();
             this.setupRemember();
+            this.setupForgot();
             const code = new URLSearchParams(window.location.search).get('support');
             if (!code || this._chSupport) { return; }
             this._chSupport = true;

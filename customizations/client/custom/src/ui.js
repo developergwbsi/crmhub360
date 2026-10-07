@@ -47,6 +47,14 @@ define('custom:ui', [], function () {
                 const yes = box.querySelector('[data-a="yes"]'); yes.onclick = () => close(true); yes.focus();
             }).then(v => v === true);
         },
+        // Aviso con un solo botón
+        notice(o) {
+            return open((box, close) => {
+                box.innerHTML = head(o.title || 'Aviso', o.icon || 'fas fa-circle-info') + `<div class="ch-dlg-body">${o.html || esc(o.text || '')}</div>` +
+                    `<div class="ch-dlg-foot"><button type="button" class="btn btn-primary" data-a="ok">${esc(o.ok || 'Entendido')}</button></div>`;
+                const b = box.querySelector('[data-a="ok"]'); b.onclick = () => close(true); b.focus();
+            }).then(() => true);
+        },
         // → texto o null si se cancela
         prompt(o) {
             return open((box, close) => {
