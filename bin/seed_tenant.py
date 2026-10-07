@@ -62,7 +62,9 @@ for name, level in LEVELS.items():
                          "dashboardPermission": "yes" if name != "Comercial" else "no"})
     log(f"rol creado: {name}")
 
-api_role = api("POST", "Role", {"name": "Integración API (Hub)", "data": role_data(("yes", "all", "all", "no"))})
+_api_data = role_data(("yes", "all", "all", "no"))
+_api_data["Campaign"] = {"create": "no", "read": "all", "edit": "no", "delete": "no", "stream": "no"}
+api_role = api("POST", "Role", {"name": "Integración API (Hub)", "data": _api_data})
 team = api("POST", "Team", {"name": "Equipo Principal"})
 user = api("POST", "User", {"userName": "hub-api", "type": "api", "authMethod": "ApiKey",
                             "rolesIds": [api_role["id"]], "teamsIds": [team["id"]]})

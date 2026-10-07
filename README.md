@@ -41,6 +41,14 @@ El vhost proxea la app, el WebSocket (`/ws`, `mod_proxy_wstunnel`) y los webhook
 
 Teléfonos se normalizan a E.164 (sin prefijo se asume +57).
 
+## Calificación de leads y asignación
+
+- **Servicios y filtros** (`hub-service/app/qualify.py`): cada empresa define sus servicios y condiciones en *Integraciones → Servicios y filtros*;
+  los valores iniciales (`DEFAULT_SERVICES`) son solo de partida. El lead queda con *Resultado del filtro*, *Servicio sugerido* y *Motivos*.
+- **Asignación automática** (`customizations/.../Services/LeadAssigner.php`, hook `AutoAssign`): campaña → usuarios habilitados de sus equipos;
+  si no hay, todos los habilitados; siempre al de menos leads abiertos. Habilitación por usuario: campo `receivesLeads`.
+- **Reasignación**: `POST /CrmHub/reassign` (admin, o rol con permiso de asignación; *team* = solo usuarios de sus equipos). Deja nota en el historial.
+
 ## Entornos y paso a producción
 
 | Entorno | Host | Tenant | Puerto local |

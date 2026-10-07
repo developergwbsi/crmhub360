@@ -55,6 +55,17 @@
     </div>
   </div>
 
+  <div class="panel panel-default ch-span-2">
+    <div class="panel-heading"><h4 class="panel-title">Asignación automática de leads</h4></div>
+    <div class="panel-body">
+      <p class="ch-muted">Cada lead nuevo sin asesor se asigna solo, de forma <b>balanceada</b> (a quien tenga menos leads abiertos):
+        <b>1)</b> si el lead trae una <b>campaña</b>, se reparte entre los usuarios habilitados que están en los <b>equipos de esa campaña</b>;
+        <b>2)</b> si no tiene campaña (o nadie de sus equipos está habilitado), entre <b>todos los usuarios habilitados</b>.
+        Un director o gerente puede reasignar leads y clientes en cualquier momento con el botón <b>Reasignar</b>.</p>
+      <div class="ch-assign"><div class="ch-muted">Cargando usuarios…</div></div>
+    </div>
+  </div>
+
   <div class="panel panel-default">
     <div class="panel-heading"><h4 class="panel-title">Inteligencia artificial</h4></div>
     <div class="panel-body">

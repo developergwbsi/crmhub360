@@ -32,5 +32,29 @@
             "controller": "CrmHub",
             "action": "resetServices"
         }
+    },
+    {
+        "route": "/CrmHub/assignment",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "assignment"
+        }
+    },
+    {
+        "route": "/CrmHub/assignees",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "assignees"
+        }
+    },
+    {
+        "route": "/CrmHub/reassign",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "reassign"
+        }
     }
 ]

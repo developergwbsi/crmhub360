@@ -21,12 +21,25 @@ def normalize_phone(raw: str | None) -> str | None:
 
 
 async def upsert_lead(tenant: dict, *, name: str, phone: str | None, email: str | None, source: str,
-                      extra: dict | None = None) -> str:
+                      extra: dict | None = None, campaign: str | None = None) -> str:
     espo = Espo(tenant)
     first, last = _split_name(name)
     data = {"firstName": first, "lastName": last or first or "Sin nombre", "phoneNumber": normalize_phone(phone),
             "emailAddress": email, "source": source, "status": "Nuevo Lead", **(extra or {})}
+    if camp_id := await find_campaign_id(tenant, campaign):
+        data["campaignId"] = camp_id
     return (await espo.post("Lead", data))["id"]
+
+
+async def find_campaign_id(tenant: dict, name: str | None) -> str | None:
+    if not name:
+        return None
+    try:
+        r = await Espo(tenant).get("Campaign", **{"where[0][type]": "equals", "where[0][attribute]": "name",
+                                                  "where[0][value]": name.strip(), "maxSize": 1, "select": "id"})
+        return r["list"][0]["id"] if r.get("list") else None
+    except Exception:
+        return None
 
 
 async def find_lead_by_phone(tenant: dict, phone: str) -> str | None:
@@ -57,7 +70,8 @@ async def from_facebook(tenant: dict, payload: dict) -> list[str]:
             name = f.get("full_name") or f.get("nombre_completo") or f.get("name") or ""
             platform = "Instagram Ads" if v.get("platform") == "ig" else "Facebook Ads"
             ids.append(await upsert_lead(tenant, name=name, phone=f.get("phone_number") or f.get("telefono"),
-                                         email=f.get("email"), source=platform))
+                                         email=f.get("email"), source=platform,
+                                         campaign=f.get("campaign_name") or v.get("campaign_name")))
     return ids
 
 

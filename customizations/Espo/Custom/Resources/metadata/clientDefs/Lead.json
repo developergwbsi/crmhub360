@@ -20,6 +20,13 @@
                     "label": "IA: Analizar sentimiento",
                     "handler": "custom:handlers/lead-ai",
                     "actionFunction": "sentiment"
+                },
+                {
+                    "name": "reassign",
+                    "label": "Reasignar",
+                    "handler": "custom:handlers/reassign",
+                    "actionFunction": "actionReassign",
+                    "checkVisibilityFunction": "canReassign"
                 }
             ]
         }
@@ -28,5 +35,18 @@
     "listDefaultViewMode": "kanban",
     "recordViews": {
         "kanban": "custom:views/lead/record/kanban"
+    },
+    "massActionList": [
+        "reassign"
+    ],
+    "massActionDefs": {
+        "reassign": {
+            "label": "Reasignar",
+            "acl": "edit",
+            "handler": "custom:handlers/reassign",
+            "actionFunction": "actionReassign",
+            "initFunction": "initReassign",
+            "groupIndex": 2
+        }
     }
 }

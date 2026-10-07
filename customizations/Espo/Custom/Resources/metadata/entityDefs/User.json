@@ -1,0 +1,17 @@
+{
+    "fields": {
+        "receivesLeads": {
+            "type": "bool",
+            "default": false,
+            "audited": true,
+            "tooltip": false
+        },
+        "lastLeadAssignedAt": {
+            "type": "datetime",
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
+        }
+    }
+}

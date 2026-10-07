@@ -9,6 +9,7 @@ define('custom:views/integrations', ['view'], function (Dep) {
         setup() {
             this.getHelper().pageTitle.setTitle('Integraciones');
             this.load();
+            this.loadAssignment();
         }
 
         load() {
@@ -52,6 +53,12 @@ define('custom:views/integrations', ['view'], function (Dep) {
                 (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject())
                     .then(() => Espo.Ui.success('Copiado'))
                     .catch(() => Espo.Ui.warning('No se pudo copiar; selecciónalo manualmente'));
+            },
+            'change [data-action="toggleReceives"]': function (e) {
+                const el = e.currentTarget;
+                Espo.Ajax.putRequest('User/' + el.dataset.id, {receivesLeads: el.checked})
+                    .then(() => { Espo.Ui.success(el.checked ? 'Recibirá leads automáticamente' : 'Ya no recibirá leads automáticos'); this.loadAssignment(); })
+                    .catch(xhr => { el.checked = !el.checked; if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo cambiar'); });
             },
             'click [data-action="addService"]': function () {
                 this.services.push({key: '', name: 'Nuevo servicio', enabled: true, conditions: []});
@@ -112,6 +119,31 @@ define('custom:views/integrations', ['view'], function (Dep) {
         afterRender() {
             super.afterRender();
             if (this.services) { this.renderServices(); }
+            if (this.assignment) { this.renderAssignment(); }
+        }
+
+        loadAssignment() {
+            Espo.Ajax.getRequest('CrmHub/assignment').then(a => { this.assignment = a; this.renderAssignment(); });
+        }
+
+        renderAssignment() {
+            const a = this.assignment, $c = this.$el.find('.ch-assign');
+            if (!a || !$c.length) { return; }
+            const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+            const rows = a.users.map(u => `<tr>
+                <td><b>${esc(u.name)}</b><div class="ch-muted ch-small">${esc(u.userName)}</div></td>
+                <td>${u.teams.length ? u.teams.map(t => `<span class="ch-pill">${esc(t)}</span>`).join(' ') : '<span class="ch-muted">Sin equipo</span>'}</td>
+                <td>${u.openLeads}</td>
+                <td><label class="ch-switch"><input type="checkbox" data-action="toggleReceives" data-id="${esc(u.id)}" ${u.receivesLeads ? 'checked' : ''}> Recibe leads</label></td>
+            </tr>`).join('');
+            const camps = a.campaigns.length
+                ? a.campaigns.map(c => `<li><b>${esc(c.name)}</b> — equipos: ${c.teams.length ? esc(c.teams.join(', ')) : '<span class="text-danger">ninguno (usa el grupo general)</span>'} · habilitados: ${c.eligible}</li>`).join('')
+                : '<li class="ch-muted">No hay campañas activas. Los leads se reparten entre todos los habilitados.</li>';
+            $c.html(`<table class="table table-bordered ch-table">
+                <thead><tr><th>Usuario</th><th>Equipos</th><th>Leads abiertos</th><th>Asignación automática</th></tr></thead><tbody>${rows}</tbody></table>
+                <div class="ch-small ch-muted">Habilitados en total: <b>${a.eligibleTotal}</b>${a.eligibleTotal ? '' : ' — <span class="text-danger">activa al menos un usuario para que los leads se asignen solos</span>'}</div>
+                <h5 class="ch-subtitle">Campañas activas</h5><ul class="ch-camps">${camps}</ul>
+                <div class="ch-small ch-muted">Para ligar una campaña a un grupo, abre la campaña y elige sus <b>Equipos</b>.</div>`);
         }
 
         renderServices() {
@@ -127,7 +159,7 @@ define('custom:views/integrations', ['view'], function (Dep) {
                         <select class="form-control" data-bind="field" data-i="${i}" data-j="${j}">${fopts}</select>
                         ${custom ? `<input class="form-control" data-bind="custom" data-i="${i}" data-j="${j}" value="${esc(String(c.field).slice(5))}" placeholder="campo técnico (ej. source)">` : ''}
                         <select class="form-control ch-op" data-bind="op" data-i="${i}" data-j="${j}">${oopts}</select>
-                        <input class="form-control ch-val" data-bind="value" data-i="${i}" data-j="${j}" value="${esc(c.value)}">
+                        <input class="form-control ch-val" data-bind="value" data-i="${i}" data-j="${j}" value="${esc(typeof c.value === 'number' && Math.abs(c.value) >= 1000 ? c.value.toLocaleString('es-CO') : c.value)}">
                         <button class="btn btn-link" title="Quitar condición" data-action="removeCondition" data-i="${i}" data-j="${j}"><span class="fas fa-times"></span></button>
                     </div>`;
                 }).join('') || '<div class="ch-muted ch-small">Sin condiciones: este servicio siempre se sugiere.</div>';

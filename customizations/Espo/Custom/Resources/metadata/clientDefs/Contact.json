@@ -1,0 +1,15 @@
+{
+    "massActionList": [
+        "reassign"
+    ],
+    "massActionDefs": {
+        "reassign": {
+            "label": "Reasignar",
+            "acl": "edit",
+            "handler": "custom:handlers/reassign",
+            "actionFunction": "actionReassign",
+            "initFunction": "initReassign",
+            "groupIndex": 2
+        }
+    }
+}

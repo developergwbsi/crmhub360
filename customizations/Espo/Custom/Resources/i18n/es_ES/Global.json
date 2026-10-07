@@ -1,6 +1,21 @@
 {
-    "scopeNames": {"Lead": "Lead", "Opportunity": "Oportunidad"},
-    "scopeNamesPlural": {"Lead": "Leads", "Opportunity": "Oportunidades"},
-    "themes": {"CrmHub": "Crm Hub 360"},
-    "labels": {"Pipeline": "Pipeline", "Manual de usuario": "Manual de usuario"}
+    "scopeNames": {
+        "Lead": "Lead",
+        "Opportunity": "Oportunidad"
+    },
+    "scopeNamesPlural": {
+        "Lead": "Leads",
+        "Opportunity": "Oportunidades"
+    },
+    "themes": {
+        "CrmHub": "Crm Hub 360"
+    },
+    "labels": {
+        "Pipeline": "Pipeline",
+        "Manual de usuario": "Manual de usuario",
+        "Reasignar": "Reasignar"
+    },
+    "massActions": {
+        "reassign": "Reasignar"
+    }
 }

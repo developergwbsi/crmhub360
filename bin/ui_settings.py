@@ -25,6 +25,7 @@ DASH_OPTIONS = {"d-leads": {"title": "Leads recientes", "entityType": "Lead", "d
 UI_SETTINGS = {
     "theme": "CrmHub", "tabList": TABS, "quickCreateList": ["Lead", "Task", "Meeting", "Call"],
     "dashboardLayout": DASH_LAYOUT, "dashletsOptions": DASH_OPTIONS,
+    "assignmentNotificationsEntityList": ["Lead", "Account", "Contact", "Opportunity", "Task", "Meeting", "Call", "Email"],
 }
 
 if __name__ == "__main__":  # python3 ui_settings.py <base_url> <admin_user> <admin_pass>
@@ -42,4 +43,11 @@ if __name__ == "__main__":  # python3 ui_settings.py <base_url> <admin_user> <ad
     me = call("GET", "App/user")["user"]["id"]
     # el administrador ya tiene Preferencias propias: se reinician el dashboard y el tema para que hereden lo nuevo
     call("PUT", f"Preferences/{me}", {"dashboardLayout": DASH_LAYOUT, "dashletsOptions": DASH_OPTIONS, "useCustomTabList": False, "theme": ""})
+    # el usuario API del Hub necesita leer campañas para ligar los leads que llegan por formularios
+    roles = call("GET", "Role?maxSize=50&select=id,name")["list"]
+    api_role = next((r for r in roles if r["name"].startswith("Integración API")), None)
+    if api_role:
+        data = call("GET", f"Role/{api_role['id']}")["data"]
+        data["Campaign"] = {"create": "no", "read": "all", "edit": "no", "delete": "no", "stream": "no"}
+        call("PUT", f"Role/{api_role['id']}", {"data": data})
     print("ui aplicada")

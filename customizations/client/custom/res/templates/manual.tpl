@@ -2,7 +2,7 @@
 <div class="ch-manual">
   <div class="ch-hero"><h2>Guía práctica de {{appName}}</h2><p>Para comerciales, directores de equipo y gerentes.</p></div>
   <div class="ch-manual-layout">
-    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq">10. Preguntas frecuentes</a></div></div>
+    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asignacion">7b. Asignación y reasignación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq">10. Preguntas frecuentes</a></div></div>
     <div class="ch-manual-body">
 <div class="panel panel-default" id="ch-m-inicio">
   <div class="panel-heading"><h4 class="panel-title">1. Ingreso y navegación</h4></div>
@@ -85,6 +85,26 @@
 <tr><td><b>Director de Equipo</b></td><td>Los leads de su equipo.</td><td>Reasignar leads del equipo, ver el rendimiento del equipo y paneles.</td></tr>
 <tr><td><b>Gerente General</b></td><td>Todo el sistema.</td><td>Gestión completa, analítica global y métricas.</td></tr></table>
 <div class="ch-tip">Si no ves un lead que esperabas, normalmente está asignado a otro usuario o equipo. Pide a tu director que lo reasigne.</div>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-asignacion">
+  <div class="panel-heading"><h4 class="panel-title">7b. Asignación y reasignación de leads</h4></div>
+  <div class="panel-body">
+<h3>Asignación automática</h3>
+<p>Cada lead nuevo sin asesor se asigna solo, de forma <b>balanceada</b>: recibe el lead el usuario habilitado con <b>menos leads abiertos</b> (en empate, quien lleva más tiempo sin recibir uno).</p>
+<ol>
+<li>Si el lead trae una <b>campaña</b>, se reparte entre los usuarios habilitados que están en los <b>equipos de esa campaña</b>.</li>
+<li>Si no tiene campaña, o nadie de esos equipos está habilitado, se reparte entre <b>todos los usuarios habilitados</b>.</li>
+</ol>
+<p>El asesor recibe una notificación y el lead queda visible también para su director de equipo.</p>
+<div class="ch-tip">Se habilita a cada usuario en <b>Integraciones → Asignación automática de leads</b> (casilla <i>Recibe leads</i>). Desmárcala para sacar a alguien del reparto, por ejemplo en vacaciones. La campaña se liga a un grupo eligiendo sus <b>Equipos</b> en la ficha de la campaña.</div>
+<h3>Reasignar leads o clientes</h3>
+<p>Los <b>directores de equipo</b> (a usuarios de sus equipos), los <b>gerentes</b> y los administradores (a cualquiera) pueden reasignar:</p>
+<ul>
+<li><b>Un registro:</b> abre el lead, cliente o contacto y elige <b>⋯ → Reasignar</b>.</li>
+<li><b>Varios a la vez:</b> en la lista marca las casillas y usa <b>Acciones → Reasignar</b>.</li>
+</ul>
+<p>Elige un usuario, o <b>Automático (el más libre)</b> para repartirlos con el balanceo. Puedes escribir un motivo; queda en el historial del registro junto con quién lo hizo.</p>
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-actividades">

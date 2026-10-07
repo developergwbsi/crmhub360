@@ -252,3 +252,6 @@ table.table thead th.checkbox-cell .checkbox-dropdown > a { padding: 0 4px !impo
 .ch-cond .ch-val { flex: 0 1 190px; min-width: 130px; }
 .ch-services-actions { margin-top: 14px; justify-content: space-between; }
 
+
+.ch-subtitle { margin: 16px 0 6px; font-size: 14px; font-weight: 600; }
+.ch-camps { padding-left: 18px; margin-bottom: 8px; }

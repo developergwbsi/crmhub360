@@ -119,7 +119,7 @@ async def web_ingest(slug: str, request: Request):
     tenant = _ingest_tenant(slug, request)
     b = await request.json()
     lead = await ingest.upsert_lead(tenant, name=b.get("name", ""), phone=b.get("phone"), email=b.get("email"),
-                                    source=b.get("source", "Formulario Web"))
+                                    source=b.get("source", "Formulario Web"), campaign=b.get("campaign"))
     return {"lead": lead}
 
 

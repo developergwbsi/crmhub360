@@ -1,0 +1,6 @@
+{
+    "fields": {
+        "receivesLeads": "Recibe leads automáticamente",
+        "lastLeadAssignedAt": "Último lead asignado"
+    }
+}
