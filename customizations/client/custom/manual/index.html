@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual de usuario · Crm Hub 360</title>
+<style>
+:root{--bg:hsl(210 22% 96.5%);--card:#fff;--ink:hsl(222 30% 14%);--muted:hsl(217 12% 42%);--line:hsl(214 20% 88%);--pri:hsl(231 70% 52%);--soft:hsl(231 80% 96%);--side:hsl(224 34% 10%)}
+@media (prefers-color-scheme:dark){:root{--bg:hsl(224 28% 9%);--card:hsl(224 26% 13%);--ink:hsl(210 20% 94%);--muted:hsl(215 14% 65%);--line:hsl(224 20% 22%);--pri:hsl(231 85% 68%);--soft:hsl(224 30% 17%)}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;font:15px/1.65 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+.layout{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
+nav{position:sticky;top:0;height:100vh;overflow:auto;background:var(--side);color:#cbd2e1;padding:26px 18px}
+nav .brand{color:#fff;font-weight:700;font-size:18px;margin:0 8px 6px}nav .brand span{color:#aab4ff}
+nav small{display:block;margin:0 8px 22px;color:#8a94ad}
+nav a{display:block;padding:8px 12px;margin:2px 0;border-radius:9px;color:#cbd2e1;text-decoration:none;font-size:14px}
+nav a:hover{background:hsl(224 30% 16%);color:#fff}
+main{padding:44px clamp(20px,5vw,72px);max-width:1100px}
+header.hero{background:linear-gradient(160deg,hsl(231 55% 22%),hsl(224 45% 11%));color:#fff;border-radius:18px;padding:34px 36px;margin-bottom:30px}
+.hero h1{margin:0 0 8px;font-size:32px;letter-spacing:-.02em}.hero p{margin:0;color:rgba(255,255,255,.78)}
+section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 30px;margin-bottom:20px}
+h2{margin:0 0 12px;font-size:22px;letter-spacing:-.01em}h3{margin:20px 0 6px;font-size:16px}
+ul,ol{padding-left:22px}li{margin:4px 0}
+code,kbd{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:13px}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.tip{background:var(--soft);border-left:4px solid var(--pri);border-radius:8px;padding:10px 14px;margin:12px 0}
+.warn{background:hsl(38 90% 94%);border-left:4px solid #f59e0b;color:#5b3d00;border-radius:8px;padding:10px 14px;margin:12px 0}
+.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12.5px;font-weight:600;background:var(--soft);color:var(--pri)}
+@media(max-width:900px){.layout{grid-template-columns:1fr}nav{position:static;height:auto}}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <div class="brand">Crm Hub <span>360</span></div><small>Manual de usuario</small>
+  <a href="#inicio">1. Ingreso y navegación</a>
+  <a href="#leads">2. Leads</a>
+  <a href="#pipeline">3. Pipeline (Kanban)</a>
+  <a href="#credito">4. Reporte de crédito con IA</a>
+  <a href="#asistente">5. Asistente IA</a>
+  <a href="#canales">6. Canales de captación</a>
+  <a href="#roles">7. Roles y equipos</a>
+  <a href="#actividades">8. Tareas y calendario</a>
+  <a href="#admin">9. Administración</a>
+  <a href="#faq">10. Preguntas frecuentes</a>
+</nav>
+<main>
+<header class="hero"><h1>Manual de usuario</h1><p>Guía práctica para comerciales, directores de equipo y gerentes de Crm Hub 360.</p></header>
+
+<section id="inicio"><h2>1. Ingreso y navegación</h2>
+<ol>
+<li>Entra a la dirección de tu empresa e inicia sesión con tu usuario y contraseña.</li>
+<li>Cambia tu contraseña la primera vez: menú de tu usuario (arriba a la derecha) → <b>Preferencias</b>.</li>
+<li>El menú lateral izquierdo da acceso a <b>Leads</b>, <b>Pipeline</b>, cuentas, contactos, oportunidades, tareas y calendario.</li>
+<li>Usa la lupa superior para buscar cualquier registro por nombre, teléfono o correo.</li>
+</ol>
+<div class="tip">La pantalla de inicio es tu panel: muestra tus leads recientes, tareas pendientes, actividades y la actividad del equipo.</div>
+</section>
+
+<section id="leads"><h2>2. Leads</h2>
+<p>Un <b>lead</b> es una persona interesada en un crédito. Verás solo los leads que tu rol permite (ver sección 7).</p>
+<h3>Crear un lead manualmente</h3>
+<ol><li><b>Leads</b> → botón <b>Crear lead</b>.</li><li>Completa nombre, teléfono (con indicativo; si no lo pones se asume +57), correo y origen.</li><li>Guarda. El estado inicial es <span class="pill">Nuevo Lead</span>.</li></ol>
+<h3>Estados del lead</h3>
+<table><tr><th>Estado</th><th>Significado</th></tr>
+<tr><td>Nuevo Lead</td><td>Recién captado, sin gestionar.</td></tr>
+<tr><td>Consulta de Crédito</td><td>Se autorizó y se está evaluando el reporte de crédito.</td></tr>
+<tr><td>Pre-Aprobado</td><td>El análisis permite avanzar con la solicitud.</td></tr>
+<tr><td>En Enfriamiento/Contactado</td><td>Contactado; se espera respuesta o decisión del cliente.</td></tr>
+<tr><td>Cierre Exitoso</td><td>El cliente tomó el crédito.</td></tr>
+<tr><td>Perdido / Convertido</td><td>Descartado, o convertido en cuenta/contacto/oportunidad.</td></tr></table>
+<p>En el detalle del lead, el <b>flujo</b> (<i>stream</i>) guarda notas, mensajes de WhatsApp y cambios. Documenta cada contacto allí.</p>
+</section>
+
+<section id="pipeline"><h2>3. Pipeline (Kanban)</h2>
+<p>Entra por <b>Pipeline</b> en el menú lateral (o <b>Leads</b> → icono de tablero arriba a la derecha). Cada columna es un estado.</p>
+<ul><li><b>Arrastra</b> una tarjeta a otra columna para cambiar su estado.</li><li>Cada columna muestra el número de leads.</li><li>Usa los filtros para ver solo los tuyos o los de tu equipo.</li><li>Vuelve a la lista con el icono de lista.</li></ul>
+</section>
+
+<section id="credito"><h2>4. Reporte de crédito con IA</h2>
+<p>Con la autorización del cliente, sube su historia de crédito en PDF y el sistema extrae los datos automáticamente.</p>
+<ol>
+<li>Abre el lead y edítalo.</li>
+<li>En <b>Reporte de crédito (PDF)</b> adjunta el archivo y guarda.</li>
+<li>El campo <b>Procesamiento del reporte</b> pasa a <i>Procesando</i> y, en uno o dos minutos, a <i>Completado</i> (recarga el lead).</li>
+</ol>
+<h3>Qué se completa solo</h3>
+<ul><li><b>Puntaje de crédito</b>, <b>deuda total</b> y <b>deuda en mora</b>.</li><li><b>Historial de incumplimientos</b> y un <b>resumen financiero</b> en español.</li><li><b>Estado de Pre-Aprobación</b>.</li></ul>
+<h3>Cómo se decide la pre-aprobación</h3>
+<table><tr><th>Resultado</th><th>Regla</th></tr>
+<tr><td><span class="pill">Pre-Aprobado</span></td><td>Puntaje de 650 o más y sin deuda en mora. El lead pasa a la etapa Pre-Aprobado.</td></tr>
+<tr><td><span class="pill">Rechazado</span></td><td>Puntaje menor a 500, o mora superior al 30 % de la deuda total.</td></tr>
+<tr><td><span class="pill">Revisión Manual</span></td><td>Cualquier otro caso, o si falta el puntaje.</td></tr></table>
+<div class="warn"><b>Importante:</b> la IA ayuda, no decide por ti. Verifica siempre las cifras contra el PDF antes de comunicar una decisión. Los PDF escaneados (imagen) no se pueden leer: el lead queda en <i>Revisión Manual</i> con el motivo en el resumen. Sube el PDF original descargado del buró.</div>
+<p>Los umbrales (650, 500 y 30 %) los puede ajustar el administrador de la plataforma.</p>
+</section>
+
+<section id="asistente"><h2>5. Asistente IA</h2>
+<p>En el detalle de un lead, abre el menú de acciones (⋯ junto a <b>Editar</b>):</p>
+<ul><li><b>IA: Resumir conversación</b> — viñetas con necesidad, objeciones y próximo paso.</li><li><b>IA: Redactar respuesta</b> — borrador de mensaje de WhatsApp en español.</li><li><b>IA: Analizar sentimiento</b> — sentimiento e interés de compra.</li></ul>
+<p>Trabaja sobre la conversación registrada en el flujo del lead. Puede tardar de 15 a 60 segundos.</p>
+<div class="warn">Revisa y edita el texto antes de enviarlo. El asistente puede equivocarse; no uses sus resultados como única base de una decisión.</div>
+</section>
+
+<section id="canales"><h2>6. Canales de captación</h2>
+<table><tr><th>Canal</th><th>Qué ocurre</th></tr>
+<tr><td>Facebook / Instagram Ads</td><td>Cada formulario de anuncio crea un lead con origen Facebook Ads o Instagram Ads.</td></tr>
+<tr><td>WhatsApp</td><td>Cada mensaje entrante se registra en el flujo del lead (se crea si no existía). Los números se unifican por teléfono, así que no se duplican.</td></tr>
+<tr><td>Formulario web</td><td>Los envíos de la página web crean leads con origen Formulario Web.</td></tr>
+<tr><td>Manual</td><td>Lo creas tú desde Leads.</td></tr></table>
+<p>La conexión de cada canal la configura el administrador (ver sección 9).</p>
+</section>
+
+<section id="roles"><h2>7. Roles y equipos</h2>
+<table><tr><th>Rol</th><th>Qué puede ver</th><th>Qué puede hacer</th></tr>
+<tr><td><b>Comercial</b></td><td>Solo los leads asignados a él.</td><td>Crear y editar sus leads; usar IA y Pipeline.</td></tr>
+<tr><td><b>Director de Equipo</b></td><td>Los leads de su equipo.</td><td>Reasignar leads del equipo, ver el rendimiento del equipo y paneles.</td></tr>
+<tr><td><b>Gerente General</b></td><td>Todo el sistema.</td><td>Gestión completa, analítica global y métricas.</td></tr></table>
+<div class="tip">Si no ves un lead que esperabas, normalmente está asignado a otro usuario o equipo. Pide a tu director que lo reasigne.</div>
+</section>
+
+<section id="actividades"><h2>8. Tareas y calendario</h2>
+<ul><li><b>Tareas:</b> crea recordatorios ligados a un lead (por ejemplo "Llamar el viernes") con fecha de vencimiento.</li><li><b>Calendario:</b> muestra tus llamadas, reuniones y tareas; haz clic en un hueco para agendar.</li><li>Las actividades pendientes aparecen en el panel de inicio.</li></ul>
+</section>
+
+<section id="admin"><h2>9. Administración (solo administradores)</h2>
+<h3>Crear un usuario</h3>
+<ol><li>Menú de usuario → <b>Administración</b> → <b>Usuarios</b> → <b>Crear usuario</b>.</li><li>Define usuario, contraseña y correo.</li><li>Asigna el <b>rol</b> (Comercial, Director de Equipo o Gerente General) y su <b>equipo</b>.</li></ol>
+<h3>Webhooks de captación</h3>
+<p>Los datos de conexión de tu empresa (dirección y token) los entrega el equipo de plataforma. Rutas:</p>
+<ul><li><code>/hub/facebook?token=…</code> — Facebook e Instagram Leads</li><li><code>/hub/evolution</code> — WhatsApp (Evolution API, cabecera <code>apikey</code>)</li><li><code>/hub/web?token=…</code> — formularios web</li></ul>
+<p>No compartas el token fuera de la empresa.</p>
+</section>
+
+<section id="faq"><h2>10. Preguntas frecuentes</h2>
+<h3>El reporte quedó en "Error"</h3><p>Lo más común: PDF escaneado o protegido. Descarga de nuevo el PDF original del buró y vuelve a adjuntarlo.</p>
+<h3>El asistente IA no responde</h3><p>Puede estar ocupado procesando otro reporte. Espera un minuto y reintenta; si persiste, avisa al administrador.</p>
+<h3>Mi licencia aparece vencida o suspendida</h3><p>Las funciones de IA y la captación automática se pausan. Contacta al administrador de tu empresa.</p>
+<h3>¿Cómo cambio mi contraseña?</h3><p>Menú de usuario → Preferencias → Cambiar contraseña.</p>
+</section>
+<p style="color:var(--muted);font-size:13px;text-align:center">Crm Hub 360 · Manual de usuario</p>
+</main></div></body></html>

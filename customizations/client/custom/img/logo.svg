@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 48" width="230" height="48" role="img" aria-label="Crm Hub 360">
+  <rect x="0" y="4" width="40" height="40" rx="11" fill="#4f63e8"/>
+  <path d="M20 11a13 13 0 1 0 0 26 13 13 0 0 0 0-26Zm0 4.8a8.2 8.2 0 0 1 7.2 4.3H12.8A8.2 8.2 0 0 1 20 15.800Zm-8.200 8.200h16.400a8.200 8.200 0 0 1-16.400 0Z" fill="#fff"/>
+  <text x="52" y="31" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="700" letter-spacing="-0.4" fill="#ffffff">Crm Hub <tspan fill="#aab4ff">360</tspan></text>
+</svg>

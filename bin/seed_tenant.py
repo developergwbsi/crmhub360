@@ -4,7 +4,11 @@ Imprime en stdout un JSON {"api_key": "..."}; todo el log va a stderr."""
 import base64
 import json
 import sys
+import os
 import urllib.request
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from ui_settings import UI_SETTINGS  # noqa: E402
 
 base, admin_user, admin_pass = sys.argv[1], sys.argv[2], sys.argv[3]
 AUTH = "Basic " + base64.b64encode(f"{admin_user}:{admin_pass}".encode()).decode()
@@ -29,6 +33,7 @@ api("PUT", "Settings", {
     "language": "es_ES", "applicationName": "Crm Hub 360", "timeZone": "America/Bogota",
     "dateFormat": "DD/MM/YYYY", "timeFormat": "HH:mm", "weekStart": 1,
     "currencyList": ["COP", "USD"], "defaultCurrency": "COP", "baseCurrency": "COP",
+    **UI_SETTINGS,
 })
 log("ajustes aplicados")
 

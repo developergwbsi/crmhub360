@@ -1,0 +1,26 @@
+{
+    "stylesheet": "client/custom/css/crmhub-theme.css",
+    "stylesheetIframe": "client/css/espo/espo-iframe.css",
+    "logo": "client/custom/img/logo.svg",
+    "params": {
+        "navbar": {"type": "enum", "default": "side", "options": ["side", "top"]}
+    },
+    "mappedParams": {
+        "navbarHeight": {"param": "navbar", "valueMap": {"side": 32, "top": 43}}
+    },
+    "dashboardCellHeight": 40,
+    "dashboardCellMargin": 16,
+    "navbarHeight": 43,
+    "modalFooterAtTheTop": true,
+    "modalFullHeight": true,
+    "fontSize": 14,
+    "textColor": "#1f2433",
+    "hoverColor": "#3b4fd8",
+    "chartGridColor": "#e3e6ee",
+    "chartSuccessColor": "#2fa36b",
+    "chartTickColor": "#e3e6ee",
+    "chartColorList": ["#4f63e8", "#8b5cf6", "#0ea5e9", "#2fa36b", "#f59e0b", "#ef5b5b", "#14b8a6", "#d4729b", "#94a3b8"],
+    "chartColorAlternativeList": ["#4f63e8", "#8b5cf6", "#0ea5e9", "#2fa36b", "#f59e0b"],
+    "calendarColors": {"": "#8b9cf5a0", "bg": "#e3e7fdb0"},
+    "isDark": false
+}

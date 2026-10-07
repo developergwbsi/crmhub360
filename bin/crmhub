@@ -19,6 +19,7 @@ Uso: bin/crmhub <comando>
   tenant:suspend|tenant:resume <slug>
   tenant:upgrade <slug>         reaplica customizaciones y reconstruye
   tenant:delete <slug> --yes    elimina contenedores, volumen y BD
+  tenant:ui <slug>              reaplica tema, menú y dashboard
   vhost:render <slug>           imprime el VirtualHost de Apache del tenant
   vhost:install <slug> --env dev|prod   instala el vhost en Apache (requiere root)
 USG
@@ -139,6 +140,12 @@ cmd_tenant_upgrade() {
   install_custom "$1"
 }
 
+cmd_tenant_ui() {
+  load_env; local slug="${1:?slug}"; [[ -d "tenants/$slug" ]] || die "tenant inexistente"
+  set -a; . "tenants/$slug/.env"; set +a
+  python3 bin/ui_settings.py "http://127.0.0.1:$WEB_PORT" admin "$ADMIN_PASSWORD"
+}
+
 cmd_tenant_delete() {
   load_env; local slug="${1:?slug}"; [[ "${2:-}" == "--yes" ]] || die "agrega --yes para confirmar la eliminación DEFINITIVA de datos"
   [[ -d "tenants/$slug" ]] || die "tenant inexistente"
@@ -186,6 +193,7 @@ case "${1:-}" in
   tenant:suspend) cmd_tenant_status "${2:?slug}" suspended;;
   tenant:resume) cmd_tenant_status "${2:?slug}" active;;
   tenant:upgrade) cmd_tenant_upgrade "${2:-}";;
+  tenant:ui) cmd_tenant_ui "${2:-}";;
   tenant:delete) shift; cmd_tenant_delete "$@";;
   vhost:render) shift; cmd_vhost_render "$@";;
   vhost:install) shift; cmd_vhost_install "$@";;
