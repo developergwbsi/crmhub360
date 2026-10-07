@@ -643,3 +643,26 @@ body.minimized #navbar .navbar-brand.ch-has-brand .ch-brand { display: none; }
 .ch-tpl .fas { color: var(--ch-primary); } .ch-tpl b { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ch-tpl:hover { border-color: var(--ch-primary); background: var(--ch-tint); } .ch-tpl.on { border-color: var(--ch-primary); background: var(--ch-tint2); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ch-primary) 25%, transparent); }
 .ch-tpl-manage { float: right; text-transform: none; letter-spacing: 0; font-weight: 600; }
+
+/* ===== Correos: mismo estilo que el resto de la aplicación ===== */
+.page-header .btn-danger, .header-buttons .btn-danger { background: var(--ch-primary); border-color: var(--ch-primary); color: #fff; }
+.page-header .btn-danger:hover, .page-header .btn-danger:focus, .header-buttons .btn-danger:hover { background: var(--ch-primary-hover); border-color: var(--ch-primary-hover); color: #fff; }
+.folders-container .folder-list { background: var(--ch-surface); border: 1px solid var(--ch-line); border-radius: 16px; padding: 8px; box-shadow: var(--ch-shadow); margin-bottom: 14px; }
+.folders-container .folder-list > li.list-group-item { border: 0 !important; background: transparent; margin: 1px 0; padding: 0; border-radius: 10px; box-shadow: none !important; }
+.folders-container .folder-list > li > a.side-link { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; color: var(--ch-ink); font-weight: 500; border: 0 !important; box-shadow: none !important; }
+.folders-container .folder-list > li > a.side-link .item-icon-container { color: var(--ch-muted); width: 18px; text-align: center; }
+.folders-container .folder-list > li:hover > a.side-link { background: var(--ch-soft); }
+.folders-container .folder-list > li.selected > a.side-link { background: var(--ch-tint2); color: var(--ch-primary); font-weight: 700; }
+.folders-container .folder-list > li.selected > a.side-link .item-icon-container { color: var(--ch-primary); }
+.folders-container .folder-list > li.selected { border-left: 0 !important; }
+.folders-container .folder-list > li.group-start { margin-top: 8px; position: relative; }
+.folders-container .folder-list > li.group-start::before { content: ""; position: absolute; left: 10px; right: 10px; top: -5px; height: 1px; background: var(--ch-line); }
+.folders-container .folder-list .badge, .folders-container .folder-list .count { background: var(--ch-primary); color: #fff; border-radius: 999px; font-weight: 700; }
+.list-container .list-row.unread, .list-container tr.list-row:has(.text-bold) { background: color-mix(in srgb, var(--ch-primary) 4%, var(--ch-surface)); }
+.list-container .list-row .cell[data-name="subject"] a, .list-container .list-row .cell[data-name="name"] a { color: var(--ch-ink); }
+.list-container .list-row:hover { background: var(--ch-tint); }
+.folders-container .folder-list { margin: 0 8px 14px 24px !important; }
+.folders-container .folder-list .badge:empty, .folders-container .folder-list .count:empty, .folders-container .folder-list .badge.hidden { display: none !important; }
+.folders-container .folder-list > li > a.side-link { font-size: 13.5px; padding: 8px 10px; }
+.folders-container .folder-list > li > a.side-link > span:not(.item-icon-container) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folders-container .folder-list .badge, .folders-container .folder-list .count { margin-left: auto; padding: 2px 8px; font-size: 11px; }

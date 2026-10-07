@@ -5,7 +5,27 @@ define('custom:lead-hero', [], function () {
     const money = n => (n === null || n === undefined || n === '') ? '—' : new Intl.NumberFormat('es-CO', {style: 'currency', currency: 'COP', maximumFractionDigits: 0}).format(n);
     const QUAL = {'Califica': 'ok', 'No califica': 'bad', 'Revisión Manual': 'warn'};
 
+    // Correo: remitente como avatar, asunto como título y de/para/fecha como resumen
+    function emailHtml(view) {
+        const a = view.model.attributes, lang = view.getLanguage();
+        const sender = (a.fromName || a.fromString || a.from || '?').replace(/<.*>/, '').trim() || a.from || '?';
+        const initials = sender.split(/\s+/).slice(0, 2).map(w => (w[0] || '')).join('').toUpperCase() || '?';
+        let h = 0; String(a.from || sender).split('').forEach(c => { h = (h * 31 + c.charCodeAt(0)) >>> 0; });
+        const chips = [];
+        if (a.status) { chips.push(`<span class="ch-chip ch-chip-main">${esc(lang.translateOption(a.status, 'status', 'Email'))}</span>`); }
+        if (a.isRead === false) { chips.push('<span class="ch-chip ch-chip-warn">Sin leer</span>'); }
+        if (a.isImportant) { chips.push('<span class="ch-chip ch-chip-bad"><span class="fas fa-star"></span> Importante</span>'); }
+        if (a.parentName) { chips.push(`<span class="ch-chip"><span class="fas fa-link"></span> ${esc(a.parentName)}</span>`); }
+        const meta = [];
+        if (a.from) { meta.push(`<span><span class="fas fa-paper-plane"></span>De: ${esc(a.from)}</span>`); }
+        if (a.to) { meta.push(`<span><span class="fas fa-inbox"></span>Para: ${esc(String(a.to).split(';').join(', '))}</span>`); }
+        if (a.dateSent) { meta.push(`<span><span class="far fa-clock"></span>${esc(a.dateSent)}</span>`); }
+        const avatar = `<span class="ch-avatar ch-avatar-lg" style="background:${COLORS[h % COLORS.length]}"><span class="ch-initials">${esc(initials)}</span></span>`;
+        return `${avatar}<div class="ch-lh-main"><div class="ch-lh-name">${esc(a.name || '(sin asunto)')}</div><div class="ch-lh-chips">${chips.join('')}</div><div class="ch-lh-meta">${meta.join('')}</div></div>`;
+    }
+
     function html(view) {
+        if ((view.model.entityType || '') === 'Email') { return emailHtml(view); }
         const a = view.model.attributes, lang = view.getLanguage(), scope = view.model.entityType || 'Lead';
         const first = (a.firstName || '').trim(), last = (a.lastName || '').trim();
         const initials = ((first[0] || '') + (last[0] || (first ? '' : (a.name || '?')[0]))).toUpperCase() || '?';
