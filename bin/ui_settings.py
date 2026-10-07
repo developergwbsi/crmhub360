@@ -102,6 +102,7 @@ if __name__ == "__main__":  # python3 ui_settings.py <base_url> <admin_user> <ad
         data = call("GET", f"Role/{api_role['id']}")["data"]
         data["Campaign"] = {"create": "no", "read": "all", "edit": "no", "delete": "no", "stream": "no"}
         data["User"] = {"read": "all"}
+        data["Import"] = True   # el Hub importa a la bandeja los correos recibidos con cualquier remitente
         # el servicio crea llamadas/leads a nombre de un asesor: necesita poder asignar a cualquier usuario
         call("PUT", f"Role/{api_role['id']}", {"data": data, "assignmentPermission": "all", "userPermission": "all"})
     # galería de plantillas de correo: solo se crean las que faltan (nunca se pisan las que el usuario modificó)

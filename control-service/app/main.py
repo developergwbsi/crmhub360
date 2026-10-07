@@ -827,6 +827,29 @@ async def tenant_mail_state(t: dict) -> dict:
         return {"hasOwn": None, "from": None}
 
 
+IMAP_HOSTS = {"smtp.gmail.com": "imap.gmail.com", "smtp.office365.com": "outlook.office365.com", "smtp.mail.yahoo.com": "imap.mail.yahoo.com", "smtp.zoho.com": "imap.zoho.com"}
+
+
+def set_company_mailbox(slug: str, mail: Optional[dict]) -> bool:
+    """Activa (o retira) la lectura del buzón de entrada de la empresa: el Hub trae por IMAP los correos que llegan a esa cuenta.
+    No se hace desde EspoCRM porque el cortafuegos del servidor redirige IMAP (143/993) del tráfico de los contenedores."""
+    with db() as c:
+        row = c.execute("SELECT settings FROM tenants WHERE slug=%s", (slug,)).fetchone()
+        settings = dict(row["settings"] or {})
+        host = IMAP_HOSTS.get((mail or {}).get("host", ""))
+        old = settings.get("mailbox") or {}
+        if mail and host and mail.get("user") and mail.get("password"):
+            same = old.get("user") == mail["user"] and old.get("host") == host
+            settings["mailbox"] = {"enabled": True, "host": host, "port": 993, "user": mail["user"], "password": mail["password"], "folder": "INBOX",
+                                   "since": old.get("since") if same else time.strftime("%Y-%m-%d", time.gmtime()), "last_uid": old.get("last_uid", 0) if same else 0}
+            ok = True
+        else:
+            settings.pop("mailbox", None)
+            ok = False
+        c.execute("UPDATE tenants SET settings=%s WHERE slug=%s", (json.dumps(settings), slug))
+    return ok
+
+
 SYS_ACCOUNT = "Crm Hub 360 · correo del sistema"
 LEGACY_SMTP_OFF = {"smtpServer": None, "smtpUsername": None, "smtpPassword": None, "smtpSecurity": ""}
 
@@ -866,6 +889,7 @@ async def set_company_mail(t: dict, mode: str) -> None:
         r = await c.put("/Settings", json=body)
     if r.status_code != 200:
         raise HTTPException(502, "No se pudo aplicar la configuración de correo en la empresa")
+    set_company_mailbox(t["slug"], mail if mode == "shared" else None)
 
 
 @app.get("/api/companies/{slug}/services")

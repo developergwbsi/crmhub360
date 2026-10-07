@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp
+from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -24,8 +24,10 @@ async def lifespan(_: FastAPI):
     db.pool.open()
     push.keys()  # crea las claves VAPID la primera vez
     bg = asyncio.create_task(broadcast.worker())
+    mb = asyncio.create_task(mailbox.worker())
     yield
     bg.cancel()
+    mb.cancel()
     db.pool.close()
 
 
