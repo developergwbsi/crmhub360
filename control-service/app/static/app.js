@@ -59,33 +59,76 @@
   }
 
   // ---------- inicio de sesión
-  function renderLogin() {
+  const store = {get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* privado */ } }, del: k => { try { localStorage.removeItem(k); } catch (e) { /* privado */ } }};
+  function renderLogin(forceFull) {
     clearInterval(state.timer);
+    const params = new URLSearchParams(location.search);
+    if (params.get('reset')) { return renderReset(params.get('reset')); }
+    const known = !forceFull && store.get('cc-user');
+    const nm = store.get('cc-name') || known || '';
     $app.innerHTML = `<div class="login"><div class="card"><div class="brand" style="margin-bottom:6px"><i>◆</i> Crm Hub 360</div><p class="sub">Centro de control</p>
-      <label>Usuario</label><input id="u" autocomplete="username"><label>Contraseña</label><input id="p" type="password" autocomplete="current-password">
-      <div class="err" id="e" hidden></div><div style="margin-top:18px"><button class="btn primary" id="go" style="width:100%;justify-content:center">Entrar</button></div></div></div>`;
+      ${known ? `<div class="welcome"><span class="av">${esc(nm.slice(0, 1).toUpperCase())}</span><div><div class="mut">Bienvenido de nuevo</div><b>${esc(nm)}</b><div class="mut">@${esc(known)}</div></div></div>`
+        : '<label>Usuario</label><input id="u" autocomplete="username">'}
+      <label>Contraseña</label><input id="p" type="password" autocomplete="current-password">
+      ${known ? '' : '<label class="chk"><input type="checkbox" id="rm" checked> Recordar mi usuario en este equipo</label>'}
+      <div class="err" id="e" hidden></div><div style="margin-top:16px"><button class="btn primary" id="go" style="width:100%;justify-content:center">Entrar</button></div>
+      <div class="links"><a role="button" id="fg">¿Olvidaste tu contraseña?</a>${known ? '<a role="button" id="nu">¿No eres tú?</a>' : ''}</div></div></div>`;
     const go = async () => {
       const e = document.getElementById('e'); e.hidden = true;
-      try { await api('POST', '/login', {user: document.getElementById('u').value.trim(), password: document.getElementById('p').value}); await boot(); }
-      catch (x) { e.hidden = false; e.textContent = x.message; }
+      const user = known || document.getElementById('u').value.trim();
+      try {
+        await api('POST', '/login', {user, password: document.getElementById('p').value});
+        const rm = document.getElementById('rm');
+        if (known || (rm && rm.checked)) { store.set('cc-user', user); } else { store.del('cc-user'); store.del('cc-name'); }
+        await boot();
+      } catch (x) { e.hidden = false; e.textContent = x.message; }
     };
     document.getElementById('go').onclick = go;
     document.getElementById('p').addEventListener('keydown', e => { if (e.key === 'Enter') { go(); } });
-    document.getElementById('u').focus();
+    document.getElementById('fg').onclick = forgotDialog;
+    const nu = document.getElementById('nu'); if (nu) { nu.onclick = () => { store.del('cc-user'); store.del('cc-name'); renderLogin(true); }; }
+    (document.getElementById('u') || document.getElementById('p')).focus();
+  }
+  function forgotDialog() {
+    const m = modal(`<h3>Recuperar contraseña</h3><p class="mut">Escribe tu usuario y el correo de tu cuenta. Si coinciden, te enviamos un enlace para crear una contraseña nueva (vale 30 minutos).</p>
+      <label>Usuario</label><input id="fu" autocomplete="username"><label>Correo de la cuenta</label><input id="fe" type="email" autocomplete="email"><div class="err" id="fer" hidden></div>
+      <div class="foot"><button class="btn" data-x="n">Cancelar</button><button class="btn primary" data-x="y">Enviar enlace</button></div>`);
+    m.el.querySelector('[data-x=n]').onclick = m.close;
+    m.el.querySelector('[data-x=y]').onclick = async () => {
+      const er = m.el.querySelector('#fer'); er.hidden = true;
+      const user = m.el.querySelector('#fu').value.trim(), email = m.el.querySelector('#fe').value.trim();
+      if (!user || !email) { er.hidden = false; er.textContent = 'Completa los dos datos.'; return; }
+      try { await api('POST', '/forgot', {user, email}); m.el.innerHTML = '<h3>Revisa tu correo</h3><p>Si los datos son correctos, te enviamos un enlace de recuperación. Puede tardar un par de minutos.</p><div class="foot"><button class="btn primary" data-x="k">Entendido</button></div>'; m.el.querySelector('[data-x=k]').onclick = m.close; }
+      catch (x) { er.hidden = false; er.textContent = x.message; }
+    };
+  }
+  function renderReset(token) {
+    $app.innerHTML = `<div class="login"><div class="card"><div class="brand" style="margin-bottom:6px"><i>◆</i> Crm Hub 360</div><p class="sub">Crea tu nueva contraseña</p>
+      <label>Contraseña nueva (mínimo 10 caracteres)</label><input id="n1" type="password" autocomplete="new-password"><label>Repítela</label><input id="n2" type="password" autocomplete="new-password">
+      <div class="err" id="e" hidden></div><div style="margin-top:16px"><button class="btn primary" id="go" style="width:100%;justify-content:center">Guardar contraseña</button></div></div></div>`;
+    document.getElementById('go').onclick = async () => {
+      const e = document.getElementById('e'); e.hidden = true;
+      const a = document.getElementById('n1').value, b = document.getElementById('n2').value;
+      if (a.length < 10) { e.hidden = false; e.textContent = 'Debe tener al menos 10 caracteres.'; return; }
+      if (a !== b) { e.hidden = false; e.textContent = 'Las contraseñas no coinciden.'; return; }
+      try { await api('POST', '/reset', {token, password: a}); history.replaceState(null, '', '/'); toast('Contraseña actualizada. Ya puedes entrar.'); renderLogin(); }
+      catch (x) { e.hidden = false; e.textContent = x.message; }
+    };
   }
 
   // ---------- estructura
   function shell() {
     $app.innerHTML = `<div class="top"><div class="brand"><i>◆</i><span>Crm Hub 360 <small>· Centro de control</small></span></div><span class="grow"></span>
-      <span class="mut hide-m" id="who"></span><button class="btn sm" id="out">Salir</button></div>
-      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="actividad">Actividad</button></div>
+      <button class="btn sm" id="acc"><span id="who">Mi cuenta</span></button><button class="btn sm" id="out">Salir</button></div>
+      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="actividad">Actividad</button></div>
       <main id="main"></main>`;
+    document.getElementById('acc').onclick = accountDialog;
     document.getElementById('out').onclick = async () => { try { await api('POST', '/logout'); } catch (e) { /* ya cerrada */ } renderLogin(); };
     document.querySelectorAll('.tab').forEach(b => b.onclick = () => { state.tab = b.dataset.t; draw(); });
   }
   function draw() {
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.t === state.tab));
-    ({empresas: drawCompanies, base: drawBase, actividad: drawActivity}[state.tab])();
+    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, correo: drawMail, actividad: drawActivity}[state.tab])();
   }
 
   // ---------- empresas
@@ -154,6 +197,21 @@
     tick();
   }
 
+
+  // ---------- visor en modo lectura (dentro del Centro de control, sin pedir inicio de sesión)
+  async function readLink(slug) { return (await api('POST', `/companies/${slug}/support-link`)).url; }
+  async function openViewer(c) {
+    const v = document.createElement('div'); v.className = 'viewer';
+    v.innerHTML = `<div class="vbar"><b>${esc(c.name)}</b><span class="chip info">Modo lectura</span><span class="mut hide-m">${esc(c.host)} · solo ves información, no puedes modificarla</span><span class="grow"></span>
+      <button class="btn sm" data-v="tab">Abrir en pestaña nueva</button><button class="btn sm primary" data-v="x">Cerrar visor</button></div><div class="vbody"><div class="vload"><span class="spin"></span> Entrando en modo lectura…</div><iframe title="${esc(c.name)}" allow="clipboard-read; clipboard-write"></iframe></div>`;
+    document.body.appendChild(v);
+    v.querySelector('[data-v=x]').onclick = () => v.remove();
+    v.querySelector('[data-v=tab]').onclick = async () => { const w = window.open('', '_blank'); try { const u = await readLink(c.slug); if (w) { w.opener = null; w.location = u; } } catch (e) { if (w) { w.close(); } toast(e.message); } };
+    const fr = v.querySelector('iframe');
+    fr.addEventListener('load', () => { const l = v.querySelector('.vload'); if (l) { setTimeout(() => l.remove(), 1200); } });
+    try { fr.src = await readLink(c.slug); } catch (e) { v.remove(); toast(e.message); }
+  }
+
   // ---------- gestión de una empresa
   async function manage(slug) {
     const c = state.companies.find(x => x.slug === slug); if (!c) { return; }
@@ -166,14 +224,11 @@
       <h4 style="margin:18px 0 6px">Datos</h4><div class="kv"><span>Estado</span><span>${esc(c.status === 'active' ? 'Activa' : 'Suspendida')}</span><span>Plan</span><span>${esc(c.plan)} · hasta ${c.maxUsers} usuarios</span>
         <span>Licencia</span><span>${esc(c.license || 'Sin vencimiento')}</span><span>Versión instalada</span><span>${esc(c.health.version || '—')}</span><span>Base de producción</span><span>${esc(c.kind === 'client' ? (c.release || 'ninguna') : 'Código de desarrollo')}</span>
         <span>Creada</span><span>${esc(fmtDate(c.createdAt))}</span><span>Respuesta</span><span>${c.health.ms == null ? '—' : c.health.ms + ' ms'}</span></div>
+      <h4 style="margin:20px 0 4px">Servicios</h4><div id="sv"><span class="spin"></span></div>
       <h4 style="margin:20px 0 4px">Usuarios</h4><div class="mut" style="margin-bottom:6px">Cambia la contraseña de cualquier usuario de esta empresa.</div><div id="us"><span class="spin"></span></div></div>`;
     document.body.appendChild(d);
     const close = () => d.remove(); d.querySelector('.x').onclick = close;
-    d.querySelector('[data-a=ro]').onclick = async () => {
-      const w = window.open('', '_blank'); // se abre antes de la consulta para que el navegador no la bloquee
-      try { const r = await api('POST', `/companies/${slug}/support-link`); if (w) { w.opener = null; w.location = r.url; } else { toast('Permite las ventanas emergentes para continuar'); } toast('Entrando en modo lectura…'); }
-      catch (e) { if (w) { w.close(); } toast(e.message); }
-    };
+    d.querySelector('[data-a=ro]').onclick = () => { close(); openViewer(c); };
     d.querySelector('[data-a=cred]').onclick = async () => {
       if (!await confirmBox('Ver credenciales', 'Se mostrará el usuario y la contraseña del administrador de «' + c.name + '». Queda registrado en la actividad.', 'Mostrar')) { return; }
       try { const r = await api('GET', `/companies/${slug}/admin-credentials`); secretBox('Administrador de ' + c.name, `Usuario: ${r.userName} · Sitio: ${r.url}`, r.password); } catch (e) { toast(e.message); }
@@ -191,6 +246,7 @@
       if (await confirmBox(susp ? 'Suspender empresa' : 'Reactivar empresa', susp ? 'Se detiene el sitio y deja de recibir mensajes. Los datos se conservan.' : 'Se vuelve a encender el sitio.', susp ? 'Suspender' : 'Reactivar', susp)) {
         close(); const r = await api('POST', `/companies/${slug}/power/${susp ? 'suspend' : 'resume'}`); watchJob(r.job, (susp ? 'Suspendiendo «' : 'Reactivando «') + c.name + '»');
       } }; }
+    loadServices(slug, d.querySelector('#sv'));
     try {
       const r = await api('GET', `/companies/${slug}/users`);
       d.querySelector('#us').innerHTML = r.items.length ? r.items.map(u => `<div class="userrow"><div style="flex:1"><b>${esc(u.userName)}</b> <span class="chip">${esc(u.type === 'admin' ? 'Administrador' : u.type === 'api' ? 'Integración' : 'Usuario')}</span>${u.active ? '' : ' <span class="chip warn">Inactivo</span>'}<div class="mut">${esc(u.name || '')} ${esc(u.email || '')}</div></div>${u.type === 'api' ? '' : `<button class="btn sm" data-u="${esc(u.id)}" data-n="${esc(u.userName)}">Cambiar clave</button>`}</div>`).join('') : '<div class="mut">Sin usuarios.</div>';
@@ -200,6 +256,120 @@
         try { const r2 = await api('POST', `/companies/${slug}/users/${b.dataset.u}/password`, custom ? {password: custom} : {}); secretBox('Contraseña cambiada', 'Nueva contraseña de «' + r2.userName + '». No se vuelve a mostrar.', r2.password, 'Entrégala por un canal seguro; el usuario puede cambiarla desde su perfil.'); } catch (e) { toast(e.message); }
       });
     } catch (e) { d.querySelector('#us').innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+  }
+
+
+  // ---------- mi cuenta
+  function accountDialog() {
+    const me = state.me || {};
+    const m = modal(`<h3>Mi cuenta</h3><div class="kv" style="margin-bottom:6px"><span>Usuario</span><span>${esc(me.user)}</span></div>
+      <label>Nombre</label><input id="an" maxlength="80" value="${esc(me.name || '')}"><label>Correo (para recuperar la contraseña)</label><input id="ae" type="email" value="${esc(me.email || '')}"><div class="err" id="aer" hidden></div>
+      <div class="acts"><button class="btn primary sm" data-x="sv">Guardar datos</button></div>
+      <h4 style="margin:18px 0 0">Cambiar contraseña</h4><label>Contraseña actual</label><input id="pc" type="password" autocomplete="current-password">
+      <label>Contraseña nueva (mínimo 10 caracteres)</label><input id="p1" type="password" autocomplete="new-password"><label>Repite la nueva</label><input id="p2" type="password" autocomplete="new-password"><div class="err" id="per" hidden></div>
+      <div class="foot"><button class="btn" data-x="c">Cerrar</button><button class="btn primary" data-x="pw">Cambiar contraseña</button></div>`);
+    const q = id => m.el.querySelector('#' + id);
+    m.el.querySelector('[data-x=c]').onclick = m.close;
+    m.el.querySelector('[data-x=sv]').onclick = async () => {
+      q('aer').hidden = true;
+      try { await api('PUT', '/account', {name: q('an').value.trim(), email: q('ae').value.trim()}); state.me.name = q('an').value.trim(); state.me.email = q('ae').value.trim(); document.getElementById('who').textContent = state.me.name || 'Mi cuenta'; store.set('cc-name', state.me.name); toast('Datos guardados'); }
+      catch (e) { q('aer').hidden = false; q('aer').textContent = e.message; }
+    };
+    m.el.querySelector('[data-x=pw]').onclick = async () => {
+      const er = q('per'); er.hidden = true;
+      if (q('p1').value.length < 10) { er.hidden = false; er.textContent = 'La contraseña nueva debe tener al menos 10 caracteres.'; return; }
+      if (q('p1').value !== q('p2').value) { er.hidden = false; er.textContent = 'Las contraseñas nuevas no coinciden.'; return; }
+      try { await api('POST', '/account/password', {current: q('pc').value, new: q('p1').value}); m.close(); toast('Contraseña cambiada'); }
+      catch (e) { er.hidden = false; er.textContent = e.message; }
+    };
+  }
+
+  // ---------- correo general
+  async function drawMail() {
+    const main = document.getElementById('main');
+    main.innerHTML = '<h2>Correo general</h2><p class="sub">Cargando…</p>';
+    let m; try { m = await api('GET', '/settings/mail'); } catch (e) { main.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
+    main.innerHTML = `<h2>Correo general</h2><p class="sub">Servidor de correo (SMTP) del sistema. Se usa para recuperar tu contraseña del Centro y para las empresas a las que decidas prestarles el servicio de correo (se activa en el panel de cada empresa → Servicios).</p>
+      <div class="card" style="padding:18px 20px;max-width:760px"><div class="grid2"><div><label>Servidor SMTP</label><input id="h" value="${esc(m.host || '')}" placeholder="smtp.proveedor.com"></div><div><label>Puerto</label><input id="po" type="number" value="${esc(m.port || 587)}"></div></div>
+      <div class="grid2"><div><label>Seguridad</label><select id="se"><option value="TLS">STARTTLS (587)</option><option value="SSL">SSL/TLS (465)</option><option value="">Ninguna</option></select></div><div><label>Usuario</label><input id="us" value="${esc(m.user || '')}" autocomplete="off"></div></div>
+      <label>Contraseña ${m.passwordSet ? `<span class="mut">(guardada ${esc(m.passwordHint)}; déjala vacía para conservarla)</span>` : ''}</label><input id="pw" type="password" autocomplete="new-password">
+      <div class="grid2"><div><label>Correo remitente</label><input id="fa" value="${esc(m.from_address || '')}" placeholder="no-responder@tudominio.com"></div><div><label>Nombre del remitente</label><input id="fn" value="${esc(m.from_name || 'Crm Hub 360')}"></div></div>
+      <div class="err" id="er" hidden></div><div class="acts"><button class="btn primary" id="sv">Guardar</button><button class="btn" id="ts">Enviar correo de prueba</button></div></div>`;
+    document.getElementById('se').value = m.security == null ? 'TLS' : m.security;
+    const val = id => document.getElementById(id).value.trim();
+    const body = () => ({host: val('h'), port: +val('po') || 587, security: document.getElementById('se').value, user: val('us'), password: document.getElementById('pw').value, from_address: val('fa'), from_name: val('fn') || 'Crm Hub 360'});
+    document.getElementById('sv').onclick = async () => { const er = document.getElementById('er'); er.hidden = true; try { await api('PUT', '/settings/mail', body()); toast('Correo guardado'); drawMail(); } catch (e) { er.hidden = false; er.textContent = e.message; } };
+    document.getElementById('ts').onclick = async () => {
+      const to = await inputBox('Correo de prueba', 'Enviar a', {required: true, ok: 'Enviar', placeholder: (state.me && state.me.email) || 'tu@correo.com', validate: v => (/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(v) ? '' : 'Escribe un correo válido.')});
+      if (to === null) { return; }
+      try { await api('PUT', '/settings/mail', body()); await api('POST', '/settings/mail/test', {to}); toast('Correo enviado a ' + to); } catch (e) { modal(`<h3>No se pudo enviar</h3><p>${esc(e.message)}</p><div class="foot"><button class="btn primary" data-x="k">Cerrar</button></div>`).el.querySelector('[data-x=k]').onclick = ev => ev.target.closest('.back').remove(); }
+    };
+  }
+
+  // ---------- proveedores aliados
+  const FIELDS = {
+    evolution: [['url', 'URL del servidor Evolution', 'https://evolution.tudominio.com'], ['apikey', 'API key global', '', 1]],
+    gupshup: [['api_key', 'API key', '', 1], ['source', 'Número de origen', '57300…'], ['app_name', 'Nombre de la app', '']],
+    twilio: [['account_sid', 'Account SID', 'AC…'], ['auth_token', 'Auth token', '', 1], ['sms_from', 'Remitente de SMS (número, código corto o MG…)', ''], ['wa_from', 'Número de WhatsApp (whatsapp:+…)', ''], ['voice_from', 'Número para llamadas (caller ID)', '']],
+    generic: [['url', 'URL de la API', 'https://api.proveedor.com/v1/…'], ['method', 'Método', '', 0, ['POST', 'GET']], ['auth_type', 'Autenticación', '', 0, ['none', 'bearer', 'basic', 'header']], ['auth_user', 'Usuario / nombre de la cabecera', ''], ['auth_secret', 'Token o clave', '', 1], ['body_type', 'Formato del cuerpo', '', 0, ['json', 'form', 'query']], ['body', 'Plantilla del cuerpo', '{"to":"{{to}}","text":"{{text}}"}', 0, 'area'], ['sender', 'Remitente / caller ID', '']],
+  };
+  const fieldsFor = kind => FIELDS[kind.startsWith('generic') ? 'generic' : kind];
+  async function drawProviders() {
+    const main = document.getElementById('main');
+    main.innerHTML = '<h2>Proveedores aliados</h2><p class="sub">Cargando…</p>';
+    let r; try { r = await api('GET', '/providers'); } catch (e) { main.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
+    state.providers = r;
+    main.innerHTML = `<h2>Proveedores aliados</h2><p class="sub">Servicios que nosotros contratamos para revenderlos a las empresas: WhatsApp, SMS, llamadas. Se configuran una sola vez aquí y se asignan a cada empresa desde su panel (Servicios); la empresa no ve nuestras claves.</p>
+      <div class="bar"><button class="btn primary" id="np">+ Agregar proveedor</button></div><div class="card">${r.items.length ? `<table><thead><tr><th>Proveedor</th><th>Tipo</th><th>Canales</th><th>Empresas que lo usan</th><th></th></tr></thead><tbody>${r.items.map(p => `<tr><td><div class="name">${esc(p.name)}</div><div class="mut">${esc(p.notes || '')}</div></td><td>${esc(r.kinds[p.kind].label)}</td><td>${r.kinds[p.kind].channels.map(c => `<span class="chip info">${esc({whatsapp: 'WhatsApp', sms: 'SMS', voice: 'Llamadas'}[c])}</span>`).join(' ')}</td><td>${p.companies.length ? p.companies.map(esc).join(', ') : '<span class="mut">Ninguna</span>'}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-ed="${esc(p.id)}">Editar</button> <button class="btn sm danger" data-del="${esc(p.id)}">Eliminar</button></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Aún no hay proveedores. Agrega el primero (por ejemplo, tu cuenta de Twilio o tu servidor Evolution).</div>'}</div>`;
+    document.getElementById('np').onclick = () => providerDialog(null);
+    main.querySelectorAll('[data-ed]').forEach(b => b.onclick = () => providerDialog(r.items.find(x => x.id === b.dataset.ed)));
+    main.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      if (!await confirmBox('Eliminar proveedor', 'Se borra este proveedor del Centro. Las empresas que lo usan deben quitarlo primero.', 'Eliminar', true)) { return; }
+      try { await api('DELETE', '/providers/' + b.dataset.del); toast('Proveedor eliminado'); drawProviders(); } catch (e) { toast(e.message); }
+    });
+  }
+  function providerDialog(p) {
+    const kinds = state.providers.kinds, cur = p ? p.kind : 'twilio';
+    const m = modal(`<h3>${p ? 'Editar' : 'Agregar'} proveedor</h3><label>Tipo</label><select id="k" ${p ? 'disabled' : ''}>${Object.keys(kinds).map(k => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(kinds[k].label)}</option>`).join('')}</select>
+      <label>Nombre para identificarlo</label><input id="pn" maxlength="80" value="${esc(p ? p.name : '')}" placeholder="Ej.: Twilio principal"><label>Notas (opcional)</label><input id="pt" maxlength="300" value="${esc(p ? p.notes : '')}">
+      <div id="ff"></div><div class="err" id="pe" hidden></div><div class="foot"><button class="btn" data-x="n">Cancelar</button><button class="btn primary" data-x="y">Guardar</button></div>`, 'wide');
+    const ff = m.el.querySelector('#ff');
+    const draw = () => {
+      const kind = m.el.querySelector('#k').value, f = (p && p.kind === kind) ? p.fields : {};
+      ff.innerHTML = fieldsFor(kind).map(([key, label, ph, secret, opts]) => {
+        const v = f[key] == null ? '' : f[key];
+        if (opts === 'area') { return `<label>${esc(label)}</label><textarea data-f="${key}" rows="3" placeholder="${esc(ph)}">${esc(v)}</textarea>`; }
+        if (opts) { return `<label>${esc(label)}</label><select data-f="${key}">${opts.map(o => `<option ${o === (v || opts[0]) ? 'selected' : ''}>${o}</option>`).join('')}</select>`; }
+        const set = secret && f[key + '_set'];
+        return `<label>${esc(label)} ${set ? `<span class="mut">(guardada ${esc(f[key + '_hint'])}; vacía = conservar)</span>` : ''}</label><input data-f="${key}" ${secret ? 'type="password" autocomplete="new-password"' : ''} value="${secret ? '' : esc(v)}" placeholder="${esc(ph)}">`;
+      }).join('');
+    };
+    draw(); m.el.querySelector('#k').onchange = draw;
+    m.el.querySelector('[data-x=n]').onclick = m.close;
+    m.el.querySelector('[data-x=y]').onclick = async () => {
+      const er = m.el.querySelector('#pe'); er.hidden = true;
+      const fields = {}; m.el.querySelectorAll('[data-f]').forEach(el => { fields[el.dataset.f] = el.value; });
+      try { await api('PUT', '/providers/' + (p ? p.id : 'new'), {kind: m.el.querySelector('#k').value, name: m.el.querySelector('#pn').value.trim(), notes: m.el.querySelector('#pt').value.trim(), fields}); m.close(); toast('Proveedor guardado'); drawProviders(); }
+      catch (e) { er.hidden = false; er.textContent = e.message; }
+    };
+  }
+
+  // servicios (proveedores y correo) de una empresa, dentro de su panel
+  async function loadServices(slug, box) {
+    let r; try { r = await api('GET', `/companies/${slug}/services`); } catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
+    const rows = [['whatsapp', 'WhatsApp'], ['sms', 'SMS'], ['voice', 'Llamadas']].map(([ch, label]) => {
+      const cur = r[ch] || {}, opts = r.providers.filter(p => r.kinds[p.kind].includes(ch));
+      return `<div class="svc" data-ch="${ch}"><label>${label}</label><div class="grid2"><select data-p><option value="">Propio de la empresa (sin nuestro servicio)</option>${opts.map(p => `<option value="${esc(p.id)}" ${cur.provider === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
+        <input data-x placeholder="${ch === 'whatsapp' ? 'Instancia (Evolution) o número' : 'Remitente / caller ID (opcional)'}" value="${esc(cur.instance || cur.from || '')}"></div></div>`;
+    }).join('');
+    box.innerHTML = `${rows}<div class="svc"><label>Correo de salida</label><select id="ml"><option value="own">Propio de la empresa${r.mail.hasOwn ? ' (tiene SMTP configurado)' : ' (aún sin configurar)'}</option><option value="shared" ${r.mail.mode === 'shared' ? 'selected' : ''}>Prestado: correo general del sistema</option></select></div>
+      <div class="acts"><button class="btn primary sm" id="sv">Aplicar servicios</button></div><div class="mut">Al aplicar, la empresa recibe las credenciales en su configuración; no las puede ver. Quitar el servicio las retira.</div>`;
+    box.querySelector('#sv').onclick = async () => {
+      const body = {mail: box.querySelector('#ml').value};
+      box.querySelectorAll('.svc[data-ch]').forEach(row => { const ch = row.dataset.ch, pid = row.querySelector('[data-p]').value, x = row.querySelector('[data-x]').value.trim(); body[ch] = pid ? {provider: pid, instance: ch === 'whatsapp' && !/^\+?\d[\d\s-]{6,}$/.test(x) ? x : '', from: ch === 'whatsapp' && !/^\+?\d[\d\s-]{6,}$/.test(x) ? '' : x} : {provider: null}; });
+      try { const res = await api('PUT', `/companies/${slug}/services`, body); toast('Servicios aplicados'); if (res.notes && res.notes.length) { modal(`<h3>Servicios aplicados</h3><p>${res.notes.map(esc).join('<br>')}</p><div class="foot"><button class="btn primary" data-x="k">Cerrar</button></div>`).el.querySelector('[data-x=k]').onclick = ev => ev.target.closest('.back').remove(); } loadServices(slug, box); }
+      catch (e) { toast(e.message); }
+    };
   }
 
   // ---------- base de producción
@@ -229,7 +399,7 @@
 
   async function boot() {
     let me; try { me = await api('GET', '/me'); state.base = me.baseDomain; } catch (e) { renderLogin(); return; }
-    shell(); document.getElementById('who').textContent = 'Sesión: ' + me.user;
+    shell(); state.me = me; document.getElementById('who').textContent = me.name || me.user; if (me.name) { store.set('cc-name', me.name); }
     await Promise.all([loadCompanies(), loadSide()]); draw();
     clearInterval(state.timer); state.timer = setInterval(() => { if (!document.querySelector('.back, .drawer')) { loadCompanies().catch(() => {}); loadSide().catch(() => {}); } }, 20000);
   }

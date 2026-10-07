@@ -317,6 +317,8 @@
         Espo.Ajax.getRequest('App/user').then(function (r) {
             var n = r && r.settings && r.settings.applicationName;
             if (n) { try { localStorage.setItem('ch-app-name', n); } catch (e) { /* privado */ } paintBrand(); }
+            // el nombre del usuario recordado se guarda para la bienvenida del próximo inicio de sesión
+            try { if (r && r.user && localStorage.getItem('ch-last-user') === r.user.userName && r.user.name) { localStorage.setItem('ch-last-name', r.user.name); } } catch (e) { /* privado */ }
             if (r && r.user && r.user.userName === 'soporte-lectura') {
                 document.body.classList.add('ch-readonly');
                 if (!document.getElementById('ch-ro')) {

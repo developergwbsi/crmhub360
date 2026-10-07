@@ -67,3 +67,10 @@ html[data-ch-theme="dark"] .crmhub-login {
 
 .crmhub-system { margin: -44px 0 48px 56px; font-size: 13px; color: rgba(255,255,255,.7); letter-spacing: .02em; } .crmhub-system b { color: #fff; font-weight: 700; }
 .crmhub-mobile-brand small { font-weight: 500; opacity: .7; font-size: .6em; }
+
+.crmhub-welcome { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin: 4px 0 14px; border-radius: 14px; background: color-mix(in srgb, var(--ch-primary) 9%, var(--ch-card)); border: 1px solid color-mix(in srgb, var(--ch-primary) 22%, transparent); }
+.crmhub-welcome[hidden] { display: none; }
+.crmhub-wav { width: 46px; height: 46px; border-radius: 50%; background: var(--ch-primary); color: #fff; display: grid; place-items: center; font-size: 19px; font-weight: 800; flex: none; }
+.crmhub-wtxt { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; flex: 1; } .crmhub-wtxt small { color: var(--ch-muted); } .crmhub-wtxt strong { font-size: 16px; color: var(--ch-fg); } .crmhub-wtxt em { color: var(--ch-muted); font-style: normal; font-size: 13px; }
+.crmhub-welcome a { font-size: 13px; color: var(--ch-primary); white-space: nowrap; cursor: pointer; }
+.crmhub-remember { display: flex; gap: 8px; align-items: center; font-weight: 500 !important; margin: 4px 0 14px; cursor: pointer; } .crmhub-remember input { width: 16px; height: 16px; }

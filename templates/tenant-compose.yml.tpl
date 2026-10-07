@@ -33,6 +33,8 @@ x-espo-env: &espo-env
   ESPOCRM_SITE_URL: ${SITE_URL}
   ESPOCRM_CONFIG_USE_WEB_SOCKET: "true"
   ESPOCRM_CONFIG_WEB_SOCKET_URL: ${WS_URL}
+  # el encabezado de marcos lo controla Apache (solo el Centro de control puede incrustar el sitio)
+  ESPOCRM_CONFIG_CLIENT_X_FRAME_OPTIONS_HEADER_DISABLED: "true"
   ESPOCRM_CONFIG_WEB_SOCKET_ZERO_M_Q_SUBSCRIBER_DSN: "tcp://*:7777"
   ESPOCRM_CONFIG_WEB_SOCKET_ZERO_M_Q_SUBMISSION_DSN: "tcp://espocrm-websocket:7777"
   ESPOCRM_CONFIG_ADMIN_PANEL_IFRAME_DISABLED: "true"

@@ -2,6 +2,8 @@
 <VirtualHost *:80>
     ServerName ${SERVER_NAME}
     ProxyPreserveHost On
+    # Permite incrustar esta empresa solo en el Centro de control (modo lectura); nadie más puede enmarcarla
+    Header always append Content-Security-Policy "frame-ancestors 'self' https://${CONTROL_HOST}"
     RewriteEngine On
 
     # WebSocket de EspoCRM

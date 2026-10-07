@@ -1,6 +1,7 @@
 """Crm Hub 360 - Centro de control: crear y vigilar empresas, restablecer claves y entrar en modo lectura.
 No ejecuta nada privilegiado: encola trabajos que realiza `bin/control-worker` en el servidor."""
-import asyncio, base64, hashlib, hmac, json, os, re, secrets, time
+import asyncio, base64, hashlib, hmac, json, os, re, secrets, smtplib, ssl, time
+from email.message import EmailMessage
 from typing import Optional
 
 import httpx
@@ -21,6 +22,8 @@ BIND_HOST, PORT = os.environ.get("CONTROL_BIND_HOST", "127.0.0.1"), int(os.envir
 TENANTS_DIR = "/tenants"
 SESSION_TTL = 12 * 3600
 SUPPORT_USER = "soporte-lectura"
+CONTROL_EMAIL = os.environ.get("CONTROL_EMAIL", "")
+CONTROL_HOST = os.environ.get("CONTROL_HOST", "")
 
 app = FastAPI(title="Crm Hub 360 · Centro de control", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -34,10 +37,34 @@ def audit(actor, action, target=None, detail=None):
         c.execute("INSERT INTO control_audit (actor, action, target, detail) VALUES (%s,%s,%s,%s)", (actor, action, target, json.dumps(detail or {})))
 
 
+# ---------------------------------------------------------------- ajustes (BD)
+def get_setting(key: str, default=None):
+    with db() as c:
+        r = c.execute("SELECT value FROM control_settings WHERE key=%s", (key,)).fetchone()
+    return r["value"] if r else default
+
+
+def put_setting(key: str, value) -> None:
+    with db() as c:
+        c.execute("INSERT INTO control_settings (key, value) VALUES (%s,%s) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now()", (key, json.dumps(value)))
+
+
+def account() -> dict:
+    """Cuenta del superadmin: la contraseña/correo cambiados desde el Centro (BD) mandan sobre los valores iniciales del .env."""
+    a = get_setting("admin", {}) or {}
+    return {"hash": a.get("hash") or PASS_HASH, "email": a.get("email") or CONTROL_EMAIL, "name": a.get("name") or "Superadministrador"}
+
+
+def hash_password(pw: str) -> str:
+    salt = os.urandom(16)
+    h = hashlib.scrypt(pw.encode(), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
+    return "scrypt:" + base64.b64encode(salt).decode() + ":" + base64.b64encode(h).decode()
+
+
 # ---------------------------------------------------------------- sesión
 def verify_password(pw: str) -> bool:
     try:
-        _, salt, h = PASS_HASH.split(":")
+        _, salt, h = account()["hash"].split(":")
         calc = hashlib.scrypt(pw.encode(), salt=base64.b64decode(salt), n=2 ** 14, r=8, p=1, dklen=32)
         return hmac.compare_digest(calc, base64.b64decode(h))
     except Exception:
@@ -113,7 +140,14 @@ def logout(response: Response):
 
 @app.get("/api/me")
 def whoami(actor: str = Depends(me)):
-    return {"user": actor, "baseDomain": BASE_DOMAIN}
+    a = account()
+    return {"user": actor, "name": a["name"], "email": a["email"], "baseDomain": BASE_DOMAIN}
+
+
+@app.get("/api/hello")
+def hello():
+    """Datos públicos mínimos para la pantalla de bienvenida (sin revelar nada sensible)."""
+    return {"mailReady": bool(get_setting("mail") and get_setting("mail").get("host"))}
 
 
 # ---------------------------------------------------------------- empresas
@@ -390,6 +424,412 @@ async def support_link(slug: str, actor: str = Depends(me)):
     return {"url": f"https://{t['host']}/?support={code}"}
 
 
+
+# ---------------------------------------------------------------- mi cuenta, recuperación de clave
+class AccountPwReq(BaseModel):
+    current: str
+    new: str = Field(min_length=10, max_length=80)
+
+
+@app.post("/api/account/password")
+def change_my_password(req: AccountPwReq, actor: str = Depends(me)):
+    if not verify_password(req.current):
+        raise HTTPException(400, "La contraseña actual no es correcta")
+    a = get_setting("admin", {}) or {}
+    a["hash"] = hash_password(req.new)
+    put_setting("admin", a)
+    audit(actor, "cambiar_mi_clave")
+    return {"ok": True}
+
+
+class AccountReq(BaseModel):
+    email: str = Field(max_length=190)
+    name: str = Field("Superadministrador", max_length=80)
+
+
+@app.put("/api/account")
+def update_account(req: AccountReq, actor: str = Depends(me)):
+    if not re.match(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$", req.email):
+        raise HTTPException(400, "Correo inválido")
+    a = get_setting("admin", {}) or {}
+    a.update({"email": req.email.strip(), "name": req.name.strip() or "Superadministrador"})
+    put_setting("admin", a)
+    audit(actor, "actualizar_mi_cuenta")
+    return {"ok": True}
+
+
+def smtp_send(cfg: dict, to: str, subject: str, text: str, html: Optional[str] = None, from_name: Optional[str] = None) -> None:
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = f"{from_name or cfg.get('from_name') or 'Crm Hub 360'} <{cfg['from_address']}>"
+    msg["To"] = to
+    msg.set_content(text)
+    if html:
+        msg.add_alternative(html, subtype="html")
+    port = int(cfg.get("port") or 587)
+    sec = cfg.get("security") or "TLS"
+    ctx = ssl.create_default_context()
+    if sec == "SSL":
+        srv = smtplib.SMTP_SSL(cfg["host"], port, timeout=15, context=ctx)
+    else:
+        srv = smtplib.SMTP(cfg["host"], port, timeout=15)
+        if sec == "TLS":
+            srv.starttls(context=ctx)
+    try:
+        if cfg.get("user"):
+            srv.login(cfg["user"], cfg.get("password") or "")
+        srv.send_message(msg)
+    finally:
+        try:
+            srv.quit()
+        except Exception:
+            pass
+
+
+class ForgotReq(BaseModel):
+    user: str
+    email: str
+
+
+@app.post("/api/forgot")
+async def forgot(req: ForgotReq, request: Request):
+    if request.headers.get("x-cc") != "1":
+        raise HTTPException(403, "Solicitud no permitida")
+    ip, now = client_ip(request), time.time()
+    recent = [t for t in _fails.get("f" + ip, []) if now - t < 900]
+    if len(recent) >= 5:
+        raise HTTPException(429, "Demasiados intentos. Espera unos minutos.")
+    _fails["f" + ip] = recent + [now]
+    a, mail = account(), get_setting("mail") or {}
+    ok = hmac.compare_digest(req.user.strip().encode(), USER.encode()) & hmac.compare_digest(req.email.strip().lower().encode(), (a["email"] or "").lower().encode())
+    if ok and mail.get("host"):
+        token = secrets.token_urlsafe(32)
+        with db() as c:
+            c.execute("DELETE FROM control_resets WHERE expires_at < now()")
+            c.execute("INSERT INTO control_resets (token_hash, expires_at) VALUES (%s, now() + interval '30 minutes')", (hashlib.sha256(token.encode()).hexdigest(),))
+        link = f"https://{CONTROL_HOST}/?reset={token}"
+        try:
+            await asyncio.to_thread(smtp_send, mail, a["email"], "Recupera tu acceso al Centro de control",
+                                    f"Hola,\n\nPara crear una nueva contraseña del Centro de control usa este enlace (vale 30 minutos):\n{link}\n\nSi no lo pediste, ignora este mensaje.\n\nCrm Hub 360")
+        except Exception as e:  # el aviso al usuario es siempre el mismo para no revelar datos
+            audit("sistema", "recuperacion_correo_fallido", None, {"error": str(e)[:150]})
+        audit("sistema", "recuperacion_solicitada", ip)
+    else:
+        audit(req.user[:40], "recuperacion_datos_incorrectos", ip)
+    return {"ok": True}
+
+
+class ResetReq(BaseModel):
+    token: str
+    password: str = Field(min_length=10, max_length=80)
+
+
+@app.post("/api/reset")
+def reset_password_with_token(req: ResetReq, request: Request):
+    if request.headers.get("x-cc") != "1":
+        raise HTTPException(403, "Solicitud no permitida")
+    h = hashlib.sha256(req.token.encode()).hexdigest()
+    with db() as c:
+        row = c.execute("DELETE FROM control_resets WHERE token_hash=%s AND expires_at > now() RETURNING token_hash", (h,)).fetchone()
+    if not row:
+        raise HTTPException(400, "El enlace no es válido o ya venció. Solicita uno nuevo.")
+    a = get_setting("admin", {}) or {}
+    a["hash"] = hash_password(req.password)
+    put_setting("admin", a)
+    audit("sistema", "clave_restablecida", client_ip(request))
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- correo general (SMTP del sistema)
+MAIL_SECRET = "password"
+
+
+def mask_mail(m: dict) -> dict:
+    out = {k: v for k, v in m.items() if k != MAIL_SECRET}
+    pw = m.get(MAIL_SECRET) or ""
+    out["passwordSet"] = bool(pw)
+    out["passwordHint"] = ("…" + pw[-3:]) if pw else ""
+    return out
+
+
+class MailReq(BaseModel):
+    host: str = Field(max_length=190)
+    port: int = Field(587, ge=1, le=65535)
+    security: str = "TLS"
+    user: str = Field("", max_length=190)
+    password: str = Field("", max_length=190)
+    from_address: str = Field(max_length=190)
+    from_name: str = Field("Crm Hub 360", max_length=80)
+
+
+@app.get("/api/settings/mail")
+def get_mail(actor: str = Depends(me)):
+    return mask_mail(get_setting("mail", {}) or {})
+
+
+@app.put("/api/settings/mail")
+def put_mail(req: MailReq, actor: str = Depends(me)):
+    if req.security not in ("TLS", "SSL", ""):
+        raise HTTPException(400, "Seguridad inválida")
+    if not re.match(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$", req.from_address):
+        raise HTTPException(400, "Correo remitente inválido")
+    old = get_setting("mail", {}) or {}
+    d = req.model_dump()
+    if not d[MAIL_SECRET]:
+        d[MAIL_SECRET] = old.get(MAIL_SECRET, "")
+    put_setting("mail", d)
+    audit(actor, "guardar_correo_general")
+    return mask_mail(d)
+
+
+class MailTestReq(BaseModel):
+    to: str
+
+
+@app.post("/api/settings/mail/test")
+async def test_mail(req: MailTestReq, actor: str = Depends(me)):
+    m = get_setting("mail") or {}
+    if not m.get("host"):
+        raise HTTPException(400, "Primero guarda la configuración de correo")
+    try:
+        await asyncio.to_thread(smtp_send, m, req.to.strip(), "Prueba de correo · Crm Hub 360", "Si lees esto, el correo general del Centro de control funciona.\n\nCrm Hub 360")
+    except Exception as e:
+        raise HTTPException(502, "No se pudo enviar: " + str(e)[:200])
+    audit(actor, "probar_correo_general", req.to)
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- proveedores aliados (servicios que revendemos)
+KINDS = {
+    "evolution": {"label": "Evolution API (servidor propio)", "channels": ["whatsapp"], "secrets": ["apikey"]},
+    "gupshup": {"label": "Gupshup (WhatsApp BSP)", "channels": ["whatsapp"], "secrets": ["api_key"]},
+    "twilio": {"label": "Twilio (SMS, WhatsApp y voz)", "channels": ["whatsapp", "sms", "voice"], "secrets": ["auth_token"]},
+    "generic_whatsapp": {"label": "Otro proveedor de WhatsApp (API HTTP)", "channels": ["whatsapp"], "secrets": ["auth_secret"]},
+    "generic_sms": {"label": "Proveedor de SMS (API HTTP)", "channels": ["sms"], "secrets": ["auth_secret"]},
+    "generic_voice": {"label": "Central / proveedor de llamadas (API HTTP)", "channels": ["voice"], "secrets": ["auth_secret"]},
+}
+
+
+def providers_list() -> list:
+    return get_setting("providers", []) or []
+
+
+def mask_provider(p: dict) -> dict:
+    sec = KINDS.get(p["kind"], {}).get("secrets", [])
+    f = {k: v for k, v in p.get("fields", {}).items() if k not in sec}
+    for k in sec:
+        v = p.get("fields", {}).get(k) or ""
+        f[k] = ""; f[k + "_set"] = bool(v); f[k + "_hint"] = ("…" + v[-4:]) if v else ""
+    return {"id": p["id"], "kind": p["kind"], "name": p["name"], "notes": p.get("notes", ""), "fields": f}
+
+
+def services_of(slug: str) -> dict:
+    return get_setting("services:" + slug, {}) or {}
+
+
+@app.get("/api/providers")
+def list_providers(actor: str = Depends(me)):
+    uses: dict = {}
+    with db() as c:
+        slugs = [r["slug"] for r in c.execute("SELECT slug FROM tenants").fetchall()]
+    for sl in slugs:
+        for ch, v in services_of(sl).items():
+            if isinstance(v, dict) and v.get("provider"):
+                uses.setdefault(v["provider"], []).append(sl)
+    return {"kinds": {k: {"label": v["label"], "channels": v["channels"]} for k, v in KINDS.items()},
+            "items": [dict(mask_provider(p), companies=sorted(set(uses.get(p["id"], [])))) for p in providers_list()]}
+
+
+class ProviderReq(BaseModel):
+    kind: str
+    name: str = Field(min_length=2, max_length=80)
+    notes: str = Field("", max_length=300)
+    fields: dict = {}
+
+
+def _clean_fields(kind: str, fields: dict, old: dict) -> dict:
+    out = {}
+    for k, v in (fields or {}).items():
+        if k.endswith("_set") or k.endswith("_hint"):
+            continue
+        if not isinstance(v, (str, int, float, bool)) or len(str(v)) > 4000:
+            raise HTTPException(400, f"Valor inválido en «{k}»")
+        out[k] = v
+    for k in KINDS[kind]["secrets"]:
+        if not out.get(k):
+            out[k] = old.get(k, "")
+    return out
+
+
+@app.put("/api/providers/{pid}")
+def save_provider(pid: str, req: ProviderReq, actor: str = Depends(me)):
+    if req.kind not in KINDS:
+        raise HTTPException(400, "Tipo de proveedor desconocido")
+    items = providers_list()
+    cur = next((p for p in items if p["id"] == pid), None)
+    if pid != "new" and not cur:
+        raise HTTPException(404, "Proveedor no encontrado")
+    if cur and cur["kind"] != req.kind:
+        raise HTTPException(400, "No se puede cambiar el tipo de un proveedor existente")
+    fields = _clean_fields(req.kind, req.fields, (cur or {}).get("fields", {}))
+    if cur:
+        cur.update({"name": req.name.strip(), "notes": req.notes.strip(), "fields": fields})
+    else:
+        cur = {"id": "p" + secrets.token_hex(4), "kind": req.kind, "name": req.name.strip(), "notes": req.notes.strip(), "fields": fields}
+        items.append(cur)
+    put_setting("providers", items)
+    audit(actor, "guardar_proveedor", cur["id"], {"nombre": cur["name"]})
+    return mask_provider(cur)
+
+
+@app.delete("/api/providers/{pid}")
+def delete_provider(pid: str, actor: str = Depends(me)):
+    with db() as c:
+        slugs = [r["slug"] for r in c.execute("SELECT slug FROM tenants").fetchall()]
+    used = [sl for sl in slugs for v in services_of(sl).values() if isinstance(v, dict) and v.get("provider") == pid]
+    if used:
+        raise HTTPException(409, "Está asignado a: " + ", ".join(sorted(set(used))) + ". Quítalo primero de esas empresas.")
+    put_setting("providers", [p for p in providers_list() if p["id"] != pid])
+    audit(actor, "borrar_proveedor", pid)
+    return {"ok": True}
+
+
+# claves de ajustes del Hub que gestiona cada canal (para poder retirarlas al quitar el servicio)
+CHANNEL_KEYS = {
+    "whatsapp": ["wa_provider", "evolution_url", "evolution_apikey", "evolution_instance", "gupshup_api_key", "gupshup_source", "gupshup_app_name", "twilio_wa_from", "generic_whatsapp"],
+    "sms": ["sms_provider", "twilio_sms_from", "generic_sms"],
+    "voice": ["voice_provider", "twilio_voice_from", "generic_voice"],
+}
+TWILIO_CORE = ["twilio_account_sid", "twilio_auth_token"]
+
+
+def _generic(f: dict) -> dict:
+    return {"url": f.get("url", ""), "method": f.get("method") or "POST", "auth_type": f.get("auth_type") or "none", "auth_user": f.get("auth_user", ""), "auth_secret": f.get("auth_secret", ""),
+            "body_type": f.get("body_type") or "json", "body": f.get("body", ""), "headers": f.get("headers", ""), "sender": f.get("sender", "")}
+
+
+def channel_settings(channel: str, prov: dict, svc: dict, t: dict) -> dict:
+    f, kind = prov["fields"], prov["kind"]
+    if channel == "whatsapp":
+        if kind == "evolution":
+            return {"wa_provider": "evolution", "evolution_url": f.get("url", ""), "evolution_apikey": f.get("apikey", ""), "evolution_instance": svc.get("instance") or t["slug"]}
+        if kind == "gupshup":
+            return {"wa_provider": "gupshup", "gupshup_api_key": f.get("api_key", ""), "gupshup_source": svc.get("from") or f.get("source", ""), "gupshup_app_name": f.get("app_name", "")}
+        if kind == "twilio":
+            return {"wa_provider": "twilio", "twilio_account_sid": f.get("account_sid", ""), "twilio_auth_token": f.get("auth_token", ""), "twilio_wa_from": svc.get("from") or f.get("wa_from", "")}
+        if kind == "generic_whatsapp":
+            return {"wa_provider": "generic", "generic_whatsapp": _generic(f)}
+    if channel == "sms":
+        if kind == "twilio":
+            return {"sms_provider": "twilio", "twilio_account_sid": f.get("account_sid", ""), "twilio_auth_token": f.get("auth_token", ""), "twilio_sms_from": svc.get("from") or f.get("sms_from", "")}
+        if kind == "generic_sms":
+            return {"sms_provider": "generic", "generic_sms": _generic(f)}
+    if channel == "voice":
+        if kind == "twilio":
+            return {"voice_provider": "twilio", "twilio_account_sid": f.get("account_sid", ""), "twilio_auth_token": f.get("auth_token", ""), "twilio_voice_from": svc.get("from") or f.get("voice_from", "")}
+        if kind == "generic_voice":
+            return {"voice_provider": "generic", "generic_voice": _generic(f)}
+    raise HTTPException(400, f"El proveedor «{prov['name']}» no sirve para {channel}")
+
+
+async def evolution_instance(t: dict, prov: dict, instance: str) -> str:
+    """Crea (si no existe) la instancia de WhatsApp de la empresa en nuestro servidor Evolution y le apunta el webhook al Hub de la empresa."""
+    f = prov["fields"]
+    body = {"instanceName": instance, "integration": "WHATSAPP-BAILEYS", "qrcode": True,
+            "webhook": {"url": f"https://{t['host']}/hub/evolution", "byEvents": False, "base64": False, "headers": {"apikey": t["hub_token"]}, "events": ["MESSAGES_UPSERT"]}}
+    try:
+        async with httpx.AsyncClient(timeout=20) as c:
+            r = await c.post(f["url"].rstrip("/") + "/instance/create", headers={"apikey": f.get("apikey", "")}, json=body)
+        if r.status_code in (200, 201):
+            return "Instancia creada: la empresa escanea el código QR en Integraciones."
+        if r.status_code in (403, 409) or "already" in r.text.lower():
+            return "La instancia ya existía."
+        return f"Evolution respondió {r.status_code}: crea la instancia a mano."
+    except Exception as e:
+        return "No se pudo contactar a Evolution: " + str(e)[:100]
+
+
+class ServicesReq(BaseModel):
+    whatsapp: Optional[dict] = None
+    sms: Optional[dict] = None
+    voice: Optional[dict] = None
+    mail: Optional[str] = None            # 'shared' | 'own'
+
+
+async def tenant_mail_state(t: dict) -> dict:
+    try:
+        async with espo(t) as c:
+            r = await c.get("/Settings")
+        s = r.json()
+        return {"hasOwn": bool(s.get("smtpServer")), "from": s.get("outboundEmailFromAddress")}
+    except Exception:
+        return {"hasOwn": None, "from": None}
+
+
+@app.get("/api/companies/{slug}/services")
+async def get_services(slug: str, actor: str = Depends(me)):
+    t = get_tenant(slug)
+    sv = services_of(slug)
+    return {"whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", **(await tenant_mail_state(t))},
+            "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
+
+
+@app.put("/api/companies/{slug}/services")
+async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
+    t = get_tenant(slug)
+    provs = {p["id"]: p for p in providers_list()}
+    sv = services_of(slug)
+    settings = dict(t["settings"] or {})
+    notes = []
+    for ch in ("whatsapp", "sms", "voice"):
+        want = getattr(req, ch)
+        if want is None:
+            continue
+        # retira lo que estaba gestionado para este canal
+        for k in CHANNEL_KEYS[ch]:
+            settings.pop(k, None)
+        pid = (want or {}).get("provider")
+        if pid:
+            prov = provs.get(pid)
+            if not prov:
+                raise HTTPException(400, "Proveedor inexistente")
+            svc = {"provider": pid, "instance": (want.get("instance") or "").strip()[:60], "from": (want.get("from") or "").strip()[:40]}
+            if svc["instance"] and not re.match(r"^[A-Za-z0-9_-]{2,60}$", svc["instance"]):
+                raise HTTPException(400, "El nombre de instancia solo admite letras, números, guiones")
+            settings.update(channel_settings(ch, prov, svc, t))
+            sv[ch] = svc
+            if prov["kind"] == "evolution":
+                notes.append(await evolution_instance(t, prov, svc["instance"] or slug))
+        else:
+            sv.pop(ch, None)
+    # Twilio compartido: se quitan las credenciales solo si ningún canal gestionado las sigue usando
+    if not any(provs.get((sv.get(c) or {}).get("provider"), {}).get("kind") == "twilio" for c in ("whatsapp", "sms", "voice")):
+        for k in TWILIO_CORE:
+            settings.pop(k, None)
+    settings["managed"] = {c: (sv.get(c) or {}).get("provider") for c in ("whatsapp", "sms", "voice") if sv.get(c)}
+    with db() as c:
+        c.execute("UPDATE tenants SET settings=%s WHERE slug=%s", (json.dumps(settings), slug))
+    # correo
+    if req.mail in ("shared", "own"):
+        mail = get_setting("mail") or {}
+        async with espo(t) as c:
+            if req.mail == "shared":
+                if not mail.get("host"):
+                    raise HTTPException(400, "Primero configura el correo general (pestaña «Correo general»)")
+                body = {"smtpServer": mail["host"], "smtpPort": int(mail.get("port") or 587), "smtpAuth": bool(mail.get("user")), "smtpSecurity": mail.get("security") or "",
+                        "smtpUsername": mail.get("user") or None, "smtpPassword": mail.get("password") or None, "outboundEmailFromAddress": mail["from_address"],
+                        "outboundEmailFromName": t["name"], "outboundEmailIsShared": True, "passwordRecoveryNoExposure": True}
+            else:
+                body = {"smtpServer": None, "smtpUsername": None, "smtpPassword": None, "smtpSecurity": "", "outboundEmailFromAddress": None, "outboundEmailIsShared": False}
+            r = await c.put("/Settings", json=body)
+        if r.status_code != 200:
+            raise HTTPException(502, "No se pudo aplicar la configuración de correo en la empresa")
+        sv["mail"] = req.mail
+    put_setting("services:" + slug, sv)
+    audit(actor, "asignar_servicios", slug, {"servicios": {k: (v or {}).get("provider") if isinstance(v, dict) else v for k, v in sv.items()}})
+    return {"ok": True, "notes": notes}
+
+
 # ---------------------------------------------------------------- interfaz
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 
@@ -406,7 +846,7 @@ app.mount("/static", StaticFiles(directory=STATIC), name="static")
 async def security_headers(request: Request, call_next):
     resp = await call_next(request)
     resp.headers.update({"X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer",
-                         "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'",
+                         "Content-Security-Policy": f"default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src https://*.{BASE_DOMAIN}; frame-ancestors 'none'",
                          "Cache-Control": resp.headers.get("Cache-Control", "no-store")})
     return resp
 

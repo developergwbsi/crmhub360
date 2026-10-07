@@ -39,6 +39,7 @@ DASH_OPTIONS = {"d-panel": {"title": "Panel gerencial", "days": "30"},
 UI_SETTINGS = {
     "theme": "CrmHub", "tabList": TABS, "quickCreateList": ["Lead", "Task", "Meeting", "Call"],
     "dashboardLayout": DASH_LAYOUT, "dashletsOptions": DASH_OPTIONS,
+    "passwordRecoveryNoExposure": True,  # «Olvidé mi contraseña» (se muestra solo si la empresa tiene correo de salida): no revela si el usuario existe
     "recordsPerPageKanban": 25,  # Espo trae 5 por columna: parecía que faltaban leads frente a la tabla
     "assignmentNotificationsEntityList": ["Lead", "Account", "Contact", "Opportunity", "Task", "Meeting", "Call", "Email"],
 }

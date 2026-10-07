@@ -44,6 +44,12 @@
                 </div>
                 {{/if}}
 
+                <div class="crmhub-welcome" id="ch-welcome" hidden>
+                    <span class="crmhub-wav" id="ch-wav"></span>
+                    <div class="crmhub-wtxt"><small>Bienvenido de nuevo</small><strong id="ch-wname"></strong><em id="ch-wuser"></em></div>
+                    <a role="button" id="ch-notme" tabindex="5">¿No eres tú?</a>
+                </div>
+
                 <div class="form-group cell" data-name="username">
                     <label for="field-userName">{{translate 'Username'}}</label>
                     <input type="text" name="username" id="field-userName" class="form-control" autocapitalize="off"
@@ -58,6 +64,8 @@
                         <a role="button" data-action="toggleShowPassword" class="text-soft" title="{{translate 'View'}}"><span class="far fa-eye"></span></a>
                     </div>
                 </div>
+
+                <label class="crmhub-remember" id="ch-remember-row"><input type="checkbox" id="ch-remember" checked> Recordar mi usuario en este equipo</label>
 
                 {{#if anotherUser}}
                 <div class="form-group cell">

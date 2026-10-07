@@ -94,7 +94,7 @@ cmd_control_install() {
   local newpw=""
   if [[ -z "${CONTROL_PASSWORD_HASH:-}" ]]; then newpw="$(rand 8)"; set_env CONTROL_PASSWORD_HASH "$(control_hash "$newpw")"; fi
   load_env
-  docker exec -i "$PSQL_C" psql -U "$PG_ADMIN_USER" -d "$PG_MASTER_DB" -v ON_ERROR_STOP=1 -q < hub-service/sql/004_control.sql
+  for f in hub-service/sql/004_control.sql hub-service/sql/005_control_settings.sql; do docker exec -i "$PSQL_C" psql -U "$PG_ADMIN_USER" -d "$PG_MASTER_DB" -v ON_ERROR_STOP=1 -q < "$f"; done
   docker compose up -d --build control
   export CONTROL_HOST CONTROL_PORT
   envsubst '${CONTROL_HOST} ${CONTROL_PORT}' < templates/apache-control.conf.tpl | sed "s|@@LOGDIR@@|\${APACHE_LOG_DIR}|g" > /etc/apache2/sites-available/crmhub-control.conf
@@ -253,8 +253,8 @@ cmd_vhost_render() { # slug [label] [server_name]
   local row; row="$(sql "SELECT web_port||' '||ws_port||' '||host FROM tenants WHERE slug='${1:?slug}'")"
   [[ -n "$row" ]] || die "tenant inexistente"
   read -r WEB_PORT WS_PORT HOST <<<"$row"
-  export SLUG="$1" LABEL="${2:-tenant}" SERVER_NAME="${3:-$HOST}" WEB_PORT WS_PORT HUB_PORT
-  envsubst '${SLUG} ${LABEL} ${SERVER_NAME} ${WEB_PORT} ${WS_PORT} ${HUB_PORT}' < templates/apache-vhost.conf.tpl \
+  export SLUG="$1" LABEL="${2:-tenant}" SERVER_NAME="${3:-$HOST}" WEB_PORT WS_PORT HUB_PORT CONTROL_HOST="${CONTROL_HOST:-control.$BASE_DOMAIN}"
+  envsubst '${SLUG} ${LABEL} ${SERVER_NAME} ${WEB_PORT} ${WS_PORT} ${HUB_PORT} ${CONTROL_HOST}' < templates/apache-vhost.conf.tpl \
     | sed "s|@@LOGDIR@@|\${APACHE_LOG_DIR}|g"
 }
 
