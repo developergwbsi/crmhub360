@@ -298,44 +298,63 @@
     other: {label: 'Otro servidor SMTP', help: 'Escribe los datos que te dio tu proveedor de correo.'},
   };
   const presetOf = h => Object.keys(MAIL_PRESETS).find(k => MAIL_PRESETS[k].host && MAIL_PRESETS[k].host === h) || (h ? 'other' : '');
-  async function drawMail() {
+  async function drawMail(mode) {   // mode: undefined = resumen si ya hay correo; 'edit' | 'new' = formulario
     const main = document.getElementById('main');
     main.innerHTML = '<h2>Correo general</h2><p class="sub">Cargando…</p>';
     let m; try { m = await api('GET', '/settings/mail'); } catch (e) { main.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
-    main.innerHTML = `<h2>Correo general</h2><p class="sub">Cuenta de correo (SMTP) del sistema. Se usa para recuperar tu contraseña del Centro y para las empresas a las que decidas prestarles el correo (se activa en el panel de cada empresa → Servicios).</p>
-      <div class="card" style="padding:18px 20px;max-width:760px"><label>Proveedor de correo</label><select id="pr"><option value="">Elige tu proveedor…</option>${Object.keys(MAIL_PRESETS).map(k => `<option value="${k}">${esc(MAIL_PRESETS[k].label)}</option>`).join('')}</select>
+    const intro = `<h2>Correo general</h2><p class="sub">Cuenta de correo (SMTP) del sistema. Se usa para recuperar tu contraseña del Centro y para las empresas a las que decidas prestarles el correo (se activa en el panel de cada empresa → Servicios).</p>`;
+    if (m.configured && !mode) {
+      const pk = presetOf(m.host), pl = pk && MAIL_PRESETS[pk] ? MAIL_PRESETS[pk].label : 'Otro servidor SMTP';
+      main.innerHTML = intro + `<div class="card" style="padding:18px 20px;max-width:760px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b style="font-size:17px">${esc(pl)}</b><span class="chip ${m.enabled ? 'ok' : 'warn'}">${m.enabled ? 'Activo' : 'Desactivado'}</span></div>
+        <div class="kv" style="margin-top:12px"><span>Servidor</span><span>${esc(m.host)}:${esc(m.port)} ${m.security ? '· ' + esc(m.security) : ''}</span><span>Usuario</span><span>${esc(m.user || '—')}</span>
+          <span>Contraseña</span><span>${m.passwordSet ? 'Guardada ' + esc(m.passwordHint) : '—'}</span><span>Remitente</span><span>${esc(m.from_name)} &lt;${esc(m.from_address)}&gt;</span>
+          <span>Empresas que lo usan</span><span>${m.companies.length ? m.companies.map(c => esc(c.name)).join(', ') : 'Ninguna'}</span></div>
+        <div class="acts"><button class="btn primary" id="ts">Enviar correo de prueba</button><button class="btn" id="ed">Editar</button><button class="btn" id="nw">Configurar otro</button>
+          <button class="btn ${m.enabled ? 'danger' : 'primary'}" id="tg">${m.enabled ? 'Desactivar' : 'Activar'}</button></div>
+        ${m.enabled ? '' : '<p class="mut">Mientras esté desactivado no se envían correos del Centro (recuperación de contraseña) y no se puede prestar a empresas.</p>'}</div>`;
+      document.getElementById('ed').onclick = () => drawMail('edit');
+      document.getElementById('nw').onclick = () => drawMail('new');
+      document.getElementById('ts').onclick = () => sendMailTest(async () => {});
+      document.getElementById('tg').onclick = async () => {
+        if (m.enabled) {
+          const txt = m.companies.length ? 'Se retirará el correo prestado de: ' + m.companies.map(c => c.name).join(', ') + '. Esas empresas quedarán sin correo de salida hasta que configuren el suyo.' : 'Dejará de usarse para recuperar tu contraseña del Centro y no se podrá prestar.';
+          if (!await confirmBox('Desactivar correo general', txt, 'Desactivar', true)) { return; }
+        }
+        try { await api('PUT', '/settings/mail/enabled', {enabled: !m.enabled}); toast(m.enabled ? 'Correo desactivado' : 'Correo activado'); drawMail(); } catch (e) { toast(e.message); }
+      };
+      return;
+    }
+    const fresh = mode === 'new', cur = fresh ? {} : m;
+    main.innerHTML = intro + `<div class="card" style="padding:18px 20px;max-width:760px"><label>Proveedor de correo</label><select id="pr"><option value="">Elige tu proveedor…</option>${Object.keys(MAIL_PRESETS).map(k => `<option value="${k}">${esc(MAIL_PRESETS[k].label)}</option>`).join('')}</select>
       <div class="notice" id="hp"></div>
-      <div class="grid2"><div><label>Servidor SMTP</label><input id="h" value="${esc(m.host || '')}" placeholder="smtp.proveedor.com"></div><div><label>Puerto</label><input id="po" type="number" value="${esc(m.port || 587)}"></div></div>
-      <div class="grid2"><div><label>Seguridad</label><select id="se"><option value="TLS">STARTTLS (587)</option><option value="SSL">SSL/TLS (465)</option><option value="">Ninguna</option></select></div><div><label>Usuario (correo completo)</label><input id="us" value="${esc(m.user || '')}" autocomplete="off" placeholder="tucuenta@gmail.com"></div></div>
-      <label>Contraseña ${m.passwordSet ? `<span class="mut">(guardada ${esc(m.passwordHint)}; déjala vacía para conservarla)</span>` : '<span class="mut">(en Gmail: contraseña de aplicación)</span>'}</label><input id="pw" type="password" autocomplete="new-password">
-      <div class="grid2"><div><label>Correo remitente</label><input id="fa" value="${esc(m.from_address || '')}" placeholder="tucuenta@gmail.com"></div><div><label>Nombre del remitente</label><input id="fn" value="${esc(m.from_name || 'Crm Hub 360')}"></div></div>
-      <div class="err" id="er" hidden></div><div class="ok" id="okm" hidden></div><div class="acts"><button class="btn primary" id="sv">Guardar</button><button class="btn" id="ts">Enviar correo de prueba</button></div></div>`;
+      <div class="grid2"><div><label>Servidor SMTP</label><input id="h" value="${esc(cur.host || '')}" placeholder="smtp.proveedor.com"></div><div><label>Puerto</label><input id="po" type="number" value="${esc(cur.port || 587)}"></div></div>
+      <div class="grid2"><div><label>Seguridad</label><select id="se"><option value="TLS">STARTTLS (587)</option><option value="SSL">SSL/TLS (465)</option><option value="">Ninguna</option></select></div><div><label>Usuario (correo completo)</label><input id="us" value="${esc(cur.user || '')}" autocomplete="off" placeholder="tucuenta@gmail.com"></div></div>
+      <label>Contraseña ${!fresh && m.passwordSet ? `<span class="mut">(guardada ${esc(m.passwordHint)}; déjala vacía para conservarla)</span>` : '<span class="mut">(en Gmail: contraseña de aplicación)</span>'}</label><input id="pw" type="password" autocomplete="new-password">
+      <div class="grid2"><div><label>Correo remitente</label><input id="fa" value="${esc(cur.from_address || '')}" placeholder="tucuenta@gmail.com"></div><div><label>Nombre del remitente</label><input id="fn" value="${esc(cur.from_name || 'Crm Hub 360')}"></div></div>
+      <div class="err" id="er" hidden></div><div class="acts"><button class="btn primary" id="sv">Guardar</button><button class="btn" id="ts">Guardar y enviar prueba</button>${m.configured ? '<button class="btn" id="cn">Cancelar</button>' : ''}</div></div>`;
     const $ = id => document.getElementById(id), val = id => $(id).value.trim();
-    $('se').value = m.security == null ? 'TLS' : m.security;
+    $('se').value = cur.security == null ? 'TLS' : cur.security;
     const showHelp = () => { const p = MAIL_PRESETS[$('pr').value] || {}; $('hp').innerHTML = p.help || ''; $('hp').hidden = !p.help; };
-    $('pr').value = presetOf(m.host); showHelp();
-    $('pr').onchange = () => {   // al elegir un proveedor se rellenan servidor, puerto y seguridad
-      const p = MAIL_PRESETS[$('pr').value] || {}; showHelp();
-      if (p.host) { $('h').value = p.host; $('po').value = p.port; $('se').value = p.security; }
-      if (p.user) { $('us').value = p.user; }
-    };
+    $('pr').value = presetOf(cur.host || ''); showHelp();
+    $('pr').onchange = () => { const p = MAIL_PRESETS[$('pr').value] || {}; showHelp(); if (p.host) { $('h').value = p.host; $('po').value = p.port; $('se').value = p.security; } if (p.user) { $('us').value = p.user; } };
     $('us').addEventListener('blur', () => { const p = MAIL_PRESETS[$('pr').value] || {}; if (p.userIsFrom && !val('fa') && /@/.test(val('us'))) { $('fa').value = val('us'); } });
     $('h').addEventListener('input', () => { const k = presetOf(val('h')); if (k && $('pr').value !== k) { $('pr').value = k; showHelp(); } });
     const body = () => ({host: val('h'), port: +val('po') || 587, security: $('se').value, user: val('us'), password: $('pw').value, from_address: val('fa') || val('us'), from_name: val('fn') || 'Crm Hub 360'});
-    const save = async () => {   // se guarda sin recargar la página: lo escrito se conserva
-      const er = $('er'), ok = $('okm'); er.hidden = true; ok.hidden = true;
-      const saved = await api('PUT', '/settings/mail', body());
-      $('pw').value = ''; $('fa').value = saved.from_address;
-      const lab = $('pw').previousElementSibling; if (lab) { lab.innerHTML = `Contraseña <span class="mut">(guardada ${esc(saved.passwordHint)}; déjala vacía para conservarla)</span>`; }
-      return saved;
+    const save = async () => {
+      if (fresh && !$('pw').value) { throw new Error('Escribe la contraseña del nuevo correo.'); }
+      if (!val('h')) { throw new Error('Elige un proveedor o escribe el servidor SMTP.'); }
+      await api('PUT', '/settings/mail', body());
     };
-    $('sv').onclick = async () => { try { await save(); const ok = $('okm'); ok.hidden = false; ok.textContent = 'Correo guardado. Usa «Enviar correo de prueba» para comprobarlo.'; toast('Correo guardado'); } catch (e) { const er = $('er'); er.hidden = false; er.textContent = e.message; } };
-    $('ts').onclick = async () => {
-      const to = await inputBox('Correo de prueba', 'Enviar a', {required: true, ok: 'Enviar', placeholder: (state.me && state.me.email) || 'tu@correo.com', validate: v => (/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(v) ? '' : 'Escribe un correo válido.')});
-      if (to === null) { return; }
-      try { await save(); await api('POST', '/settings/mail/test', {to}); toast('Correo enviado a ' + to); }
-      catch (e) { modal(`<h3>No se pudo enviar</h3><p>${esc(e.message)}</p><div class="foot"><button class="btn primary" data-x="k">Cerrar</button></div>`).el.querySelector('[data-x=k]').onclick = ev => ev.target.closest('.back').remove(); }
-    };
+    $('sv').onclick = async () => { try { await save(); toast('Correo guardado'); drawMail(); } catch (e) { const er = $('er'); er.hidden = false; er.textContent = e.message; } };
+    $('ts').onclick = () => sendMailTest(async () => { try { await save(); } catch (e) { const er = $('er'); er.hidden = false; er.textContent = e.message; throw e; } });
+    const cn = $('cn'); if (cn) { cn.onclick = () => drawMail(); }
+  }
+  async function sendMailTest(beforeSend) {
+    const to = await inputBox('Correo de prueba', 'Enviar a', {required: true, ok: 'Enviar', placeholder: (state.me && state.me.email) || 'tu@correo.com', validate: v => (/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(v) ? '' : 'Escribe un correo válido.')});
+    if (to === null) { return; }
+    try { await beforeSend(); await api('POST', '/settings/mail/test', {to}); toast('Correo enviado a ' + to); if (state.tab === 'correo' && document.getElementById('sv')) { drawMail(); } }
+    catch (e) { if (e && !document.querySelector('#er:not([hidden])')) { modal(`<h3>No se pudo enviar</h3><p>${esc(e.message)}</p><div class="foot"><button class="btn primary" data-x="k">Cerrar</button></div>`).el.querySelector('[data-x=k]').onclick = ev => ev.target.closest('.back').remove(); } }
   }
 
   // ---------- proveedores aliados

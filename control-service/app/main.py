@@ -147,7 +147,8 @@ def whoami(actor: str = Depends(me)):
 @app.get("/api/hello")
 def hello():
     """Datos públicos mínimos para la pantalla de bienvenida (sin revelar nada sensible)."""
-    return {"mailReady": bool(get_setting("mail") and get_setting("mail").get("host"))}
+    mm = get_setting("mail") or {}
+    return {"mailReady": bool(mm.get("host")) and mm.get("enabled", True)}
 
 
 # ---------------------------------------------------------------- empresas
@@ -502,7 +503,7 @@ async def forgot(req: ForgotReq, request: Request):
     _fails["f" + ip] = recent + [now]
     a, mail = account(), get_setting("mail") or {}
     ok = hmac.compare_digest(req.user.strip().encode(), USER.encode()) & hmac.compare_digest(req.email.strip().lower().encode(), (a["email"] or "").lower().encode())
-    if ok and mail.get("host"):
+    if ok and mail.get("host") and mail.get("enabled", True):
         token = secrets.token_urlsafe(32)
         with db() as c:
             c.execute("DELETE FROM control_resets WHERE expires_at < now()")
@@ -562,9 +563,16 @@ class MailReq(BaseModel):
     from_name: str = Field("Crm Hub 360", max_length=80)
 
 
+def companies_using_mail() -> list:
+    with db() as c:
+        rows = c.execute("SELECT slug, name FROM tenants").fetchall()
+    return [{"slug": r["slug"], "name": r["name"]} for r in rows if services_of(r["slug"]).get("mail") == "shared"]
+
+
 @app.get("/api/settings/mail")
 def get_mail(actor: str = Depends(me)):
-    return mask_mail(get_setting("mail", {}) or {})
+    m = get_setting("mail", {}) or {}
+    return dict(mask_mail(m), enabled=bool(m) and m.get("enabled", True), configured=bool(m.get("host")), companies=companies_using_mail())
 
 
 @app.put("/api/settings/mail")
@@ -580,9 +588,32 @@ def put_mail(req: MailReq, actor: str = Depends(me)):
         d[MAIL_SECRET] = d[MAIL_SECRET].replace(" ", "")
     if not d[MAIL_SECRET]:
         d[MAIL_SECRET] = old.get(MAIL_SECRET, "")
+    d["enabled"] = True
     put_setting("mail", d)
     audit(actor, "guardar_correo_general")
-    return mask_mail(d)
+    return dict(mask_mail(d), enabled=True, configured=True, companies=companies_using_mail())
+
+
+class MailEnabledReq(BaseModel):
+    enabled: bool
+
+
+@app.put("/api/settings/mail/enabled")
+async def mail_enabled(req: MailEnabledReq, actor: str = Depends(me)):
+    """Activa o desactiva el correo general. Al desactivarlo se retira de las empresas a las que se les había prestado."""
+    m = get_setting("mail", {}) or {}
+    if not m.get("host"):
+        raise HTTPException(400, "Aún no hay un correo configurado")
+    affected = []
+    if not req.enabled:
+        for c in companies_using_mail():
+            await set_company_mail(get_tenant(c["slug"]), "own")
+            sv = services_of(c["slug"]); sv["mail"] = "own"; put_setting("services:" + c["slug"], sv)
+            affected.append(c["name"])
+    m["enabled"] = req.enabled
+    put_setting("mail", m)
+    audit(actor, "activar_correo_general" if req.enabled else "desactivar_correo_general", None, {"empresas": affected})
+    return {"enabled": req.enabled, "affected": affected}
 
 
 class MailTestReq(BaseModel):
@@ -769,6 +800,22 @@ async def tenant_mail_state(t: dict) -> dict:
         return {"hasOwn": None, "from": None}
 
 
+async def set_company_mail(t: dict, mode: str) -> None:
+    mail = get_setting("mail") or {}
+    async with espo(t) as c:
+        if mode == "shared":
+            if not mail.get("host") or not mail.get("enabled", True):
+                raise HTTPException(400, "El correo general está sin configurar o desactivado (pestaña «Correo general»)")
+            body = {"smtpServer": mail["host"], "smtpPort": int(mail.get("port") or 587), "smtpAuth": bool(mail.get("user")), "smtpSecurity": mail.get("security") or "",
+                    "smtpUsername": mail.get("user") or None, "smtpPassword": mail.get("password") or None, "outboundEmailFromAddress": mail["from_address"],
+                    "outboundEmailFromName": t["name"], "outboundEmailIsShared": True, "passwordRecoveryNoExposure": True}
+        else:
+            body = {"smtpServer": None, "smtpUsername": None, "smtpPassword": None, "smtpSecurity": "", "outboundEmailFromAddress": None, "outboundEmailIsShared": False}
+        r = await c.put("/Settings", json=body)
+    if r.status_code != 200:
+        raise HTTPException(502, "No se pudo aplicar la configuración de correo en la empresa")
+
+
 @app.get("/api/companies/{slug}/services")
 async def get_services(slug: str, actor: str = Depends(me)):
     t = get_tenant(slug)
@@ -814,19 +861,7 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
         c.execute("UPDATE tenants SET settings=%s WHERE slug=%s", (json.dumps(settings), slug))
     # correo
     if req.mail in ("shared", "own"):
-        mail = get_setting("mail") or {}
-        async with espo(t) as c:
-            if req.mail == "shared":
-                if not mail.get("host"):
-                    raise HTTPException(400, "Primero configura el correo general (pestaña «Correo general»)")
-                body = {"smtpServer": mail["host"], "smtpPort": int(mail.get("port") or 587), "smtpAuth": bool(mail.get("user")), "smtpSecurity": mail.get("security") or "",
-                        "smtpUsername": mail.get("user") or None, "smtpPassword": mail.get("password") or None, "outboundEmailFromAddress": mail["from_address"],
-                        "outboundEmailFromName": t["name"], "outboundEmailIsShared": True, "passwordRecoveryNoExposure": True}
-            else:
-                body = {"smtpServer": None, "smtpUsername": None, "smtpPassword": None, "smtpSecurity": "", "outboundEmailFromAddress": None, "outboundEmailIsShared": False}
-            r = await c.put("/Settings", json=body)
-        if r.status_code != 200:
-            raise HTTPException(502, "No se pudo aplicar la configuración de correo en la empresa")
+        await set_company_mail(t, req.mail)
         sv["mail"] = req.mail
     put_setting("services:" + slug, sv)
     audit(actor, "asignar_servicios", slug, {"servicios": {k: (v or {}).get("provider") if isinstance(v, dict) else v for k, v in sv.items()}})
