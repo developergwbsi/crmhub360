@@ -27,7 +27,7 @@ OBLIGACIONES VIGENTES
 BANCO DE BOGOTA  Libre inversion  Saldo: 12.800.000  Mora: 3.200.000  (60 dias)  ESTADO: EN MORA
 CLARO COLOMBIA   Telefonia        Saldo: 890.000     Mora: 890.000    (120 dias) ESTADO: CASTIGADA
 ADDI             Consumo          Saldo: 1.500.000   Mora: 0                      ESTADO: AL DIA
-TOTAL DEUDA: $ 15.190.000   TOTAL EN MORA: $ 4.090.000""", dict(score=538, total=15_190_000, overdue=4_090_000, verdict="Rechazado")),
+TOTAL DEUDA: $ 15.190.000   TOTAL EN MORA: $ 4.090.000""", dict(score=538, total=15_190_000, overdue=4_090_000, verdict="Revisión Manual")),
     ("sin score", """REPORTE DE CREDITO
 Titular: PEDRO NEL SUAREZ  CC 79.111.222
 Puntaje: No disponible (historial insuficiente)
