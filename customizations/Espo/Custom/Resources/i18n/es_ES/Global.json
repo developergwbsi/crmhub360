@@ -17,5 +17,14 @@
     },
     "massActions": {
         "reassign": "Reasignar"
+    },
+    "dashlets": {
+        "CrmHubPanel": "Panel gerencial"
+    },
+    "dashletDays": {
+        "7": "7 días",
+        "30": "30 días",
+        "90": "90 días",
+        "365": "12 meses"
     }
 }

@@ -1,0 +1,40 @@
+{
+    "view": "custom:views/dashlets/crmhub-panel",
+    "aclScope": "Lead",
+    "options": {
+        "fields": {
+            "title": {
+                "type": "varchar",
+                "required": true
+            },
+            "days": {
+                "type": "enum",
+                "options": [
+                    "7",
+                    "30",
+                    "90",
+                    "365"
+                ],
+                "translation": "Global.dashletDays"
+            }
+        },
+        "defaults": {
+            "title": "Panel gerencial",
+            "days": "30"
+        },
+        "layout": [
+            {
+                "rows": [
+                    [
+                        {
+                            "name": "title"
+                        },
+                        {
+                            "name": "days"
+                        }
+                    ]
+                ]
+            }
+        ]
+    }
+}

@@ -255,3 +255,70 @@ table.table thead th.checkbox-cell .checkbox-dropdown > a { padding: 0 4px !impo
 
 .ch-subtitle { margin: 16px 0 6px; font-size: 14px; font-weight: 600; }
 .ch-camps { padding-left: 18px; margin-bottom: 8px; }
+
+/* ---------- Menú lateral colapsado: nombre al pasar el mouse (sin esperar el tooltip nativo) ---------- */
+body.minimized #navbar .tabs li > a:hover .short-label::after,
+body.minimized #navbar .tabs li > a:focus-visible .short-label::after {
+    content: attr(title);
+    position: fixed;            /* escapa del recorte del menú; queda junto al ícono */
+    margin-left: 34px; margin-top: -1px;
+    padding: 5px 11px; border-radius: 8px;
+    background: hsl(224 34% 7%); color: #fff; border: 1px solid hsl(224 30% 22%);
+    font-size: 13px; font-weight: 500; line-height: 1.4; letter-spacing: 0; white-space: nowrap;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .28); z-index: 3000; pointer-events: none;
+}
+
+/* ---------- Panel gerencial ---------- */
+.ch-panel { padding: 4px 2px 8px; }
+.ch-pad { padding: 24px; }
+.ch-panel-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.ch-seg { display: inline-flex; background: hsl(210 22% 94%); border-radius: 10px; padding: 3px; }
+.ch-seg button { border: 0; background: transparent; padding: 5px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--ch-muted); }
+.ch-seg button.active { background: #fff; color: var(--ch-primary); font-weight: 600; box-shadow: 0 1px 3px rgba(20, 28, 60, .12); }
+.ch-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+@media (max-width: 1100px) { .ch-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .ch-kpis { grid-template-columns: 1fr; } }
+.ch-kpi { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border: 1px solid var(--ch-line); border-radius: 14px; background: #fff; box-shadow: var(--default-box-shadow); }
+.ch-kpi-ic { flex: none; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 17px; background: hsl(231 80% 95%); color: var(--ch-primary); }
+.ch-tone-warn .ch-kpi-ic { background: hsl(38 95% 92%); color: #d97706; }
+.ch-tone-ok .ch-kpi-ic { background: hsl(152 50% 92%); color: hsl(152 60% 30%); }
+.ch-tone-violet .ch-kpi-ic { background: hsl(262 80% 95%); color: #7c3aed; }
+.ch-tone-info .ch-kpi-ic { background: hsl(199 85% 92%); color: #0284c7; }
+.ch-tone-danger .ch-kpi-ic { background: hsl(0 85% 95%); color: #dc3f3f; }
+.ch-kpi-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ch-muted); }
+.ch-kpi-value { font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; color: var(--ch-ink); }
+.ch-kpi-sub { font-size: 12.5px; color: var(--ch-muted); }
+.ch-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.ch-box { border: 1px solid var(--ch-line); border-radius: 14px; padding: 14px 16px; background: #fff; }
+.ch-box h5 { margin: 0 0 12px; font-size: 14px; font-weight: 600; color: var(--ch-ink); }
+.ch-bar { display: grid; grid-template-columns: minmax(110px, 1.1fr) 2fr 38px; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 13px; }
+.ch-bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ch-ink); }
+.ch-bar-track { height: 9px; border-radius: 99px; background: hsl(210 22% 94%); overflow: hidden; }
+.ch-bar-track i { display: block; height: 100%; border-radius: 99px; }
+.ch-bar b { text-align: right; }
+.ch-spark { display: flex; align-items: flex-end; gap: 3px; height: 120px; padding-top: 6px; }
+.ch-spark span { flex: 1 1 0; background: linear-gradient(180deg, var(--ch-primary), hsl(231 70% 70%)); border-radius: 4px 4px 0 0; min-height: 3px; }
+.ch-spark span:hover { filter: brightness(1.15); }
+.ch-rank td, .ch-rank th { padding: 7px 8px !important; }
+
+/* ---------- Organigrama ---------- */
+.ch-org-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.ch-org { overflow-x: auto; padding-bottom: 12px; }
+.ch-org-level { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; position: relative; }
+.ch-org-top { margin-bottom: 34px; }
+.ch-org-top::after { content: ""; position: absolute; left: 50%; bottom: -34px; height: 34px; border-left: 2px solid var(--ch-line); }
+.ch-org-teams { display: flex; gap: 16px; align-items: flex-start; justify-content: center; flex-wrap: wrap; padding-top: 0; }
+.ch-org-team { width: 290px; border: 1px solid var(--ch-line); border-radius: 14px; background: #fff; box-shadow: var(--default-box-shadow); }
+.ch-org-team-head { padding: 12px 14px; border-bottom: 1px solid var(--ch-line); background: hsl(231 60% 97%); border-radius: 14px 14px 0 0; }
+.ch-org-team-head b { font-size: 15px; }
+.ch-org-team-head a { color: var(--ch-ink); }
+.ch-org-camps { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+.ch-org-sec { padding: 10px 14px 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ch-muted); }
+.ch-person { display: flex; align-items: center; gap: 10px; padding: 7px 14px; }
+.ch-person .ch-avatar { width: 32px; height: 32px; font-size: 12px; box-shadow: none; }
+.ch-person a { color: var(--ch-ink); font-weight: 500; }
+.ch-person small { display: block; color: var(--ch-muted); }
+.ch-person .ch-pill.off { background: hsl(210 22% 94%); color: var(--ch-muted); }
+.ch-org-mgr { width: 260px; border: 1px solid hsl(231 50% 80%); background: hsl(231 80% 97%); border-radius: 14px; }
+.ch-org-help { margin-top: 18px; }
+.ch-org-help li { margin: 5px 0; }

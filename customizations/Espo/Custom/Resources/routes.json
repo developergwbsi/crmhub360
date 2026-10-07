@@ -56,5 +56,21 @@
             "controller": "CrmHub",
             "action": "reassign"
         }
+    },
+    {
+        "route": "/CrmHub/metrics",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "metrics"
+        }
+    },
+    {
+        "route": "/CrmHub/orgchart",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "orgchart"
+        }
     }
 ]

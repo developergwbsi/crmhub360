@@ -48,6 +48,7 @@ LEVELS = {  # scope -> (create, read, edit, delete) por rol
     "Gerente General": ("yes", "all", "all", "all"),
 }
 SCOPES = ["Lead", "Account", "Contact", "Opportunity", "Task", "Call", "Meeting", "Email", "Note"]
+CAMPAIGN = {"Comercial": ("no", "no", "no", "no"), "Director de Equipo": ("no", "team", "no", "no"), "Gerente General": ("yes", "all", "all", "all")}
 
 
 def role_data(level: tuple) -> dict:
@@ -55,8 +56,13 @@ def role_data(level: tuple) -> dict:
     return {s: {"create": c, "read": r, "edit": e, "delete": d, "stream": r} for s in SCOPES}
 
 
+def campaign_perm(role: str) -> dict:
+    c, r, e, d = CAMPAIGN[role]
+    return {"create": c, "read": r, "edit": e, "delete": d, "stream": r}
+
+
 for name, level in LEVELS.items():
-    api("POST", "Role", {"name": name, "data": role_data(level),
+    api("POST", "Role", {"name": name, "data": {**role_data(level), "Campaign": campaign_perm(name)},
                          "assignmentPermission": {"Comercial": "no", "Director de Equipo": "team", "Gerente General": "all"}[name],
                          "userPermission": {"Comercial": "no", "Director de Equipo": "team", "Gerente General": "all"}[name],
                          "dashboardPermission": "yes" if name != "Comercial" else "no"})

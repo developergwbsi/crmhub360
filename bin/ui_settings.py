@@ -8,17 +8,28 @@ TABS = [
     "Account", "Contact", "Opportunity",
     {"type": "divider", "id": "t3", "text": "Actividad"},
     "Task", "Meeting", "Call", "Calendar", "Email",
+    {"type": "divider", "id": "t7", "text": "Organización"},
+    "Campaign",
+    {"type": "url", "id": "t8", "text": "Organigrama", "url": "#CrmHub/organigrama", "iconClass": "fas fa-sitemap", "aclScope": "Campaign"},
+    {"type": "url", "id": "t9", "text": "Equipos", "url": "#Team", "iconClass": "fas fa-users", "onlyAdmin": True},
+    {"type": "url", "id": "t10", "text": "Usuarios", "url": "#User", "iconClass": "fas fa-user-gear", "onlyAdmin": True},
     {"type": "divider", "id": "t4", "text": "Ayuda"},
     {"type": "url", "id": "t5", "text": "Manual de usuario", "url": "#CrmHub/manual", "iconClass": "fas fa-book"},
     {"type": "url", "id": "t6", "text": "Integraciones", "url": "#CrmHub/integrations", "iconClass": "fas fa-plug", "onlyAdmin": True},
 ]
-DASH_LAYOUT = [{"name": "Inicio", "layout": [
-    {"id": "d-leads", "name": "Records", "x": 0, "y": 0, "width": 3, "height": 2},
-    {"id": "d-tasks", "name": "Tasks", "x": 3, "y": 0, "width": 1, "height": 2},
-    {"id": "d-activities", "name": "Activities", "x": 0, "y": 2, "width": 2, "height": 2},
-    {"id": "d-stream", "name": "Stream", "x": 2, "y": 2, "width": 2, "height": 2},
-]}]
-DASH_OPTIONS = {"d-leads": {"title": "Leads recientes", "entityType": "Lead", "displayRecords": 10, "sortBy": "createdAt", "sortDirection": "desc",
+DASH_LAYOUT = [
+    {"name": "Panel gerencial", "layout": [
+        {"id": "d-panel", "name": "CrmHubPanel", "x": 0, "y": 0, "width": 4, "height": 6},
+    ]},
+    {"name": "Mi día", "layout": [
+        {"id": "d-leads", "name": "Records", "x": 0, "y": 0, "width": 3, "height": 2},
+        {"id": "d-tasks", "name": "Tasks", "x": 3, "y": 0, "width": 1, "height": 2},
+        {"id": "d-activities", "name": "Activities", "x": 0, "y": 2, "width": 2, "height": 2},
+        {"id": "d-stream", "name": "Stream", "x": 2, "y": 2, "width": 2, "height": 2},
+    ]},
+]
+DASH_OPTIONS = {"d-panel": {"title": "Panel gerencial", "days": "30"},
+                "d-leads": {"title": "Leads recientes", "entityType": "Lead", "displayRecords": 10, "sortBy": "createdAt", "sortDirection": "desc",
                             "expandedLayout": {"rows": [[{"name": "name", "link": True}, {"name": "status"}], [{"name": "qualificationStatus"}, {"name": "suggestedService"}]]}},
                 "d-tasks": {"title": "Mis tareas"}}
 
@@ -43,8 +54,16 @@ if __name__ == "__main__":  # python3 ui_settings.py <base_url> <admin_user> <ad
     me = call("GET", "App/user")["user"]["id"]
     # el administrador ya tiene Preferencias propias: se reinician el dashboard y el tema para que hereden lo nuevo
     call("PUT", f"Preferences/{me}", {"dashboardLayout": DASH_LAYOUT, "dashletsOptions": DASH_OPTIONS, "useCustomTabList": False, "theme": ""})
-    # el usuario API del Hub necesita leer campañas para ligar los leads que llegan por formularios
     roles = call("GET", "Role?maxSize=50&select=id,name")["list"]
+    # campañas: gerente gestiona, director las ve (de su equipo), comercial no
+    CAMP = {"Gerente General": ("yes", "all", "all", "all"), "Director de Equipo": ("no", "team", "no", "no")}
+    for r in roles:
+        if r["name"] in CAMP:
+            c_, rd, ed, dl = CAMP[r["name"]]
+            data = call("GET", f"Role/{r['id']}")["data"]
+            data["Campaign"] = {"create": c_, "read": rd, "edit": ed, "delete": dl, "stream": rd}
+            call("PUT", f"Role/{r['id']}", {"data": data})
+    # el usuario API del Hub necesita leer campañas para ligar los leads que llegan por formularios
     api_role = next((r for r in roles if r["name"].startswith("Integración API")), None)
     if api_role:
         data = call("GET", f"Role/{api_role['id']}")["data"]

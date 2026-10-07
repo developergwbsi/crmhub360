@@ -6,6 +6,7 @@ use Espo\Core\Acl;
 use Espo\Core\Api\Request;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Exceptions\Forbidden;
+use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\Config;
 use Espo\Custom\Services\HubClient;
 use Espo\Custom\Services\LeadAssigner;
@@ -21,7 +22,8 @@ class CrmHub
         private User $user,
         private Config $config,
         private Acl $acl,
-        private EntityManager $em
+        private EntityManager $em,
+        private SelectBuilderFactory $selectBuilderFactory
     ) {}
 
     private function admin(): void
@@ -170,5 +172,173 @@ class CrmHub
             $done++;
         }
         return (object) ['done' => $done, 'skipped' => $skipped];
+    }
+
+    // ---------- Panel gerencial: métricas con el alcance (ACL) del usuario que consulta ----------
+    private const PIPELINE = ['Nuevo Lead', 'En Calificación', 'Calificado', 'En Enfriamiento/Contactado', 'Cierre Exitoso'];
+
+    public function getActionMetrics(Request $request): \stdClass
+    {
+        $days = (int) ($request->getQueryParam('days') ?: 30);
+        $days = in_array($days, [7, 30, 90, 365], true) ? $days : 30;
+        $now = time();
+        $from = gmdate('Y-m-d H:i:s', $now - $days * 86400);
+        $today = gmdate('Y-m-d 00:00:00');
+
+        $builder = $this->selectBuilderFactory->create()->from('Lead')->withAccessControlFilter()->buildQueryBuilder();
+        $builder->select(['id', 'status', 'source', 'assignedUserId', 'createdAt', 'totalDebt', 'overdueDebt',
+                          'qualificationStatus', 'suggestedService', 'campaignId'])->limit(0, 30000);
+        $leads = iterator_to_array($this->em->getRDBRepository('Lead')->clone($builder->build())->find(), false);
+
+        $names = [];
+        foreach ($this->em->getRDBRepository(User::ENTITY_TYPE)->select(['id', 'name', 'userName'])->find() as $u) {
+            $names[$u->getId()] = $u->get('name') ?: $u->get('userName');
+        }
+        $camps = [];
+        foreach ($this->em->getRDBRepository('Campaign')->select(['id', 'name'])->find() as $c) {
+            $camps[$c->getId()] = $c->get('name');
+        }
+
+        $k = ['leads' => 0, 'nuevosHoy' => 0, 'sinAsesor' => 0, 'evaluados' => 0, 'califican' => 0, 'cierres' => 0,
+              'deudaTotal' => 0, 'deudaMora' => 0, 'abiertos' => 0];
+        $estado = array_fill_keys(self::PIPELINE, 0);
+        $servicio = $origen = $campana = $asesor = [];
+        $bucket = max(1, (int) ceil($days / 30));
+        $trend = [];
+        for ($i = (int) ceil($days / $bucket) - 1; $i >= 0; $i--) {
+            $trend[gmdate('Y-m-d', $now - $i * $bucket * 86400)] = 0;
+        }
+        $trendKeys = array_keys($trend);
+
+        foreach ($leads as $l) {
+            $status = (string) $l->get('status');
+            $closed = in_array($status, ['Cierre Exitoso', 'Converted', 'Dead'], true);
+            if (!$closed) {
+                $k['abiertos']++;
+            }
+            $k['deudaTotal'] += (float) $l->get('totalDebt');
+            $k['deudaMora'] += (float) $l->get('overdueDebt');
+            if (isset($estado[$status])) {
+                $estado[$status]++;
+            }
+            $created = (string) $l->get('createdAt');
+            if ($created >= $today) {
+                $k['nuevosHoy']++;
+            }
+            if ($created < $from) {
+                continue; // el resto son métricas de los leads captados en el periodo
+            }
+            $k['leads']++;
+            $uid = $l->get('assignedUserId');
+            if (!$uid) {
+                $k['sinAsesor']++;
+            }
+            $q = (string) $l->get('qualificationStatus');
+            if ($q !== '') {
+                $k['evaluados']++;
+                if ($q === 'Califica') {
+                    $k['califican']++;
+                    $svc = trim(explode(' (', (string) $l->get('suggestedService'))[0]);
+                    $servicio[$svc ?: 'Sin servicio'] = ($servicio[$svc ?: 'Sin servicio'] ?? 0) + 1;
+                }
+            }
+            $won = $status === 'Cierre Exitoso';
+            $k['cierres'] += $won ? 1 : 0;
+            $src = (string) ($l->get('source') ?: 'Sin origen');
+            $origen[$src] = ($origen[$src] ?? 0) + 1;
+            if ($cid = $l->get('campaignId')) {
+                $cn = $camps[$cid] ?? 'Campaña';
+                $campana[$cn] = ($campana[$cn] ?? 0) + 1;
+            }
+            $an = $uid ? ($names[$uid] ?? $uid) : 'Sin asesor';
+            $asesor[$an] ??= ['name' => $an, 'leads' => 0, 'califican' => 0, 'cierres' => 0];
+            $asesor[$an]['leads']++;
+            $asesor[$an]['califican'] += $q === 'Califica' ? 1 : 0;
+            $asesor[$an]['cierres'] += $won ? 1 : 0;
+            $day = substr($created, 0, 10);
+            for ($i = count($trendKeys) - 1; $i >= 0; $i--) {
+                if ($day >= $trendKeys[$i]) {
+                    $trend[$trendKeys[$i]]++;
+                    break;
+                }
+            }
+        }
+        $rank = function (array $a, int $n = 8) {
+            arsort($a);
+            return array_map(fn ($name, $v) => ['name' => $name, 'value' => $v], array_keys(array_slice($a, 0, $n, true)), array_slice($a, 0, $n, true));
+        };
+        usort($asesor, fn ($a, $b) => [$b['cierres'], $b['califican'], $b['leads']] <=> [$a['cierres'], $a['califican'], $a['leads']]);
+        $pct = fn (int $a, int $b) => $b > 0 ? round(100 * $a / $b, 1) : 0;
+
+        return (object) [
+            'days' => $days,
+            'kpi' => $k + ['tasaCalificacion' => $pct($k['califican'], $k['evaluados']), 'tasaCierre' => $pct($k['cierres'], $k['leads'])],
+            'estado' => array_map(fn ($n, $v) => ['name' => $n, 'value' => $v], array_keys($estado), array_values($estado)),
+            'servicio' => $rank($servicio), 'origen' => $rank($origen), 'campanas' => $rank($campana, 6),
+            'asesores' => array_slice($asesor, 0, 8),
+            'tendencia' => array_map(fn ($d, $v) => ['day' => $d, 'value' => $v], array_keys($trend), array_values($trend)),
+            'bucketDays' => $bucket,
+            'scope' => $this->user->isAdmin() ? 'all' : ($this->acl->getPermissionLevel('assignmentPermission') ?: 'no'),
+        ];
+    }
+
+    // ---------- Organigrama: gerentes -> equipos (directores y asesores), derivado de roles y equipos ----------
+    public function getActionOrgchart(Request $request): \stdClass
+    {
+        $level = $this->assignmentLevel();
+        if ($level === 'no') {
+            throw new Forbidden();
+        }
+        $assigner = new LeadAssigner($this->em);
+        $roleName = [];
+        foreach ($this->em->getRDBRepository('Role')->find() as $r) {
+            $roleName[$r->getId()] = $r->get('name');
+        }
+        $myTeams = $this->user->getLinkMultipleIdList('teams');
+        $teams = [];
+        foreach ($this->em->getRDBRepository('Team')->find() as $t) {
+            if ($level === 'team' && !in_array($t->getId(), $myTeams, true)) {
+                continue;
+            }
+            $camps = [];
+            foreach ($this->em->getRDBRepository('Campaign')->where(['status' => ['Planning', 'Active']])->find() as $c) {
+                if (in_array($t->getId(), $c->getLinkMultipleIdList('teams'), true)) {
+                    $camps[] = $c->get('name');
+                }
+            }
+            $teams[$t->getId()] = ['id' => $t->getId(), 'name' => $t->get('name'), 'directors' => [], 'members' => [], 'campaigns' => $camps];
+        }
+        $managers = [];
+        $unassigned = [];
+        foreach ($this->em->getRDBRepository(User::ENTITY_TYPE)->where(['isActive' => true, 'type' => ['regular', 'admin']])->find() as $u) {
+            $roles = array_values(array_filter(array_map(fn ($id) => $roleName[$id] ?? null, $u->getLinkMultipleIdList('roles'))));
+            $row = ['id' => $u->getId(), 'name' => $u->get('name') ?: $u->get('userName'), 'userName' => $u->get('userName'),
+                    'roles' => $u->isAdmin() ? array_values(array_unique(array_merge(['Administrador'], $roles))) : $roles,
+                    'receivesLeads' => (bool) $u->get('receivesLeads'), 'openLeads' => $assigner->openLeads($u->getId())];
+            $isManager = $u->isAdmin() || in_array('Gerente General', $roles, true);
+            $isDirector = in_array('Director de Equipo', $roles, true);
+            if ($isManager) {
+                if ($level === 'all') {
+                    $managers[] = $row;
+                }
+                continue;
+            }
+            $placed = false;
+            foreach ($u->getLinkMultipleIdList('teams') as $tid) {
+                if (isset($teams[$tid])) {
+                    $teams[$tid][$isDirector ? 'directors' : 'members'][] = $row;
+                    $placed = true;
+                }
+            }
+            if (!$placed && $level === 'all') {
+                $unassigned[] = $row;
+            }
+        }
+        $teams = array_values($teams);
+        foreach ($teams as &$t) {
+            $t['openLeads'] = array_sum(array_map(fn ($m) => $m['openLeads'], array_merge($t['directors'], $t['members'])));
+        }
+        return (object) ['managers' => $managers, 'teams' => $teams, 'unassigned' => $unassigned,
+                         'canManage' => $this->user->isAdmin()];
     }
 }

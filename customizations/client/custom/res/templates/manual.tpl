@@ -2,7 +2,7 @@
 <div class="ch-manual">
   <div class="ch-hero"><h2>Guía práctica de {{appName}}</h2><p>Para comerciales, directores de equipo y gerentes.</p></div>
   <div class="ch-manual-layout">
-    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asignacion">7b. Asignación y reasignación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq">10. Preguntas frecuentes</a></div></div>
+    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asignacion">7b. Asignación y reasignación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="organizacion">7c. Equipos, campañas y organigrama</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq">10. Preguntas frecuentes</a></div></div>
     <div class="ch-manual-body">
 <div class="panel panel-default" id="ch-m-inicio">
   <div class="panel-heading"><h4 class="panel-title">1. Ingreso y navegación</h4></div>
@@ -12,8 +12,9 @@
 <li>Cambia tu contraseña la primera vez: menú de tu usuario (arriba a la derecha) → <b>Preferencias</b>.</li>
 <li>El menú lateral izquierdo da acceso a <b>Leads</b>, cuentas, contactos, oportunidades, tareas y calendario.</li>
 <li>Usa la lupa superior para buscar cualquier registro por nombre, teléfono o correo.</li>
+<li>Con la flecha de abajo a la izquierda puedes <b>contraer el menú</b>; al pasar el mouse sobre cada ícono verás su nombre.</li>
 </ol>
-<div class="ch-tip">La pantalla de inicio es tu panel: muestra tus leads recientes, tareas pendientes, actividades y la actividad del equipo.</div>
+<div class="ch-tip">El inicio tiene dos pestañas: <b>Panel gerencial</b> (indicadores, embudo, servicios, tendencia, origen, rendimiento por asesor y campañas, según tu alcance; puedes cambiar el periodo de 7 días a 12 meses) y <b>Mi día</b> (leads recientes, tareas, actividades y la actividad del equipo).</div>
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-leads">
@@ -105,6 +106,25 @@
 <li><b>Varios a la vez:</b> en la lista marca las casillas y usa <b>Acciones → Reasignar</b>.</li>
 </ul>
 <p>Elige un usuario, o <b>Automático (el más libre)</b> para repartirlos con el balanceo. Puedes escribir un motivo; queda en el historial del registro junto con quién lo hizo.</p>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-organizacion">
+  <div class="panel-heading"><h4 class="panel-title">7c. Equipos, campañas y organigrama</h4></div>
+  <div class="panel-body">
+<p>Todo está en el grupo <b>Organización</b> del menú lateral (los gerentes y administradores lo ven completo; los directores ven sus equipos y campañas).</p>
+<table class="table table-bordered ch-table"><tr><th>Qué quiero hacer</th><th>Dónde</th></tr>
+<tr><td><b>Crear un grupo de trabajo (equipo)</b></td><td>Organización → <b>Equipos</b> → <b>Crear equipo</b>. También con el botón <i>Crear equipo</i> del Organigrama.</td></tr>
+<tr><td><b>Crear un usuario y meterlo a un equipo</b></td><td>Organización → <b>Usuarios</b> → <b>Crear usuario</b>. Elige su <b>Rol</b> (Comercial, Director de Equipo o Gerente General) y su <b>Equipo</b>.</td></tr>
+<tr><td><b>Habilitarlo para recibir leads</b></td><td>Integraciones → Asignación automática de leads → casilla <i>Recibe leads</i>.</td></tr>
+<tr><td><b>Crear una campaña</b></td><td>Organización → <b>Campañas</b> → <b>Crear campaña</b>. En el campo <b>Equipos</b> elige qué equipos la atienden: sus leads se reparten entre ellos.</td></tr>
+<tr><td><b>Ver la estructura</b></td><td>Organización → <b>Organigrama</b>.</td></tr></table>
+<h3>Cómo se compone</h3>
+<ul>
+<li><b>Dirección:</b> administradores y usuarios con rol <i>Gerente General</i>.</li>
+<li><b>Equipo:</b> un grupo de trabajo. Su <b>director</b> es el usuario con rol <i>Director de Equipo</i> que pertenece a él; sus <b>asesores</b> son los usuarios con rol <i>Comercial</i>.</li>
+<li><b>Campaña:</b> se liga a uno o más equipos. Un mismo equipo puede atender varias campañas.</li>
+</ul>
+<div class="ch-tip">El organigrama no se dibuja a mano: se arma solo con los roles y equipos de cada usuario. Si alguien no aparece, revisa que tenga equipo (si no, sale en «Sin equipo»).</div>
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-actividades">
