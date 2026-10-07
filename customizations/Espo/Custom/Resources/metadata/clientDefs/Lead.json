@@ -25,5 +25,8 @@
         }
     },
     "kanbanViewMode": true,
-    "listDefaultViewMode": "kanban"
+    "listDefaultViewMode": "kanban",
+    "recordViews": {
+        "kanban": "custom:views/lead/record/kanban"
+    }
 }

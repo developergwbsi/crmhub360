@@ -1,3 +1,5 @@
+import logging
+
 import httpx
 
 from .espo import Espo
@@ -59,6 +61,22 @@ async def from_facebook(tenant: dict, payload: dict) -> list[str]:
     return ids
 
 
+async def fetch_avatar(payload: dict, phone: str) -> str | None:
+    """Foto de perfil de WhatsApp vía Evolution API (best-effort; el webhook trae server_url, apikey e instance)."""
+    server, key, inst = payload.get("server_url"), payload.get("apikey"), payload.get("instance")
+    if not (server and key and inst):
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=6) as c:
+            r = await c.post(f"{server.rstrip('/')}/chat/fetchProfilePictureUrl/{inst}", headers={"apikey": key},
+                             json={"number": phone.lstrip("+")})
+            r.raise_for_status()
+            return r.json().get("profilePictureUrl") or None
+    except Exception as e:  # no es crítico: la tarjeta usa iniciales
+        logging.getLogger("crmhub").info("sin avatar para %s: %s", phone, e)
+        return None
+
+
 async def from_evolution(tenant: dict, payload: dict) -> str | None:
     if payload.get("event", "").lower().replace("_", ".") != "messages.upsert":
         return None
@@ -71,8 +89,11 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
     text = msg.get("conversation") or (msg.get("extendedTextMessage") or {}).get("text")
     if not phone or not text:
         return None
-    lead_id = await find_lead_by_phone(tenant, phone) or await upsert_lead(
-        tenant, name=d.get("pushName") or phone, phone=phone, email=None, source="WhatsApp")
+    lead_id = await find_lead_by_phone(tenant, phone)
+    if not lead_id:
+        avatar = await fetch_avatar(payload, phone)
+        lead_id = await upsert_lead(tenant, name=d.get("pushName") or phone, phone=phone, email=None,
+                                    source="WhatsApp", extra={"avatarUrl": avatar} if avatar else None)
     who = "Asesor" if key.get("fromMe") else (d.get("pushName") or "Cliente")
     await Espo(tenant).note(lead_id, f"[WhatsApp] {who}: {text}")
     return lead_id

@@ -210,3 +210,30 @@ table.table thead th.checkbox-cell .checkbox-dropdown > a { padding: 0 4px !impo
 /* Tarjetas Kanban */
 .list-kanban .kanban-item, .kanban-item, td.group-column .item { border-radius: 12px; border: 1px solid var(--ch-line); box-shadow: var(--default-box-shadow); }
 .list-kanban .group-header, .kanban-head-container .group-header { border-radius: 10px; font-weight: 600; }
+
+/* ---------- Tarjetas Kanban de Lead: avatar, más datos y señal de arrastre ---------- */
+.group-column-list .item { cursor: grab; transition: transform .12s ease, box-shadow .12s ease; }
+.group-column-list .item:hover { transform: translateY(-2px); }
+.group-column-list .item:hover .ch-card { border-color: hsl(231 60% 80%); box-shadow: 0 6px 18px rgba(40, 55, 140, .14); }
+.group-column-list .item:active, .group-column-list .item.ui-sortable-helper { cursor: grabbing; }
+.group-column-list .item.ui-sortable-helper .ch-card { box-shadow: 0 14px 30px rgba(40, 55, 140, .28); transform: rotate(1.2deg); }
+.ch-card { border-radius: 12px; margin-bottom: 0; }
+.ch-card .panel-body { padding: 12px 12px 10px; }
+.ch-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.ch-card-name { flex: 1 1 auto; min-width: 0; font-weight: 600; font-size: 14.5px; }
+.ch-card-name a { color: var(--ch-ink); }
+.ch-card-head .item-menu-container { flex: none; float: none !important; margin: 0; }
+.ch-avatar { position: relative; flex: none; width: 36px; height: 36px; border-radius: 50%; color: #fff; font-weight: 700;
+    font-size: 13px; display: grid; place-items: center; overflow: hidden; box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--ch-line); }
+.ch-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ch-f { display: flex; align-items: center; gap: 6px; font-size: 12.8px; color: var(--ch-muted); line-height: 1.5; margin-top: 3px; }
+.ch-f.ch-empty { display: none; }
+.ch-f::before { flex: none; width: 15px; text-align: center; font-family: "Font Awesome 6 Free"; font-weight: 900; color: hsl(231 40% 65%); font-size: 11px; }
+.ch-f-phoneNumber::before { content: "\f095"; }
+.ch-f-assignedUser::before { content: "\f007"; }
+.ch-f-createdAt::before { content: "\f017"; }
+.ch-f-creditScore::before { content: "\f080"; }
+.ch-f-creditScore::after { content: "pts"; font-size: 11px; }
+.ch-f-totalDebt::before { content: "\f155"; }
+.ch-f-preApprovalStatus::before { content: "\f058"; }
+.ch-f-preApprovalStatus { font-weight: 600; }

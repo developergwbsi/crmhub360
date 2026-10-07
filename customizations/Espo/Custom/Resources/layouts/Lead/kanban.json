@@ -10,6 +10,15 @@
         "name": "creditScore"
     },
     {
+        "name": "totalDebt"
+    },
+    {
+        "name": "phoneNumber"
+    },
+    {
         "name": "assignedUser"
+    },
+    {
+        "name": "createdAt"
     }
 ]

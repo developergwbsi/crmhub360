@@ -1,7 +1,15 @@
 {
     "fields": {
         "status": {
-            "options": ["Nuevo Lead", "Consulta de Crédito", "Pre-Aprobado", "En Enfriamiento/Contactado", "Cierre Exitoso", "Converted", "Dead"],
+            "options": [
+                "Nuevo Lead",
+                "Consulta de Crédito",
+                "Pre-Aprobado",
+                "En Enfriamiento/Contactado",
+                "Cierre Exitoso",
+                "Converted",
+                "Dead"
+            ],
             "default": "Nuevo Lead",
             "style": {
                 "Nuevo Lead": null,
@@ -14,29 +22,80 @@
             }
         },
         "source": {
-            "options": ["", "Facebook Ads", "Instagram Ads", "Formulario Web", "WhatsApp", "Manual", "Referido"]
+            "options": [
+                "",
+                "Facebook Ads",
+                "Instagram Ads",
+                "Formulario Web",
+                "WhatsApp",
+                "Manual",
+                "Referido"
+            ]
         },
         "creditPdf": {
             "type": "file",
-            "accept": ["application/pdf"],
+            "accept": [
+                "application/pdf"
+            ],
             "audited": true
         },
-        "creditScore": {"type": "int", "min": 0, "max": 999},
-        "totalDebt": {"type": "currency"},
-        "overdueDebt": {"type": "currency"},
-        "defaultHistory": {"type": "text", "rows": 5},
-        "creditSummary": {"type": "text", "rows": 8},
+        "creditScore": {
+            "type": "int",
+            "min": 0,
+            "max": 999
+        },
+        "totalDebt": {
+            "type": "currency"
+        },
+        "overdueDebt": {
+            "type": "currency"
+        },
+        "defaultHistory": {
+            "type": "text",
+            "rows": 5
+        },
+        "creditSummary": {
+            "type": "text",
+            "rows": 8
+        },
         "preApprovalStatus": {
             "type": "enum",
-            "options": ["", "Pre-Aprobado", "Rechazado", "Revisión Manual"],
-            "style": {"Pre-Aprobado": "success", "Rechazado": "danger", "Revisión Manual": "warning"},
+            "options": [
+                "",
+                "Pre-Aprobado",
+                "Rechazado",
+                "Revisión Manual"
+            ],
+            "style": {
+                "Pre-Aprobado": "success",
+                "Rechazado": "danger",
+                "Revisión Manual": "warning"
+            },
             "audited": true,
             "isSorted": false
         },
         "creditParseStatus": {
             "type": "enum",
-            "options": ["", "Procesando", "Completado", "Error"],
-            "style": {"Completado": "success", "Error": "danger", "Procesando": "warning"}
+            "options": [
+                "",
+                "Procesando",
+                "Completado",
+                "Error"
+            ],
+            "style": {
+                "Completado": "success",
+                "Error": "danger",
+                "Procesando": "warning"
+            }
+        },
+        "avatarUrl": {
+            "type": "varchar",
+            "maxLength": 500,
+            "readOnlyAfterCreate": false,
+            "layoutDetailDisabled": true,
+            "layoutListDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
         }
     }
 }
