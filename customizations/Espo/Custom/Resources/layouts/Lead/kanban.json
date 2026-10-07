@@ -4,10 +4,10 @@
         "link": true
     },
     {
-        "name": "preApprovalStatus"
+        "name": "qualificationStatus"
     },
     {
-        "name": "creditScore"
+        "name": "suggestedService"
     },
     {
         "name": "totalDebt"

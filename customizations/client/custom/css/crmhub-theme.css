@@ -232,8 +232,23 @@ table.table thead th.checkbox-cell .checkbox-dropdown > a { padding: 0 4px !impo
 .ch-f-phoneNumber::before { content: "\f095"; }
 .ch-f-assignedUser::before { content: "\f007"; }
 .ch-f-createdAt::before { content: "\f017"; }
-.ch-f-creditScore::before { content: "\f080"; }
-.ch-f-creditScore::after { content: "pts"; font-size: 11px; }
 .ch-f-totalDebt::before { content: "\f155"; }
-.ch-f-preApprovalStatus::before { content: "\f058"; }
-.ch-f-preApprovalStatus { font-weight: 600; }
+.ch-f-qualificationStatus::before { content: "\f058"; }
+.ch-f-qualificationStatus { font-weight: 600; }
+.ch-f-suggestedService::before { content: "\f0b1"; }
+.ch-f-suggestedService { color: var(--ch-ink); font-weight: 500; }
+
+/* ---------- Editor de servicios y filtros ---------- */
+.ch-service { border: 1px solid var(--ch-line); border-radius: 12px; margin-bottom: 12px; background: #fff; }
+.ch-service.ch-off { opacity: .6; }
+.ch-service-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--ch-line); background: hsl(210 22% 97.5%); border-radius: 12px 12px 0 0; }
+.ch-prio { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--ch-primary); color: #fff; font-weight: 700; font-size: 12px; }
+.ch-svc-name { flex: 1 1 auto; font-weight: 600; }
+.ch-switch { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 500; white-space: nowrap; }
+.ch-service-body { padding: 12px; }
+.ch-cond { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.ch-cond > select:first-child, .ch-cond > input[data-bind="custom"] { flex: 1 1 220px; min-width: 0; }
+.ch-cond .ch-op { flex: 0 0 82px; }
+.ch-cond .ch-val { flex: 0 1 190px; min-width: 130px; }
+.ch-services-actions { margin-top: 14px; justify-content: space-between; }
+

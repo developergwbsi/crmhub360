@@ -3,8 +3,8 @@
         "status": {
             "options": [
                 "Nuevo Lead",
-                "Consulta de Crédito",
-                "Pre-Aprobado",
+                "En Calificación",
+                "Calificado",
                 "En Enfriamiento/Contactado",
                 "Cierre Exitoso",
                 "Converted",
@@ -13,8 +13,8 @@
             "default": "Nuevo Lead",
             "style": {
                 "Nuevo Lead": null,
-                "Consulta de Crédito": "primary",
-                "Pre-Aprobado": "info",
+                "En Calificación": "primary",
+                "Calificado": "info",
                 "En Enfriamiento/Contactado": "warning",
                 "Cierre Exitoso": "success",
                 "Converted": "success",
@@ -58,22 +58,6 @@
             "type": "text",
             "rows": 8
         },
-        "preApprovalStatus": {
-            "type": "enum",
-            "options": [
-                "",
-                "Pre-Aprobado",
-                "Rechazado",
-                "Revisión Manual"
-            ],
-            "style": {
-                "Pre-Aprobado": "success",
-                "Rechazado": "danger",
-                "Revisión Manual": "warning"
-            },
-            "audited": true,
-            "isSorted": false
-        },
         "creditParseStatus": {
             "type": "enum",
             "options": [
@@ -96,6 +80,47 @@
             "layoutListDisabled": true,
             "layoutMassUpdateDisabled": true,
             "layoutFiltersDisabled": true
+        },
+        "qualificationStatus": {
+            "type": "enum",
+            "options": [
+                "",
+                "Califica",
+                "No califica",
+                "Revisión Manual"
+            ],
+            "style": {
+                "Califica": "success",
+                "No califica": "danger",
+                "Revisión Manual": "warning"
+            },
+            "audited": true,
+            "isSorted": false
+        },
+        "suggestedService": {
+            "type": "varchar",
+            "maxLength": 255,
+            "audited": true
+        },
+        "qualificationReasons": {
+            "type": "text",
+            "rows": 8
+        },
+        "creditorCount": {
+            "type": "int",
+            "min": 0
+        },
+        "maxDaysOverdue": {
+            "type": "int",
+            "min": 0
+        },
+        "defaultCount": {
+            "type": "int",
+            "min": 0
+        },
+        "monthlyIncome": {
+            "type": "currency",
+            "audited": true
         }
     }
 }

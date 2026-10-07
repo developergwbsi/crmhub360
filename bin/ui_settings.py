@@ -19,7 +19,7 @@ DASH_LAYOUT = [{"name": "Inicio", "layout": [
     {"id": "d-stream", "name": "Stream", "x": 2, "y": 2, "width": 2, "height": 2},
 ]}]
 DASH_OPTIONS = {"d-leads": {"title": "Leads recientes", "entityType": "Lead", "displayRecords": 10, "sortBy": "createdAt", "sortDirection": "desc",
-                            "expandedLayout": {"rows": [[{"name": "name", "link": True}, {"name": "status"}], [{"name": "preApprovalStatus"}, {"name": "creditScore"}]]}},
+                            "expandedLayout": {"rows": [[{"name": "name", "link": True}, {"name": "status"}], [{"name": "qualificationStatus"}, {"name": "suggestedService"}]]}},
                 "d-tasks": {"title": "Mis tareas"}}
 
 UI_SETTINGS = {

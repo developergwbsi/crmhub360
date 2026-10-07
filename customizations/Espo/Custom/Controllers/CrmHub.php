@@ -30,9 +30,7 @@ class CrmHub
     public function putActionIntegrations(Request $request): \stdClass
     {
         $data = json_decode(json_encode($request->getParsedBody()), true) ?: [];
-        $allowed = array_intersect_key($data, array_flip(
-            ['fb_page_token', 'approve_min_score', 'reject_max_score', 'reject_overdue_ratio']
-        ));
+        $allowed = array_intersect_key($data, array_flip(['fb_page_token', 'services']));
         try {
             return (object) $this->hub()->request('PUT', '/v1/tenant/settings', $allowed);
         } catch (\RuntimeException $e) {
@@ -42,5 +40,10 @@ class CrmHub
             }
             throw $e;
         }
+    }
+
+    public function postActionResetServices(Request $request): \stdClass
+    {
+        return (object) $this->hub()->request('POST', '/v1/tenant/settings/reset-services', []);
     }
 }

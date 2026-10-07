@@ -2,7 +2,7 @@ import io
 
 from pypdf import PdfReader
 
-from . import config, ollama
+from . import config, ollama, qualify
 from .espo import Espo
 
 SCHEMA = {
@@ -11,17 +11,27 @@ SCHEMA = {
         "score": {"type": ["integer", "null"], "description": "Puntaje de crédito (ej. 0-950)"},
         "total_debt": {"type": ["number", "null"], "description": "Deuda total en pesos"},
         "overdue_debt": {"type": ["number", "null"], "description": "Saldo total en mora"},
-        "default_history": {"type": "array", "items": {"type": "string"},
-                            "description": "Obligaciones con mora o castigo: entidad, monto, estado"},
+        "obligations": {"type": "array", "description": "Una entrada por obligación reportada", "items": {
+            "type": "object",
+            "properties": {
+                "entity": {"type": "string", "description": "Acreedor / entidad"},
+                "balance": {"type": ["number", "null"]},
+                "overdue_amount": {"type": ["number", "null"]},
+                "days_overdue": {"type": ["integer", "null"]},
+                "written_off": {"type": "boolean", "description": "true si está castigada"},
+            },
+            "required": ["entity", "balance", "overdue_amount", "days_overdue", "written_off"],
+        }},
         "summary": {"type": "string", "description": "Resumen financiero ejecutivo en español, máx. 5 frases"},
     },
-    "required": ["score", "total_debt", "overdue_debt", "default_history", "summary"],
+    "required": ["score", "total_debt", "overdue_debt", "obligations", "summary"],
 }
 
 SYSTEM = (
-    "Eres un analista de riesgo crediticio colombiano. Extrae datos EXACTAMENTE del texto de una historia de "
-    "crédito (Datacrédito/TransUnion/CIFIN). No inventes cifras: si un dato no aparece, usa null. Montos como "
-    "número sin símbolos ni separadores de miles. Responde solo con JSON y el resumen siempre en español."
+    "Eres un analista financiero colombiano. Extrae datos EXACTAMENTE del texto de una historia de crédito "
+    "(Datacrédito/TransUnion/CIFIN). No inventes cifras: si un dato no aparece, usa null. Montos como número sin "
+    "símbolos ni separadores de miles. Lista cada obligación en 'obligations'. Responde solo con JSON y el resumen "
+    "siempre en español."
 )
 
 
@@ -29,29 +39,6 @@ def extract_text(pdf: bytes) -> str:
     reader = PdfReader(io.BytesIO(pdf))
     text = "\n".join((p.extract_text(extraction_mode="layout") or "") for p in reader.pages)
     return text.strip()
-
-
-def thresholds(tenant: dict | None) -> dict:
-    """Umbrales por empresa (tenants.settings) con respaldo en los valores globales."""
-    st = (tenant or {}).get("settings") or {}
-    return {
-        "approve_min_score": int(st.get("approve_min_score", config.APPROVE_MIN_SCORE)),
-        "reject_max_score": int(st.get("reject_max_score", config.REJECT_MAX_SCORE)),
-        "reject_overdue_ratio": float(st.get("reject_overdue_ratio", config.REJECT_OVERDUE_RATIO)),
-    }
-
-
-def decide(score, total_debt, overdue_debt, tenant: dict | None = None) -> str:
-    """Reglas deterministas de pre-aprobación; sin datos suficientes -> revisión manual."""
-    t = thresholds(tenant)
-    if score is None:
-        return "Revisión Manual"
-    ratio = (overdue_debt or 0) / total_debt if total_debt else 0
-    if score < t["reject_max_score"] or ratio > t["reject_overdue_ratio"]:
-        return "Rechazado"
-    if score >= t["approve_min_score"] and not overdue_debt:
-        return "Pre-Aprobado"
-    return "Revisión Manual"
 
 
 async def process(tenant: dict, lead_id: str, attachment_id: str) -> None:
@@ -63,21 +50,27 @@ async def process(tenant: dict, lead_id: str, attachment_id: str) -> None:
             raise ValueError("El PDF no contiene texto extraíble (¿escaneado?). Se requiere OCR.")
         data = await ollama.chat_json(SYSTEM, text[: config.MAX_PDF_CHARS], SCHEMA)
     except Exception as e:  # el lead queda en revisión manual con el motivo
-        await espo.put(f"Lead/{lead_id}", {"creditParseStatus": "Error", "preApprovalStatus": "Revisión Manual",
+        await espo.put(f"Lead/{lead_id}", {"creditParseStatus": "Error", "qualificationStatus": "Revisión Manual",
                                            "creditSummary": f"No se pudo procesar el reporte: {e}"})
         raise
-    verdict = decide(data.get("score"), data.get("total_debt"), data.get("overdue_debt"), tenant)
+    obl = data.get("obligations") or []
+    total = data.get("total_debt") or (sum((o.get("balance") or 0) for o in obl) or None)
+    overdue = data.get("overdue_debt")
+    if overdue is None and obl:
+        overdue = sum((o.get("overdue_amount") or 0) for o in obl)
+    detail = "\n".join(
+        f"• {o.get('entity') or 'Acreedor'}: saldo {int(o.get('balance') or 0):,} · mora {int(o.get('overdue_amount') or 0):,}"
+        f" · {o.get('days_overdue') or 0} días{' · CASTIGADA' if o.get('written_off') else ''}".replace(",", ".") for o in obl)
     update = {
         "creditScore": data.get("score"),
-        "totalDebt": data.get("total_debt"),
-        "totalDebtCurrency": "COP",
-        "overdueDebt": data.get("overdue_debt"),
-        "overdueDebtCurrency": "COP",
-        "defaultHistory": "\n".join(data.get("default_history") or []) or "Sin mora reportada",
+        "totalDebt": total, "totalDebtCurrency": "COP",
+        "overdueDebt": overdue, "overdueDebtCurrency": "COP",
+        "creditorCount": len(obl) or None,
+        "maxDaysOverdue": max((o.get("days_overdue") or 0) for o in obl) if obl else None,
+        "defaultCount": sum(1 for o in obl if o.get("written_off")) if obl else None,
+        "defaultHistory": detail or "Sin obligaciones reportadas",
         "creditSummary": data.get("summary"),
-        "preApprovalStatus": verdict,
         "creditParseStatus": "Completado",
     }
-    if verdict == "Pre-Aprobado":
-        update["status"] = "Pre-Aprobado"
     await espo.put(f"Lead/{lead_id}", update)
+    await qualify.run(tenant, lead_id)

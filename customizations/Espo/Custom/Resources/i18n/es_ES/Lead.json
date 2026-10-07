@@ -4,30 +4,36 @@
         "creditScore": "Puntaje de crédito",
         "totalDebt": "Deuda total",
         "overdueDebt": "Deuda en mora",
-        "defaultHistory": "Historial de incumplimientos",
+        "defaultHistory": "Detalle de obligaciones",
         "creditSummary": "Resumen financiero (IA)",
-        "preApprovalStatus": "Estado de Pre-Aprobación",
-        "creditParseStatus": "Procesamiento del reporte"
+        "creditParseStatus": "Procesamiento del reporte",
+        "qualificationStatus": "Resultado del filtro",
+        "suggestedService": "Servicio sugerido",
+        "qualificationReasons": "Motivos del filtro",
+        "creditorCount": "Cantidad de acreedores",
+        "maxDaysOverdue": "Máx. días de mora",
+        "defaultCount": "Obligaciones castigadas",
+        "monthlyIncome": "Ingresos mensuales"
     },
     "options": {
         "status": {
             "Nuevo Lead": "Nuevo Lead",
-            "Consulta de Crédito": "Consulta de Crédito",
-            "Pre-Aprobado": "Pre-Aprobado",
+            "En Calificación": "En Calificación",
+            "Calificado": "Calificado",
             "En Enfriamiento/Contactado": "En Enfriamiento/Contactado",
             "Cierre Exitoso": "Cierre Exitoso",
             "Converted": "Convertido",
             "Dead": "Perdido"
         },
-        "preApprovalStatus": {
-            "Pre-Aprobado": "Pre-Aprobado",
-            "Rechazado": "Rechazado",
-            "Revisión Manual": "Revisión Manual"
-        },
         "creditParseStatus": {
             "Procesando": "Procesando",
             "Completado": "Completado",
             "Error": "Error"
+        },
+        "qualificationStatus": {
+            "Califica": "Califica",
+            "No califica": "No califica",
+            "Revisión Manual": "Revisión Manual"
         }
     },
     "labels": {
@@ -35,6 +41,7 @@
         "IA: Redactar respuesta": "IA: Redactar respuesta",
         "IA: Analizar sentimiento": "IA: Analizar sentimiento",
         "Create Lead": "Crear lead",
-        "Evaluación de crédito": "Evaluación de crédito"
+        "Filtro y servicio sugerido": "Filtro y servicio sugerido",
+        "Reporte de crédito": "Reporte de crédito"
     }
 }

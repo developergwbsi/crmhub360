@@ -40,17 +40,18 @@
     </div>
   </div>
 
-  <div class="panel panel-default">
-    <div class="panel-heading"><h4 class="panel-title">Evaluación de crédito</h4></div>
+  <div class="panel panel-default ch-span-2">
+    <div class="panel-heading"><h4 class="panel-title">Servicios y filtros</h4></div>
     <div class="panel-body">
-      <p class="ch-muted">Reglas con las que se asigna el Estado de Pre-Aprobación al leer un reporte.</p>
-      <div class="form-group"><label>Puntaje mínimo para Pre-Aprobado (sin mora)</label>
-        <input type="number" name="approve_min_score" class="form-control" min="1" max="999" value="{{th.approve_min_score}}"></div>
-      <div class="form-group"><label>Puntaje menor a este valor = Rechazado</label>
-        <input type="number" name="reject_max_score" class="form-control" min="0" max="998" value="{{th.reject_max_score}}"></div>
-      <div class="form-group"><label>Mora máxima sobre la deuda total (%)</label>
-        <input type="number" name="reject_overdue_pct" class="form-control" min="0" max="100" step="1" value="{{pct}}"></div>
-      <button class="btn btn-primary" data-action="saveThresholds">Guardar reglas</button>
+      <p class="ch-muted">Define qué servicios ofrece tu empresa y las condiciones que debe cumplir un cliente para cada uno.
+        Cuando llega un reporte de crédito (o editas los datos del lead) el sistema evalúa los servicios <b>en este orden</b>
+        y sugiere el primero que cumpla, con los motivos. Si falta un dato, el lead queda en <i>Revisión Manual</i>.</p>
+      <div class="ch-services"></div>
+      <div class="ch-row ch-services-actions">
+        <button class="btn btn-default btn-sm" data-action="addService"><span class="fas fa-plus"></span> Agregar servicio</button>
+        <button class="btn btn-default btn-sm" data-action="resetServices">Restaurar valores iniciales</button>
+        <button class="btn btn-primary" data-action="saveServices">Guardar servicios y filtros</button>
+      </div>
     </div>
   </div>
 

@@ -25,8 +25,8 @@
 <h3>Estados del lead</h3>
 <table class="table table-bordered ch-table"><tr><th>Estado</th><th>Significado</th></tr>
 <tr><td>Nuevo Lead</td><td>Recién captado, sin gestionar.</td></tr>
-<tr><td>Consulta de Crédito</td><td>Se autorizó y se está evaluando el reporte de crédito.</td></tr>
-<tr><td>Pre-Aprobado</td><td>El análisis permite avanzar con la solicitud.</td></tr>
+<tr><td>En Calificación</td><td>Se recibió el reporte o los datos del cliente y se está aplicando el filtro.</td></tr>
+<tr><td>Calificado</td><td>El cliente cumple al menos un servicio; ya tiene servicio sugerido.</td></tr>
 <tr><td>En Enfriamiento/Contactado</td><td>Contactado; se espera respuesta o decisión del cliente.</td></tr>
 <tr><td>Cierre Exitoso</td><td>El cliente tomó el crédito.</td></tr>
 <tr><td>Perdido / Convertido</td><td>Descartado, o convertido en cuenta/contacto/oportunidad.</td></tr></table>
@@ -37,28 +37,25 @@
   <div class="panel-heading"><h4 class="panel-title">3. Tablero Kanban</h4></div>
   <div class="panel-body">
 <p>Al entrar a <b>Leads</b> verás el tablero Kanban: cada columna es un estado. Con los iconos de arriba a la derecha alternas entre el tablero y la lista.</p>
-<ul><li><b>Arrastra</b> una tarjeta a otra columna para cambiar su estado.</li><li>Cada columna muestra el número de leads.</li><li>Usa los filtros para ver solo los tuyos o los de tu equipo.</li><li>Vuelve a la lista con el icono de lista.</li></ul>
+<ul><li><b>Arrastra</b> una tarjeta a otra columna para cambiar su estado.</li><li>Cada tarjeta muestra el avatar (foto de WhatsApp si existe, o las iniciales), el resultado del filtro, el servicio sugerido, la deuda, el teléfono, el asesor y la antigüedad.</li><li>Usa los filtros para ver solo los tuyos o los de tu equipo.</li><li>Vuelve a la lista con el icono de lista.</li></ul>
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-credito">
-  <div class="panel-heading"><h4 class="panel-title">4. Reporte de crédito con IA</h4></div>
-  <div class="panel-body">
-<p>Con la autorización del cliente, sube su historia de crédito en PDF y el sistema extrae los datos automáticamente.</p>
+  <div class="panel-heading"><h4 class="panel-title">4. Filtro del cliente y servicio sugerido</h4></div>
+  <div class="panel-body"><p>Cuando un cliente se registra, el primer paso es aplicar el <b>filtro</b>: ¿cumple las condiciones para alguno de los servicios de la empresa (por ejemplo resolución de deudas, consolidación de cartera, préstamo o limpieza de historial)?</p>
+<h3>Cómo se aplica</h3>
 <ol>
-<li>Abre el lead y edítalo.</li>
-<li>En <b>Reporte de crédito (PDF)</b> adjunta el archivo y guarda.</li>
-<li>El campo <b>Procesamiento del reporte</b> pasa a <i>Procesando</i> y, en uno o dos minutos, a <i>Completado</i> (recarga el lead).</li>
+<li>Abre el lead y edítalo. En <b>Reporte de crédito (PDF)</b> adjunta la historia de crédito autorizada por el cliente y guarda. Si no tienes el PDF, puedes escribir a mano el puntaje, las deudas, los acreedores y los <b>ingresos mensuales</b>.</li>
+<li>La IA lee el PDF (uno o dos minutos) y completa: puntaje, deuda total, deuda en mora, cantidad de acreedores, máximo de días de mora, obligaciones castigadas y el detalle de cada obligación.</li>
+<li>El sistema evalúa los servicios <b>en orden de prioridad</b> y deja en el lead: <b>Resultado del filtro</b>, <b>Servicio sugerido</b> y los <b>Motivos</b> (qué condición cumple o no cumple cada servicio).</li>
 </ol>
-<h3>Qué se completa solo</h3>
-<ul><li><b>Puntaje de crédito</b>, <b>deuda total</b> y <b>deuda en mora</b>.</li><li><b>Historial de incumplimientos</b> y un <b>resumen financiero</b> en español.</li><li><b>Estado de Pre-Aprobación</b>.</li></ul>
-<h3>Cómo se decide la pre-aprobación</h3>
-<table class="table table-bordered ch-table"><tr><th>Resultado</th><th>Regla</th></tr>
-<tr><td><span class="ch-pill">Pre-Aprobado</span></td><td>Puntaje de 650 o más y sin deuda en mora. El lead pasa a la etapa Pre-Aprobado.</td></tr>
-<tr><td><span class="ch-pill">Rechazado</span></td><td>Puntaje menor a 500, o mora superior al 30 % de la deuda total.</td></tr>
-<tr><td><span class="ch-pill">Revisión Manual</span></td><td>Cualquier otro caso, o si falta el puntaje.</td></tr></table>
-<div class="ch-warn"><b>Importante:</b> la IA ayuda, no decide por ti. Verifica siempre las cifras contra el PDF antes de comunicar una decisión. Los PDF escaneados (imagen) no se pueden leer: el lead queda en <i>Revisión Manual</i> con el motivo en el resumen. Sube el PDF original descargado del buró.</div>
-<p>Los umbrales (650, 500 y 30 %) los puede ajustar el administrador de la plataforma.</p>
-</div>
+<h3>Resultado del filtro</h3>
+<table class="table table-bordered ch-table"><tr><th>Resultado</th><th>Significado</th></tr>
+<tr><td><span class="ch-pill">Califica</span></td><td>Cumple las condiciones de al menos un servicio. El lead pasa a <i>Calificado</i> y se muestra el servicio sugerido (y otros posibles).</td></tr>
+<tr><td><span class="ch-pill">No califica</span></td><td>No cumple ningún servicio activo.</td></tr>
+<tr><td><span class="ch-pill">Revisión Manual</span></td><td>Faltan datos para decidir (por ejemplo ingresos) o no se pudo leer el PDF. Complétalos y el sistema recalcula solo.</td></tr></table>
+<div class="ch-warn"><b>Importante:</b> la IA ayuda, no decide por ti. Verifica las cifras contra el PDF antes de comunicar algo al cliente. Los PDF escaneados (imagen) no se pueden leer: el lead queda en <i>Revisión Manual</i>. Sube el PDF original del buró.</div>
+<div class="ch-tip">Los servicios y sus condiciones los configura el administrador en <b>Integraciones → Servicios y filtros</b>: puede agregar servicios propios, activarlos, cambiar su prioridad y definir condiciones sobre deuda, mora, acreedores, ingresos, puntaje o cualquier campo del lead (por ejemplo, la campaña o el origen).</div></div>
 </div>
 <div class="panel panel-default" id="ch-m-asistente">
   <div class="panel-heading"><h4 class="panel-title">5. Asistente IA</h4></div>

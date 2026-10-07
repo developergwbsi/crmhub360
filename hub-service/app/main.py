@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, config, credit, db, ingest
+from . import assistant, config, credit, db, ingest, qualify
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -124,14 +124,13 @@ async def web_ingest(slug: str, request: Request):
 
 
 # --- Integraciones del tenant (las consume el panel de administración de EspoCRM) ---
-EDITABLE = {"fb_page_token": str, "approve_min_score": int, "reject_max_score": int, "reject_overdue_ratio": float}
-
-
 class SettingsReq(BaseModel):
     fb_page_token: str | None = None
-    approve_min_score: int | None = None
-    reject_max_score: int | None = None
-    reject_overdue_ratio: float | None = None
+    services: list[dict] | None = None
+
+
+class QualifyReq(BaseModel):
+    leadId: str
 
 
 @app.get("/v1/tenant/settings")
@@ -150,23 +149,46 @@ async def tenant_settings(tenant: dict = Depends(tenant_auth)):
     return {
         "host": tenant["host"], "token": tenant["hub_token"], "plan": tenant["plan"], "maxUsers": tenant["max_users"],
         "status": tenant["status"], "licenseUntil": str(tenant["license_until"]) if tenant["license_until"] else None,
-        "model": config.OLLAMA_MODEL, "aiReachable": ai_ok, "thresholds": credit.thresholds(tenant),
-        "fbPageTokenSet": bool(fb), "fbPageTokenHint": ("…" + fb[-4:]) if fb else "", "jobs": jobs,
+        "model": config.OLLAMA_MODEL, "aiReachable": ai_ok, "jobs": jobs,
+        "fbPageTokenSet": bool(fb), "fbPageTokenHint": ("…" + fb[-4:]) if fb else "",
+        "services": qualify.services_for(tenant), "servicesCustomized": bool(st.get("services")),
+        "metrics": [{"key": k, "label": v[0], "unit": v[2]} for k, v in qualify.METRICS.items()],
+        "ops": qualify.OPS,
     }
 
 
 @app.put("/v1/tenant/settings")
 def tenant_settings_update(req: SettingsReq, tenant: dict = Depends(tenant_auth)):
-    patch = {k: v for k, v in req.model_dump().items() if v is not None}
-    if "approve_min_score" in patch or "reject_max_score" in patch:
-        t = credit.thresholds({"settings": {**(tenant.get("settings") or {}), **patch}})
-        if not (0 <= t["reject_max_score"] < t["approve_min_score"] <= 999):
-            raise HTTPException(422, "Se requiere 0 <= puntaje de rechazo < puntaje de aprobación <= 999")
-    if "reject_overdue_ratio" in patch and not 0 <= patch["reject_overdue_ratio"] <= 1:
-        raise HTTPException(422, "La proporción de mora debe estar entre 0 y 1")
+    patch = {}
+    if req.fb_page_token is not None:
+        patch["fb_page_token"] = req.fb_page_token
+    if req.services is not None:
+        try:
+            patch["services"] = qualify.validate_services(req.services)
+        except ValueError as e:
+            raise HTTPException(422, str(e))
     with db.pool.connection() as c:
         c.execute("UPDATE tenants SET settings = settings || %s::jsonb WHERE slug = %s", (json.dumps(patch), tenant["slug"]))
     return {"ok": True}
+
+
+@app.post("/v1/tenant/settings/reset-services")
+def reset_services(tenant: dict = Depends(tenant_auth)):
+    with db.pool.connection() as c:
+        c.execute("UPDATE tenants SET settings = settings - 'services' WHERE slug = %s", (tenant["slug"],))
+    return {"ok": True}
+
+
+@app.post("/v1/leads/qualify")
+async def leads_qualify(req: QualifyReq, tenant: dict = Depends(tenant_auth)):
+    job = db.log_job(tenant["slug"], "qualify", req.leadId)
+    try:
+        res = await qualify.run(tenant, req.leadId)
+        db.finish_job(job)
+        return res
+    except Exception as e:
+        db.finish_job(job, str(e)[:500])
+        raise HTTPException(502, f"No se pudo calificar: {e}")
 
 
 # --- Métricas de licenciamiento (Gerente General / operador de plataforma) ---

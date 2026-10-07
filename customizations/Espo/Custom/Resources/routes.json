@@ -24,5 +24,13 @@
             "controller": "CrmHub",
             "action": "integrations"
         }
+    },
+    {
+        "route": "/CrmHub/integrations/reset-services",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "resetServices"
+        }
     }
 ]
