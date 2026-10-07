@@ -103,6 +103,7 @@
 <div class="panel panel-default" id="ch-m-contacto" data-roles="comercial director gerente">
   <div class="panel-heading"><h4 class="panel-title">5b. Llamar y enviar WhatsApp a un lead</h4></div>
   <div class="panel-body">
+<div class="ch-tip"><b>Plantillas de correo:</b> al redactar un correo verás una galería de plantillas ya listas (bienvenida, seguimiento, propuesta, documentos, recordatorio…). Elige una y el asunto y el mensaje se llenan con el nombre del cliente y el tuyo; puedes modificarlos antes de enviar y guardar tu versión con «Guardar como plantilla». «Administrar» abre la lista completa para editarlas.</div>
 <div class="ch-tip">Cada botón abre la interfaz de su canal: <b>WhatsApp, Telegram y SMS</b> se ven como una conversación (burbujas, con el historial y la caja para escribir abajo); <b>Llamar</b> abre un teléfono con el historial de llamadas (estado, duración, quién y notas); <b>Correo</b> muestra los correos enviados y recibidos y permite redactar uno.</div>
 <p>Abre el lead: arriba están los botones <b>Llamar</b>, <b>WhatsApp</b> y <b>SMS</b>. Todos necesitan que el lead tenga <b>teléfono</b>.</p>
 <h3>Llamar</h3>

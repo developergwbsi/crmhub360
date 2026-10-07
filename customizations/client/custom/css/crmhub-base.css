@@ -636,3 +636,10 @@ body.ch-readonly .list-row-buttons, body.ch-readonly .actions-btn-group { displa
 .ch-brand-sys::before { content: "◆ "; color: var(--ch-primary, #7b8cff); font-size: 9px; }
 body.minimized #navbar .navbar-brand.ch-has-brand img.logo { display: block; }
 body.minimized #navbar .navbar-brand.ch-has-brand .ch-brand { display: none; }
+
+/* galería de plantillas de correo */
+.ch-tpl-gallery { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; margin-bottom: 4px; }
+.ch-tpl { flex: none; display: inline-flex; align-items: center; gap: 8px; max-width: 230px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--ch-line-strong); background: var(--ch-surface); color: var(--ch-ink); cursor: pointer; text-align: left; }
+.ch-tpl .fas { color: var(--ch-primary); } .ch-tpl b { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-tpl:hover { border-color: var(--ch-primary); background: var(--ch-tint); } .ch-tpl.on { border-color: var(--ch-primary); background: var(--ch-tint2); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ch-primary) 25%, transparent); }
+.ch-tpl-manage { float: right; text-transform: none; letter-spacing: 0; font-weight: 600; }

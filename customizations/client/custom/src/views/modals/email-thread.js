@@ -1,5 +1,8 @@
 // Correos del registro: historial tipo bandeja y redacción dentro del mismo panel (sin ventanas aparte).
 define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:split'], function (Dep, ChUi, Split) {
+    // HTML de una plantilla → texto editable (el correo se envía con saltos de línea convertidos a HTML)
+    const toText = h => String(h || '').replace(/<\s*br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h\d)>/gi, '\n').replace(/<li[^>]*>/gi, '• ').replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/\n{3,}/g, '\n\n').trim();
     return class extends Dep {
         className = 'dialog ch-ch-panel ch-mail-modal'
         backdrop = false
@@ -9,6 +12,8 @@ define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:
             'click [data-action="compose"]': function () { this.toggleCompose(true); },
             'click [data-action="cancelCompose"]': function () { this.toggleCompose(false); },
             'click [data-action="sendMail"]': function () { this.send(); },
+            'click [data-action="pickTpl"]': function (e) { this.applyTemplate(e.currentTarget.dataset.id); },
+            'click [data-action="saveTpl"]': function () { this.saveAsTemplate(); },
             'click .ch-mail-item': function (e) { e.currentTarget.classList.toggle('open'); },
         }
 
@@ -35,10 +40,44 @@ define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:
             box.hidden = false;
             box.innerHTML = (ready === false ? '<div class="ch-chat-err">El envío de correo aún no está configurado (SMTP). Puedes redactar, pero el envío fallará hasta que' +
                     (this.channels.admin ? ' lo configures en <a href="#Admin/outboundEmails">Administración → Correo saliente</a>.' : ' tu administrador lo configure.') + '</div>' : '') +
+                '<label>Plantillas <a class="ch-tpl-manage" href="#EmailTemplate">Administrar</a></label><div class="ch-tpl-gallery" data-role="tpls"><span class="ch-muted">Cargando plantillas…</span></div>' +
                 `<label>Para</label><input value="${ChUi.esc(this.options.email)}" readonly><label>Asunto</label><input name="subject" maxlength="250" placeholder="Asunto">` +
                 '<label>Mensaje</label><textarea name="body" rows="6" placeholder="Escribe el correo…"></textarea><div class="ch-chat-err" data-role="err" hidden></div>' +
-                '<div class="ch-mail-actions"><button type="button" class="btn btn-primary btn-sm" data-action="sendMail"><span class="fas fa-paper-plane"></span> Enviar</button><button type="button" class="btn btn-default btn-sm" data-action="cancelCompose">Cancelar</button></div>';
+                '<div class="ch-mail-actions"><button type="button" class="btn btn-primary btn-sm" data-action="sendMail"><span class="fas fa-paper-plane"></span> Enviar</button><button type="button" class="btn btn-default btn-sm" data-action="saveTpl"><span class="far fa-floppy-disk"></span> Guardar como plantilla</button><button type="button" class="btn btn-default btn-sm" data-action="cancelCompose">Cancelar</button></div>';
+            this.loadTemplates();
             setTimeout(() => { const i = box.querySelector('[name="subject"]'); i && i.focus(); }, 50);
+        }
+
+        loadTemplates() {
+            Espo.Ajax.getRequest('EmailTemplate', {maxSize: 60, orderBy: 'name', select: 'name,subject'}).then(r => {
+                const box = this.el.querySelector('[data-role="tpls"]'); if (!box) { return; }
+                this.templates = r.list || [];
+                box.innerHTML = this.templates.length ? this.templates.map(x => `<button type="button" class="ch-tpl" data-action="pickTpl" data-id="${ChUi.esc(x.id)}" title="${ChUi.esc(x.subject || '')}"><span class="fas fa-file-lines"></span><b>${ChUi.esc(x.name)}</b></button>`).join('')
+                    : '<span class="ch-muted">Aún no hay plantillas. Escribe un correo y usa «Guardar como plantilla».</span>';
+            }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } const box = this.el.querySelector('[data-role="tpls"]'); if (box) { box.innerHTML = '<span class="ch-muted">No se pudieron cargar las plantillas.</span>'; } });
+        }
+
+        // Rellena asunto y mensaje con la plantilla (ya con el nombre del cliente y del asesor); sigue siendo editable antes de enviar
+        applyTemplate(id) {
+            const box = this.el.querySelector('[data-role="compose"]'), subj = box.querySelector('[name="subject"]'), body = box.querySelector('[name="body"]');
+            const go = () => Espo.Ajax.postRequest(`EmailTemplate/${id}/prepare`, {parentType: this.scope, parentId: this.options.leadId, emailAddress: this.options.email}).then(r => {
+                subj.value = toText(r.subject); body.value = toText(r.body); body.focus();
+                box.querySelectorAll('.ch-tpl').forEach(b => b.classList.toggle('on', b.dataset.id === id));
+            }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } const e = box.querySelector('[data-role="err"]'); e.hidden = false; e.textContent = 'No se pudo cargar la plantilla.'; });
+            if ((subj.value.trim() || body.value.trim()) && !box.querySelector('.ch-tpl.on')) {
+                ChUi.confirm({title: 'Usar plantilla', text: 'Se reemplazará el asunto y el mensaje que ya escribiste. ¿Continuar?', ok: 'Usar plantilla'}).then(yes => { if (yes) { go(); } });
+            } else { go(); }
+        }
+
+        saveAsTemplate() {
+            const box = this.el.querySelector('[data-role="compose"]'), subject = box.querySelector('[name="subject"]').value.trim(), body = box.querySelector('[name="body"]').value.trim();
+            if (!subject || !body) { const e = box.querySelector('[data-role="err"]'); e.hidden = false; e.textContent = 'Escribe el asunto y el mensaje para guardarlos como plantilla.'; return; }
+            ChUi.prompt({title: 'Guardar como plantilla', label: 'Nombre de la plantilla', required: true, min: 3, rows: 1, max: 80, ok: 'Guardar', hint: 'Queda disponible para ti y tu equipo. Puedes usar {Person.firstName} y {User.name} para personalizar.'}).then(name => {
+                if (!name) { return; }
+                Espo.Ajax.postRequest('EmailTemplate', {name, subject, body: body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>'), isHtml: true})
+                    .then(() => { Espo.Ui.success('Plantilla guardada'); this.loadTemplates(); })
+                    .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo guardar la plantilla'); });
+            });
         }
 
         send() {
@@ -47,7 +86,7 @@ define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:
             if (!subject || !body) { err.hidden = false; err.textContent = 'Escribe el asunto y el mensaje.'; return; }
             err.hidden = true;
             const btn = box.querySelector('[data-action="sendMail"]'); btn.disabled = true;
-            Espo.Ajax.postRequest('Email', {name: subject, body: body.replace(/\n/g, '<br>'), bodyPlain: body, isHtml: true, to: this.options.email, status: 'Sending', parentType: this.scope, parentId: this.options.leadId})
+            Espo.Ajax.postRequest('Email', {name: subject, body: body.replace(/\n/g, '<br>'), bodyPlain: body, isHtml: true, to: this.options.email, status: 'Sending', from: (this.channels && this.channels.emailFrom) || undefined, parentType: this.scope, parentId: this.options.leadId})
                 .then(() => { Espo.Ui.success('Correo enviado'); this.toggleCompose(false); this.trigger('done'); setTimeout(() => this.load(), 600); })
                 .catch(xhr => {
                     err.hidden = false;

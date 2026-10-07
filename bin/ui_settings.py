@@ -44,6 +44,28 @@ UI_SETTINGS = {
     "assignmentNotificationsEntityList": ["Lead", "Account", "Contact", "Opportunity", "Task", "Meeting", "Call", "Email"],
 }
 
+
+# Galería inicial de plantillas de correo (el usuario las puede modificar o crear las suyas). Marcadores de Espo: {Person.firstName}, {Person.name}, {User.name}
+FIRMA = "<p>Quedo atento(a).<br>Un saludo,<br><b>{User.name}</b></p>"
+EMAIL_TEMPLATES = [
+    ("Bienvenida · primer contacto", "Hola {Person.firstName}, gracias por tu interés",
+     "<p>Hola {Person.firstName},</p><p>Gracias por escribirnos. Soy {User.name} y voy a acompañarte en este proceso. Cuéntame con calma tu situación y revisamos juntos las mejores opciones.</p><p>¿Cuál sería un buen horario para llamarte?</p>" + FIRMA),
+    ("Seguimiento después de la llamada", "Resumen de nuestra conversación, {Person.firstName}",
+     "<p>Hola {Person.firstName},</p><p>Gracias por tu tiempo en la llamada de hoy. Te dejo un resumen de lo que hablamos:</p><ul><li>Punto 1</li><li>Punto 2</li><li>Próximo paso acordado</li></ul><p>Si algo no quedó claro, escríbeme y lo resolvemos.</p>" + FIRMA),
+    ("Envío de propuesta", "Propuesta para ti, {Person.firstName}",
+     "<p>Hola {Person.firstName},</p><p>Como acordamos, te comparto la propuesta con las condiciones y los pasos a seguir. Quedo atento(a) a tus comentarios para ajustarla a lo que necesitas.</p><p>La propuesta tiene vigencia de 5 días hábiles.</p>" + FIRMA),
+    ("Solicitud de documentos", "Documentos para continuar, {Person.firstName}",
+     "<p>Hola {Person.firstName},</p><p>Para avanzar con tu proceso necesito que me envíes, por este medio, los siguientes documentos:</p><ul><li>Documento de identidad (ambas caras)</li><li>Reporte de crédito actualizado</li><li>Soporte de ingresos</li></ul><p>En cuanto los reciba, continuamos con el análisis.</p>" + FIRMA),
+    ("Recordatorio de cita", "Recordatorio: nuestra cita, {Person.firstName}",
+     "<p>Hola {Person.firstName},</p><p>Te escribo para recordarte nuestra cita programada. Si necesitas cambiar la fecha o la hora, responde a este correo y la reagendamos sin problema.</p>" + FIRMA),
+    ("Seguimiento sin respuesta", "{Person.firstName}, ¿pudiste revisar mi mensaje?",
+     "<p>Hola {Person.firstName},</p><p>Te escribo de nuevo porque no quiero que se te pase la oportunidad. ¿Pudiste revisar la información que te envié? Estoy disponible para resolver cualquier duda.</p>" + FIRMA),
+    ("Agradecimiento y siguientes pasos", "Gracias por confiar en nosotros, {Person.firstName}",
+     "<p>Hola {Person.firstName},</p><p>Gracias por confiar en nosotros. Con esto damos inicio formal a tu proceso. En los próximos días recibirás las instrucciones y yo seguiré pendiente de todo.</p><p>Cualquier duda, aquí estoy.</p>" + FIRMA),
+    ("Cierre amable (sin interés)", "Quedamos a tu disposición, {Person.firstName}",
+     "<p>Hola {Person.firstName},</p><p>Entiendo que por ahora no es el momento. Cierro tu solicitud, pero quedamos a tu disposición: cuando quieras retomarla, escríbeme y continuamos desde donde lo dejamos.</p>" + FIRMA),
+]
+
 if __name__ == "__main__":  # python3 ui_settings.py <base_url> <admin_user> <admin_pass>
     base, user, pw = sys.argv[1:4]
     auth = "Basic " + base64.b64encode(f"{user}:{pw}".encode()).decode()
@@ -82,4 +104,17 @@ if __name__ == "__main__":  # python3 ui_settings.py <base_url> <admin_user> <ad
         data["User"] = {"read": "all"}
         # el servicio crea llamadas/leads a nombre de un asesor: necesita poder asignar a cualquier usuario
         call("PUT", f"Role/{api_role['id']}", {"data": data, "assignmentPermission": "all", "userPermission": "all"})
+    # galería de plantillas de correo: solo se crean las que faltan (nunca se pisan las que el usuario modificó)
+    have = {t["name"] for t in call("GET", "EmailTemplate?maxSize=200&select=name").get("list", [])}
+    for name, subject, body in EMAIL_TEMPLATES:
+        if name not in have:
+            call("POST", "EmailTemplate", {"name": name, "subject": subject, "body": body, "isHtml": True})
+    # todos los roles ven la galería; cada uno edita según su alcance
+    ET = {"Comercial": ("yes", "all", "own", "own"), "Director de Equipo": ("yes", "all", "team", "own"), "Gerente General": ("yes", "all", "all", "all")}
+    for r in roles:
+        if r["name"] in ET:
+            c_, rd, ed, dl = ET[r["name"]]
+            data = call("GET", f"Role/{r['id']}")["data"]
+            data["EmailTemplate"] = {"create": c_, "read": rd, "edit": ed, "delete": dl, "stream": "no"}
+            call("PUT", f"Role/{r['id']}", {"data": data})
     print("ui aplicada")

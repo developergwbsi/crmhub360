@@ -822,12 +822,18 @@ async def tenant_mail_state(t: dict) -> dict:
         async with espo(t) as c:
             r = await c.get("/Settings")
         s = r.json()
-        return {"hasOwn": bool(s.get("smtpServer")), "from": s.get("outboundEmailFromAddress")}
+        return {"hasOwn": bool(s.get("outboundEmailFromAddress")) and (get_setting("services:" + t["slug"], {}) or {}).get("mail", "own") == "own", "from": s.get("outboundEmailFromAddress")}
     except Exception:
         return {"hasOwn": None, "from": None}
 
 
+SYS_ACCOUNT = "Crm Hub 360 · correo del sistema"
+LEGACY_SMTP_OFF = {"smtpServer": None, "smtpUsername": None, "smtpPassword": None, "smtpSecurity": ""}
+
+
 async def set_company_mail(t: dict, mode: str) -> None:
+    """Aplica (o retira) el correo de salida de una empresa. En EspoCRM 10 el correo del sistema es una cuenta de grupo con SMTP
+    cuya dirección coincide con «outboundEmailFromAddress»: por eso se crea esa cuenta y se apunta el ajuste a ella."""
     mail = get_setting("mail") or {}
     if mode.startswith("p"):   # un proveedor de correo de la lista de proveedores aliados
         p = next((x for x in providers_list() if x["id"] == mode and x["kind"] == "email"), None)
@@ -838,14 +844,25 @@ async def set_company_mail(t: dict, mode: str) -> None:
                 "from_address": f["from_address"], "enabled": True}
         mode = "shared"
     async with espo(t) as c:
+        found = (await c.get("/InboundEmail", params={"where[0][type]": "equals", "where[0][attribute]": "name", "where[0][value]": SYS_ACCOUNT, "select": "id,emailAddress"})).json().get("list", [])
+        acc = found[0] if found else None
         if mode == "shared":
             if not mail.get("host") or not mail.get("enabled", True):
                 raise HTTPException(400, "El correo general está sin configurar o desactivado (pestaña «Correo general»)")
-            body = {"smtpServer": mail["host"], "smtpPort": int(mail.get("port") or 587), "smtpAuth": bool(mail.get("user")), "smtpSecurity": mail.get("security") or "",
-                    "smtpUsername": mail.get("user") or None, "smtpPassword": mail.get("password") or None, "outboundEmailFromAddress": mail["from_address"],
-                    "outboundEmailFromName": t["name"], "outboundEmailIsShared": True, "passwordRecoveryNoExposure": True}
+            data = {"name": SYS_ACCOUNT, "emailAddress": mail["from_address"], "status": "Active", "useImap": False, "useSmtp": True, "smtpIsShared": True,
+                    "smtpHost": mail["host"], "smtpPort": int(mail.get("port") or 587), "smtpAuth": bool(mail.get("user")), "smtpSecurity": mail.get("security") or "",
+                    "smtpUsername": mail.get("user") or None, "smtpPassword": mail.get("password") or None, "fromName": t["name"], "createCase": False}
+            r = await (c.put(f"/InboundEmail/{acc['id']}", json=data) if acc else c.post("/InboundEmail", json=data))
+            if r.status_code != 200:
+                raise HTTPException(502, "No se pudo crear la cuenta de correo del sistema en la empresa: " + (r.headers.get("X-Status-Reason") or str(r.status_code)))
+            body = {"outboundEmailFromAddress": mail["from_address"], "outboundEmailFromName": t["name"], "outboundEmailIsShared": True, "passwordRecoveryNoExposure": True, **LEGACY_SMTP_OFF}
         else:
-            body = {"smtpServer": None, "smtpUsername": None, "smtpPassword": None, "smtpSecurity": "", "outboundEmailFromAddress": None, "outboundEmailIsShared": False}
+            body = dict(LEGACY_SMTP_OFF)
+            if acc:
+                cur = (await c.get("/Settings")).json().get("outboundEmailFromAddress")
+                await c.put(f"/InboundEmail/{acc['id']}", json={"status": "Inactive", "useSmtp": False})
+                if cur and cur.lower() == (acc.get("emailAddress") or "").lower():
+                    body.update({"outboundEmailFromAddress": None, "outboundEmailIsShared": False})
         r = await c.put("/Settings", json=body)
     if r.status_code != 200:
         raise HTTPException(502, "No se pudo aplicar la configuración de correo en la empresa")

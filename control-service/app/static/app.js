@@ -286,8 +286,8 @@
 
   // ---------- correo general
   const MAIL_PRESETS = {
-    gmail: {label: 'Gmail / Google Workspace', host: 'smtp.gmail.com', port: 587, security: 'TLS', userIsFrom: true,
-      help: 'Usa tu correo completo como usuario y una <b>contraseña de aplicación</b> (no tu clave normal): activa la verificación en 2 pasos y créala en <b>myaccount.google.com/apppasswords</b>. Se pega con o sin espacios.'},
+    gmail: {label: 'Gmail / Google Workspace', host: 'smtp.gmail.com', port: 465, security: 'SSL', userIsFrom: true,
+      help: 'Usa tu correo completo como usuario y una <b>contraseña de aplicación</b> (no tu clave normal): activa la verificación en 2 pasos y créala en <b>myaccount.google.com/apppasswords</b>. Se pega con o sin espacios. Se usa el puerto 465 (SSL): en este servidor el 587 está redirigido por el cortafuegos y las empresas no podrían enviar.'},
     outlook: {label: 'Outlook / Microsoft 365', host: 'smtp.office365.com', port: 587, security: 'TLS', userIsFrom: true,
       help: 'Usa tu correo completo. En Microsoft 365 el administrador debe tener activado «SMTP autenticado» para el buzón; con verificación en 2 pasos usa una contraseña de aplicación.'},
     yahoo: {label: 'Yahoo Mail', host: 'smtp.mail.yahoo.com', port: 465, security: 'SSL', userIsFrom: true, help: 'Genera una contraseña de aplicación en la seguridad de tu cuenta Yahoo.'},

@@ -630,7 +630,7 @@ class CrmHub
     {
         $s = $this->hubAny('GET', '/v1/tenant/settings');
         return (object) ['whatsapp' => !empty($s['wa']['provider']), 'sms' => !empty($s['sms']['provider']), 'voice' => !empty($s['voice']['provider']),
-                         'telegram' => !empty($s['telegram']['tokenSet']), 'email' => !empty($this->config->get('smtpServer')),
+                         'telegram' => !empty($s['telegram']['tokenSet']), 'email' => !empty($this->config->get('outboundEmailFromAddress')), 'emailFrom' => (string) $this->config->get('outboundEmailFromAddress'),
                          'admin' => $this->user->isAdmin()];
     }
 
