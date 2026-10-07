@@ -192,5 +192,88 @@
             "controller": "CrmHub",
             "action": "telegramInvite"
         }
+    },
+    {
+        "route": "/CrmHub/sms/send",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "smsSend"
+        }
+    },
+    {
+        "route": "/CrmHub/sms/test",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "smsTest"
+        }
+    },
+    {
+        "route": "/CrmHub/voice/call",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "voiceCall"
+        }
+    },
+    {
+        "route": "/CrmHub/channels",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "channels"
+        }
+    },
+    {
+        "route": "/CrmHub/broadcast/audience",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "broadcastAudience"
+        }
+    },
+    {
+        "route": "/CrmHub/broadcast",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "broadcastCreate"
+        }
+    },
+    {
+        "route": "/CrmHub/broadcasts",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "broadcasts"
+        }
+    },
+    {
+        "route": "/CrmHub/broadcasts/:id",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "broadcast",
+            "id": ":id"
+        }
+    },
+    {
+        "route": "/CrmHub/broadcasts/:id/:act",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "broadcastAction",
+            "id": ":id",
+            "act": ":act"
+        }
+    },
+    {
+        "route": "/CrmHub/twilio/test",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "twilioTest"
+        }
     }
 ]

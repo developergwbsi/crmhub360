@@ -11,6 +11,7 @@ TABS = [
     {"type": "divider", "id": "t7", "text": "Organización"},
     "Campaign",
     {"type": "url", "id": "t8", "text": "Organigrama", "url": "#CrmHub/organigrama", "iconClass": "fas fa-sitemap", "aclScope": "Campaign"},
+    {"type": "url", "id": "t13", "text": "Mensajes masivos", "url": "#CrmHub/difusion", "iconClass": "fas fa-bullhorn", "aclScope": "Campaign"},
     {"type": "url", "id": "t9", "text": "Equipos", "url": "#Team", "iconClass": "fas fa-users", "onlyAdmin": True},
     {"type": "url", "id": "t10", "text": "Usuarios", "url": "#User", "iconClass": "fas fa-user-gear", "onlyAdmin": True},
     {"type": "url", "id": "t11", "text": "Asignación de leads", "url": "#CrmHub/asignacion", "iconClass": "fas fa-shuffle", "onlyAdmin": True},
@@ -76,5 +77,7 @@ if __name__ == "__main__":  # python3 ui_settings.py <base_url> <admin_user> <ad
     if api_role:
         data = call("GET", f"Role/{api_role['id']}")["data"]
         data["Campaign"] = {"create": "no", "read": "all", "edit": "no", "delete": "no", "stream": "no"}
-        call("PUT", f"Role/{api_role['id']}", {"data": data})
+        data["User"] = {"read": "all"}
+        # el servicio crea llamadas/leads a nombre de un asesor: necesita poder asignar a cualquier usuario
+        call("PUT", f"Role/{api_role['id']}", {"data": data, "assignmentPermission": "all", "userPermission": "all"})
     print("ui aplicada")

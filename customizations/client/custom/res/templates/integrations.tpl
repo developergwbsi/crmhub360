@@ -59,6 +59,16 @@
         <div class="ch-help">Para <b>recibir</b>: en Gupshup → tu app → Webhook (Inbound): <code>{{hub}}/gupshup?token=…</code> (cópiala de la tabla de arriba).</div>
       </div>
 
+      <div class="ch-prov" data-prov="twilio">
+        <div class="form-group"><label>Número de WhatsApp de Twilio</label><input name="wa_tw_from" class="form-control" value="{{s.twilio.waFrom}}" placeholder="+14155238886"></div>
+        <div class="ch-help">Usa las credenciales de la pestaña <b>SMS y llamadas → Twilio</b>. Para <b>recibir</b>: en Twilio, en tu número de WhatsApp → «When a message comes in»: <code>{{hub}}/twilio?token=…</code> (cópiala de la tabla de arriba).</div>
+      </div>
+
+      <div class="ch-prov" data-prov="generic">
+        <p class="ch-muted">¿Tu proveedor no está en la lista? Configura su API aquí: dónde se envía, cómo se autentica y cómo es el cuerpo del mensaje, con variables como <code>{{to}}</code> y <code>{{text}}</code>.</p>
+        <div class="ch-http" data-kind="whatsapp"></div>
+      </div>
+
       <div class="ch-row" style="margin-top:12px">
         <button class="btn btn-primary" data-action="saveWhatsapp">Guardar</button>
         <button class="btn btn-default" data-action="testWhatsapp"><span class="fas fa-plug"></span> Probar conexión</button>
@@ -124,6 +134,61 @@
           Con el <b>App Secret</b> guardado, se rechazan los webhooks de Meta sin firma válida.
         </div>
       </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="ch-pane" data-pane="telefonia" style="display:none">
+<div class="ch-grid">
+  <div class="panel panel-default ch-span-2">
+    <div class="panel-heading"><h4 class="panel-title"><span class="fas fa-phone-volume"></span> Twilio · una cuenta para SMS, WhatsApp y llamadas</h4></div>
+    <div class="panel-body">
+      <p class="ch-muted">Opcional: si usas Twilio, guarda aquí las credenciales una sola vez y elígelo como proveedor en cada canal. Para <b>recibir</b> SMS: en tu número de Twilio → «A message comes in»: <code>{{hub}}/twilio?token=…</code>.</p>
+      <div class="ch-cols2">
+        <div class="form-group"><label>Account SID</label><input name="tw_sid" class="form-control" value="{{s.twilio.sid}}" placeholder="AC…"></div>
+        <div class="form-group"><label>Auth Token</label><input type="password" name="tw_token" class="form-control" autocomplete="off" placeholder="{{#if s.twilio.tokenSet}}Configurado {{s.twilio.tokenHint}} · escribe uno nuevo para reemplazarlo{{else}}Token de autenticación{{/if}}"></div>
+        <div class="form-group"><label>Remitente de SMS</label><input name="tw_sms_from" class="form-control" value="{{s.twilio.smsFrom}}" placeholder="+1…, código corto, ID alfanumérico o Messaging Service (MG…)"></div>
+        <div class="form-group"><label>Número para llamadas (caller ID)</label><input name="tw_voice_from" class="form-control" value="{{s.twilio.voiceFrom}}" placeholder="+57…"></div>
+      </div>
+      <div class="ch-row"><button class="btn btn-primary" data-action="saveTwilio">Guardar</button>
+        <button class="btn btn-default" data-action="testTwilio"><span class="fas fa-plug"></span> Probar credenciales</button><span class="ch-small" data-role="twStatus"></span></div>
+    </div>
+  </div>
+
+  <div class="panel panel-default ch-span-2">
+    <div class="panel-heading"><h4 class="panel-title"><span class="fas fa-comment-sms"></span> SMS</h4></div>
+    <div class="panel-body">
+      <p class="ch-muted">Los asesores envían desde el botón <b>SMS</b> del lead y las campañas masivas pueden usar este canal. El <b>remitente</b> puede ser un número largo, un <b>código corto</b> o un ID alfanumérico: depende de lo que tu proveedor te haya habilitado.</p>
+      <div class="form-group" style="max-width:420px"><label>Proveedor</label>
+        <select name="sms_provider" class="form-control" data-for="sms">{{#each smsOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+      <div class="ch-prov" data-for="sms" data-prov="twilio"><div class="ch-help" style="margin-top:0">Usa las credenciales de Twilio de arriba; el remitente es «Remitente de SMS».</div></div>
+      <div class="ch-prov" data-for="sms" data-prov="generic">
+        <p class="ch-muted">Configura la API de tu proveedor de SMS (Infobip, Hablame, Onurix, LabsMobile, Altiria… cualquiera con API REST).</p>
+        <div class="ch-http" data-kind="sms"></div>
+      </div>
+      <div class="ch-row" style="margin-top:12px"><button class="btn btn-primary" data-action="saveSms">Guardar</button>
+        <input name="sms_test_to" class="form-control" style="max-width:200px" placeholder="Celular de prueba">
+        <button class="btn btn-default" data-action="testSms"><span class="fas fa-paper-plane"></span> Enviar SMS de prueba</button><span class="ch-small" data-role="smsStatus"></span></div>
+    </div>
+  </div>
+
+  <div class="panel panel-default ch-span-2">
+    <div class="panel-heading"><h4 class="panel-title"><span class="fas fa-phone"></span> Llamadas desde el CRM · troncal / central</h4></div>
+    <div class="panel-body">
+      <div class="ch-help" style="margin-top:0"><b>¿Dónde está mi troncal?</b> La troncal SIP se configura en tu <b>central telefónica</b> (Asterisk / FreePBX, 3CX…) o en tu <b>proveedor</b> (Twilio, Telnyx…); el CRM no maneja SIP. Aquí le indicas <b>cómo pedirle a esa central que marque</b>: primero llama al teléfono o extensión del asesor y, al contestar, lo conecta con el cliente (click-to-call). Sin esta configuración, el botón <b>Llamar</b> abre el marcador del equipo.</div>
+      <div class="form-group" style="max-width:420px;margin-top:12px"><label>Proveedor / central</label>
+        <select name="voice_provider" class="form-control" data-for="voice">{{#each voiceOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+      <div class="ch-prov" data-for="voice" data-prov="twilio">
+        <label class="ch-switch"><input type="checkbox" name="voice_record" {{#if s.voice.record}}checked{{/if}}> Grabar las llamadas (avisa al cliente según la ley)</label>
+        <div class="ch-help">Usa las credenciales de Twilio de arriba y el «Número para llamadas». Twilio debe poder llamar a tu servidor: las direcciones <code>{{hub}}/voice-bridge</code> y <code>/voice-status</code> se usan solas.</div>
+      </div>
+      <div class="ch-prov" data-for="voice" data-prov="generic">
+        <p class="ch-muted">Configura la petición que inicia la llamada en tu central. Variables: <code>\{{agent_phone}}</code> (teléfono/extensión del asesor) y <code>\{{to}}</code> (cliente).</p>
+        <div class="ch-http" data-kind="voice"></div>
+      </div>
+      <div class="ch-row" style="margin-top:12px"><button class="btn btn-primary" data-action="saveVoice">Guardar</button>
+        <span class="ch-small ch-muted">Pruébalo desde un lead de prueba con el botón Llamar.</span></div>
     </div>
   </div>
 </div>

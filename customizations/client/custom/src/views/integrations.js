@@ -43,6 +43,12 @@ define('custom:views/integrations', ['view'], function (Dep) {
                  note: 'Campo messages. Token de verificación: el mismo token.'},
                 {name: 'WhatsApp · Gupshup', icon: 'fab fa-whatsapp', method: 'POST', url: `${base}/gupshup?token=${tk}`, copy: `${base}/gupshup?token=${real}`,
                  note: 'Webhook de mensajes entrantes de tu app en Gupshup.'},
+                {name: 'SMS y WhatsApp · Twilio', icon: 'fas fa-comment-sms', method: 'POST', url: `${base}/twilio?token=${tk}`, copy: `${base}/twilio?token=${real}`,
+                 note: 'En tu número de Twilio → «A message comes in».'},
+                {name: 'SMS · proveedor genérico', icon: 'fas fa-comment-sms', method: 'POST (JSON)', url: `${base}/generic?channel=sms&token=${tk}`, copy: `${base}/generic?channel=sms&token=${real}`,
+                 note: 'Webhook de SMS entrantes de tu proveedor; las rutas del JSON se definen en SMS y llamadas.'},
+                {name: 'WhatsApp · proveedor genérico', icon: 'fab fa-whatsapp', method: 'POST (JSON)', url: `${base}/generic?channel=whatsapp&token=${tk}`, copy: `${base}/generic?channel=whatsapp&token=${real}`,
+                 note: 'Webhook de mensajes entrantes de tu proveedor; las rutas del JSON se definen en el panel de WhatsApp.'},
                 {name: 'Telegram', icon: 'fab fa-telegram', method: 'POST', url: `${base}/telegram`, copy: '',
                  note: 'Se registra solo al pulsar «Guardar y conectar» en el panel de Telegram.'},
                 {name: 'Formulario externo (JSON)', icon: 'fas fa-globe', method: 'POST (JSON)', url: `${base}/web?token=${tk}`, copy: `${base}/web?token=${real}`,
@@ -53,13 +59,15 @@ define('custom:views/integrations', ['view'], function (Dep) {
             const prov = s.wa.provider || '';
             const provOptions = [{value: '', label: 'Sin configurar'}].concat(Object.keys(s.wa.providers).map(k => ({value: k, label: s.wa.providers[k]})))
                 .map(o => ({...o, selected: o.value === prov}));
+            const opts = (map, cur) => [{value: '', label: 'Sin configurar'}].concat(Object.keys(map).map(k => ({value: k, label: map[k]}))).map(o => ({...o, selected: o.value === cur}));
+            const smsOptions = opts(s.sms.providers, s.sms.provider), voiceOptions = opts(s.voice.providers, s.voice.provider);
             const tabs = [
-                {key: 'canales', icon: 'fas fa-comments', label: 'Canales de mensajería'}, {key: 'formularios', icon: 'fas fa-file-lines', label: 'Formularios web'},
+                {key: 'canales', icon: 'fas fa-comments', label: 'Canales de mensajería'}, {key: 'telefonia', icon: 'fas fa-phone-volume', label: 'SMS y llamadas'}, {key: 'formularios', icon: 'fas fa-file-lines', label: 'Formularios web'},
                 {key: 'meta', icon: 'fab fa-facebook', label: 'Meta'}, {key: 'reglas', icon: 'fas fa-sliders', label: 'Servicios y filtros'},
                 {key: 'sistema', icon: 'fas fa-gear', label: 'Sistema'},
             ].map(t => ({...t, active: t.key === this.tab}));
             return {
-                loading: false, rows, s, showToken: this.showToken, hub: base, tabs, provOptions,
+                loading: false, rows, s, showToken: this.showToken, hub: base, tabs, provOptions, smsOptions, voiceOptions,
                 active: s.status === 'active', jobsDone: jobs.done || 0, jobsError: jobs.error || 0,
                 license: s.licenseUntil || 'Sin vencimiento',
             };
@@ -74,10 +82,34 @@ define('custom:views/integrations', ['view'], function (Dep) {
                     .catch(() => Espo.Ui.warning('No se pudo copiar; selecciónalo manualmente'));
             },
             'click [data-action="tab"]': function (e) { this.tab = e.currentTarget.dataset.tab; try { sessionStorage.setItem('crmhub-int-tab', this.tab); } catch (x) { /* privado */ } this.applyTab(); },
-            'change [name="wa_provider"]': function () { this.applyProvider(); },
+            'change [name="wa_provider"], [name="sms_provider"], [name="voice_provider"]': function () { this.applyProvider(); },
+            'click [data-action="httpPreset"]': function (e) {
+                const kind = e.currentTarget.dataset.kind, p = this.httpPresets()[kind][e.currentTarget.dataset.preset];
+                Object.keys(p).forEach(k => this.$el.find(`[data-http="${kind}.${k}"]`).val(p[k]));
+                Espo.Ui.success('Plantilla aplicada: reemplaza los datos de ejemplo por los de tu proveedor');
+            },
+            'click [data-action="saveTwilio"]': function () {
+                const v = n => (this.$el.find(`[name="${n}"]`).val() || '').trim();
+                this.save({twilio_account_sid: v('tw_sid'), twilio_auth_token: v('tw_token'), twilio_sms_from: v('tw_sms_from'), twilio_voice_from: v('tw_voice_from')});
+            },
+            'click [data-action="testTwilio"]': function () {
+                const $s = this.$el.find('[data-role="twStatus"]').text('Probando…').removeClass('text-danger text-success');
+                Espo.Ajax.postRequest('CrmHub/twilio/test', {}).then(r => $s.text('Conectado ✔ ' + (r.name || '')).addClass('text-success')).catch(xhr => this.showError($s, xhr, 'No se pudo probar'));
+            },
+            'click [data-action="saveSms"]': function () {
+                this.save({sms_provider: this.$el.find('[name="sms_provider"]').val(), generic_sms: this.collectHttp('sms')});
+            },
+            'click [data-action="testSms"]': function () {
+                const $s = this.$el.find('[data-role="smsStatus"]').text('Enviando…').removeClass('text-danger text-success');
+                Espo.Ajax.postRequest('CrmHub/sms/test', {to: this.$el.find('[name="sms_test_to"]').val()})
+                    .then(r => $s.text('Enviado a ' + r.to + ' ✔').addClass('text-success')).catch(xhr => this.showError($s, xhr, 'No se pudo enviar'));
+            },
+            'click [data-action="saveVoice"]': function () {
+                this.save({voice_provider: this.$el.find('[name="voice_provider"]').val(), voice_record: this.$el.find('[name="voice_record"]').is(':checked'), generic_voice: this.collectHttp('voice')});
+            },
             'click [data-action="saveWhatsapp"]': function () {
                 const v = n => (this.$el.find(`[name="${n}"]`).val() || '').trim();
-                this.save({wa_provider: v('wa_provider'), evolution_url: v('wa_url'), evolution_instance: v('wa_instance'), evolution_apikey: v('wa_key'),
+                this.save({twilio_wa_from: v('wa_tw_from'), generic_whatsapp: this.collectHttp('whatsapp'), wa_provider: v('wa_provider'), evolution_url: v('wa_url'), evolution_instance: v('wa_instance'), evolution_apikey: v('wa_key'),
                     meta_phone_number_id: v('meta_pid'), meta_access_token: v('meta_token'),
                     gupshup_source: v('gs_source'), gupshup_app_name: v('gs_app'), gupshup_api_key: v('gs_key')});
             },
@@ -209,6 +241,7 @@ define('custom:views/integrations', ['view'], function (Dep) {
             super.afterRender();
             if (!this.state || this.state.error) { return; }
             this.applyTab(); this.applyProvider();
+            this.renderHttp(); this.applyProvider();
             if (this.services) { this.renderServices(); }
             if (this.forms) { this.renderForms(); }
         }
@@ -219,8 +252,60 @@ define('custom:views/integrations', ['view'], function (Dep) {
         }
 
         applyProvider() {
-            const prov = this.$el.find('[name="wa_provider"]').val();
-            this.$el.find('.ch-prov').each((i, d) => { d.style.display = d.dataset.prov === prov ? '' : 'none'; });
+            [['wa_provider', 'wa'], ['sms_provider', 'sms'], ['voice_provider', 'voice']].forEach(([name, grp]) => {
+                const prov = this.$el.find(`[name="${name}"]`).val();
+                this.$el.find('.ch-prov').each((i, d) => {
+                    const g = d.dataset.for || 'wa';
+                    if (g === grp) { d.style.display = d.dataset.prov === prov ? '' : 'none'; }
+                });
+            });
+        }
+
+        // Formulario del proveedor genérico (cualquier BSP / SMS / central con API HTTP)
+        httpPresets() {
+            return {
+                sms: {'JSON con token (Bearer)': {method: 'POST', body_type: 'json', auth_type: 'bearer', url: 'https://api.tu-proveedor.com/v1/sms', body: '{"from":"{{from}}","to":"{{to}}","message":"{{text}}"}'},
+                      'Formulario con usuario y clave': {method: 'POST', body_type: 'form', auth_type: 'basic', url: 'https://api.tu-proveedor.com/sms/send', body: 'from={{from}}&to={{to_plain}}&text={{text}}'},
+                      'GET con parámetros en la URL': {method: 'GET', body_type: 'query', auth_type: 'none', url: 'https://api.tu-proveedor.com/sendsms', body: 'user=USUARIO&pass=CLAVE&to={{to_plain}}&msg={{text}}'}},
+                whatsapp: {'JSON con token (Bearer)': {method: 'POST', body_type: 'json', auth_type: 'bearer', url: 'https://api.tu-proveedor.com/v1/messages', body: '{"to":"{{to_plain}}","type":"text","text":{"body":"{{text}}"}}'}},
+                voice: {'Asterisk / FreePBX (ARI)': {method: 'POST', body_type: 'query', auth_type: 'basic', url: 'http://pbx.tu-empresa.com:8088/ari/channels', body: 'endpoint=PJSIP/{{agent_phone}}&extension={{to_plain}}&context=from-internal&priority=1&callerId={{from}}'},
+                        'API REST con token (Bearer)': {method: 'POST', body_type: 'json', auth_type: 'bearer', url: 'https://api.tu-central.com/v1/click-to-call', body: '{"agent":"{{agent_phone}}","customer":"{{to}}","caller_id":"{{from}}"}'}},
+            };
+        }
+
+        renderHttp() {
+            const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+            const vars = Object.keys(this.state.httpVars).map(k => `<code title="${esc(this.state.httpVars[k])}">{{${k}}}</code>`).join(' ');
+            const opt = (list, cur) => list.map(([v, l]) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${l}</option>`).join('');
+            const cfgs = {whatsapp: this.state.genericWhatsapp, sms: this.state.sms.generic, voice: this.state.voice.generic};
+            this.$el.find('.ch-http').each((i, box) => {
+                const kind = box.dataset.kind, c = cfgs[kind] || {}, f = n => `data-http="${kind}.${n}"`;
+                const presets = Object.keys(this.httpPresets()[kind] || {}).map(p => `<button class="btn btn-default btn-sm" data-action="httpPreset" data-kind="${kind}" data-preset="${esc(p)}">${esc(p)}</button>`).join(' ');
+                const inbound = kind === 'voice' ? '' : `<h5 class="ch-subtitle">Mensajes entrantes (opcional)</h5>
+                    <div class="ch-cols2"><div class="form-group"><label>Ruta del teléfono en el JSON</label><input class="form-control" ${f('inbound_phone')} value="${esc(c.inbound_phone)}" placeholder="messages.0.from"></div>
+                    <div class="form-group"><label>Ruta del texto</label><input class="form-control" ${f('inbound_text')} value="${esc(c.inbound_text)}" placeholder="messages.0.text"></div>
+                    <div class="form-group"><label>Ruta del nombre (opcional)</label><input class="form-control" ${f('inbound_name')} value="${esc(c.inbound_name)}" placeholder="contacts.0.name"></div></div>`;
+                box.innerHTML = `<div class="ch-small ch-muted" style="margin-bottom:6px">Plantillas de ejemplo (ajusta los datos a tu proveedor): ${presets}</div>
+                    <div class="ch-cols2">
+                        <div class="form-group"><label>URL</label><input class="form-control" ${f('url')} value="${esc(c.url)}" placeholder="https://api.tu-proveedor.com/…"></div>
+                        <div class="form-group"><label>Método</label><select class="form-control" ${f('method')}>${opt([['POST', 'POST'], ['GET', 'GET'], ['PUT', 'PUT']], c.method || 'POST')}</select></div>
+                        <div class="form-group"><label>Autenticación</label><select class="form-control" ${f('auth_type')}>${opt([['none', 'Ninguna'], ['bearer', 'Token (Bearer)'], ['basic', 'Usuario y clave (Basic)'], ['header', 'Cabecera propia']], c.auth_type || 'none')}</select></div>
+                        <div class="form-group"><label>Usuario / nombre de la cabecera</label><input class="form-control" ${f('auth_user')} value="${esc(c.auth_user || c.auth_header)}" placeholder="solo para Basic o cabecera propia"></div>
+                        <div class="form-group"><label>Token / clave</label><input type="password" class="form-control" ${f('auth_secret')} autocomplete="off" placeholder="${c.secretSet ? 'Configurada ' + esc(c.secretHint) + ' · escribe una nueva para reemplazarla' : 'Pega aquí la clave'}"></div>
+                        <div class="form-group"><label>${kind === 'voice' ? 'Caller ID / número que verá el cliente' : 'Remitente ({{from}})'}</label><input class="form-control" ${f('sender')} value="${esc(c.sender)}" placeholder="${kind === 'sms' ? 'número largo, código corto o ID' : '+57…'}"></div>
+                    </div>
+                    <div class="ch-cols2"><div class="form-group"><label>Formato del cuerpo</label><select class="form-control" ${f('body_type')}>${opt([['json', 'JSON'], ['form', 'Formulario (a=1&b=2)'], ['query', 'Parámetros en la URL']], c.body_type || 'json')}</select></div>
+                        <div class="form-group"><label>Cabeceras adicionales (JSON, opcional)</label><input class="form-control" ${f('headers')} value="${esc(c.headers)}" placeholder='{"X-Api-Version":"2"}'></div></div>
+                    <div class="form-group"><label>Plantilla del cuerpo</label><textarea class="form-control" rows="4" ${f('body')} style="font-family:monospace;font-size:12.5px">${esc(c.body)}</textarea>
+                        <div class="ch-small ch-muted">Variables: ${vars}. En JSON los textos se escapan solos.</div></div>${inbound}`;
+            });
+        }
+
+        collectHttp(kind) {
+            const o = {};
+            this.$el.find(`[data-http^="${kind}."]`).each((i, el) => { o[el.dataset.http.split('.')[1]] = (el.value || '').trim(); });
+            if (o.auth_type === 'header') { o.auth_header = o.auth_user; }
+            return o;
         }
 
         showError($el, xhr, fallback) {

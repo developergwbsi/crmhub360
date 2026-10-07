@@ -120,6 +120,12 @@ async def whatsapp_inbound(tenant: dict, *, phone: str, name: str | None, text: 
     if from_me and whatsapp.recently_sent(lead_id, text):
         return lead_id  # eco del mensaje enviado desde el CRM; ya tiene su nota
     await Espo(tenant).note(lead_id, f"[WhatsApp] {'Asesor' if from_me else (name or 'Cliente')}: {text}")
+    if not from_me and is_optout(text):
+        await apply_optout(tenant, lead_id, "WhatsApp")
+        try:
+            await whatsapp.send_text(tenant, normalize_phone(phone), "Listo, no volverás a recibir mensajes masivos de nuestra parte.")
+        except Exception:
+            pass
     return lead_id
 
 
@@ -136,6 +142,22 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
     if not phone or not text:
         return None
     return await whatsapp_inbound(tenant, phone=phone, name=d.get("pushName"), text=text, from_me=bool(key.get("fromMe")), avatar_payload=payload)
+
+
+OPTOUT = {"baja", "stop", "alto", "cancelar", "no mas", "no mas mensajes", "no quiero mas mensajes", "unsubscribe", "salir"}
+
+
+def is_optout(text: str) -> bool:
+    import unicodedata
+    t = "".join(c for c in unicodedata.normalize("NFD", (text or "").lower().strip().strip(".!¡")) if unicodedata.category(c) != "Mn")
+    return t in OPTOUT
+
+
+async def apply_optout(tenant: dict, lead_id: str, channel: str) -> None:
+    """El cliente pidió no recibir más mensajes: se marca el lead y las campañas masivas lo excluyen."""
+    espo = Espo(tenant)
+    await espo.put(f"Lead/{lead_id}", {"doNotContact": True})
+    await espo.note(lead_id, f"[{channel}] El cliente pidió no recibir más mensajes (BAJA). Se excluyó de las campañas masivas.")
 
 
 def _media_label(kind: str) -> str:
@@ -213,6 +235,13 @@ async def from_telegram(tenant: dict, update: dict) -> str | None:
     elif not text:
         text = f"[{_media_label(next((k for k in ('photo', 'voice', 'audio', 'video', 'document', 'sticker', 'location') if k in m), 'mensaje'))}]"
     await espo.note(lead_id, f"[Telegram] {name}: {text}")
+    if is_optout(m.get("text") or ""):
+        await apply_optout(tenant, lead_id, "Telegram")
+        try:
+            await telegram.send_text(tenant, chat_id, "Listo, no volverás a recibir mensajes masivos de nuestra parte.")
+        except Exception:
+            pass
+        return lead_id
 
     if created or linked or (m.get("text") or "").startswith("/start") or contact:
         welcome = st.get("telegram_welcome") or "¡Hola! Recibimos tu mensaje. Un asesor te escribirá por aquí en breve."
@@ -223,3 +252,40 @@ async def from_telegram(tenant: dict, update: dict) -> str | None:
         except Exception as e:
             logging.getLogger("crmhub").info("no se pudo responder en Telegram: %s", e)
     return lead_id
+
+
+async def sms_inbound(tenant: dict, *, phone: str, text: str, name: str | None = None) -> str:
+    from . import sms
+    lead_id = await find_lead_by_phone(tenant, phone) or await upsert_lead(
+        tenant, name=name or phone, phone=phone, email=None, source="SMS", extra={"preferredChannel": "Teléfono"})
+    await Espo(tenant).note(lead_id, f"[SMS] {name or 'Cliente'}: {text}")
+    if is_optout(text):
+        await apply_optout(tenant, lead_id, "SMS")
+        try:
+            await sms.send_text(tenant, normalize_phone(phone), "Listo, no volverás a recibir mensajes masivos de nuestra parte.")
+        except Exception:
+            pass
+    return lead_id
+
+
+async def from_twilio(tenant: dict, form: dict) -> str | None:
+    """Webhook de Twilio (SMS y WhatsApp): campos From, Body, ProfileName."""
+    frm, body = form.get("From", ""), (form.get("Body") or "").strip()
+    if not frm or not body:
+        return None
+    if frm.startswith("whatsapp:"):
+        return await whatsapp_inbound(tenant, phone=frm[9:], name=form.get("ProfileName"), text=body)
+    return await sms_inbound(tenant, phone=frm, text=body)
+
+
+async def from_generic(tenant: dict, channel: str, payload: dict) -> str | None:
+    """Entrante de un proveedor HTTP genérico: las rutas del JSON (p. ej. «messages.0.from») se definen en la configuración."""
+    from . import httpgen
+    cfg = (tenant.get("settings") or {}).get("generic_" + channel) or {}
+    phone, text = httpgen.dig(payload, cfg.get("inbound_phone")), httpgen.dig(payload, cfg.get("inbound_text"))
+    name = httpgen.dig(payload, cfg.get("inbound_name")) if cfg.get("inbound_name") else None
+    if not phone or not text:
+        return None
+    if channel == "whatsapp":
+        return await whatsapp_inbound(tenant, phone=str(phone), name=name, text=str(text))
+    return await sms_inbound(tenant, phone=str(phone), text=str(text), name=name)

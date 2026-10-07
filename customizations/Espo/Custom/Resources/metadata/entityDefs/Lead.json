@@ -28,6 +28,7 @@
                 "Instagram Ads",
                 "Formulario Web",
                 "WhatsApp",
+                "SMS",
                 "Telegram",
                 "Manual",
                 "Referido"
@@ -156,6 +157,11 @@
             "layoutListDisabled": true,
             "layoutMassUpdateDisabled": true,
             "layoutFiltersDisabled": true
+        },
+        "doNotContact": {
+            "type": "bool",
+            "default": false,
+            "audited": true
         }
     }
 }

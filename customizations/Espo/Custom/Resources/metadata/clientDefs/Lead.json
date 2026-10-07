@@ -19,6 +19,14 @@
                     "actionFunction": "actionWhatsapp"
                 },
                 {
+                    "name": "smsLead",
+                    "label": "SMS",
+                    "iconClass": "fas fa-comment-sms",
+                    "style": "default",
+                    "handler": "custom:handlers/lead-contact",
+                    "actionFunction": "actionSms"
+                },
+                {
                     "name": "telegramLead",
                     "label": "Telegram",
                     "iconClass": "fab fa-telegram",

@@ -4,7 +4,7 @@
   <div class="ch-rolebar"><span>Manual para: <b>{{roleLabel}}</b></span>
     {{#if canToggle}}<button class="btn btn-default btn-sm" data-action="toggleAll">{{#if showAll}}Ver solo mi rol{{else}}Ver todo el manual{{/if}}</button>{{/if}}</div>
   <div class="ch-manual-layout">
-    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio" data-roles="comercial director gerente">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="app" data-roles="comercial director gerente">1b. Modo oscuro, instalar y sin internet</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads" data-roles="comercial director gerente">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline" data-roles="comercial director gerente">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito" data-roles="comercial director gerente">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente" data-roles="comercial director gerente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="contacto" data-roles="comercial director gerente">5b. Llamar y WhatsApp</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales" data-roles="gerente">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles" data-roles="director gerente">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asignacion" data-roles="director gerente">7b. Asignación y reasignación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="organizacion" data-roles="director gerente">7c. Equipos, campañas y organigrama</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="config" data-roles="">7d. Estados y balanceo (configuración)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="configcomm" data-roles="">7e. Canales: WhatsApp, Telegram y Meta</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="formularios" data-roles="">7f. Formularios web</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades" data-roles="comercial director gerente">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin" data-roles="">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq" data-roles="comercial director gerente">10. Preguntas frecuentes</a></div></div>
+    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio" data-roles="comercial director gerente">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="app" data-roles="comercial director gerente">1b. Modo oscuro, instalar y sin internet</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads" data-roles="comercial director gerente">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline" data-roles="comercial director gerente">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito" data-roles="comercial director gerente">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente" data-roles="comercial director gerente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="contacto" data-roles="comercial director gerente">5b. Llamar, WhatsApp y SMS</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales" data-roles="gerente">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles" data-roles="director gerente">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asignacion" data-roles="director gerente">7b. Asignación y reasignación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="organizacion" data-roles="director gerente">7c. Equipos, campañas y organigrama</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="config" data-roles="">7d. Estados y balanceo (configuración)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="configcomm" data-roles="">7e. Canales: WhatsApp, Telegram y Meta</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="formularios" data-roles="">7f. Formularios web</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="telefonia" data-roles="">7g. SMS, llamadas y troncal</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="masivos" data-roles="director gerente">7h. Mensajes masivos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades" data-roles="comercial director gerente">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin" data-roles="">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq" data-roles="comercial director gerente">10. Preguntas frecuentes</a></div></div>
     <div class="ch-manual-body">
 <div class="panel panel-default" id="ch-m-inicio" data-roles="comercial director gerente">
   <div class="panel-heading"><h4 class="panel-title">1. Ingreso y navegación</h4></div>
@@ -101,10 +101,10 @@
 <div class="panel panel-default" id="ch-m-contacto" data-roles="comercial director gerente">
   <div class="panel-heading"><h4 class="panel-title">5b. Llamar y enviar WhatsApp a un lead</h4></div>
   <div class="panel-body">
-<p>Abre el lead: arriba están los botones <b>Llamar</b> y <b>WhatsApp</b>. Ambos necesitan que el lead tenga <b>teléfono</b>.</p>
+<p>Abre el lead: arriba están los botones <b>Llamar</b>, <b>WhatsApp</b> y <b>SMS</b>. Todos necesitan que el lead tenga <b>teléfono</b>.</p>
 <h3>Llamar</h3>
 <ol>
-<li>Pulsa <b>Llamar</b>: se abre el marcador de tu equipo (tu softphone o la app de teléfono vinculada) con el número ya cargado.</li>
+<li>Pulsa <b>Llamar</b>. Si tu administrador conectó una <b>central o proveedor de llamadas</b>, escribe tu teléfono o extensión: el sistema <b>te llama primero</b> y, al contestar, te comunica con el cliente (la llamada queda registrada y, si está activado, grabada). Si no hay central conectada, se abre el marcador de tu equipo (softphone o app de teléfono) con el número ya cargado.</li>
 <li>Haz la llamada. Cuando termines, en la ventana <b>Registrar llamada</b> elige el <b>resultado</b> (Contactado, No contesta, Buzón de voz, Número equivocado, Reagendar), los minutos y tus notas, y guarda.</li>
 <li>Queda en <b>Llamadas</b>, en el <b>Historial de actividades</b> y en el flujo del lead.</li>
 </ol>
@@ -113,6 +113,12 @@
 <li>Pulsa <b>WhatsApp</b>. Escribe el mensaje, o usa <b>Sugerir con IA</b> para que proponga un borrador según la conversación (revísalo y edítalo).</li>
 <li>Pulsa <b>Enviar</b>. Sale desde el WhatsApp conectado de la empresa y queda en el flujo del lead.</li>
 <li>Las respuestas del cliente aparecen solas en el flujo del lead.</li>
+</ol>
+<h3>SMS</h3>
+<ol>
+<li>Pulsa <b>SMS</b> (o elige SMS en la ventana de mensajes), escribe el texto y mira el contador: un SMS normal admite 160 caracteres; con tildes especiales o emojis, 70. Si te pasas se envía en varios segmentos.</li>
+<li>Pulsa <b>Enviar</b>: sale desde el número, código corto o remitente que configuró tu administrador, y queda en el flujo del lead. Las respuestas del cliente aparecen solas.</li>
+<li>Si el cliente responde <b>BAJA</b>, queda marcado como «No contactar» y deja de recibir mensajes y campañas.</li>
 </ol>
 <h3>Telegram</h3>
 <p>Si el cliente prefiere Telegram (aparece en <b>Canal preferido</b> del lead):</p>
@@ -215,9 +221,48 @@
 </ol>
 <h3>Meta: anuncios de Facebook e Instagram</h3>
 <p>Pestaña <b>Meta</b>: guarda el token de la página (permiso <code>leads_retrieval</code>) y el <b>App Secret</b> (con él se rechazan los webhooks sin firma válida). En tu app de Meta suscribe el campo <code>leadgen</code> a <code>/hub/facebook?token=…</code>.</p>
-<h3>Llamadas</h3>
-<p>El botón <b>Llamar</b> abre el marcador del asesor (enlace <code>tel:</code>) y registra el resultado. Cada asesor necesita un <b>softphone o app de telefonía</b> (Zoiper, Linphone, MicroSIP o la app del celular vinculado) conectado a tu central o proveedor SIP.</p>
-<div class="ch-warn">La marcación directa desde el CRM con grabación o llamadas por navegador (Twilio, Asterisk/WebRTC) <b>no están incluidas</b>: requieren un proveedor y sus credenciales. Hoy el CRM registra el resultado de cada llamada, no el audio.</div>
+<h3>Otro proveedor de WhatsApp o SMS (BSP)</h3>
+<p>Si tu proveedor no está en la lista (360dialog, Infobip, Hablame, Onurix, Altiria…), elige <b>Otro proveedor (API HTTP)</b>. Ver la sección 7g.</p>
+<h3>Llamadas y SMS</h3>
+<p>Se configuran en la pestaña <b>SMS y llamadas</b> (sección 7g).</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-telefonia" data-roles="">
+  <div class="panel-heading"><h4 class="panel-title">7g. SMS, llamadas, troncal y otros proveedores (administradores)</h4></div>
+  <div class="panel-body">
+<h3>¿Mi proveedor no es Gupshup?</h3>
+<p>En <b>Canales de mensajería → WhatsApp</b> y en <b>SMS y llamadas → SMS</b> elige <b>Otro proveedor (API HTTP)</b>. Pulsa una <b>plantilla de ejemplo</b> y ajusta con los datos de la documentación de tu proveedor:</p>
+<ul>
+<li><b>URL y método</b> (POST o GET), <b>autenticación</b> (ninguna, token Bearer, usuario y clave, o una cabecera propia) y <b>token/clave</b> (se guarda y nunca se vuelve a mostrar).</li>
+<li><b>Plantilla del cuerpo</b> (JSON, formulario o parámetros en la URL) con las variables <code>\{{to}}</code> (teléfono con +), <code>\{{to_plain}}</code> (solo dígitos), <code>\{{text}}</code>, <code>\{{from}}</code>, <code>\{{name}}</code>, <code>\{{lead_id}}</code>, <code>\{{agent}}</code> y <code>\{{agent_phone}}</code>.</li>
+<li><b>Mensajes entrantes (opcional):</b> el proveedor envía a <code>/hub/generic?channel=sms</code> (o <code>whatsapp</code>) <code>&amp;token=…</code>; indica la ruta del teléfono, del texto y del nombre en el JSON que recibes (por ejemplo <code>messages.0.from</code>).</li>
+</ul>
+<p>Prueba con <b>Enviar SMS de prueba</b> a tu celular. Por seguridad, no se aceptan direcciones internas del servidor.</p>
+<h3>SMS: números largos, códigos cortos y remitentes</h3>
+<p>El CRM envía por la API de tu proveedor; el tipo de remitente lo define lo que él te habilite. En <b>Remitente</b> escribe un número largo (+57…), un <b>código corto</b> (p. ej. 89999) o un nombre alfanumérico. Con <b>Twilio</b> basta guardar Account SID, Auth Token y remitente (o un Messaging Service que empiece por MG). Para recibir respuestas, en tu número de Twilio pon como webhook la URL que muestra la pestaña.</p>
+<h3>Llamadas: ¿dónde va mi troncal?</h3>
+<div class="ch-tip">La <b>troncal SIP</b> no se configura en el CRM: vive en tu <b>central telefónica</b> (Asterisk, FreePBX, 3CX…) o en tu <b>proveedor</b> (Twilio, Telnyx…). El CRM solo le pide a esa central que marque.</div>
+<ol>
+<li>En <b>SMS y llamadas → Llamadas</b> elige el proveedor: <b>Twilio</b> (usa las credenciales de arriba y el número de caller ID) u <b>Otra central (API HTTP)</b> (plantillas para Asterisk ARI y API REST).</li>
+<li>Cuando un asesor pulsa <b>Llamar</b>, la central llama primero a su teléfono o extensión y, al contestar, lo conecta con el cliente. El caller ID es el número que ve el cliente.</li>
+<li>Cada llamada queda en <b>Llamadas</b> con su duración y resultado, y una nota en el lead. Con Twilio puedes activar la grabación.</li>
+<li>Si no configuras nada, el botón Llamar sigue abriendo el softphone del asesor (<code>tel:</code>).</li>
+</ol>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-masivos" data-roles="director gerente">
+  <div class="panel-heading"><h4 class="panel-title">7h. Mensajes masivos (campañas de envío)</h4></div>
+  <div class="panel-body">
+<p>Menú <b>Mensajes masivos</b>: envía un mensaje a un grupo de leads por WhatsApp, SMS o Telegram, con ritmo controlado.</p>
+<ol>
+<li><b>Canal:</b> elige WhatsApp, SMS o Telegram (debe estar configurado en Integraciones).</li>
+<li><b>Audiencia:</b> filtra por estado, resultado del filtro, origen, canal preferido, antigüedad, servicio sugerido o asesor, y pulsa <b>Calcular audiencia</b> para ver cuántos y quiénes. Solo entran quienes tienen el dato de contacto y no pidieron «no contactar»; verás los leads que tus permisos permiten.</li>
+<li><b>Mensaje:</b> escribe el texto con variables (<code>{nombre}</code>, <code>{primer_nombre}</code>, <code>{servicio}</code>, <code>{asesor}</code>, <code>{empresa}</code>). Se agrega «Responde BAJA para no recibir más» (recomendado).</li>
+<li><b>Ritmo y horario:</b> mensajes por minuto, y empezar <b>ahora</b> o <b>programado</b>.</li>
+<li>Pulsa <b>Crear y enviar campaña</b>. En la lista puedes ver el avance, <b>pausar, reanudar o cancelar</b>; el detalle muestra enviados, fallidos y omitidos.</li>
+</ol>
+<div class="ch-warn">Envía solo a clientes que <b>autorizaron</b> ser contactados (Ley 1581 / habeas data). Quien responda BAJA queda excluido automáticamente. Con WhatsApp oficial (Meta), fuera de las 24 h solo se permiten plantillas aprobadas; con Evolution (no oficial) un ritmo alto puede hacer que bloqueen tu número: usa pocos mensajes por minuto.</div>
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-formularios" data-roles="">

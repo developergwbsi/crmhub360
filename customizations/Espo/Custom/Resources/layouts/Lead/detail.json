@@ -28,6 +28,12 @@
             ],
             [
                 {
+                    "name": "doNotContact"
+                },
+                false
+            ],
+            [
+                {
                     "name": "title"
                 },
                 {

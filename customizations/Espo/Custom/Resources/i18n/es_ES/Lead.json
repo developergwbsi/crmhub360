@@ -17,7 +17,8 @@
         "preferredChannel": "Canal preferido",
         "telegramUsername": "Usuario de Telegram",
         "telegramChatId": "Chat de Telegram",
-        "telegramStartToken": "Código de invitación de Telegram"
+        "telegramStartToken": "Código de invitación de Telegram",
+        "doNotContact": "No contactar (pidió BAJA)"
     },
     "options": {
         "status": {
@@ -52,7 +53,8 @@
             "WhatsApp": "WhatsApp",
             "Telegram": "Telegram",
             "Manual": "Manual",
-            "Referido": "Referido"
+            "Referido": "Referido",
+            "SMS": "SMS"
         }
     },
     "labels": {

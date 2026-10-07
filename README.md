@@ -71,6 +71,13 @@ Teléfonos se normalizan a E.164 (sin prefijo se asume +57).
 - **Formularios web** (`forms.py`): configuración en `tenants.settings.forms`; páginas públicas `https://<dominio>/f/<slug>` (el vhost las proxea a `/v1/public/<tenant>/forms/`); honeypot, tiempo mínimo, límite por IP, escape de HTML, consentimiento en nota, deduplicación por teléfono/correo.
 - Las URLs base de Telegram/Meta/Gupshup son variables de entorno (`TELEGRAM_API_BASE`, `META_GRAPH_BASE`, `GUPSHUP_BASE`) solo para poder probar con servidores simulados.
 
+
+## SMS, llamadas, proveedor genérico y mensajes masivos
+- **Proveedor genérico HTTP** (`httpgen.py`): WhatsApp, SMS y llamadas contra cualquier API REST (plantillas con `{{to}} {{to_plain}} {{text}} {{from}} {{name}} {{lead_id}} {{agent}} {{agent_phone}}`, cuerpo json/form/query, auth ninguna/Bearer/Basic/cabecera, mapeo de entrantes por ruta JSON). Guarda anti-SSRF: bloquea loopback/privadas/metadata salvo `ALLOW_LOOPBACK_URLS=1` (solo pruebas).
+- **Twilio** (`twilio.py`, `sms.py`, `voice.py`): SMS/WhatsApp y click-to-call (llama al asesor y luego lo conecta con el cliente; grabación opcional; estado en `/hub/voice-status`). La troncal SIP vive en la central/proveedor, no en el CRM. `TWILIO_BASE` solo para pruebas.
+- **Mensajes masivos** (`broadcast.py`, tablas `broadcasts`/`broadcast_items`, `sql/003_broadcast.sql`): audiencia resuelta en PHP con ACL, worker con ritmo por minuto, programación, pausa/cancelación, omite `doNotContact`, respuesta `BAJA` activa «no contactar», pie legal automático.
+- El rol «Integración API (Hub)» necesita `assignmentPermission/userPermission = all` y lectura de `User` para crear llamadas asignadas al asesor (`bin/seed_tenant.py`, `bin/ui_settings.py`).
+
 ## Entornos y paso a producción
 
 | Entorno | Host | Tenant | Puerto local |

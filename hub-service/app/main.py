@@ -6,12 +6,12 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import BackgroundTasks, Body, Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, config, credit, db, forms, ingest, push, qualify, telegram, whatsapp
+from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -23,7 +23,9 @@ _llm_lock = asyncio.Semaphore(1)
 async def lifespan(_: FastAPI):
     db.pool.open()
     push.keys()  # crea las claves VAPID la primera vez
+    bg = asyncio.create_task(broadcast.worker())
     yield
+    bg.cancel()
     db.pool.close()
 
 
@@ -161,6 +163,60 @@ async def telegram_ingest(slug: str, request: Request):
         return {"lead": None}  # 200: Telegram reintenta indefinidamente si respondemos error
 
 
+@app.post("/v1/ingest/{slug}/twilio")
+async def twilio_ingest(slug: str, request: Request):
+    from urllib.parse import parse_qs
+    tenant = _ingest_tenant(slug, request)
+    form = {k: v[0] for k, v in parse_qs((await request.body()).decode("utf-8", "replace"), keep_blank_values=True).items()}
+    try:
+        await ingest.from_twilio(tenant, form)
+    except Exception:
+        log.exception("fallo al procesar un mensaje de Twilio")
+    return Response("<Response/>", media_type="text/xml")  # Twilio espera TwiML (vacío = sin respuesta automática)
+
+
+@app.api_route("/v1/ingest/{slug}/voice-bridge", methods=["GET", "POST"])
+async def voice_bridge(slug: str, request: Request):
+    tenant = _ingest_tenant(slug, request)
+    to = "+" + "".join(ch for ch in request.query_params.get("to", "") if ch.isdigit())
+    return Response(voice.bridge_twiml(tenant, to), media_type="text/xml")
+
+
+@app.post("/v1/ingest/{slug}/voice-status")
+async def voice_status(slug: str, request: Request):
+    from urllib.parse import parse_qs
+    tenant = _ingest_tenant(slug, request)
+    form = {k: v[0] for k, v in parse_qs((await request.body()).decode("utf-8", "replace"), keep_blank_values=True).items()}
+    call_id = request.query_params.get("call", "")
+    st, dur = form.get("CallStatus", ""), int(form.get("CallDuration") or 0)
+    if call_id and st:
+        from .espo import Espo
+        espo = Espo(tenant)
+        held = st == "completed" and dur > 0
+        try:
+            call = await espo.get(f"Call/{call_id}")
+            upd = {"status": "Held" if held else "Not Held"}
+            if dur and call.get("dateStart"):  # la duración de Espo se calcula de inicio/fin
+                import datetime as _dt
+                upd["dateEnd"] = (_dt.datetime.strptime(call["dateStart"], "%Y-%m-%d %H:%M:%S") + _dt.timedelta(seconds=dur)).strftime("%Y-%m-%d %H:%M:%S")
+            await espo.put(f"Call/{call_id}", upd)
+            if call.get("parentId"):
+                label = {"completed": f"contestada ({max(1, round(dur / 60))} min)", "busy": "ocupado", "no-answer": "no contestó", "failed": "falló", "canceled": "cancelada"}.get(st, st)
+                await espo.note(call["parentId"], f"[Llamada] {label}")
+        except Exception:
+            log.exception("no se pudo registrar el estado de la llamada")
+    return {"ok": True}
+
+
+@app.post("/v1/ingest/{slug}/generic")
+async def generic_ingest(slug: str, request: Request):
+    tenant = _ingest_tenant(slug, request)
+    ch = request.query_params.get("channel", "sms")
+    if ch not in ("sms", "whatsapp"):
+        raise HTTPException(422, "channel debe ser sms o whatsapp")
+    return {"lead": await ingest.from_generic(tenant, ch, await request.json())}
+
+
 @app.post("/v1/ingest/{slug}/evolution")
 async def evo_ingest(slug: str, request: Request):
     tenant = _ingest_tenant(slug, request)
@@ -245,6 +301,15 @@ async def tenant_settings(tenant: dict = Depends(tenant_auth)):
                "gupshup": {"source": st.get("gupshup_source") or "", "appName": st.get("gupshup_app_name") or "", "keySet": bool(st.get("gupshup_api_key")),
                            "keyHint": ("…" + st["gupshup_api_key"][-4:]) if st.get("gupshup_api_key") else ""}},
         "metaAppSecretSet": bool(st.get("meta_app_secret")),
+        "twilio": {"sid": st.get("twilio_account_sid") or "", "tokenSet": bool(st.get("twilio_auth_token")),
+                   "tokenHint": ("…" + st["twilio_auth_token"][-4:]) if st.get("twilio_auth_token") else "",
+                   "smsFrom": st.get("twilio_sms_from") or "", "waFrom": st.get("twilio_wa_from") or "", "voiceFrom": st.get("twilio_voice_from") or ""},
+        "genericWhatsapp": httpgen.public(st.get("generic_whatsapp")),
+        "sms": {"provider": sms.provider(tenant), "providers": sms.PROVIDERS, "generic": httpgen.public(st.get("generic_sms"))},
+        "voice": {"provider": voice.provider(tenant), "providers": voice.PROVIDERS, "record": bool(st.get("voice_record")),
+                  "generic": httpgen.public(st.get("generic_voice"))},
+        "httpVars": httpgen.VARS,
+        "channelsReady": {k: broadcast.configured(tenant, k) for k in broadcast.CHANNELS},
         "telegram": {"tokenSet": bool(st.get("telegram_bot_token")), "tokenHint": ("…" + st["telegram_bot_token"][-4:]) if st.get("telegram_bot_token") else "",
                      "bot": st.get("telegram_bot_username") or "", "welcome": st.get("telegram_welcome") or ""},
         "forms": st.get("forms") or [], "formDefault": forms.default_form(len(st.get("forms") or []) + 1),
@@ -255,8 +320,9 @@ async def tenant_settings(tenant: dict = Depends(tenant_auth)):
     }
 
 
-SECRET_KEYS = {"fb_page_token", "evolution_apikey", "meta_access_token", "meta_app_secret", "gupshup_api_key", "telegram_bot_token"}
-PLAIN_KEYS = {"evolution_instance", "meta_phone_number_id", "gupshup_source", "gupshup_app_name", "telegram_welcome"}
+SECRET_KEYS = {"fb_page_token", "evolution_apikey", "meta_access_token", "meta_app_secret", "gupshup_api_key", "telegram_bot_token", "twilio_auth_token"}
+PLAIN_KEYS = {"evolution_instance", "meta_phone_number_id", "gupshup_source", "gupshup_app_name", "telegram_welcome",
+              "twilio_account_sid", "twilio_sms_from", "twilio_wa_from", "twilio_voice_from"}
 
 
 @app.put("/v1/tenant/settings")
@@ -277,6 +343,22 @@ def tenant_settings_update(body: dict = Body(...), tenant: dict = Depends(tenant
         if body["wa_provider"] not in ("", *whatsapp.PROVIDERS):
             raise HTTPException(422, "Proveedor de WhatsApp desconocido")
         patch["wa_provider"] = body["wa_provider"]
+    if "sms_provider" in body:
+        if body["sms_provider"] not in ("", *sms.PROVIDERS):
+            raise HTTPException(422, "Proveedor de SMS desconocido")
+        patch["sms_provider"] = body["sms_provider"]
+    if "voice_provider" in body:
+        if body["voice_provider"] not in ("", *voice.PROVIDERS):
+            raise HTTPException(422, "Proveedor de llamadas desconocido")
+        patch["voice_provider"] = body["voice_provider"]
+    if "voice_record" in body:
+        patch["voice_record"] = bool(body["voice_record"])
+    for key in ("generic_whatsapp", "generic_sms", "generic_voice"):
+        if isinstance(body.get(key), dict):
+            try:
+                patch[key] = httpgen.merge((tenant.get("settings") or {}).get(key), body[key])
+            except ValueError as e:
+                raise HTTPException(422, str(e))
     if body.get("services") is not None:
         try:
             patch["services"] = qualify.validate_services(body["services"])
@@ -296,6 +378,105 @@ def tenant_settings_update(body: dict = Body(...), tenant: dict = Depends(tenant
 def reset_services(tenant: dict = Depends(tenant_auth)):
     with db.pool.connection() as c:
         c.execute("UPDATE tenants SET settings = settings - 'services' WHERE slug = %s", (tenant["slug"],))
+    return {"ok": True}
+
+
+class SmsTestReq(BaseModel):
+    to: str
+
+
+class CallReq(BaseModel):
+    leadId: str
+    agentPhone: str
+    agent: str = "Asesor"
+    agentId: str = ""
+
+
+class BroadcastCreate(BaseModel):
+    name: str
+    channel: str
+    text: str
+    leadIds: list[str]
+    perMinute: int = 20
+    footer: bool = True
+    startInMinutes: int = 0
+    by: str = ""
+
+
+@app.post("/v1/sms/send")
+async def sms_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
+    text = req.text.strip()
+    if not text or len(text) > 1000:
+        raise HTTPException(422, "El SMS debe tener entre 1 y 1000 caracteres")
+    job = db.log_job(tenant["slug"], "sms_send", req.leadId)
+    try:
+        res = await sms.send(tenant, req.leadId, text, req.agent); db.finish_job(job); return res
+    except ValueError as e:
+        db.finish_job(job, str(e)[:500]); raise HTTPException(422, str(e))
+    except Exception as e:
+        db.finish_job(job, str(e)[:500]); raise HTTPException(502, f"No se pudo enviar: {e}")
+
+
+@app.post("/v1/sms/test")
+async def sms_test(req: SmsTestReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return await sms.test(tenant, req.to)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/twilio/test")
+async def twilio_test(tenant: dict = Depends(tenant_auth)):
+    from . import twilio
+    try:
+        a = await twilio.account(tenant)
+        return {"name": a.get("friendly_name"), "status": a.get("status")}
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/voice/call")
+async def voice_call(req: CallReq, tenant: dict = Depends(tenant_auth)):
+    job = db.log_job(tenant["slug"], "voice_call", req.leadId)
+    try:
+        res = await voice.call(tenant, req.leadId, req.agentPhone, req.agent, req.agentId); db.finish_job(job); return res
+    except ValueError as e:
+        db.finish_job(job, str(e)[:500]); raise HTTPException(422, str(e))
+    except Exception as e:
+        db.finish_job(job, str(e)[:500]); raise HTTPException(502, f"No se pudo iniciar la llamada: {e}")
+
+
+@app.get("/v1/broadcasts")
+def bc_list(tenant: dict = Depends(tenant_auth)):
+    return {"items": [{**b, "created_at": str(b["created_at"]), "scheduled_at": str(b["scheduled_at"]) if b["scheduled_at"] else None}
+                      for b in broadcast.listing(tenant["slug"])], "channels": {k: {"label": v, "ready": broadcast.configured(tenant, k), "max": broadcast.LIMITS[k]} for k, v in broadcast.CHANNELS.items()}}
+
+
+@app.post("/v1/broadcasts")
+def bc_create(req: BroadcastCreate, tenant: dict = Depends(tenant_auth)):
+    try:
+        bid = broadcast.create(tenant, name=req.name, channel=req.channel, text=req.text, lead_ids=req.leadIds, per_minute=req.perMinute,
+                               footer=req.footer, by=req.by, start_in_min=max(0, min(req.startInMinutes, 60 * 24 * 14)))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"id": bid}
+
+
+@app.get("/v1/broadcasts/{bid}")
+def bc_detail(bid: int, tenant: dict = Depends(tenant_auth)):
+    d = broadcast.detail(tenant["slug"], bid)
+    if not d:
+        raise HTTPException(404)
+    return {**d, "created_at": str(d["created_at"]), "scheduled_at": str(d["scheduled_at"]) if d["scheduled_at"] else None,
+            "next_send_at": str(d["next_send_at"]) if d["next_send_at"] else None, "finished_at": str(d["finished_at"]) if d["finished_at"] else None}
+
+
+@app.post("/v1/broadcasts/{bid}/{action}")
+def bc_action(bid: int, action: str, tenant: dict = Depends(tenant_auth)):
+    if action not in ("pause", "resume", "cancel"):
+        raise HTTPException(404)
+    if not broadcast.set_status(tenant["slug"], bid, action):
+        raise HTTPException(409, "La campaña no está en un estado que permita esa acción")
     return {"ok": True}
 
 

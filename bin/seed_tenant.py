@@ -70,7 +70,8 @@ for name, level in LEVELS.items():
 
 _api_data = role_data(("yes", "all", "all", "no"))
 _api_data["Campaign"] = {"create": "no", "read": "all", "edit": "no", "delete": "no", "stream": "no"}
-api_role = api("POST", "Role", {"name": "Integración API (Hub)", "data": _api_data})
+_api_data["User"] = {"read": "all"}
+api_role = api("POST", "Role", {"name": "Integración API (Hub)", "data": _api_data, "assignmentPermission": "all", "userPermission": "all"})
 team = api("POST", "Team", {"name": "Equipo Principal"})
 user = api("POST", "User", {"userName": "hub-api", "type": "api", "authMethod": "ApiKey",
                             "rolesIds": [api_role["id"]], "teamsIds": [team["id"]]})

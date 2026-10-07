@@ -21,7 +21,8 @@ class CrmHub
     private const REASSIGNABLE = ['Lead', 'Contact', 'Account', 'Opportunity'];
     private const SETTING_KEYS = ['fb_page_token', 'services', 'forms', 'wa_provider', 'evolution_url', 'evolution_apikey', 'evolution_instance',
         'meta_phone_number_id', 'meta_access_token', 'meta_app_secret', 'gupshup_api_key', 'gupshup_source', 'gupshup_app_name',
-        'telegram_bot_token', 'telegram_welcome'];
+        'telegram_bot_token', 'telegram_welcome', 'twilio_account_sid', 'twilio_auth_token', 'twilio_sms_from', 'twilio_wa_from', 'twilio_voice_from',
+        'sms_provider', 'voice_provider', 'voice_record', 'generic_whatsapp', 'generic_sms', 'generic_voice'];
 
     public function __construct(
         private User $user,
@@ -544,5 +545,141 @@ class CrmHub
             throw new Forbidden();
         }
         return (object) $this->hubAny('POST', '/v1/telegram/invite', ['leadId' => $lead->getId()]);
+    }
+
+    // ---------- SMS y llamadas ----------
+    public function postActionTwilioTest(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubAny('POST', '/v1/twilio/test', []);
+    }
+
+    public function postActionSmsSend(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->em->getEntityById('Lead', (string) ($d->leadId ?? ''));
+        if (!$lead || !$this->acl->checkEntityEdit($lead)) {
+            throw new Forbidden();
+        }
+        return (object) $this->hubAny('POST', '/v1/sms/send', ['leadId' => $lead->getId(), 'text' => (string) ($d->text ?? ''),
+            'agent' => $this->user->get('name') ?: $this->user->get('userName')]);
+    }
+
+    public function postActionSmsTest(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubAny('POST', '/v1/sms/test', ['to' => (string) ($d->to ?? '')]);
+    }
+
+    /** Click-to-call: la central/proveedor llama primero al teléfono o extensión del asesor y luego lo conecta con el cliente. */
+    public function postActionVoiceCall(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->em->getEntityById('Lead', (string) ($d->leadId ?? ''));
+        if (!$lead || !$this->acl->checkEntityEdit($lead)) {
+            throw new Forbidden();
+        }
+        return (object) $this->hubAny('POST', '/v1/voice/call', ['leadId' => $lead->getId(), 'agentPhone' => (string) ($d->agentPhone ?? ''),
+            'agent' => $this->user->get('name') ?: $this->user->get('userName'), 'agentId' => $this->user->getId()]);
+    }
+
+    /** Qué canales están listos (el botón de llamar decide entre click-to-call y el marcador del equipo). */
+    public function getActionChannels(Request $request): \stdClass
+    {
+        $s = $this->hubAny('GET', '/v1/tenant/settings');
+        return (object) ['whatsapp' => !empty($s['wa']['provider']), 'sms' => !empty($s['sms']['provider']), 'voice' => !empty($s['voice']['provider']),
+                         'telegram' => !empty($s['telegram']['tokenSet'])];
+    }
+
+    // ---------- Campañas de mensajes masivos ----------
+    private function broadcastGuard(): void
+    {
+        if ($this->assignmentLevel() === 'no') {
+            throw new Forbidden('No tienes permiso para enviar mensajes masivos.');
+        }
+    }
+
+    /** Leads que cumplen los filtros, dentro de lo que el usuario puede ver, con un medio de contacto válido para el canal. */
+    private function audience(array $f, string $channel): array
+    {
+        $b = $this->selectBuilderFactory->create()->from('Lead')->withAccessControlFilter()->buildQueryBuilder();
+        $where = [['OR' => [['doNotContact' => false], ['doNotContact' => null]]]];
+        foreach (['status' => 'statuses', 'qualificationStatus' => 'qualifications', 'source' => 'sources', 'preferredChannel' => 'channels'] as $field => $key) {
+            if (!empty($f[$key]) && is_array($f[$key])) {
+                $where[] = [$field => array_values($f[$key])];
+            }
+        }
+        if (!empty($f['campaignId'])) {
+            $where[] = ['campaignId' => (string) $f['campaignId']];
+        }
+        if (($f['assigned'] ?? '') === 'none') {
+            $where[] = ['assignedUserId' => null];
+        } elseif (!empty($f['assigned'])) {
+            $where[] = ['assignedUserId' => (string) $f['assigned']];
+        }
+        if (!empty($f['days'])) {
+            $where[] = ['createdAt>=' => gmdate('Y-m-d H:i:s', time() - (int) $f['days'] * 86400)];
+        }
+        if (!empty($f['service'])) {
+            $where[] = ['suggestedService*' => '%' . str_replace(['%', '_'], '', (string) $f['service']) . '%'];
+        }
+        $b->select(['id', 'name', 'phoneNumber', 'telegramChatId'])->where($where)->limit(0, 20000);
+        $ids = [];
+        $sample = [];
+        foreach ($this->em->getRDBRepository('Lead')->clone($b->build())->find() as $l) {
+            $ok = $channel === 'telegram' ? (bool) $l->get('telegramChatId') : (bool) $l->get('phoneNumber');
+            if ($ok) {
+                $ids[] = $l->getId();
+                if (count($sample) < 8) {
+                    $sample[] = $l->get('name');
+                }
+            }
+        }
+        return ['ids' => $ids, 'sample' => $sample];
+    }
+
+    public function postActionBroadcastAudience(Request $request): \stdClass
+    {
+        $this->broadcastGuard();
+        $d = json_decode(json_encode($request->getParsedBody()), true) ?: [];
+        $channel = in_array($d['channel'] ?? '', ['whatsapp', 'sms', 'telegram'], true) ? $d['channel'] : 'whatsapp';
+        $a = $this->audience((array) ($d['filters'] ?? []), $channel);
+        return (object) ['count' => count($a['ids']), 'sample' => $a['sample']];
+    }
+
+    public function postActionBroadcastCreate(Request $request): \stdClass
+    {
+        $this->broadcastGuard();
+        $d = json_decode(json_encode($request->getParsedBody()), true) ?: [];
+        $channel = in_array($d['channel'] ?? '', ['whatsapp', 'sms', 'telegram'], true) ? $d['channel'] : '';
+        $a = $this->audience((array) ($d['filters'] ?? []), $channel ?: 'whatsapp');
+        return (object) $this->hubAny('POST', '/v1/broadcasts', [
+            'name' => (string) ($d['name'] ?? ''), 'channel' => $channel, 'text' => (string) ($d['text'] ?? ''), 'leadIds' => $a['ids'],
+            'perMinute' => (int) ($d['perMinute'] ?? 20), 'footer' => (bool) ($d['footer'] ?? true), 'startInMinutes' => (int) ($d['startInMinutes'] ?? 0),
+            'by' => $this->user->get('name') ?: $this->user->get('userName'),
+        ]);
+    }
+
+    public function getActionBroadcasts(Request $request): \stdClass
+    {
+        $this->broadcastGuard();
+        return (object) $this->hubAny('GET', '/v1/broadcasts');
+    }
+
+    public function getActionBroadcast(Request $request): \stdClass
+    {
+        $this->broadcastGuard();
+        return (object) $this->hubAny('GET', '/v1/broadcasts/' . (int) $request->getRouteParam('id'));
+    }
+
+    public function postActionBroadcastAction(Request $request): \stdClass
+    {
+        $this->broadcastGuard();
+        $act = (string) $request->getRouteParam('act');
+        if (!in_array($act, ['pause', 'resume', 'cancel'], true)) {
+            throw new BadRequest();
+        }
+        return (object) $this->hubAny('POST', '/v1/broadcasts/' . (int) $request->getRouteParam('id') . '/' . $act, []);
     }
 }

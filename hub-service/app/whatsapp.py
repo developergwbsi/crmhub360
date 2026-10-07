@@ -5,11 +5,12 @@ import time
 
 import httpx
 
-from . import config
+from . import config, httpgen, twilio
 from .espo import Espo
 from .ingest import normalize_phone
 
-PROVIDERS = {"evolution": "Evolution API", "meta": "Meta WhatsApp Cloud API", "gupshup": "Gupshup"}
+PROVIDERS = {"evolution": "Evolution API", "meta": "Meta WhatsApp Cloud API", "gupshup": "Gupshup", "twilio": "Twilio",
+             "generic": "Otro proveedor (API HTTP)"}
 _sent: dict[tuple[str, str], float] = {}  # (lead_id, texto) -> instante: evita duplicar la nota cuando llega el eco del webhook
 
 
@@ -60,6 +61,15 @@ async def test(tenant: dict) -> dict:
             key, src = _need(tenant, "gupshup_api_key", "gupshup_source")
             return {"provider": p, "state": f"guardado para {src}", "connected": True,
                     "note": "Gupshup no ofrece una prueba de conexión sin enviar un mensaje; envía uno a un lead de prueba."}
+        if p == "twilio":
+            acc = await twilio.account(tenant)
+            return {"provider": p, "state": acc.get("friendly_name", "cuenta válida"), "connected": True}
+        if p == "generic":
+            cfg = (tenant.get("settings") or {}).get("generic_whatsapp") or {}
+            if not cfg.get("url"):
+                raise ValueError("Falta la URL del proveedor.")
+            return {"provider": p, "state": "configuración guardada", "connected": True,
+                    "note": "No hay una prueba automática para un proveedor genérico; envía un mensaje a un lead de prueba."}
     raise ValueError("Elige un proveedor de WhatsApp y guarda sus credenciales.")
 
 
@@ -89,6 +99,14 @@ async def send_text(tenant: dict, phone: str, text: str) -> None:
             r = await c.post(f"{config.GUPSHUP_BASE}/wa/api/v1/msg", headers={"apikey": key},
                              data={"channel": "whatsapp", "source": src.lstrip("+"), "destination": number, "src.name": app,
                                    "message": json.dumps({"type": "text", "text": text})})
+        elif p == "twilio":
+            frm = twilio.sender(tenant, "twilio_wa_from")
+            await twilio.post(tenant, "Messages.json", {**({"MessagingServiceSid": frm["MessagingServiceSid"]} if "MessagingServiceSid" in frm else {"From": "whatsapp:" + frm["From"].replace("whatsapp:", "")}),
+                                                        "To": "whatsapp:" + phone, "Body": text})
+            return
+        elif p == "generic":
+            await httpgen.call((tenant.get("settings") or {}).get("generic_whatsapp"), {"to": phone, "text": text})
+            return
         else:
             raise ValueError("WhatsApp no está configurado (Integraciones → Mensajería).")
     if r.status_code >= 400:

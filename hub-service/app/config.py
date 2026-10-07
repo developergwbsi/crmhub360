@@ -18,3 +18,6 @@ VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:admin@example.com")
 TELEGRAM_API_BASE = os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org")
 META_GRAPH_BASE = os.getenv("META_GRAPH_BASE", "https://graph.facebook.com/v21.0")
 GUPSHUP_BASE = os.getenv("GUPSHUP_BASE", "https://api.gupshup.io")
+TWILIO_BASE = os.getenv("TWILIO_BASE", "https://api.twilio.com")
+# Por seguridad (varias empresas comparten este servicio) no se permite que una integración HTTP apunte al propio servidor
+ALLOW_LOOPBACK_URLS = os.getenv("ALLOW_LOOPBACK_URLS", "0") == "1"

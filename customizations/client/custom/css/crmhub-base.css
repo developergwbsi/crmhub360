@@ -398,3 +398,11 @@ body[data-navbar=side].minimized.side-menu-opened #navbar .navbar-right > li > a
 .ch-ffield .ch-fopts { flex: 1 1 100%; }
 .panel-title .fab, .panel-title .fas { margin-right: 8px; }
 input[type=color].form-control { width: 96px; cursor: pointer; }
+
+/* ======================= Mensajes masivos ======================= */
+.ch-pre { white-space: pre-wrap; background: var(--ch-soft); border: 1px solid var(--ch-line); border-radius: 12px; padding: 12px 14px; color: var(--ch-ink); font: inherit; min-height: 120px; }
+.ch-radios { display: flex; gap: 10px; flex-wrap: wrap; }
+.ch-radio-card { display: flex; align-items: center; gap: 8px; border: 1px solid var(--ch-line); border-radius: 12px; padding: 10px 14px; margin: 0; cursor: pointer; background: var(--ch-surface); font-weight: 400; }
+.ch-radio-card:has(input:checked) { border-color: var(--ch-primary); background: var(--ch-tint); }
+.ch-radio-card.ch-off { opacity: .5; cursor: not-allowed; }
+.ch-nowrap { white-space: nowrap; }

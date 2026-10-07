@@ -17,7 +17,8 @@
         "Llamar": "Llamar",
         "WhatsApp": "WhatsApp",
         "Telegram": "Telegram",
-        "Invitar por Telegram": "Invitar por Telegram"
+        "Invitar por Telegram": "Invitar por Telegram",
+        "SMS": "SMS"
     },
     "massActions": {
         "reassign": "Reasignar"

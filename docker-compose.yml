@@ -56,3 +56,5 @@ services:
       TELEGRAM_API_BASE: ${TELEGRAM_API_BASE:-https://api.telegram.org}
       META_GRAPH_BASE: ${META_GRAPH_BASE:-https://graph.facebook.com/v21.0}
       GUPSHUP_BASE: ${GUPSHUP_BASE:-https://api.gupshup.io}
+      TWILIO_BASE: ${TWILIO_BASE:-https://api.twilio.com}
+      ALLOW_LOOPBACK_URLS: ${ALLOW_LOOPBACK_URLS:-0}
