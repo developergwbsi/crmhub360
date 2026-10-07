@@ -1,0 +1,68 @@
+/* Crm Hub 360 - login dividido. Tokens alineados con Core360 (índigo / Inter). */
+.crmhub-login {
+    --ch-bg: hsl(210 20% 97.5%); --ch-card: #fff; --ch-fg: hsl(222 30% 14%); --ch-muted: hsl(217 12% 42%);
+    --ch-border: hsl(214 20% 88%); --ch-primary: hsl(231 70% 52%); --ch-primary-fg: #fff; --ch-input: hsl(214 24% 96%);
+    position: fixed; inset: 0; z-index: 1000; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ch-fg); background: var(--ch-bg);
+}
+@media (prefers-color-scheme: dark) {
+    .crmhub-login {
+        --ch-bg: hsl(224 28% 9%); --ch-card: hsl(224 26% 13%); --ch-fg: hsl(210 20% 94%); --ch-muted: hsl(215 14% 65%);
+        --ch-border: hsl(224 20% 22%); --ch-primary: hsl(231 85% 68%); --ch-primary-fg: hsl(224 40% 8%); --ch-input: hsl(224 22% 18%);
+    }
+}
+.crmhub-hidden-footer { display: none; }
+
+/* Panel de marca */
+.crmhub-brand {
+    position: relative; overflow: hidden; color: #fff; display: flex; align-items: center; padding: 56px 64px;
+    background: radial-gradient(900px 500px at 10% 0%, hsl(231 85% 62% / .55), transparent 60%),
+                radial-gradient(700px 500px at 100% 100%, hsl(262 80% 55% / .45), transparent 60%),
+                linear-gradient(160deg, hsl(231 55% 22%), hsl(224 45% 11%));
+}
+.crmhub-brand::after {
+    content: ""; position: absolute; inset: 0; opacity: .08; pointer-events: none;
+    background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px);
+    background-size: 44px 44px;
+}
+.crmhub-brand-inner { position: relative; z-index: 1; max-width: 560px; }
+.crmhub-logo { display: flex; align-items: center; gap: 12px; font-size: 22px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 56px; }
+.crmhub-brand h1 { font-size: clamp(30px, 3.2vw, 46px); line-height: 1.12; font-weight: 700; letter-spacing: -.02em; margin: 0 0 18px; color: #fff; }
+.crmhub-lead { font-size: 16px; line-height: 1.6; color: rgba(255,255,255,.78); margin: 0 0 36px; }
+.crmhub-features { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; }
+.crmhub-features li { display: flex; gap: 14px; align-items: flex-start; }
+.crmhub-ic { flex: none; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; font-size: 18px;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.18); }
+.crmhub-features strong { display: block; font-size: 15px; font-weight: 600; }
+.crmhub-features small { display: block; font-size: 13.5px; line-height: 1.5; color: rgba(255,255,255,.7); margin-top: 2px; }
+.crmhub-brand-foot { margin-top: 48px; font-size: 12.5px; color: rgba(255,255,255,.55); }
+
+/* Panel del formulario */
+.crmhub-form-side { display: flex; align-items: center; justify-content: center; padding: 32px 24px; overflow-y: auto; }
+.crmhub-card { width: 100%; max-width: 400px; }
+.crmhub-card h2 { font-size: 28px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 6px; color: var(--ch-fg); }
+.crmhub-sub { color: var(--ch-muted); margin: 0 0 28px; font-size: 15px; }
+.crmhub-mobile-brand { display: none; font-weight: 700; color: var(--ch-primary); font-size: 20px; margin-bottom: 28px; }
+.crmhub-card label { font-size: 13px; font-weight: 600; color: var(--ch-fg); margin-bottom: 6px; }
+.crmhub-card .form-control {
+    height: 44px; border-radius: 10px; background: var(--ch-input); border: 1px solid var(--ch-border);
+    color: var(--ch-fg); box-shadow: none; font-size: 15px; padding: 0 14px;
+}
+.crmhub-card .form-control:focus { border-color: var(--ch-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ch-primary) 25%, transparent); background: var(--ch-card); }
+.crmhub-card [data-role="password-input-container"] { position: relative; }
+.crmhub-card [data-role="password-input-container"] .form-control { padding-right: 42px; }
+.crmhub-card [data-action="toggleShowPassword"] { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--ch-muted); }
+.crmhub-submit {
+    width: 100%; height: 46px; margin-top: 8px; border: 0; border-radius: 10px; font-size: 15px; font-weight: 600;
+    background: var(--ch-primary); color: var(--ch-primary-fg); transition: filter .15s, transform .05s;
+}
+.crmhub-submit:hover, .crmhub-submit:focus { filter: brightness(1.08); background: var(--ch-primary); color: var(--ch-primary-fg); }
+.crmhub-submit:active { transform: translateY(1px); }
+.crmhub-forgot { text-align: center; margin-top: 18px; }
+.crmhub-forgot a { color: var(--ch-primary); font-size: 14px; }
+
+@media (max-width: 900px) {
+    .crmhub-login { grid-template-columns: 1fr; }
+    .crmhub-brand { display: none; }
+    .crmhub-mobile-brand { display: block; }
+}
