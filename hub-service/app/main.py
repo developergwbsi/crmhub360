@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox
+from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -637,6 +637,32 @@ async def wa_qr(tenant: dict = Depends(tenant_auth)):
         raise HTTPException(422, str(e))
     except Exception as e:
         raise HTTPException(502, f"No se pudo obtener el código QR: {e}")
+
+
+class EmailSendReq(BaseModel):
+    userId: str
+    userName: str = ""
+    to: list[str] | str
+    cc: list[str] | str = []
+    subject: str = ""
+    html: str
+    parentType: str | None = None
+    parentId: str | None = None
+    inReplyTo: str | None = None
+    references: list[str] = []
+
+
+@app.post("/v1/email/send")
+async def email_send(req: EmailSendReq, tenant: dict = Depends(tenant_auth)):
+    """Envía un correo como el usuario (nombre, firma y Reply-To personales). 409 si la empresa no tiene el correo del Centro."""
+    try:
+        return await mailout.send(tenant, req.model_dump())
+    except LookupError as e:
+        raise HTTPException(409, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo enviar el correo: {str(e)[:200]}")
 
 
 @app.post("/v1/whatsapp/send")

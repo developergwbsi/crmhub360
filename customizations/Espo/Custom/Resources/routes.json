@@ -308,5 +308,21 @@
             "controller": "CrmHub",
             "action": "whatsappQr"
         }
+    },
+    {
+        "route": "/CrmHub/email/send",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "emailSend"
+        }
+    },
+    {
+        "route": "/CrmHub/emailSignature",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "emailSignature"
+        }
     }
 ]

@@ -672,3 +672,7 @@ body.minimized #navbar .navbar-brand.ch-has-brand .ch-brand { display: none; }
 .ch-qr-wait { display: grid; place-items: center; min-height: 160px; color: var(--ch-muted); gap: 8px; }
 .ch-qr-steps { margin: 10px 0 0; padding-left: 20px; font-size: 13.5px; color: var(--ch-muted); line-height: 1.55; }
 .ch-qr-ok { text-align: center; padding: 18px 8px; } .ch-qr-ok .fas { font-size: 44px; color: #2fa36b; display: block; margin-bottom: 8px; } .ch-qr-ok p { color: var(--ch-muted); margin: 6px 0 0; }
+
+/* firma del usuario en el compositor */
+.ch-sig { margin-top: 10px; padding: 10px 12px; border: 1px dashed var(--ch-line-strong); border-radius: 12px; background: var(--ch-soft); font-size: 13px; }
+.ch-sig-h { color: var(--ch-muted); font-size: 12px; margin-bottom: 6px; }

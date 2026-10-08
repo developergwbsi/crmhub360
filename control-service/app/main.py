@@ -1084,6 +1084,13 @@ def set_company_mailbox(slug: str, mail: Optional[dict]) -> bool:
         else:
             settings.pop("mailbox", None)
             ok = False
+        # envío «como el usuario»: el Hub manda con SMTP propio (nombre, firma y Reply-To del usuario) y las respuestas vuelven por un alias personal
+        if mail and mail.get("host") and mail.get("from_address"):
+            plus = any(k in mail["host"] for k in ("gmail", "google", "zoho"))
+            settings["mailout"] = {"host": mail["host"], "port": int(mail.get("port") or 587), "security": mail.get("security") or "", "user": mail.get("user") or "",
+                                   "password": mail.get("password") or "", "from_address": mail["from_address"], "plus": plus}
+        else:
+            settings.pop("mailout", None)
         c.execute("UPDATE tenants SET settings=%s WHERE slug=%s", (json.dumps(settings), slug))
     return ok
 

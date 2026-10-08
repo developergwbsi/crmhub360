@@ -74,7 +74,7 @@ class LeadTimeline
             $body = (string) ($e->get('bodyPlain') ?: strip_tags((string) $e->get('body')));
             $sent = in_array($e->get('status'), ['Sent', 'Sending'], true);
             $out[] = ['id' => $e->getId(), 'at' => $e->get('dateSent') ?: $e->get('createdAt'), 'dir' => $sent ? 'out' : 'in', 'status' => $e->get('status'),
-                'subject' => (string) $e->get('name'), 'from' => (string) $e->get('fromString'), 'to' => (string) $e->get('to'),
+                'subject' => (string) $e->get('name'), 'messageId' => (string) $e->get('messageId'), 'from' => (string) $e->get('fromString'), 'to' => (string) $e->get('to'),
                 'text' => mb_substr(trim($body), 0, 4000)];
         }
         return $out;

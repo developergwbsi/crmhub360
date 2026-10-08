@@ -1,5 +1,8 @@
 {
     "recordViews": {
         "detail": "custom:views/email/record/detail"
+    },
+    "modalViews": {
+        "compose": "custom:views/modals/compose"
     }
 }

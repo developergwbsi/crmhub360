@@ -64,8 +64,11 @@ def fetch_new(cfg: dict) -> tuple[list[dict], int]:
                 when = parsedate_to_datetime(msg.get("Date")).astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
             except Exception:
                 when = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-            out.append({"uid": uid, "subject": _h(msg.get("Subject")) or "(sin asunto)", "from": addr.lower(), "fromName": name,
-                        "to": [a.lower() for _, a in getaddresses([_h(msg.get("To"))]) if a], "cc": [a.lower() for _, a in getaddresses([_h(msg.get("Cc"))]) if a],
+            vals = [v for v in (_h(msg.get(h)) for h in ("To", "Cc", "Delivered-To", "X-Original-To", "Envelope-To", "X-Forwarded-To")) if v]
+            hdr_to = [a.lower() for _, a in getaddresses(vals, strict=False) if a]
+            refs = re.findall(r"<[^>]+>", " ".join([msg.get("In-Reply-To") or "", msg.get("References") or ""]))
+            out.append({"uid": uid, "recipients": hdr_to, "refs": refs, "subject": _h(msg.get("Subject")) or "(sin asunto)", "from": addr.lower(), "fromName": name,
+                        "to": [a.lower() for _, a in getaddresses([v for v in [_h(msg.get("To"))] if v], strict=False) if a], "cc": [a.lower() for _, a in getaddresses([v for v in [_h(msg.get("Cc"))] if v], strict=False) if a],
                         "html": html, "text": text, "date": when, "messageId": (msg.get("Message-ID") or "").strip()})
         return out, (uids[-1] if uids else last)
     finally:
@@ -95,7 +98,41 @@ async def _admin_id(espo: Espo) -> str | None:
         return None
 
 
-async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str) -> bool:
+async def _thread(espo: Espo, m: dict) -> dict:
+    """Correo de este hilo que envió el CRM: de él salen el asesor y el registro (lead/contacto) a los que pertenece la conversación."""
+    for ref in m.get("refs", [])[::-1]:
+        try:
+            r = await espo.get("Email", **{"where[0][type]": "equals", "where[0][attribute]": "messageId", "where[0][value]": ref[:255], "maxSize": 1, "select": "id,assignedUserId,parentType,parentId"})
+        except Exception:
+            continue
+        if r.get("list"):
+            return r["list"][0]
+    return {}
+
+
+async def _route(tenant: dict, espo: Espo, m: dict, account: str) -> tuple[str | None, str | None, str | None]:
+    """¿De quién es este correo? → (usuario, parentType, parentId). Orden: alias personal (cuenta+idUsuario@…), hilo de una conversación enviada por el
+    CRM, y por último un lead o contacto con ese remitente (su asesor). Si nada coincide, no es de nadie y no se importa."""
+    thread = await _thread(espo, m)
+    local, _, domain = account.lower().partition("@")
+    for a in m.get("recipients", []):
+        mt = re.match(rf"^{re.escape(local.split('+')[0])}\+([0-9a-f]{{15,24}})@{re.escape(domain)}$", a)
+        if mt:
+            try:
+                u = await espo.get(f"User/{mt.group(1)}", select="id,isActive")
+                if u.get("id") and u.get("isActive"):
+                    return u["id"], thread.get("parentType"), thread.get("parentId")
+            except Exception:
+                pass
+    if thread.get("assignedUserId"):
+        return thread["assignedUserId"], thread.get("parentType"), thread.get("parentId")
+    ptype, pid, assignee = await _owner(tenant, espo, m["from"])
+    if assignee:
+        return assignee, ptype, pid
+    return None, ptype, pid
+
+
+async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str, import_all: bool = False) -> bool:
     if m["messageId"]:   # no repetir un correo ya importado (p. ej. si se reinicia el avance del buzón)
         try:
             dup = await espo.get("Email", **{"where[0][type]": "equals", "where[0][attribute]": "messageId", "where[0][value]": m["messageId"][:255], "maxSize": 1, "select": "id"})
@@ -103,8 +140,11 @@ async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str) ->
                 return False
         except Exception:
             pass
-    ptype, pid, assignee = await _owner(tenant, espo, m["from"])
-    owner = assignee or await _admin_id(espo)
+    owner, ptype, pid = await _route(tenant, espo, m, own_address)
+    if not owner:
+        if not import_all:
+            return False   # correo que no es de ningún usuario (promociones, avisos…): no se muestra a nadie
+        owner = await _admin_id(espo)
     body = m["html"] or "<br>".join(_html.escape(m["text"]).splitlines())
     data = {"name": m["subject"][:250], "from": m["from"], "to": ";".join(m["to"]), "cc": ";".join(m["cc"]), "isHtml": bool(m["html"]), "body": body,
             "bodyPlain": m["text"] or re.sub(r"<[^>]+>", "", m["html"]), "status": "Archived", "dateSent": m["date"], "messageId": m["messageId"][:255], "isRead": False}
@@ -128,7 +168,7 @@ async def poll(tenant: dict) -> int:
     own = cfg.get("user", "")
     for m in msgs:
         try:
-            n += 1 if await import_message(tenant, espo, m, own) else 0
+            n += 1 if await import_message(tenant, espo, m, own, bool(cfg.get("import_all"))) else 0
         except Exception as e:  # un correo problemático no debe frenar los demás
             log.warning("no se pudo importar el correo %s de %s: %s", m["uid"], tenant["slug"], str(e)[:160])
     if top != int(cfg.get("last_uid") or 0):

@@ -512,6 +512,75 @@ class CrmHub
         return (object) ['requiresComment' => !$a, 'action' => $a];
     }
 
+    // ---------- Correo «como el usuario» (nombre, firma y respuestas personales) ----------
+    private function signatureHtml(): string
+    {
+        $prefs = $this->em->getEntityById('Preferences', $this->user->getId());
+        $custom = $prefs ? trim((string) $prefs->get('signature')) : '';
+        if ($custom !== '') {
+            return '<div data-ch-sig="1">' . $custom . '</div>';
+        }
+        $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+        $name = $this->user->get('name') ?: $this->user->get('userName');
+        $lines = [];
+        $title = trim((string) $this->user->get('title'));
+        $company = (string) $this->config->get('applicationName');
+        if ($title !== '' || $company !== '') {
+            $lines[] = '<span style="color:#5d6678">' . $e(trim($title . ($title !== '' && $company !== '' ? ' · ' : '') . $company)) . '</span>';
+        }
+        if ($this->user->get('phoneNumber')) {
+            $lines[] = '<span style="color:#5d6678">Tel. ' . $e($this->user->get('phoneNumber')) . '</span>';
+        }
+        return '<div data-ch-sig="1" style="margin-top:18px;padding-top:12px;border-top:2px solid #4f63e8;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#161b2e">'
+            . '<b style="font-size:14px">' . $e($name) . '</b>' . ($lines ? '<br>' . implode('<br>', $lines) : '') . '</div>';
+    }
+
+    public function getActionEmailSignature(Request $request): \stdClass
+    {
+        return (object) ['html' => $this->signatureHtml(), 'name' => $this->user->get('name'), 'custom' => (bool) trim((string) ($this->em->getEntityById('Preferences', $this->user->getId())?->get('signature') ?? ''))];
+    }
+
+    /** Envía desde el Hub con el nombre y la firma del usuario; si la empresa no tiene el correo del Centro responde fallback para usar el envío de Espo. */
+    public function postActionEmailSend(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        if ($this->user->isApi() || !$this->acl->checkScope('Email', 'create')) {
+            throw new Forbidden();
+        }
+        $text = trim((string) ($d->body ?? ''));
+        $to = is_array($d->to ?? null) ? $d->to : preg_split('/[;,]\s*/', (string) ($d->to ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+        $cc = is_array($d->cc ?? null) ? $d->cc : preg_split('/[;,]\s*/', (string) ($d->cc ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+        if (!$to || $text === '') {
+            throw new BadRequest('Escribe el destinatario y el mensaje.');
+        }
+        $parentType = in_array($d->parentType ?? '', ['Lead', 'Account', 'Contact', 'Opportunity'], true) ? $d->parentType : null;
+        $parentId = null;
+        if ($parentType && !empty($d->parentId)) {
+            $parent = $this->em->getEntityById($parentType, (string) $d->parentId);
+            if (!$parent || !$this->acl->checkEntityRead($parent)) {
+                throw new Forbidden();
+            }
+            $parentId = $parent->getId();
+        }
+        $html = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#161b2e">'
+            . nl2br(htmlspecialchars($text, ENT_QUOTES, 'UTF-8')) . '</div>' . $this->signatureHtml();
+        $payload = ['userId' => $this->user->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName')), 'to' => array_values($to), 'cc' => array_values($cc),
+            'subject' => mb_substr(trim((string) ($d->subject ?? '')), 0, 250), 'html' => $html, 'parentType' => $parentType, 'parentId' => $parentId,
+            'inReplyTo' => !empty($d->inReplyTo) ? (string) $d->inReplyTo : null, 'references' => array_values(array_filter((array) ($d->references ?? []), 'is_string'))];
+        try {
+            $r = (new HubClient($this->config))->request('POST', '/v1/email/send', $payload, 45);
+        } catch (\RuntimeException $e) {
+            $msg = $e->getMessage();
+            if (str_contains($msg, 'HTTP 409')) {
+                return (object) ['fallback' => true];
+            }
+            preg_match('/"detail":"([^"]+)"/u', $msg, $m);
+            throw new BadRequest($m[1] ?? 'No se pudo enviar el correo.');
+        }
+        return (object) ['ok' => true, 'id' => $r['id'] ?? null, 'replyTo' => $r['replyTo'] ?? null];
+    }
+
+
     /** Roles del usuario actual: el manual muestra solo lo que le corresponde. */
     public function getActionMyroles(Request $request): \stdClass
     {
