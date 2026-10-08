@@ -1,7 +1,9 @@
 {
     "recordViews": {
         "detail": "custom:views/email/record/detail",
-        "detailQuick": "custom:views/email/record/detail-quick"
+        "detailQuick": "custom:views/email/record/detail-quick",
+        "list": "custom:views/email/record/list",
+        "edit": "custom:views/email/record/edit"
     },
     "modalViews": {
         "compose": "custom:views/modals/compose"
