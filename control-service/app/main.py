@@ -13,6 +13,8 @@ from fastapi.staticfiles import StaticFiles
 from psycopg.rows import dict_row
 from pydantic import BaseModel, Field
 
+from . import welcome as welcome_tpl
+
 DATABASE_URL = os.environ["DATABASE_URL"]
 USER = os.environ["CONTROL_USER"]
 PASS_HASH = os.environ["CONTROL_PASSWORD_HASH"]          # scrypt:<salt_b64>:<hash_b64>
@@ -219,7 +221,7 @@ async def companies(actor: str = Depends(me)):
     for t, h in zip(rows, health):
         out.append({"slug": t["slug"], "name": t["name"], "kind": t["kind"], "host": t["host"], "status": t["status"], "plan": t["plan"], "maxUsers": t["max_users"],
                     "license": t["license_until"].isoformat() if t["license_until"] else None, "release": t["release_id"], "createdAt": t["created_at"].isoformat(),
-                    "health": h, "stats": await asyncio.to_thread(stats, t)})
+                    "profile": (t["settings"] or {}).get("profile") or {}, "health": h, "stats": await asyncio.to_thread(stats, t)})
     return {"items": out, "currentRelease": cur["id"] if cur else None}
 
 
@@ -231,6 +233,12 @@ class CreateReq(BaseModel):
     slug: str = Field(pattern=SLUG_RE)
     name: str = Field(min_length=2, max_length=80)
     email: str = Field(max_length=190)
+    admin_first: str = Field("", max_length=60)
+    admin_last: str = Field("", max_length=60)
+    phone: str = Field("", max_length=30)
+    country: str = Field("", max_length=2)
+    city: str = Field("", max_length=60)
+    send_welcome: bool = True
     host: Optional[str] = None
     plan: str = "standard"
     max_users: int = Field(10, ge=1, le=500)
@@ -246,7 +254,9 @@ def enqueue(kind: str, params: dict, actor: str) -> int:
 def create_company(req: CreateReq, actor: str = Depends(me)):
     host = (req.host or f"{req.slug}.{BASE_DOMAIN}").strip().lower()
     jid = enqueue("create", {"slug": req.slug, "name": req.name.strip(), "email": req.email.strip(), "host": host, "plan": req.plan,
-                             "max_users": req.max_users, "license_until": req.license_until or ""}, actor)
+                             "max_users": req.max_users, "license_until": req.license_until or "",
+                             "admin_first": req.admin_first.strip(), "admin_last": req.admin_last.strip(), "phone": req.phone.strip(), "country": req.country.strip().upper(),
+                             "city": req.city.strip(), "send_welcome": req.send_welcome}, actor)
     audit(actor, "crear_empresa", req.slug, {"host": host, "job": jid})
     return {"job": jid}
 
@@ -424,6 +434,69 @@ async def support_link(slug: str, actor: str = Depends(me)):
     audit(actor, "entrar_modo_lectura", slug)
     return {"url": f"https://{t['host']}/?support={code}"}
 
+
+
+
+# ---------------------------------------------------------------- plantilla de bienvenida
+@app.get("/api/settings/welcome")
+def get_welcome(actor: str = Depends(me)):
+    w = get_setting("welcome", {}) or {}
+    return {"subject": w.get("subject") or welcome_tpl.DEFAULT_SUBJECT, "html": w.get("html") or welcome_tpl.DEFAULT_HTML, "custom": bool(w),
+            "sample": welcome_tpl.render(w.get("html") or welcome_tpl.DEFAULT_HTML, welcome_tpl.SAMPLE),
+            "markers": ["nombre", "apellido", "empresa", "url", "usuario", "clave", "ciudad", "pais", "anio"]}
+
+
+class WelcomeReq(BaseModel):
+    subject: str = Field(min_length=3, max_length=200)
+    html: str = Field(min_length=50, max_length=60000)
+
+
+@app.put("/api/settings/welcome")
+def put_welcome(req: WelcomeReq, actor: str = Depends(me)):
+    low = req.html.lower()
+    if "<script" in low or "javascript:" in low or re.search(r"\son\w+\s*=", low):
+        raise HTTPException(400, "La plantilla no puede llevar scripts ni eventos (los correos no los admiten)")
+    put_setting("welcome", {"subject": req.subject.strip(), "html": req.html})
+    audit(actor, "guardar_plantilla_bienvenida")
+    return get_welcome(actor)
+
+
+@app.delete("/api/settings/welcome")
+def reset_welcome(actor: str = Depends(me)):
+    with db() as c:
+        c.execute("DELETE FROM control_settings WHERE key='welcome'")
+    audit(actor, "restablecer_plantilla_bienvenida")
+    return get_welcome(actor)
+
+
+class WelcomeTestReq(BaseModel):
+    to: str
+    subject: str = ""
+    html: str = ""
+
+
+@app.post("/api/settings/welcome/test")
+async def test_welcome(req: WelcomeTestReq, actor: str = Depends(me)):
+    m = get_setting("mail") or {}
+    if not m.get("host") or not m.get("enabled", True):
+        raise HTTPException(400, "Configura y activa el correo general para enviar pruebas")
+    w = get_setting("welcome", {}) or {}
+    html_t, subj_t = req.html or w.get("html") or welcome_tpl.DEFAULT_HTML, req.subject or w.get("subject") or welcome_tpl.DEFAULT_SUBJECT
+    html_s = welcome_tpl.render(html_t, welcome_tpl.SAMPLE)
+    try:
+        await asyncio.to_thread(smtp_send, m, req.to.strip(), "[Prueba] " + welcome_tpl.render(subj_t, welcome_tpl.SAMPLE), welcome_tpl.plain(html_s), html_s, "Crm Hub 360")
+    except Exception as e:
+        raise HTTPException(502, "No se pudo enviar: " + str(e)[:200])
+    audit(actor, "probar_plantilla_bienvenida", req.to)
+    return {"ok": True}
+
+
+@app.post("/api/companies/{slug}/welcome")
+def resend_welcome(slug: str, actor: str = Depends(me)):
+    t = get_tenant(slug)
+    jid = enqueue("welcome", {"slug": t["slug"]}, actor)
+    audit(actor, "reenviar_bienvenida", slug, {"job": jid})
+    return {"job": jid}
 
 
 # ---------------------------------------------------------------- mi cuenta, recuperación de clave

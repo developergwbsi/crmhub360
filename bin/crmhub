@@ -14,7 +14,7 @@ usage() { cat <<USG
 Uso: bin/crmhub <comando>
   init                          genera .env con secretos aleatorios
   up                            levanta Postgres + Hub Service
-  tenant:create <slug> --name "Empresa" --admin-email a@b.co [--host h] [--plan p] [--max-users n] [--license-until YYYY-MM-DD]
+  tenant:create <slug> --name "Empresa" --admin-email a@b.co [--admin-first N --admin-last A --admin-phone T --country CO --city Ciudad] [--host h] [--plan p] [--max-users n] [--license-until YYYY-MM-DD]
   tenant:list
   tenant:suspend|tenant:resume <slug>
   tenant:upgrade <slug>         reaplica customizaciones y reconstruye
@@ -141,14 +141,17 @@ cmd_tenant_create() {
   if [[ -z "$REL_ARG" ]]; then [[ -n "$(release_current)" ]] && REL_ARG=current || REL_ARG=repo; fi
   use_release "$REL_ARG"
   [[ "$slug" =~ ^[a-z][a-z0-9-]{1,30}$ ]] || die "slug inválido (minúsculas, dígitos y guiones, 2-31 caracteres)"
-  local name="" email="" host="" plan="standard" maxu=10 until=""
+  local name="" email="" host="" plan="standard" maxu=10 until="" afirst="" alast="" aphone="" country="" city=""
   while [[ $# -gt 0 ]]; do case "$1" in
     --name) name="$2"; shift 2;; --admin-email) email="$2"; shift 2;; --host) host="$2"; shift 2;;
+    --admin-first) afirst="$2"; shift 2;; --admin-last) alast="$2"; shift 2;; --admin-phone) aphone="$2"; shift 2;;
+    --country) country="$2"; shift 2;; --city) city="$2"; shift 2;;
     --plan) plan="$2"; shift 2;; --max-users) maxu="$2"; shift 2;; --license-until) until="$2"; shift 2;;
     *) die "opción desconocida: $1";; esac; done
   [[ -n "$name" && -n "$email" ]] || die "--name y --admin-email son obligatorios"
   [[ -z "$until" ]] || [[ "$until" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || die "--license-until debe ser YYYY-MM-DD"
-  [[ "$name$email$host$plan" != *"'"* ]] || die "no se permiten comillas simples en los datos"
+  [[ "$name$email$host$plan$afirst$alast$aphone$country$city" != *"'"* ]] || die "no se permiten comillas simples en los datos"
+  local profile; profile="$(jq -nc --arg f "$afirst" --arg l "$alast" --arg p "$aphone" --arg c "$country" --arg y "$city" '{first:$f,last:$l,phone:$p,country:$c,city:$y}')"
   [[ -n "$host" ]] || host="${slug}.${PROD_HOST}"
   [[ -z "$(sql "SELECT 1 FROM tenants WHERE slug='$slug'")" ]] || die "el tenant '$slug' ya existe"
 
@@ -190,12 +193,12 @@ ENV
 
   echo "==> Semilla: ajustes es_ES/COP, roles, equipos, usuario API"
   local api_key
-  api_key="$(python3 "$SRC/bin/seed_tenant.py" "http://127.0.0.1:$web_port" admin "$admin_pass" "$email" "$name" | jq -r .api_key)"
+  api_key="$(python3 "$SRC/bin/seed_tenant.py" "http://127.0.0.1:$web_port" admin "$admin_pass" "$email" "$name" "$profile" | jq -r .api_key)"
   [[ -n "$api_key" && "$api_key" != null ]] || die "falló la semilla"
 
   local lic="NULL"; [[ -z "$until" ]] || lic="'$until'"
-  sql "INSERT INTO tenants (slug,name,db_name,web_port,ws_port,host,plan,max_users,license_until,espo_api_key,hub_token,kind,release_id)
-       VALUES ('$slug','$name','$db_name',$web_port,$ws_port,'$host','$plan',$maxu,$lic,'$api_key','$hub_token','client',$([[ -n "$RELEASE_ID" ]] && echo "'$RELEASE_ID'" || echo NULL))"
+  sql "INSERT INTO tenants (slug,name,db_name,web_port,ws_port,host,plan,max_users,license_until,espo_api_key,hub_token,kind,release_id,settings)
+       VALUES ('$slug','$name','$db_name',$web_port,$ws_port,'$host','$plan',$maxu,$lic,'$api_key','$hub_token','client',$([[ -n "$RELEASE_ID" ]] && echo "'$RELEASE_ID'" || echo NULL),jsonb_build_object('profile','$profile'::jsonb))"
 
   cat <<OUT
 

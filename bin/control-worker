@@ -2,11 +2,14 @@
 """Crm Hub 360 - ejecutor de trabajos privilegiados del Centro de control.
 Lee la cola `control_jobs` (PostgreSQL maestro) y ejecuta SOLO operaciones de una lista cerrada, con parámetros validados y sin shell.
 Corre como servicio systemd en el servidor (necesita docker, apache y certbot)."""
-import json, os, re, subprocess, sys, time
+import json, os, re, smtplib, ssl, subprocess, sys, time
 from datetime import datetime
+from email.message import EmailMessage
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
+sys.path.insert(0, os.path.join(ROOT, 'control-service', 'app'))
+import welcome as welcome_tpl  # noqa: E402  (plantilla de bienvenida, sin dependencias)
 
 
 def load_env():
@@ -67,6 +70,62 @@ def tenant_row(slug):
     return row or None
 
 
+
+PERSON = re.compile(r"^[^'\"\\;`$<>\n\r]{0,60}$")
+PHONE = re.compile(r"^[+0-9 ()-]{0,30}$")
+COUNTRIES = {"CO": "Colombia", "MX": "México", "PE": "Perú", "CL": "Chile", "AR": "Argentina", "EC": "Ecuador", "PA": "Panamá", "CR": "Costa Rica", "DO": "República Dominicana",
+             "GT": "Guatemala", "UY": "Uruguay", "PY": "Paraguay", "BO": "Bolivia", "VE": "Venezuela", "ES": "España", "US": "Estados Unidos"}
+
+
+def tenant_env(slug):
+    out = {}
+    for line in open(os.path.join(ROOT, "tenants", slug, ".env"), encoding="utf8"):
+        if "=" in line and not line.startswith("#"):
+            k, v = line.rstrip("\n").split("=", 1)
+            out[k] = v
+    return out
+
+
+def send_welcome(jid, slug, ssl_ok=True):
+    """Envía al administrador el correo de bienvenida (plantilla del Centro) con el enlace de ingreso y sus credenciales."""
+    mail = json.loads(psql("SELECT value::text FROM control_settings WHERE key='mail'") or "{}")
+    if not mail.get("host") or not mail.get("enabled", True):
+        append_log(jid, "AVISO: el correo general no está configurado o está desactivado: no se envió la bienvenida. Puedes reenviarla desde el panel de la empresa.\n")
+        return False
+    row = psql("SELECT name || E'\\t' || host || E'\\t' || settings::text FROM tenants WHERE slug = :'s'", s=slug)
+    name, host, settings = row.split("\t", 2)
+    prof = (json.loads(settings).get("profile") or {})
+    to = prof.get("email")
+    if not to:
+        append_log(jid, "AVISO: no hay correo del administrador registrado: no se envió la bienvenida.\n")
+        return False
+    tpl = json.loads(psql("SELECT value::text FROM control_settings WHERE key='welcome'") or "{}")
+    data = {"nombre": prof.get("first") or "equipo", "apellido": prof.get("last") or "", "empresa": name, "url": f"{'https' if ssl_ok else 'http'}://{host}", "usuario": "admin",
+            "clave": tenant_env(slug).get("ADMIN_PASSWORD", ""), "ciudad": prof.get("city") or "", "pais": COUNTRIES.get(prof.get("country", ""), "")}
+    html_body = welcome_tpl.render(tpl.get("html") or welcome_tpl.DEFAULT_HTML, data)
+    msg = EmailMessage()
+    msg["Subject"] = welcome_tpl.render(tpl.get("subject") or welcome_tpl.DEFAULT_SUBJECT, data)
+    msg["From"] = f"Crm Hub 360 <{mail['from_address']}>"
+    msg["To"] = to
+    msg.set_content(welcome_tpl.plain(html_body))
+    msg.add_alternative(html_body, subtype="html")
+    port, sec, ctx = int(mail.get("port") or 587), mail.get("security") or "TLS", ssl.create_default_context()
+    srv = smtplib.SMTP_SSL(mail["host"], port, timeout=20, context=ctx) if sec == "SSL" else smtplib.SMTP(mail["host"], port, timeout=20)
+    try:
+        if sec == "TLS":
+            srv.starttls(context=ctx)
+        if mail.get("user"):
+            srv.login(mail["user"], mail.get("password") or "")
+        srv.send_message(msg)
+    finally:
+        try:
+            srv.quit()
+        except Exception:
+            pass
+    append_log(jid, f"Correo de bienvenida enviado a {to}.\n")
+    return True
+
+
 def job_create(jid, p):
     slug, name, email, host = p.get("slug", ""), p.get("name", ""), p.get("email", ""), p.get("host", "")
     plan, maxu, lic = p.get("plan", "standard"), int(p.get("max_users", 10)), p.get("license_until") or ""
@@ -77,11 +136,18 @@ def job_create(jid, p):
     need(plan in PLANS, "plan inválido")
     need(1 <= maxu <= 500, "máximo de usuarios inválido")
     need(not lic or DATE.match(lic), "fecha de licencia inválida")
+    first, last, phone, country, city = (p.get("admin_first") or "").strip(), (p.get("admin_last") or "").strip(), (p.get("phone") or "").strip(), (p.get("country") or "").strip().upper(), (p.get("city") or "").strip()
+    need(PERSON.match(first) and PERSON.match(last) and PERSON.match(city), "nombre, apellido o ciudad inválidos")
+    need(PHONE.match(phone), "teléfono inválido")
+    need(not country or country in COUNTRIES, "país inválido")
     need(tenant_row(slug) is None, f"la empresa '{slug}' ya existe")
     need(not psql("SELECT 1 FROM tenants WHERE host = :'h'", h=host), "ese dominio ya está en uso")
     argv = ["bin/crmhub", "tenant:create", slug, "--name", name, "--admin-email", email, "--host", host, "--plan", plan, "--max-users", str(maxu), "--release", "current"]
     if lic:
         argv += ["--license-until", lic]
+    for flag, val in (("--admin-first", first), ("--admin-last", last), ("--admin-phone", phone), ("--country", country), ("--city", city)):
+        if val:
+            argv += [flag, val]
     code, _ = run(jid, argv, mask=r"(?<=Admin:\s{6}admin / )\S+")
     need(code == 0, "falló la creación de la empresa")
     code, _ = run(jid, ["bin/crmhub", "vhost:install", slug, "--env", "client"])
@@ -94,7 +160,21 @@ def job_create(jid, p):
         append_log(jid, "AVISO: no se pudo emitir el certificado SSL (revisa que el DNS de " + host + " apunte a este servidor). La empresa quedó creada en HTTP.\n")
     code, _ = run(jid, ["bin/crmhub", "tenant:ui", slug, "--release", "current"])
     need(code == 0, "falló la aplicación del tema y menús")
-    return {"slug": slug, "url": f"{'https' if ssl else 'http'}://{host}", "ssl": ssl}
+    psql("UPDATE tenants SET settings = jsonb_set(settings, '{profile,email}', to_jsonb(:'e'::text)) WHERE slug = :'s'", e=email, s=slug)
+    welcome_sent = False
+    if p.get("send_welcome", True):
+        try:
+            welcome_sent = send_welcome(jid, slug, ssl)
+        except Exception as e:
+            append_log(jid, f"AVISO: no se pudo enviar la bienvenida ({str(e)[:160]}). Puedes reenviarla desde el panel de la empresa.\n")
+    return {"slug": slug, "url": f"{'https' if ssl else 'http'}://{host}", "ssl": ssl, "welcome": welcome_sent}
+
+
+def job_welcome(jid, p):
+    slug = p.get("slug", "")
+    need(SLUG.match(slug) and tenant_row(slug) == "client", "solo se reenvía la bienvenida de empresas creadas desde el Centro")
+    need(send_welcome(jid, slug), "no se pudo enviar la bienvenida")
+    return {"slug": slug, "welcome": True}
 
 
 def job_upgrade(jid, p):
@@ -127,7 +207,7 @@ def job_power(jid, p, action):
     return {"slug": slug, "status": "suspended" if action == "suspend" else "active"}
 
 
-HANDLERS = {"create": job_create, "upgrade": job_upgrade, "release": job_release,
+HANDLERS = {"create": job_create, "welcome": job_welcome, "upgrade": job_upgrade, "release": job_release,
             "suspend": lambda j, p: job_power(j, p, "suspend"), "resume": lambda j, p: job_power(j, p, "resume")}
 
 
