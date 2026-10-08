@@ -49,7 +49,7 @@ define('custom:lead-hero', [], function () {
         let kpis = '';
         if (scope === 'Opportunity') {
             kpis = kpi('Monto', money(a.amount)) + kpi('Cierre', a.closeDate ? esc(a.closeDate) : '—') + kpi('Probabilidad', a.probability != null ? esc(a.probability) + '%' : '—');
-        } else if (a.totalDebt || a.overdueDebt || a.creditScore || a.monthlyIncome) {
+        } else if (view.getConfig().get('crmhubCartera') && (a.totalDebt || a.overdueDebt || a.creditScore || a.monthlyIncome)) {
             kpis = kpi('Deuda total', money(a.totalDebt)) + kpi('En mora', money(a.overdueDebt)) + kpi('Ingresos', money(a.monthlyIncome)) + kpi('Puntaje', a.creditScore != null ? esc(a.creditScore) : '—');
         }
         const avatar = `<span class="ch-avatar ch-avatar-lg" style="background:${COLORS[h % COLORS.length]}"><span class="ch-initials">${esc(initials)}</span>` +

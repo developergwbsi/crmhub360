@@ -53,6 +53,7 @@ define('custom:views/dashlets/crmhub-panel', ['views/dashlets/abstract/base'], f
                 {label: 'Deuda en cartera', value: money(k.deudaTotal), sub: 'Suma de los leads visibles', icon: 'fas fa-wallet', tone: 'info'},
                 {label: 'Deuda en mora', value: money(k.deudaMora), sub: k.deudaTotal ? nf.format(100 * k.deudaMora / k.deudaTotal) + '% de la cartera' : '—', icon: 'fas fa-triangle-exclamation', tone: 'danger'},
             ];
+            if (!this.getConfig().get('crmhubCartera')) { kpis.splice(4, 2); }   // sin módulo de cartera: solo captación
             const maxT = Math.max(1, ...m.tendencia.map(t => t.value));
             const tendencia = m.tendencia.map(t => ({day: t.day, value: t.value, h: Math.max(3, Math.round(100 * t.value / maxT))}));
             const tot = m.tendencia.reduce((a, t) => a + t.value, 0);

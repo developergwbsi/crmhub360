@@ -1,0 +1,5 @@
+{
+    "fields": {
+        "crmhubCartera": {"type": "bool", "default": false}
+    }
+}
