@@ -43,9 +43,9 @@ define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:
                     (this.channels.admin ? ' lo configures en <a href="#Admin/outboundEmails">Administración → Correo saliente</a>.' : ' tu administrador lo configure.') + '</div>' : '') +
                 '<label>Plantillas <a class="ch-tpl-manage" href="#EmailTemplate">Administrar</a></label><div class="ch-tpl-gallery" data-role="tpls"><span class="ch-muted">Cargando plantillas…</span></div>' +
                 `<label>Para</label><input value="${ChUi.esc(this.options.email)}" readonly><label>Asunto</label><input name="subject" maxlength="250" placeholder="Asunto">` +
-                '<label>Mensaje</label><textarea name="body" rows="6" placeholder="Escribe el correo…"></textarea><div class="ch-sig" data-role="sig"><span class="ch-muted">Cargando tu firma…</span></div><div class="ch-chat-err" data-role="err" hidden></div>' +
+                '<label>Mensaje</label>' + MailSend.editorMarkup(6) + '<div class="ch-sig" data-role="sig"><span class="ch-muted">Cargando tu firma…</span></div><div class="ch-chat-err" data-role="err" hidden></div>' +
                 '<div class="ch-mail-actions"><button type="button" class="btn btn-primary btn-sm" data-action="sendMail"><span class="fas fa-paper-plane"></span> Enviar</button><button type="button" class="btn btn-default btn-sm" data-action="saveTpl"><span class="far fa-floppy-disk"></span> Guardar como plantilla</button><button type="button" class="btn btn-default btn-sm" data-action="cancelCompose">Cancelar</button></div>';
-            this.loadTemplates();
+            this.loadTemplates(); MailSend.mountEditor(box);
             MailSend.signature().then(r => { const s = this.el.querySelector('[data-role="sig"]'); if (s) { s.innerHTML = '<div class="ch-sig-h">Se envía como <b>' + ChUi.esc(r.name || '') + '</b> con esta firma:</div>' + (r.html || ''); } });
             setTimeout(() => { const i = box.querySelector('[name="subject"]'); i && i.focus(); }, 50);
         }
@@ -63,7 +63,7 @@ define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:
         applyTemplate(id) {
             const box = this.el.querySelector('[data-role="compose"]'), subj = box.querySelector('[name="subject"]'), body = box.querySelector('[name="body"]');
             const go = () => Espo.Ajax.postRequest(`EmailTemplate/${id}/prepare`, {parentType: this.scope, parentId: this.options.leadId, emailAddress: this.options.email}).then(r => {
-                subj.value = toText(r.subject); body.value = toText(r.body); body.focus();
+                subj.value = toText(r.subject); body.value = r.body; body.focus();
                 box.querySelectorAll('.ch-tpl').forEach(b => b.classList.toggle('on', b.dataset.id === id));
             }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } const e = box.querySelector('[data-role="err"]'); e.hidden = false; e.textContent = 'No se pudo cargar la plantilla.'; });
             if ((subj.value.trim() || body.value.trim()) && !box.querySelector('.ch-tpl.on')) {
@@ -76,7 +76,7 @@ define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:
             if (!subject || !body) { const e = box.querySelector('[data-role="err"]'); e.hidden = false; e.textContent = 'Escribe el asunto y el mensaje para guardarlos como plantilla.'; return; }
             ChUi.prompt({title: 'Guardar como plantilla', label: 'Nombre de la plantilla', required: true, min: 3, rows: 1, max: 80, ok: 'Guardar', hint: 'Queda disponible para ti y tu equipo. Puedes usar {Person.firstName} y {User.name} para personalizar.'}).then(name => {
                 if (!name) { return; }
-                Espo.Ajax.postRequest('EmailTemplate', {name, subject, body: body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>'), isHtml: true})
+                Espo.Ajax.postRequest('EmailTemplate', {name, subject, body, isHtml: true})
                     .then(() => { Espo.Ui.success('Plantilla guardada'); this.loadTemplates(); })
                     .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo guardar la plantilla'); });
             });

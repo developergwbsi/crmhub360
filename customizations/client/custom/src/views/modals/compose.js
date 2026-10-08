@@ -27,13 +27,14 @@ define('custom:views/modals/compose', ['views/modal', 'custom:ui', 'custom:split
         afterRender() {
             if (!this._chSplit) { this._chSplit = true; Split.open('ch'); }
             const a = this.attrs, to = [].concat(a.to || a.emailAddress || []).join(', ').replace(/;/g, ',');
-            const quoted = a.body ? '\n\n' + MailSend.toText(a.body).split('\n').map(l => '> ' + l).join('\n') : '';
+            const quoted = a.body ? MailSend.quoteHtml(MailSend.toText(a.body)) : '';
             this.el.querySelector('.ch-mail').innerHTML = '<div class="ch-mail-compose" style="margin:0">' +
                 '<label>Plantillas <a class="ch-tpl-manage" href="#EmailTemplate">Administrar</a></label><div class="ch-tpl-gallery" data-role="tpls"><span class="ch-muted">Cargando plantillas…</span></div>' +
                 `<label>Para</label><input name="to" value="${ChUi.esc(to)}" placeholder="cliente@empresa.com, otro@empresa.com"><label>Cc (opcional)</label><input name="cc" value="${ChUi.esc([].concat(a.cc || []).join(', ').replace(/;/g, ','))}">` +
-                `<label>Asunto</label><input name="subject" maxlength="250" value="${ChUi.esc(a.name || a.subject || '')}"><label>Mensaje</label><textarea name="body" rows="9" placeholder="Escribe el correo…">${ChUi.esc(quoted ? quoted.trim() : '')}</textarea>` +
+                `<label>Asunto</label><input name="subject" maxlength="250" value="${ChUi.esc(a.name || a.subject || '')}"><label>Mensaje</label>` + MailSend.editorMarkup(9) +
                 '<div class="ch-sig" data-role="sig"><span class="ch-muted">Cargando tu firma…</span></div><div class="ch-chat-err" data-role="err" hidden></div>' +
                 '<div class="ch-mail-actions"><button type="button" class="btn btn-primary btn-sm" data-action="sendMail"><span class="fas fa-paper-plane"></span> Enviar</button><button type="button" class="btn btn-default btn-sm" data-action="cancelMail">Cancelar</button></div></div>';
+            MailSend.mountEditor(this.el); if (quoted) { this.el.querySelector('[name="body"]').value = quoted; }
             MailSend.signature().then(r => { const s = this.el.querySelector('[data-role="sig"]'); if (s) { s.innerHTML = '<div class="ch-sig-h">Se envía como <b>' + ChUi.esc(r.name || '') + '</b> con esta firma:</div>' + (r.html || ''); } });
             Espo.Ajax.getRequest('EmailTemplate', {maxSize: 60, orderBy: 'name', select: 'name,subject'}).then(r => {
                 const box = this.el.querySelector('[data-role="tpls"]'); if (!box) { return; }
@@ -45,7 +46,7 @@ define('custom:views/modals/compose', ['views/modal', 'custom:ui', 'custom:split
         applyTemplate(id) {
             const first = (this.el.querySelector('[name="to"]').value || '').split(',')[0].trim();
             Espo.Ajax.postRequest(`EmailTemplate/${id}/prepare`, {parentType: this.attrs.parentType || undefined, parentId: this.attrs.parentId || undefined, emailAddress: first || undefined}).then(r => {
-                this.el.querySelector('[name="subject"]').value = MailSend.toText(r.subject); this.el.querySelector('[name="body"]').value = MailSend.toText(r.body);
+                this.el.querySelector('[name="subject"]').value = MailSend.toText(r.subject); this.el.querySelector('[name="body"]').value = r.body;
             }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
         }
 

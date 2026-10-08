@@ -676,3 +676,11 @@ body.minimized #navbar .navbar-brand.ch-has-brand .ch-brand { display: none; }
 /* firma del usuario en el compositor */
 .ch-sig { margin-top: 10px; padding: 10px 12px; border: 1px dashed var(--ch-line-strong); border-radius: 12px; background: var(--ch-soft); font-size: 13px; }
 .ch-sig-h { color: var(--ch-muted); font-size: 12px; margin-bottom: 6px; }
+
+.ch-ed { border: 1px solid var(--ch-line-strong); border-radius: 10px; background: var(--ch-soft); overflow: hidden; }
+.ch-ed-bar { display: flex; gap: 2px; padding: 4px 6px; border-bottom: 1px solid var(--ch-line); background: var(--ch-surface); }
+.ch-ed-bar button { border: 0; background: transparent; color: var(--ch-muted); width: 28px; height: 26px; border-radius: 6px; cursor: pointer; }
+.ch-ed-bar button:hover { background: var(--ch-soft); color: var(--ch-ink); }
+.ch-ed-area { padding: 9px 11px; outline: 0; color: var(--ch-ink); max-height: 340px; overflow: auto; line-height: 1.5; }
+.ch-ed-area:empty::before { content: attr(data-ph); color: var(--ch-muted); }
+.ch-ed-area blockquote { margin: 6px 0; padding-left: 10px; border-left: 3px solid var(--ch-line-strong); color: var(--ch-muted); }
