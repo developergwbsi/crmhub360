@@ -6,11 +6,11 @@ from datetime import datetime, timezone
 from email.header import decode_header, make_header
 from email.utils import getaddresses, parseaddr, parsedate_to_datetime
 
-from . import db
+from . import db, push
 from .espo import Espo
 
 log = logging.getLogger("mailbox")
-INTERVAL = 60
+INTERVAL = 8   # segundos entre revisiones del buzón: el correo nuevo se ve y se avisa casi al instante
 MAX_PER_CYCLE = 25
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -155,7 +155,14 @@ async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str, im
         data["usersIds"] = [owner]
     if ptype:
         data.update({"parentType": ptype, "parentId": pid})
-    await espo.post("Email", data)
+    saved = await espo.post("Email", data)
+    if owner:   # aviso del navegador/celular (push) aunque la app esté cerrada; la campana de Espo la crea el propio CRM
+        try:
+            who = (m["fromName"] or m["from"] or "").strip()
+            await push.send(tenant["slug"], title=f"Nuevo correo de {who}"[:90], body=(m["subject"] or "(sin asunto)")[:140], url=f"/#Email/view/{saved.get('id')}",
+                            tag=f"crmhub-mail-{saved.get('id')}", kind="email", user_id=owner)
+        except Exception as e:
+            log.warning("push de correo falló: %s", str(e)[:120])
     return True
 
 
@@ -178,7 +185,7 @@ async def poll(tenant: dict) -> int:
 
 
 async def worker():
-    await asyncio.sleep(20)
+    await asyncio.sleep(5)
     while True:
         try:
             with db.pool.connection() as c:

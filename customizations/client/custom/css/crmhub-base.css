@@ -684,3 +684,4 @@ body.minimized #navbar .navbar-brand.ch-has-brand .ch-brand { display: none; }
 .ch-ed-area { padding: 9px 11px; outline: 0; color: var(--ch-ink); max-height: 340px; overflow: auto; line-height: 1.5; }
 .ch-ed-area:empty::before { content: attr(data-ph); color: var(--ch-muted); }
 .ch-ed-area blockquote { margin: 6px 0; padding-left: 10px; border-left: 3px solid var(--ch-line-strong); color: var(--ch-muted); }
+.ch-email-locked [data-action="edit"], .ch-email-locked .inline-edit-link, .ch-email-locked .inline-cancel-link { display: none !important; }
