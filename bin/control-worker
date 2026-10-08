@@ -100,6 +100,8 @@ def send_welcome(jid, slug, ssl_ok=True):
         append_log(jid, "AVISO: no hay correo del administrador registrado: no se envió la bienvenida.\n")
         return False
     tpl = json.loads(psql("SELECT value::text FROM control_settings WHERE key='welcome'") or "{}")
+    if not tpl:
+        tpl = (json.loads(psql("SELECT value::text FROM control_settings WHERE key='email_templates'") or "{}")).get("welcome") or {}
     data = {"nombre": prof.get("first") or "equipo", "apellido": prof.get("last") or "", "empresa": name, "url": f"{'https' if ssl_ok else 'http'}://{host}", "usuario": "admin",
             "clave": tenant_env(slug).get("ADMIN_PASSWORD", ""), "ciudad": prof.get("city") or "", "pais": COUNTRIES.get(prof.get("country", ""), "")}
     html_body = welcome_tpl.render(tpl.get("html") or welcome_tpl.DEFAULT_HTML, data)

@@ -120,7 +120,7 @@
   function shell() {
     $app.innerHTML = `<div class="top"><div class="brand"><i>◆</i><span>Crm Hub 360 <small>· Centro de control</small></span></div><span class="grow"></span>
       <button class="btn sm" id="acc"><span id="who">Mi cuenta</span></button><button class="btn sm" id="out">Salir</button></div>
-      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantilla de bienvenida</button><button class="tab" data-t="actividad">Actividad</button></div>
+      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="actividad">Actividad</button></div>
       <main id="main"></main>`;
     document.getElementById('acc').onclick = accountDialog;
     document.getElementById('out').onclick = async () => { try { await api('POST', '/logout'); } catch (e) { /* ya cerrada */ } renderLogin(); };
@@ -128,7 +128,7 @@
   }
   function draw() {
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.t === state.tab));
-    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, correo: drawMail, bienvenida: drawWelcome, actividad: drawActivity}[state.tab])();
+    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, correo: drawMail, bienvenida: drawTemplates, actividad: drawActivity}[state.tab])();
   }
 
   // ---------- empresas
@@ -232,7 +232,7 @@
     d.innerHTML = `<header><div style="flex:1"><div class="name" style="font-size:17px">${esc(c.name)}</div><div class="mut">${esc(c.host)}</div></div><button class="x" aria-label="Cerrar">×</button></header><div class="body">
       <div class="acts"><a class="btn" href="https://${esc(c.host)}" target="_blank" rel="noopener">Abrir sitio</a><button class="btn primary" data-a="ro">Ver en modo lectura</button>
         ${isClient ? `<button class="btn" data-a="up">Actualizar a la base actual</button><button class="btn ${c.status === 'active' ? 'danger' : ''}" data-a="pw">${c.status === 'active' ? 'Suspender' : 'Reactivar'}</button>` : ''}
-        <button class="btn" data-a="cred">Ver credenciales del admin</button><button class="btn" data-a="ren">Cambiar nombre</button>${isClient ? '<button class="btn" data-a="wel">Reenviar bienvenida</button>' : ''}</div>
+        <button class="btn" data-a="cred">Ver credenciales del admin</button><button class="btn" data-a="ren">Cambiar nombre</button><button class="btn" data-a="mail">Enviar correo…</button></div>
       <h4 style="margin:18px 0 6px">Datos</h4><div class="kv"><span>Estado</span><span>${esc(c.status === 'active' ? 'Activa' : 'Suspendida')}</span><span>Plan</span><span>${esc(c.plan)} · hasta ${c.maxUsers} usuarios</span>
         <span>Licencia</span><span>${esc(c.license || 'Sin vencimiento')}</span><span>Versión instalada</span><span>${esc(c.health.version || '—')}</span><span>Base de producción</span><span>${esc(c.kind === 'client' ? (c.release || 'ninguna') : 'Código de desarrollo')}</span>
         ${c.profile && (c.profile.first || c.profile.email) ? `<span>Administrador</span><span>${esc([c.profile.first, c.profile.last].filter(Boolean).join(' ') || '—')}<br><span class="mut">${esc(c.profile.email || '')}${c.profile.phone ? ' · ' + esc(c.profile.phone) : ''}</span></span>` : ''}${c.profile && (c.profile.country || c.profile.city) ? `<span>Ubicación</span><span>${esc([c.profile.city, countryName(c.profile.country)].filter(Boolean).join(', '))}</span>` : ''}<span>Creada</span><span>${esc(fmtDate(c.createdAt))}</span><span>Respuesta</span><span>${c.health.ms == null ? '—' : c.health.ms + ' ms'}</span></div>
@@ -250,10 +250,7 @@
       if (nm === null) { return; }
       try { await api('PUT', `/companies/${slug}/name`, {name: nm}); toast('Nombre actualizado'); close(); loadCompanies(); } catch (e) { toast(e.message); }
     };
-    const wel = d.querySelector('[data-a=wel]');
-    if (wel) { wel.onclick = async () => {
-      if (!await confirmBox('Reenviar bienvenida', 'Se envía de nuevo al administrador el correo con el enlace de ingreso y sus credenciales actuales.', 'Reenviar')) { return; }
-      try { const r = await api('POST', `/companies/${slug}/welcome`); close(); watchJob(r.job, 'Enviando bienvenida a «' + c.name + '»'); } catch (e) { toast(e.message); } }; }
+    d.querySelector('[data-a=mail]').onclick = () => sendMailDialog(c);
     const up = d.querySelector('[data-a=up]');
     if (up) { up.onclick = async () => { if (await confirmBox('Actualizar empresa', 'Se aplicará la base de producción actual (' + state.currentRelease + '). El sitio se reinicia unos segundos.', 'Actualizar')) { close(); const r = await api('POST', `/companies/${slug}/upgrade`); watchJob(r.job, 'Actualizando «' + c.name + '»'); } }; }
     const pw = d.querySelector('[data-a=pw]');
@@ -374,29 +371,87 @@
   }
 
 
-  // ---------- plantilla de bienvenida de las empresas nuevas
-  async function drawWelcome() {
+  // ---------- plantillas de correo del Centro (bienvenida, pago, reingreso, licencia, comunicado)
+  const fillSample = (h, s, base) => String(h || '').replace(/\{\{(\w+)\}\}/g, (_, k) => (k === 'url' ? 'https://acme.' + base : (k === 'ubicacion' ? ' en Bogotá, Colombia' : (s[k] != null ? s[k] : ''))));
+  async function drawTemplates(selected) {
     const main = document.getElementById('main');
-    main.innerHTML = '<h2>Plantilla de bienvenida</h2><p class="sub">Cargando…</p>';
-    let w; try { w = await api('GET', '/settings/welcome'); } catch (e) { main.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
-    main.innerHTML = `<h2>Plantilla de bienvenida</h2><p class="sub">Correo que recibe el administrador al crear su empresa, con el enlace de ingreso y sus credenciales. Se envía desde el <b>correo general</b>. ${w.custom ? '<span class="chip info">Personalizada</span>' : '<span class="chip ok">Plantilla original</span>'}</p>
-      <div class="wgrid"><div class="card" style="padding:16px 18px"><label>Asunto</label><input id="ws" maxlength="200" value="${esc(w.subject)}">
-        <label>Contenido (HTML)</label><textarea id="wh" rows="22" spellcheck="false" style="font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace">${esc(w.html)}</textarea>
-        <div class="mut" style="margin-top:8px">Marcadores: ${w.markers.map(k => `<code>{{${k}}}</code>`).join(' ')}</div>
+    main.innerHTML = '<h2>Plantillas de correo</h2><p class="sub">Cargando…</p>';
+    let r; try { r = await api('GET', '/mail-templates'); } catch (e) { main.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
+    const cur = r.items.find(x => x.key === selected) || r.items[0];
+    main.innerHTML = `<h2>Plantillas de correo</h2><p class="sub">Los correos que el Centro envía a las empresas. Se mandan desde el <b>correo general</b> y se personalizan con los datos de cada empresa. Para enviar uno, abre una empresa y pulsa <b>Enviar correo</b>.</p>
+      <div class="tpl-tabs">${r.items.map(x => `<button class="tpl-tab ${x.key === cur.key ? 'on' : ''}" data-k="${x.key}"><span>${x.icon}</span> ${esc(x.name)} ${x.custom ? '<i class="dotc" title="Personalizada"></i>' : ''}</button>`).join('')}</div>
+      <p class="mut">${esc(cur.desc)} ${cur.custom ? '<span class="chip info">Personalizada</span>' : '<span class="chip ok">Original</span>'}</p>
+      <div class="wgrid"><div class="card" style="padding:16px 18px"><label>Asunto</label><input id="ws" maxlength="200" value="${esc(cur.subject)}">
+        <label>Contenido (HTML)</label><textarea id="wh" rows="22" spellcheck="false" style="font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace">${esc(cur.html)}</textarea>
+        <div class="mut" style="margin-top:8px">Marcadores: ${cur.markers.map(k => `<code>{{${k}}}</code>`).join(' ')}</div>
         <div class="err" id="we" hidden></div><div class="acts"><button class="btn primary" id="wsv">Guardar</button><button class="btn" id="wts">Enviar prueba</button><button class="btn danger" id="wrs">Restablecer original</button></div></div>
         <div class="card" style="padding:0;overflow:hidden"><div class="mut" style="padding:10px 14px;border-bottom:1px solid var(--line)">Vista previa (con datos de ejemplo)</div><iframe id="wp" title="Vista previa" sandbox="" style="width:100%;height:760px;border:0;background:#fff"></iframe></div></div>`;
     const $ = id => document.getElementById(id);
-    const prev = () => { $('wp').srcdoc = ($('wh').value || '').replace(/\{\{nombre\}\}/g, 'Camila').replace(/\{\{apellido\}\}/g, 'Rojas').replace(/\{\{empresa\}\}/g, 'Acme S.A.S.').replace(/\{\{url\}\}/g, 'https://acme.' + state.base)
-      .replace(/\{\{usuario\}\}/g, 'admin').replace(/\{\{clave\}\}/g, 'Xk93-Pw2mQ7aB').replace(/\{\{ciudad\}\}/g, 'Bogotá').replace(/\{\{pais\}\}/g, 'Colombia').replace(/\{\{anio\}\}/g, String(new Date().getFullYear())).replace(/\{\{ubicacion\}\}/g, ' en Bogotá, Colombia'); };
+    main.querySelectorAll('.tpl-tab').forEach(b => b.onclick = () => drawTemplates(b.dataset.k));
+    const prev = () => { $('wp').srcdoc = fillSample($('wh').value, r.sample, state.base); };
     prev(); let tm; $('wh').addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(prev, 400); });
-    $('wsv').onclick = async () => { const er = $('we'); er.hidden = true; try { await api('PUT', '/settings/welcome', {subject: $('ws').value.trim(), html: $('wh').value}); toast('Plantilla guardada'); drawWelcome(); } catch (e) { er.hidden = false; er.textContent = e.message; } };
-    $('wrs').onclick = async () => { if (!await confirmBox('Restablecer plantilla', 'Se descartan tus cambios y vuelve la plantilla original de Crm Hub 360.', 'Restablecer', true)) { return; } try { await api('DELETE', '/settings/welcome'); toast('Plantilla original restablecida'); drawWelcome(); } catch (e) { toast(e.message); } };
+    $('wsv').onclick = async () => { const er = $('we'); er.hidden = true; try { await api('PUT', '/mail-templates/' + cur.key, {subject: $('ws').value.trim(), html: $('wh').value}); toast('Plantilla guardada'); drawTemplates(cur.key); } catch (e) { er.hidden = false; er.textContent = e.message; } };
+    $('wrs').onclick = async () => { if (!await confirmBox('Restablecer plantilla', 'Se descartan tus cambios y vuelve la plantilla original de Crm Hub 360.', 'Restablecer', true)) { return; } try { await api('DELETE', '/mail-templates/' + cur.key); toast('Plantilla original restablecida'); drawTemplates(cur.key); } catch (e) { toast(e.message); } };
     $('wts').onclick = async () => {
       const to = await inputBox('Enviar prueba', 'Enviar a', {required: true, ok: 'Enviar', placeholder: (state.me && state.me.email) || 'tu@correo.com', validate: v => (/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(v) ? '' : 'Escribe un correo válido.')});
       if (to === null) { return; }
-      try { await api('POST', '/settings/welcome/test', {to, subject: $('ws').value.trim(), html: $('wh').value}); toast('Prueba enviada a ' + to); }
+      try { await api('POST', `/mail-templates/${cur.key}/test`, {to, subject: $('ws').value.trim(), html: $('wh').value}); toast('Prueba enviada a ' + to); }
       catch (e) { modal(`<h3>No se pudo enviar</h3><p>${esc(e.message)}</p><div class="foot"><button class="btn primary" data-x="k">Cerrar</button></div>`).el.querySelector('[data-x=k]').onclick = ev => ev.target.closest('.back').remove(); }
     };
+  }
+
+  // ---------- enviar un correo a una empresa ya creada
+  async function sendMailDialog(c) {
+    let r; try { r = await api('GET', '/mail-templates'); } catch (e) { toast(e.message); return; }
+    let hist = []; try { hist = (await api('GET', `/companies/${c.slug}/mail-history`)).items; } catch (e) { /* sin historial */ }
+    const m = modal(`<h3>Enviar correo a ${esc(c.name)}</h3>
+      <div class="tpl-tabs" id="sm-t">${r.items.map(x => `<button class="tpl-tab" data-k="${x.key}"><span>${x.icon}</span> ${esc(x.name)}</button>`).join('')}</div>
+      <div class="mut" id="sm-d"></div>
+      <label>Enviar a</label><select id="sm-to"><option value="admin">El administrador${c.profile && c.profile.email ? ' (' + esc(c.profile.email) + ')' : ''}</option><option value="all">Todos los usuarios activos de la empresa</option><option value="custom">Otro correo…</option></select>
+      <input id="sm-c" type="email" placeholder="correo@empresa.com" hidden style="margin-top:8px">
+      <div id="sm-f"></div>
+      <label>Asunto</label><input id="sm-s" maxlength="200">
+      <div class="mut" style="margin:8px 0 4px">Vista previa</div><iframe id="sm-p" title="Vista previa" sandbox="" style="width:100%;height:340px;border:1px solid var(--line);border-radius:12px;background:#fff"></iframe>
+      ${hist.length ? `<div class="mut" style="margin-top:8px">Últimos envíos: ${hist.slice(0, 3).map(h => `${esc((r.items.find(x => x.key === h.template) || {}).name || h.template)} · ${esc(fmtDate(h.at))}`).join(' · ')}</div>` : ''}
+      <div class="err" id="sm-e" hidden></div><div class="foot"><button class="btn" data-x="n">Cancelar</button><button class="btn primary" data-x="y">Enviar correo</button></div>`, 'wide');
+    const $ = id => m.el.querySelector('#' + id);
+    let key = null, tm;
+    const values = () => { const v = {}; m.el.querySelectorAll('[data-fv]').forEach(el => { v[el.dataset.fv] = el.value; }); return v; };
+    const preview = async () => {
+      try { const p = await api('POST', `/companies/${c.slug}/mail-preview`, {template: key, values: values(), subject: $('sm-s').dataset.edited ? $('sm-s').value : ''}); $('sm-p').srcdoc = p.html; if (!$('sm-s').dataset.edited) { $('sm-s').value = p.subject; } $('sm-e').hidden = true; }
+      catch (e) { $('sm-e').hidden = false; $('sm-e').textContent = e.message; }
+    };
+    const pick = k => {
+      key = k; const t = r.items.find(x => x.key === k);
+      m.el.querySelectorAll('.tpl-tab').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+      $('sm-d').textContent = t.desc + (t.credentials ? ' (Solo al administrador o a un correo concreto.)' : '');
+      if (t.credentials && $('sm-to').value === 'all') { $('sm-to').value = 'admin'; }
+      $('sm-to').querySelector('[value=all]').disabled = t.credentials;
+      $('sm-s').dataset.edited = '';
+      $('sm-f').innerHTML = t.fields.map(f => f.type === 'area' ? `<label>${esc(f.label)}</label><textarea data-fv="${f.key}" rows="3" maxlength="1500"></textarea>`
+        : `<label>${esc(f.label)}</label><input data-fv="${f.key}" ${f.type === 'date' ? 'type="date"' : 'maxlength="300"'}>`).join('');
+      // valores iniciales útiles
+      const dv = (kk, vv) => { const el = m.el.querySelector(`[data-fv="${kk}"]`); if (el && !el.value) { el.value = vv; } };
+      const t5 = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10);
+      if (k === 'payment') { dv('vencimiento', t5); dv('concepto', 'Servicio Crm Hub 360 · plan ' + c.plan); dv('instrucciones', 'Realiza la transferencia a la cuenta que te indicamos y responde este correo con el soporte de pago.'); }
+      if (k === 'license') { dv('vencimiento', c.license || t5); }
+      m.el.querySelectorAll('[data-fv]').forEach(el => el.addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(preview, 450); }));
+      preview();
+    };
+    m.el.querySelectorAll('.tpl-tab').forEach(b => b.onclick = () => pick(b.dataset.k));
+    $('sm-to').onchange = () => { $('sm-c').hidden = $('sm-to').value !== 'custom'; if (!$('sm-c').hidden) { $('sm-c').focus(); } };
+    $('sm-s').addEventListener('input', () => { $('sm-s').dataset.edited = '1'; });
+    m.el.querySelector('[data-x=n]').onclick = m.close;
+    m.el.querySelector('[data-x=y]').onclick = async () => {
+      const er = $('sm-e'); er.hidden = true; const btn = m.el.querySelector('[data-x=y]');
+      const t = r.items.find(x => x.key === key);
+      if (t.credentials && !await confirmBox('Enviar credenciales', 'Este correo incluye el usuario y la contraseña actual del administrador. ¿Enviarlo?', 'Enviar')) { return; }
+      btn.disabled = true; btn.textContent = 'Enviando…';
+      try { const res = await api('POST', `/companies/${c.slug}/send-mail`, {template: key, to_mode: $('sm-to').value, to_custom: $('sm-c').value.trim(), values: values(), subject: $('sm-s').dataset.edited ? $('sm-s').value : ''});
+        m.close(); toast(`Correo enviado a ${res.sent.length} destinatario${res.sent.length === 1 ? '' : 's'}${res.failed.length ? ' · ' + res.failed.length + ' fallaron' : ''}`); }
+      catch (e) { er.hidden = false; er.textContent = e.message; btn.disabled = false; btn.textContent = 'Enviar correo'; }
+    };
+    pick(r.items[0].key === 'welcome' ? 'welcome' : r.items[0].key);
   }
 
   // ---------- proveedores aliados

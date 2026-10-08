@@ -437,58 +437,210 @@ async def support_link(slug: str, actor: str = Depends(me)):
 
 
 
-# ---------------------------------------------------------------- plantilla de bienvenida
-@app.get("/api/settings/welcome")
-def get_welcome(actor: str = Depends(me)):
-    w = get_setting("welcome", {}) or {}
-    return {"subject": w.get("subject") or welcome_tpl.DEFAULT_SUBJECT, "html": w.get("html") or welcome_tpl.DEFAULT_HTML, "custom": bool(w),
-            "sample": welcome_tpl.render(w.get("html") or welcome_tpl.DEFAULT_HTML, welcome_tpl.SAMPLE),
-            "markers": ["nombre", "apellido", "empresa", "url", "usuario", "clave", "ciudad", "pais", "anio"]}
+# ---------------------------------------------------------------- correos del Centro a las empresas (bienvenida, pago, reingreso…)
+MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
 
-class WelcomeReq(BaseModel):
+def fecha_es(iso: str) -> str:
+    try:
+        y, mo, d = (int(x) for x in str(iso)[:10].split("-"))
+        return f"{d} de {MESES[mo - 1]} de {y}"
+    except Exception:
+        return str(iso or "")
+
+
+def tpl_overrides() -> dict:
+    o = dict(get_setting("email_templates", {}) or {})
+    legacy = get_setting("welcome", {}) or {}
+    if legacy and "welcome" not in o:
+        o["welcome"] = legacy
+    return o
+
+
+def tpl_view(key: str) -> dict:
+    base, o = welcome_tpl.TEMPLATES[key], tpl_overrides().get(key) or {}
+    return {"key": key, "name": base["name"], "icon": base["icon"], "desc": base["desc"], "fields": base["fields"], "credentials": base["credentials"],
+            "subject": o.get("subject") or base["subject"], "html": o.get("html") or base["html"], "custom": bool(o), "markers": welcome_tpl.MARKERS_BASE + [f["key"] for f in base["fields"]]}
+
+
+@app.get("/api/mail-templates")
+def list_mail_templates(actor: str = Depends(me)):
+    return {"items": [tpl_view(k) for k in welcome_tpl.TEMPLATES], "sample": welcome_tpl.SAMPLE}
+
+
+class TplReq(BaseModel):
     subject: str = Field(min_length=3, max_length=200)
     html: str = Field(min_length=50, max_length=60000)
 
 
-@app.put("/api/settings/welcome")
-def put_welcome(req: WelcomeReq, actor: str = Depends(me)):
+@app.put("/api/mail-templates/{key}")
+def save_mail_template(key: str, req: TplReq, actor: str = Depends(me)):
+    if key not in welcome_tpl.TEMPLATES:
+        raise HTTPException(404, "Plantilla desconocida")
     low = req.html.lower()
     if "<script" in low or "javascript:" in low or re.search(r"\son\w+\s*=", low):
         raise HTTPException(400, "La plantilla no puede llevar scripts ni eventos (los correos no los admiten)")
-    put_setting("welcome", {"subject": req.subject.strip(), "html": req.html})
-    audit(actor, "guardar_plantilla_bienvenida")
-    return get_welcome(actor)
+    o = dict(get_setting("email_templates", {}) or {})
+    o[key] = {"subject": req.subject.strip(), "html": req.html}
+    put_setting("email_templates", o)
+    if key == "welcome":
+        put_setting("welcome", o[key])   # el ejecutor de creación de empresas lee esta clave
+    audit(actor, "guardar_plantilla_correo", key)
+    return tpl_view(key)
 
 
-@app.delete("/api/settings/welcome")
-def reset_welcome(actor: str = Depends(me)):
-    with db() as c:
-        c.execute("DELETE FROM control_settings WHERE key='welcome'")
-    audit(actor, "restablecer_plantilla_bienvenida")
-    return get_welcome(actor)
+@app.delete("/api/mail-templates/{key}")
+def reset_mail_template(key: str, actor: str = Depends(me)):
+    if key not in welcome_tpl.TEMPLATES:
+        raise HTTPException(404, "Plantilla desconocida")
+    o = dict(get_setting("email_templates", {}) or {})
+    o.pop(key, None)
+    put_setting("email_templates", o)
+    if key == "welcome":
+        with db() as c:
+            c.execute("DELETE FROM control_settings WHERE key='welcome'")
+    audit(actor, "restablecer_plantilla_correo", key)
+    return tpl_view(key)
 
 
-class WelcomeTestReq(BaseModel):
+class TplTestReq(BaseModel):
     to: str
     subject: str = ""
     html: str = ""
 
 
-@app.post("/api/settings/welcome/test")
-async def test_welcome(req: WelcomeTestReq, actor: str = Depends(me)):
+@app.post("/api/mail-templates/{key}/test")
+async def test_mail_template(key: str, req: TplTestReq, actor: str = Depends(me)):
+    if key not in welcome_tpl.TEMPLATES:
+        raise HTTPException(404, "Plantilla desconocida")
     m = get_setting("mail") or {}
     if not m.get("host") or not m.get("enabled", True):
         raise HTTPException(400, "Configura y activa el correo general para enviar pruebas")
-    w = get_setting("welcome", {}) or {}
-    html_t, subj_t = req.html or w.get("html") or welcome_tpl.DEFAULT_HTML, req.subject or w.get("subject") or welcome_tpl.DEFAULT_SUBJECT
-    html_s = welcome_tpl.render(html_t, welcome_tpl.SAMPLE)
+    v = tpl_view(key)
+    html_s = welcome_tpl.render(req.html or v["html"], welcome_tpl.SAMPLE)
     try:
-        await asyncio.to_thread(smtp_send, m, req.to.strip(), "[Prueba] " + welcome_tpl.render(subj_t, welcome_tpl.SAMPLE), welcome_tpl.plain(html_s), html_s, "Crm Hub 360")
+        await asyncio.to_thread(smtp_send, m, req.to.strip(), "[Prueba] " + welcome_tpl.render(req.subject or v["subject"], welcome_tpl.SAMPLE), welcome_tpl.plain(html_s), html_s, "Crm Hub 360")
     except Exception as e:
         raise HTTPException(502, "No se pudo enviar: " + str(e)[:200])
-    audit(actor, "probar_plantilla_bienvenida", req.to)
+    audit(actor, "probar_plantilla_correo", key, {"para": req.to})
     return {"ok": True}
+
+
+async def company_context(t: dict) -> dict:
+    prof = (t["settings"] or {}).get("profile") or {}
+    st = await asyncio.to_thread(stats, t)
+    email = prof.get("email")
+    first, last = prof.get("first") or "", prof.get("last") or ""
+    if not email or not first:
+        try:
+            async with espo(t) as c:
+                r = await c.get("/User", params={"where[0][type]": "equals", "where[0][attribute]": "userName", "where[0][value]": "admin", "select": "firstName,lastName,emailAddress"})
+            u = (r.json().get("list") or [{}])[0]
+            email, first, last = email or u.get("emailAddress"), first or u.get("firstName") or "", last or u.get("lastName") or ""
+        except Exception:
+            pass
+    days = None
+    if st.get("lastLogin"):
+        try:
+            days = max(0, int((time.time() - time.mktime(time.strptime(st["lastLogin"][:19], "%Y-%m-%dT%H:%M:%S"))) / 86400))
+        except Exception:
+            days = None
+    lic = t["license_until"].isoformat() if t["license_until"] else ""
+    left = ""
+    if lic:
+        try:
+            left = str(max(0, int((time.mktime(time.strptime(lic, "%Y-%m-%d")) - time.time()) / 86400)))
+        except Exception:
+            left = ""
+    countries = {"CO": "Colombia", "MX": "México", "PE": "Perú", "CL": "Chile", "AR": "Argentina", "EC": "Ecuador", "PA": "Panamá", "CR": "Costa Rica", "DO": "República Dominicana", "GT": "Guatemala", "UY": "Uruguay", "PY": "Paraguay", "BO": "Bolivia", "VE": "Venezuela", "ES": "España", "US": "Estados Unidos"}
+    return {"admin_email": email, "data": {"nombre": first or "equipo", "apellido": last, "empresa": t["name"], "url": f"https://{t['host']}", "usuario": "admin", "ciudad": prof.get("city") or "",
+            "pais": countries.get(prof.get("country", ""), ""), "plan": t["plan"], "dias": str(days) if days is not None else "varios", "leads": str(st.get("leads") if st.get("leads") is not None else "—"),
+            "usuarios": str(st.get("users") if st.get("users") is not None else "—"), "vencimiento": fecha_es(lic), "dias_restantes": left or "—", "anio": time.strftime("%Y")}}
+
+
+class SendMailReq(BaseModel):
+    template: str
+    to_mode: str = "admin"          # admin | all | custom
+    to_custom: str = ""
+    values: dict = {}
+    subject: str = ""
+    html: str = ""
+
+
+def _values(key: str, ctx: dict, given: dict) -> dict:
+    out = {}
+    for f in welcome_tpl.TEMPLATES[key]["fields"]:
+        v = str(given.get(f["key"], "") or "")
+        if not v:
+            v = welcome_tpl.render(f.get("default", ""), ctx["data"])
+        if f.get("required") and not v.strip():
+            raise HTTPException(400, f"Falta: {f['label']}")
+        out[f["key"]] = fecha_es(v) if f.get("type") == "date" and re.match(r"^\d{4}-\d{2}-\d{2}$", v) else v
+    if not out.get("enlace_pago") and "enlace_pago" in out:
+        out["enlace_pago"] = ctx["data"]["url"]
+    return out
+
+
+@app.post("/api/companies/{slug}/mail-preview")
+async def preview_mail(slug: str, req: SendMailReq, actor: str = Depends(me)):
+    if req.template not in welcome_tpl.TEMPLATES:
+        raise HTTPException(404, "Plantilla desconocida")
+    t = get_tenant(slug)
+    ctx, v = await company_context(t), tpl_view(req.template)
+    data = {**ctx["data"], **_values(req.template, ctx, req.values), "clave": "••••••••"}
+    return {"subject": welcome_tpl.render(req.subject or v["subject"], data), "html": welcome_tpl.render(req.html or v["html"], data), "to": ctx["admin_email"]}
+
+
+@app.post("/api/companies/{slug}/send-mail")
+async def send_company_mail(slug: str, req: SendMailReq, actor: str = Depends(me)):
+    if req.template not in welcome_tpl.TEMPLATES:
+        raise HTTPException(404, "Plantilla desconocida")
+    t = get_tenant(slug)
+    mail = get_setting("mail") or {}
+    if not mail.get("host") or not mail.get("enabled", True):
+        raise HTTPException(400, "Configura y activa el correo general (pestaña «Correo general») para enviar correos")
+    ctx, v = await company_context(t), tpl_view(req.template)
+    vals = _values(req.template, ctx, req.values)
+    creds = welcome_tpl.TEMPLATES[req.template]["credentials"]
+    if creds and req.to_mode == "all":
+        raise HTTPException(400, "La bienvenida lleva credenciales: envíala solo al administrador o a un correo concreto")
+    recipients: list = []
+    if req.to_mode == "custom":
+        if not re.match(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$", req.to_custom.strip()):
+            raise HTTPException(400, "Escribe un correo válido")
+        recipients = [(req.to_custom.strip(), ctx["data"]["nombre"])]
+    elif req.to_mode == "all":
+        async with espo(t) as c:
+            r = await c.get("/User", params={"maxSize": 200, "select": "userName,firstName,emailAddress,type,isActive"})
+        recipients = [(u["emailAddress"], u.get("firstName") or "equipo") for u in r.json().get("list", []) if u.get("emailAddress") and u.get("isActive") and u.get("type") in ("admin", "regular") and u["userName"] != SUPPORT_USER]
+        if not recipients:
+            raise HTTPException(400, "Ningún usuario activo tiene correo")
+    else:
+        if not ctx["admin_email"]:
+            raise HTTPException(400, "El administrador no tiene correo registrado: usa «Otro correo»")
+        recipients = [(ctx["admin_email"], ctx["data"]["nombre"])]
+    clave = tenant_env(slug).get("ADMIN_PASSWORD", "") if creds else ""
+    sent, failed = [], []
+    for addr, first in recipients:
+        data = {**ctx["data"], **vals, "nombre": first, "clave": clave}
+        html_s = welcome_tpl.render(req.html or v["html"], data)
+        try:
+            await asyncio.to_thread(smtp_send, mail, addr, welcome_tpl.render(req.subject or v["subject"], data), welcome_tpl.plain(html_s), html_s, "Crm Hub 360")
+            sent.append(addr)
+        except Exception as e:
+            failed.append({"to": addr, "error": str(e)[:120]})
+    audit(actor, "enviar_correo", slug, {"plantilla": req.template, "enviados": len(sent), "fallidos": len(failed), "para": sent[:5]})
+    if not sent:
+        raise HTTPException(502, "No se pudo enviar: " + (failed[0]["error"] if failed else "sin destinatarios"))
+    return {"sent": sent, "failed": failed}
+
+
+@app.get("/api/companies/{slug}/mail-history")
+def mail_history(slug: str, actor: str = Depends(me)):
+    get_tenant(slug)
+    with db() as c:
+        rows = c.execute("SELECT at, actor, detail FROM control_audit WHERE action='enviar_correo' AND target=%s ORDER BY id DESC LIMIT 8", (slug,)).fetchall()
+    return {"items": [{"at": r["at"].isoformat(), "by": r["actor"], "template": (r["detail"] or {}).get("plantilla"), "sent": (r["detail"] or {}).get("enviados"), "to": (r["detail"] or {}).get("para")} for r in rows]}
 
 
 @app.post("/api/companies/{slug}/welcome")
