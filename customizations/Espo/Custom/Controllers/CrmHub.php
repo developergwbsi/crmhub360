@@ -597,7 +597,7 @@ class CrmHub
         $html = $this->brandedHtml($body, mb_substr(trim((string) ($d->subject ?? '')), 0, 250));
         $payload = ['userId' => $this->user->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName')), 'to' => array_values($to), 'cc' => array_values($cc),
             'subject' => mb_substr(trim((string) ($d->subject ?? '')), 0, 250), 'html' => $html, 'parentType' => $parentType, 'parentId' => $parentId,
-            'inReplyTo' => !empty($d->inReplyTo) ? (string) $d->inReplyTo : null, 'references' => array_values(array_filter((array) ($d->references ?? []), 'is_string'))];
+            'inReplyTo' => !empty($d->inReplyTo) ? (string) $d->inReplyTo : null, 'references' => array_values(array_filter((array) ($d->references ?? []), 'is_string')), 'record' => false];
         try {
             $r = (new HubClient($this->config))->request('POST', '/v1/email/send', $payload, 45);
         } catch (\RuntimeException $e) {
@@ -608,7 +608,9 @@ class CrmHub
             preg_match('/"detail":"([^"]+)"/u', $msg, $m);
             throw new BadRequest($m[1] ?? 'No se pudo enviar el correo.');
         }
-        return (object) ['ok' => true, 'id' => $r['id'] ?? null, 'replyTo' => $r['replyTo'] ?? null];
+        // se guarda aquí, como el usuario: queda en «Enviados» (autor = él) y no en su bandeja de entrada
+        $email = $this->em->createEntity('Email', (array) ($r['email'] ?? []));
+        return (object) ['ok' => true, 'id' => $email->getId(), 'replyTo' => $r['replyTo'] ?? null];
     }
 
 

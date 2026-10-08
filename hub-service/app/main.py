@@ -650,6 +650,7 @@ class EmailSendReq(BaseModel):
     parentId: str | None = None
     inReplyTo: str | None = None
     references: list[str] = []
+    record: bool = True
 
 
 @app.post("/v1/email/send")

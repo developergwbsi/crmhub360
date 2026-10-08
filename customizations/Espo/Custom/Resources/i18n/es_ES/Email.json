@@ -1,0 +1,4 @@
+{
+    "fields": {"status": "Tipo"},
+    "options": {"status": {"Archived": "Recibido", "Sent": "Enviado"}}
+}

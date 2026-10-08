@@ -82,10 +82,11 @@ async def send(tenant: dict, req: dict) -> dict:
     msg.set_content(plain_of(html))
     msg.add_alternative(html, subtype="html")
     await asyncio.to_thread(_smtp_send, cfg, msg, to + cc)
-    espo = Espo(tenant)
     data = {"name": msg["Subject"], "from": cfg["from_address"], "fromName": uname, "to": ";".join(to), "cc": ";".join(cc), "replyTo": reply_to, "body": html, "bodyPlain": plain_of(html),
             "isHtml": True, "status": "Sent", "dateSent": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), "messageId": mid, "assignedUserId": uid, "usersIds": [uid]}
     if req.get("parentType") and req.get("parentId"):
         data.update({"parentType": req["parentType"], "parentId": req["parentId"]})
-    saved = await espo.post("Email", data)
+    if req.get("record") is False:   # el CRM lo guarda con el usuario como autor (así queda en «Enviados» y no en la bandeja de entrada)
+        return {"id": None, "messageId": mid, "replyTo": reply_to, "email": data}
+    saved = await Espo(tenant).post("Email", data)
     return {"id": saved.get("id"), "messageId": mid, "replyTo": reply_to}

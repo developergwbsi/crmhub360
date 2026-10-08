@@ -1,0 +1,5 @@
+{
+    "fields": {
+        "status": {"style": {"Sent": "info", "Archived": "success", "Draft": "warning", "Failed": "danger", "Sending": "warning"}}
+    }
+}

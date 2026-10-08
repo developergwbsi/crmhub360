@@ -1,0 +1,7 @@
+[
+    {"name": "personStringData", "width": 17, "notSortable": true, "noLabel": true},
+    {"name": "subject", "link": true, "notSortable": true},
+    {"name": "status", "width": 10, "notSortable": true},
+    {"name": "parent", "notSortable": true, "width": 18},
+    {"name": "dateSent", "notSortable": true, "width": 10, "align": "right"}
+]
