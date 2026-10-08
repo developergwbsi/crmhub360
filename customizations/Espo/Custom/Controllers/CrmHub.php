@@ -407,6 +407,16 @@ class CrmHub
     }
 
     // ---------- WhatsApp (envío) y llamadas ----------
+    public function postActionWhatsappQr(Request $request): \stdClass
+    {
+        try {
+            return (object) $this->hub()->request('POST', '/v1/whatsapp/qr', []);
+        } catch (\RuntimeException $e) {
+            preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
+            throw new BadRequest($m[1] ?? 'No se pudo obtener el código QR.');
+        }
+    }
+
     public function postActionWhatsappTest(Request $request): \stdClass
     {
         try {

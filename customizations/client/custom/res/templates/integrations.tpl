@@ -72,6 +72,7 @@
       <div class="ch-row" style="margin-top:12px">
         <button class="btn btn-primary" data-action="saveWhatsapp">Guardar</button>
         <button class="btn btn-default" data-action="testWhatsapp"><span class="fas fa-plug"></span> Probar conexión</button>
+        <button class="btn btn-default" data-action="linkWhatsapp" title="Solo Evolution API"><span class="fas fa-qrcode"></span> Vincular WhatsApp (QR)</button>
         <span class="ch-small" data-role="waStatus"></span>
       </div>
     </div>

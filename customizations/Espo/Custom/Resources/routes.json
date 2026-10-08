@@ -300,5 +300,13 @@
             "action": "exchange"
         },
         "noAuth": true
+    },
+    {
+        "route": "/CrmHub/whatsapp/qr",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "whatsappQr"
+        }
     }
 ]

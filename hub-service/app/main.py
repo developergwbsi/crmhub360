@@ -629,6 +629,16 @@ async def wa_test(tenant: dict = Depends(tenant_auth)):
         raise HTTPException(502, f"No se pudo conectar con Evolution API: {e}")
 
 
+@app.post("/v1/whatsapp/qr")
+async def wa_qr(tenant: dict = Depends(tenant_auth)):
+    try:
+        return await whatsapp.qr(tenant)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo obtener el código QR: {e}")
+
+
 @app.post("/v1/whatsapp/send")
 async def wa_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
     text = req.text.strip()

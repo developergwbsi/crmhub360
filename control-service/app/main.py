@@ -1018,6 +1018,19 @@ def channel_settings(channel: str, prov: dict, svc: dict, t: dict) -> dict:
     raise HTTPException(400, f"El proveedor «{prov['name']}» no sirve para {channel}")
 
 
+async def evolution_token(prov: dict, instance: str) -> str:
+    """Clave propia de la instancia (no la global): la empresa solo puede operar su instancia, nunca las demás del servidor."""
+    f = prov["fields"]
+    try:
+        async with httpx.AsyncClient(timeout=15) as c:
+            r = await c.get(f["url"].rstrip("/") + "/instance/fetchInstances", params={"instanceName": instance}, headers={"apikey": f.get("apikey", "")})
+        d = r.json()
+        d = d[0] if isinstance(d, list) and d else d
+        return (d or {}).get("token") or (d or {}).get("apikey") or ""
+    except Exception:
+        return ""
+
+
 async def evolution_instance(t: dict, prov: dict, instance: str) -> str:
     """Crea (si no existe) la instancia de WhatsApp de la empresa en nuestro servidor Evolution y le apunta el webhook al Hub de la empresa."""
     f = prov["fields"]
@@ -1151,6 +1164,9 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
             sv[ch] = svc
             if prov["kind"] == "evolution":
                 notes.append(await evolution_instance(t, prov, svc["instance"] or slug))
+                tok = await evolution_token(prov, svc["instance"] or slug)
+                if tok:
+                    settings["evolution_apikey"] = tok   # la empresa usa la clave de SU instancia, no la global del servidor
         else:
             sv.pop(ch, None)
     # Twilio compartido: se quitan las credenciales solo si ningún canal gestionado las sigue usando

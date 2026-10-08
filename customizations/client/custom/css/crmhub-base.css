@@ -666,3 +666,9 @@ body.minimized #navbar .navbar-brand.ch-has-brand .ch-brand { display: none; }
 .folders-container .folder-list > li > a.side-link { font-size: 13.5px; padding: 8px 10px; }
 .folders-container .folder-list > li > a.side-link > span:not(.item-icon-container) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .folders-container .folder-list .badge, .folders-container .folder-list .count { margin-left: auto; padding: 2px 8px; font-size: 11px; }
+
+/* vinculación de WhatsApp por QR */
+.ch-qr { display: grid; place-items: center; padding: 8px; } .ch-qr img { width: min(280px, 100%); height: auto; border: 1px solid var(--ch-line); border-radius: 14px; background: #fff; padding: 8px; }
+.ch-qr-wait { display: grid; place-items: center; min-height: 160px; color: var(--ch-muted); gap: 8px; }
+.ch-qr-steps { margin: 10px 0 0; padding-left: 20px; font-size: 13.5px; color: var(--ch-muted); line-height: 1.55; }
+.ch-qr-ok { text-align: center; padding: 18px 8px; } .ch-qr-ok .fas { font-size: 44px; color: #2fa36b; display: block; margin-bottom: 8px; } .ch-qr-ok p { color: var(--ch-muted); margin: 6px 0 0; }

@@ -121,6 +121,27 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                         .addClass(r.connected ? 'text-success' : 'text-danger'))
                     .catch(xhr => this.showError($s, xhr, 'No se pudo probar'));
             },
+            // Vincular el teléfono por código QR (Evolution): se renueva el código y se detecta la conexión sola
+            'click [data-action="linkWhatsapp"]': function () {
+                let alive = true, timer = null;
+                const tick = body => Espo.Ajax.postRequest('CrmHub/whatsapp/qr', {}).then(r => {
+                    if (!alive) { return; }
+                    if (r.connected) {
+                        body.innerHTML = '<div class="ch-qr-ok"><span class="fas fa-circle-check"></span><b>¡WhatsApp vinculado!</b><p>Ya puedes enviar y recibir mensajes desde el CRM.</p></div>';
+                        Espo.Ui.success('WhatsApp vinculado'); this.load(true); return;
+                    }
+                    body.innerHTML = (r.qr ? `<div class="ch-qr"><img alt="Código QR de WhatsApp" src="${ChUi.esc(r.qr)}"></div>` : '<div class="ch-qr-wait"><span class="fas fa-spinner fa-spin"></span> Generando el código…</div>') +
+                        '<ol class="ch-qr-steps"><li>Abre WhatsApp en el teléfono de la empresa.</li><li>Ve a <b>Ajustes → Dispositivos vinculados → Vincular un dispositivo</b>.</li><li>Escanea este código. Se renueva solo cada pocos segundos.</li></ol>' +
+                        (r.pairingCode ? `<p class="ch-muted">¿Sin cámara? Usa el código de emparejamiento: <b>${ChUi.esc(r.pairingCode)}</b></p>` : '');
+                    timer = setTimeout(() => tick(body), 4000);
+                }).catch(xhr => {
+                    const reason = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason');
+                    if (xhr) { xhr.errorIsHandled = true; }
+                    body.innerHTML = `<div class="ch-warn">${ChUi.esc(reason || 'No se pudo obtener el código QR. Revisa que el proveedor sea Evolution API y que la configuración esté guardada.')}</div>`;
+                });
+                ChUi.panel({title: 'Vincular WhatsApp', icon: 'fab fa-whatsapp', mount: body => { body.innerHTML = '<div class="ch-qr-wait"><span class="fas fa-spinner fa-spin"></span> Generando el código…</div>'; tick(body); }})
+                    .then(() => { alive = false; clearTimeout(timer); });
+            },
             'click [data-action="saveTelegram"]': function () {
                 const v = n => (this.$el.find(`[name="${n}"]`).val() || '').trim();
                 const $s = this.$el.find('[data-role="tgStatus"]').text('Guardando y conectando…').removeClass('text-danger text-success');

@@ -47,6 +47,14 @@ define('custom:ui', [], function () {
                 const yes = box.querySelector('[data-a="yes"]'); yes.onclick = () => close(true); yes.focus();
             }).then(v => v === true);
         },
+        // Diálogo con contenido propio: mount(cuerpo, cerrar) lo llena; devuelve una promesa que se resuelve al cerrarse
+        panel(o) {
+            return open((box, close) => {
+                box.innerHTML = head(o.title || '', o.icon) + `<div class="ch-dlg-body" data-role="body"></div><div class="ch-dlg-foot"><button type="button" class="btn btn-default" data-a="ok">${esc(o.close || 'Cerrar')}</button></div>`;
+                box.querySelector('[data-a="ok"]').onclick = () => close(true);
+                o.mount(box.querySelector('[data-role="body"]'), close);
+            });
+        },
         // Aviso con un solo botón
         notice(o) {
             return open((box, close) => {

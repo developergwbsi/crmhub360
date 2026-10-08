@@ -73,6 +73,28 @@ async def test(tenant: dict) -> dict:
     raise ValueError("Elige un proveedor de WhatsApp y guarda sus credenciales.")
 
 
+async def qr(tenant: dict) -> dict:
+    """Vinculación por QR (solo Evolution): devuelve el estado y, si aún no está conectado, el código QR actual."""
+    if provider(tenant) != "evolution":
+        raise ValueError("La vinculación por QR solo aplica a Evolution API.")
+    url, key, inst = _need(tenant, "evolution_url", "evolution_apikey", "evolution_instance")
+    base, h = url.rstrip("/"), {"apikey": key}
+    async with httpx.AsyncClient(timeout=20) as c:
+        r = await c.get(f"{base}/instance/connectionState/{inst}", headers=h)
+        if r.status_code == 404:   # la instancia no existe todavía: se crea
+            cr = await c.post(f"{base}/instance/create", headers=h, json={"instanceName": inst, "integration": "WHATSAPP-BAILEYS", "qrcode": True})
+            cr.raise_for_status()
+            r = await c.get(f"{base}/instance/connectionState/{inst}", headers=h)
+        r.raise_for_status()
+        data = r.json(); state = (data.get("instance") or data).get("state")
+        if state == "open":
+            return {"connected": True, "state": state}
+        q = await c.get(f"{base}/instance/connect/{inst}", headers=h)
+        q.raise_for_status()
+        d = q.json()
+        return {"connected": False, "state": state, "qr": d.get("base64") or "", "pairingCode": d.get("pairingCode") or ""}
+
+
 def _err(r: httpx.Response) -> str:
     try:
         j = r.json()
