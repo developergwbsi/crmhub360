@@ -16,5 +16,51 @@
         "list": "custom:views/record/list-drawer",
         "detail": "custom:views/lead/record/detail",
         "detailSmall": "custom:views/lead/record/detail-small"
+    },
+    "menu": {
+        "detail": {
+            "buttons": [
+                {
+                    "name": "callLead",
+                    "label": "Llamar",
+                    "iconClass": "fas fa-phone",
+                    "style": "default",
+                    "handler": "custom:handlers/lead-contact",
+                    "actionFunction": "actionCall"
+                },
+                {
+                    "name": "whatsappLead",
+                    "label": "WhatsApp",
+                    "iconClass": "fab fa-whatsapp",
+                    "style": "default",
+                    "handler": "custom:handlers/lead-contact",
+                    "actionFunction": "actionWhatsapp"
+                },
+                {
+                    "name": "smsLead",
+                    "label": "SMS",
+                    "iconClass": "fas fa-comment-sms",
+                    "style": "default",
+                    "handler": "custom:handlers/lead-contact",
+                    "actionFunction": "actionSms"
+                },
+                {
+                    "name": "telegramLead",
+                    "label": "Telegram",
+                    "iconClass": "fab fa-telegram",
+                    "style": "default",
+                    "handler": "custom:handlers/lead-contact",
+                    "actionFunction": "actionTelegram"
+                },
+                {
+                    "name": "emailLead",
+                    "label": "Correo",
+                    "iconClass": "fas fa-envelope",
+                    "style": "default",
+                    "handler": "custom:handlers/lead-contact",
+                    "actionFunction": "actionEmail"
+                }
+            ]
+        }
     }
 }

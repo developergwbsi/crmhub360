@@ -18,8 +18,7 @@ define('custom:views/modals/lead-drawer', ['views/modals/detail', 'custom:handle
                 ['callLead', 'fas fa-phone', 'Llamar', 'actionCall'], ['whatsappLead', 'fab fa-whatsapp', 'WhatsApp', 'actionWhatsapp'],
                 ['smsLead', 'fas fa-comment-sms', 'SMS', 'actionSms'], ['telegramLead', 'fab fa-telegram', 'Telegram', 'actionTelegram'], ['emailLead', 'fas fa-envelope', 'Correo', 'actionEmail'],
             ];
-            // WhatsApp, SMS y Telegram viven en el módulo de leads; llamadas y correo sirven para cualquier registro
-            const contact = scope === 'Lead' ? all : all.filter(c => ['callLead', 'emailLead'].includes(c[0]));
+            const contact = all;   // todos los canales sirven para lead, cuenta, contacto y oportunidad (la conversación sigue en el lead de origen)
             contact.slice().reverse().forEach(([name, icon, label, fn]) => {
                 this.buttonList.unshift({name, html: `<span class="${icon}"></span>`, title: label, className: 'ch-contact-btn ch-contact-' + name, onClick: () => new ContactHandler(this)[fn]()});
             });

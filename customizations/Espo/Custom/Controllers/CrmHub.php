@@ -247,7 +247,7 @@ class CrmHub
 
         $builder = $this->selectBuilderFactory->create()->from('Lead')->withAccessControlFilter()->buildQueryBuilder();
         $builder->select(['id', 'status', 'source', 'assignedUserId', 'createdAt', 'totalDebt', 'overdueDebt',
-                          'qualificationStatus', 'suggestedService', 'campaignId', 'isSimulation'])->limit(0, 30000);
+                          'qualificationStatus', 'suggestedService', 'campaignId', 'isSimulation', 'isThread'])->limit(0, 30000);
         $leads = iterator_to_array($this->em->getRDBRepository('Lead')->clone($builder->build())->find(), false);
 
         $names = [];
@@ -275,7 +275,7 @@ class CrmHub
         $trendKeys = array_keys($trend);
 
         foreach ($leads as $l) {
-            if ($l->get('isSimulation')) {
+            if ($l->get('isSimulation') || $l->get('isThread')) {
                 continue;   // los leads de la simulación no cuentan en los reportes reales
             }
             $status = (string) $l->get('status');
@@ -948,5 +948,46 @@ class CrmHub
             throw new BadRequest('No se pudo eliminar la nota.');
         }
         return (object) $r;
+    }
+
+    /**
+     * WhatsApp, SMS y Telegram guardan la conversación en el lead de la persona. Cuando ya es cuenta, contacto u oportunidad se sigue usando ese mismo
+     * hilo (el lead del que nació); si el registro se creó a mano y no tiene lead, se crea uno de conversación (estado «Converted», fuera de los reportes).
+     */
+    public function postActionThread(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $scope = (string) ($d->scope ?? '');
+        if ($this->user->isApi() || !in_array($scope, ['Account', 'Contact', 'Opportunity'], true)) {
+            throw new BadRequest();
+        }
+        $rec = $this->em->getEntityById($scope, (string) ($d->id ?? ''));
+        if (!$rec || !$this->acl->checkEntityRead($rec)) {
+            throw new Forbidden();
+        }
+        $account = $scope === 'Account' ? $rec : ($rec->get('accountId') ? $this->em->getEntityById('Account', (string) $rec->get('accountId')) : null);
+        $phone = trim((string) $rec->get('phoneNumber')) ?: trim((string) ($account?->get('phoneNumber') ?? ''));
+        $email = trim((string) $rec->get('emailAddress')) ?: trim((string) ($account?->get('emailAddress') ?? ''));
+        $col = ['Account' => 'createdAccountId', 'Contact' => 'createdContactId', 'Opportunity' => 'createdOpportunityId'][$scope];
+        $repo = $this->em->getRDBRepository('Lead');
+        $lead = $repo->where([$col => $rec->getId()])->findOne();
+        if (!$lead && $account) {
+            $lead = $repo->where(['createdAccountId' => $account->getId()])->findOne();
+        }
+        if (!$lead && $phone !== '') {
+            $lead = $repo->where(['phoneNumber' => $phone])->findOne();
+        }
+        if (!$lead) {
+            $name = trim((string) $rec->get('name'));
+            [$first, $last] = array_pad(preg_split('/\s+/', $name, 2) ?: [], 2, '');
+            $lead = $this->em->createEntity('Lead', array_filter([
+                'firstName' => $last !== '' ? $first : null, 'lastName' => $last !== '' ? $last : ($first ?: 'Cliente'),
+                'phoneNumber' => $phone ?: null, 'emailAddress' => $email ?: null, 'status' => 'Converted', 'isThread' => true,
+                'assignedUserId' => $rec->get('assignedUserId') ?: $this->user->getId(), $col => $rec->getId(),
+                'description' => 'Conversación de ' . ['Account' => 'la cuenta', 'Contact' => 'el contacto', 'Opportunity' => 'la oportunidad'][$scope] . ' «' . $name . '» (creado automáticamente).',
+            ], fn ($v) => $v !== null));
+        }
+        return (object) ['leadId' => $lead->getId(), 'phone' => $phone ?: (string) $lead->get('phoneNumber'), 'email' => $email ?: (string) $lead->get('emailAddress'),
+            'name' => (string) ($rec->get('name') ?: $lead->get('name')), 'telegramUsername' => (string) $lead->get('telegramUsername'), 'telegramChatId' => (string) $lead->get('telegramChatId')];
     }
 }

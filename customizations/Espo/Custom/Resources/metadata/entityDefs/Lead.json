@@ -181,6 +181,10 @@
             "default": false,
             "readOnly": false,
             "notStorable": false
+        },
+        "isThread": {
+            "type": "bool",
+            "default": false
         }
     }
 }

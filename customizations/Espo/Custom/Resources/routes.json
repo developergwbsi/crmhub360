@@ -396,5 +396,13 @@
             "controller": "CrmHub",
             "action": "kbNoteDelete"
         }
+    },
+    {
+        "route": "/CrmHub/thread",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "thread"
+        }
     }
 ]
