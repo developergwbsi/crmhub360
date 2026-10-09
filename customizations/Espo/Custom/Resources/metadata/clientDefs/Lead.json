@@ -129,6 +129,11 @@
                 "view": "custom:views/lead/panels/documents"
             },
             {
+                "name": "chAgent",
+                "label": "Comercial virtual",
+                "view": "custom:views/lead/panels/agent"
+            },
+            {
                 "name": "activities",
                 "reference": "activities"
             },

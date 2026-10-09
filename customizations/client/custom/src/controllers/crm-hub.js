@@ -31,6 +31,11 @@ define('custom:controllers/crm-hub', ['controller'], function (Dep) {
             this.main('custom:views/processes', {});
         }
 
+        actionAgente() {
+            if (!this.getUser().isAdmin()) { this.error403(); return; }
+            this.main('custom:views/agent', {});
+        }
+
         actionAsignacion() {
             if (!this.getUser().isAdmin()) { this.error403(); return; }
             this.main('custom:views/assignment', {});

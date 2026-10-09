@@ -156,6 +156,12 @@ async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str, im
     if ptype:
         data.update({"parentType": ptype, "parentId": pid})
     saved = await espo.post("Email", data)
+    if ptype == "Lead" and pid:   # respuesta de un cliente a un lead atendido por el comercial virtual
+        from . import agent
+        try:
+            await agent.on_inbound(tenant, pid, "email", m["subject"] or "")
+        except Exception as e:
+            log.warning("agente (correo): %s", str(e)[:100])
     if owner:   # aviso del navegador/celular (push) aunque la app esté cerrada; la campana de Espo la crea el propio CRM
         try:
             who = (m["fromName"] or m["from"] or "").strip()

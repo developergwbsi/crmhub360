@@ -1054,6 +1054,7 @@ class ServicesReq(BaseModel):
     voice: Optional[dict] = None
     mail: Optional[str] = None            # 'shared' | 'own'
     cartera: Optional[bool] = None        # módulo «Cartera y cobranza» (tarjetas de deuda y mora)
+    agent: Optional[str] = None           # comercial virtual: 'off' (solo manual) | 'auto' (versión automática, con costo propio)
     lookups: Optional[list] = None        # servicios de consulta del sistema habilitados para la empresa
     templates: Optional[int] = None       # plantillas personales por usuario y canal (10 incluidas; más es un servicio adicional)
 
@@ -1149,7 +1150,13 @@ async def get_services(slug: str, actor: str = Depends(me)):
             cartera = bool((await c.get("/Settings")).json().get("crmhubCartera"))
     except Exception:
         cartera = False
-    return {"lookups": list(((t["settings"] or {}).get("lookups")) or []), "lookupCatalog": [{"id": l["id"], "name": l["name"], "category": l.get("category", "otro")} for l in lookups_list()], "cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10), "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
+    try:
+        with db() as c4:
+            u = c4.execute("SELECT messages, llm_calls, escalations FROM agent_usage WHERE tenant=%s AND month=to_char(now() AT TIME ZONE 'UTC','YYYY-MM')", (slug,)).fetchone()
+    except Exception:
+        u = None
+    return {"agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
+            "lookups": list(((t["settings"] or {}).get("lookups")) or []), "lookupCatalog": [{"id": l["id"], "name": l["name"], "category": l.get("category", "otro")} for l in lookups_list()], "cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10), "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
             "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
 
 
@@ -1195,6 +1202,11 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
     if req.mail in ("shared", "own") or (req.mail or "").startswith("p"):
         await set_company_mail(t, req.mail)
         sv["mail"] = req.mail
+    if req.agent is not None:
+        if req.agent not in ("off", "auto"):
+            raise HTTPException(400, "Valor no válido para el comercial virtual")
+        with db() as c5:
+            c5.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps({"agent": req.agent}), slug))
     if req.lookups is not None:
         known = {l["id"] for l in lookups_list()}
         ids = [str(i) for i in req.lookups if str(i) in known]

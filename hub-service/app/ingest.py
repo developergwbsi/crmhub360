@@ -158,6 +158,12 @@ async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None,
     await Espo(tenant).note(lead_id, f"[WhatsApp] {'→ Asesor' if from_me else '← ' + (name or 'Cliente')}: {text}")
     if not from_me:
         await notify_owner(tenant, lead_id, name, text)
+        if not is_optout(text):
+            from . import agent
+            try:
+                await agent.on_inbound(tenant, lead_id, "whatsapp", text)
+            except Exception as e:
+                logging.getLogger("crmhub").warning("agente (whatsapp): %s", str(e)[:100])
     if not from_me and is_optout(text):
         await apply_optout(tenant, lead_id, "WhatsApp")
         try:
@@ -335,6 +341,12 @@ async def sms_inbound(tenant: dict, *, phone: str, text: str, name: str | None =
             await sms.send_text(tenant, normalize_phone(phone), "Listo, no volverás a recibir mensajes masivos de nuestra parte.")
         except Exception:
             pass
+    else:
+        from . import agent
+        try:
+            await agent.on_inbound(tenant, lead_id, "sms", text)
+        except Exception as e:
+            logging.getLogger("crmhub").warning("agente (sms): %s", str(e)[:100])
     return lead_id
 
 

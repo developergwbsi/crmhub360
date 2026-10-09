@@ -87,6 +87,12 @@ async def send(tenant: dict, req: dict) -> dict:
     if req.get("parentType") and req.get("parentId"):
         data.update({"parentType": req["parentType"], "parentId": req["parentId"]})
     if req.get("record") is False:   # el CRM lo guarda con el usuario como autor (así queda en «Enviados» y no en la bandeja de entrada)
+        if req.get("parentType") == "Lead" and req.get("parentId") and not req.get("agent"):
+            from . import agent
+            agent.note_human(tenant["slug"], req["parentId"], agent.config(tenant)["cadence"]["human_hold_minutes"])
         return {"id": None, "messageId": mid, "replyTo": reply_to, "email": data}
     saved = await Espo(tenant).post("Email", data)
+    if req.get("parentType") == "Lead" and req.get("parentId") and not req.get("agent"):
+        from . import agent
+        agent.note_human(tenant["slug"], req["parentId"], agent.config(tenant)["cadence"]["human_hold_minutes"])
     return {"id": saved.get("id"), "messageId": mid, "replyTo": reply_to}

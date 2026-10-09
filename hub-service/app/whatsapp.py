@@ -168,4 +168,7 @@ async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str |
     _sent[(lead_id, text)] = time.time()
     await espo.note(lead_id, f"[WhatsApp] → {agent}: {text}")
     routing.note_out(tenant["slug"], lead_id, user_id, number)   # la respuesta del cliente le llega a quien le escribió
+    if user_id:   # una persona escribió: el comercial virtual se hace a un lado un rato
+        from . import agent
+        agent.note_human(tenant["slug"], lead_id, agent.config(tenant)["cadence"]["human_hold_minutes"])
     return {"ok": True, "phone": number}

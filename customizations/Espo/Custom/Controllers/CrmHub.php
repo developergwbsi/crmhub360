@@ -1207,4 +1207,48 @@ class CrmHub
         $lead = $this->docLead((string) $request->getQueryParam('leadId'), false);
         return (object) $this->hubCall('GET', '/v1/docs/history?leadId=' . rawurlencode($lead->getId()), null, 10);
     }
+
+    // ---------- Comercial virtual (versión automática del seguimiento de leads) ----------
+    public function getActionAgentConfig(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/agent/config', null, 10);
+    }
+
+    public function postActionAgentConfigSave(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('PUT', '/v1/agent/config', ['config' => json_decode(json_encode($d->config ?? new \stdClass()), true)], 20);
+    }
+
+    public function postActionAgentTest(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/agent/test', ['sample' => json_decode(json_encode($d->sample ?? new \stdClass()), true)], 290);
+    }
+
+    public function getActionAgentStats(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/agent/stats?days=' . (int) ($request->getQueryParam('days') ?: 30), null, 15);
+    }
+
+    public function getActionAgentLead(Request $request): \stdClass
+    {
+        $lead = $this->docLead((string) $request->getQueryParam('leadId'), false);
+        return (object) $this->hubCall('GET', '/v1/agent/lead?leadId=' . rawurlencode($lead->getId()), null, 10);
+    }
+
+    public function postActionAgentAction(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->docLead((string) ($d->leadId ?? ''), true);
+        $action = (string) ($d->action ?? '');
+        if (!in_array($action, ['pause', 'resume', 'manual', 'auto'], true)) {
+            throw new BadRequest();
+        }
+        return (object) $this->hubCall('POST', '/v1/agent/lead/action', ['leadId' => $lead->getId(), 'action' => $action, 'by' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 20);
+    }
 }

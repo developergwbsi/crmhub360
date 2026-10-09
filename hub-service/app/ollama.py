@@ -1,8 +1,12 @@
+import asyncio
 import json
 
 import httpx
 
 from . import config
+
+# Ollama atiende una inferencia a la vez con modelos locales; todo el servicio comparte este turno
+LOCK = asyncio.Semaphore(1)
 
 
 async def chat_json(system: str, user: str, schema: dict, max_tokens: int | None = None) -> dict:

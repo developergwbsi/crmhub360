@@ -150,6 +150,9 @@ class LeadTimeline
             foreach ($chat as $m) {
                 $out[] = ['id' => $m['id'], 'at' => $m['at'], 'type' => $m['channel'], 'dir' => $m['dir'], 'title' => '', 'text' => mb_substr((string) $m['text'], 0, 200), 'who' => (string) ($m['who'] ?? ''), 'href' => null];
             }
+            foreach ($this->notes($chatLeadId, ['post*' => '[Comercial virtual]%'], 'DESC', 30) as $n) {
+                $out[] = ['id' => $n->getId(), 'at' => $n->get('createdAt'), 'type' => 'agent', 'dir' => 'out', 'title' => '', 'text' => preg_replace('/^\\[Comercial virtual\\]\\s*/u', '', (string) $n->get('post')), 'who' => 'Comercial virtual', 'href' => null];
+            }
             foreach ($this->notes($chatLeadId, ['post*' => '[Proceso]%'], 'DESC', 30) as $n) {
                 $out[] = ['id' => $n->getId(), 'at' => $n->get('createdAt'), 'type' => 'process', 'dir' => 'out', 'title' => '', 'text' => preg_replace('/^\\[Proceso\\]\\s*/u', '', (string) $n->get('post')), 'who' => 'Sistema', 'href' => null];
             }

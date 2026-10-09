@@ -11,12 +11,12 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents
+from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
 # Ollama atiende una inferencia a la vez con modelos locales; serializamos para no saturar la RAM.
-_llm_lock = asyncio.Semaphore(1)
+_llm_lock = ollama.LOCK
 
 
 @asynccontextmanager
@@ -27,12 +27,15 @@ async def lifespan(_: FastAPI):
     routing.ensure_schema()
     processes.ensure_schema()
     documents.ensure_schema()
+    agent.ensure_schema()
     templates.ensure_schema()
     bg = asyncio.create_task(broadcast.worker())
     mb = asyncio.create_task(mailbox.worker())
+    ag = asyncio.create_task(agent.worker())
     yield
     bg.cancel()
     mb.cancel()
+    ag.cancel()
     db.pool.close()
 
 
@@ -891,6 +894,11 @@ async def proc_trigger(req: ProcTriggerReq, tenant: dict = Depends(tenant_auth))
             await processes.run_for_lead(tenant, req.leadId, process_id=req.processId, changed=req.changed)
         except Exception:
             logging.getLogger("hub.proc").exception("disparo de procesos")
+        if not req.changed:   # lead nuevo: el comercial virtual programa su primer contacto
+            try:
+                await agent.on_lead(tenant, req.leadId)
+            except Exception:
+                logging.getLogger("hub.agent").exception("alta del lead en el comercial virtual")
     asyncio.create_task(later())
     return {"queued": True}
 
@@ -994,6 +1002,68 @@ async def docs_dismiss(req: dict = Body(...), tenant: dict = Depends(tenant_auth
 @app.get("/v1/docs/history")
 async def docs_history(leadId: str, tenant: dict = Depends(tenant_auth)):
     return {"items": documents.history(tenant["slug"], leadId)}
+
+
+# ---------------- comercial virtual (versión automática del seguimiento de leads)
+class AgentCfgReq(BaseModel):
+    config: dict
+
+
+class AgentTestReq(BaseModel):
+    sample: dict
+
+
+class AgentActionReq(BaseModel):
+    leadId: str
+    action: str
+    by: str = "Un usuario"
+
+
+@app.get("/v1/agent/config")
+async def agent_config(tenant: dict = Depends(tenant_auth)):
+    return {"config": agent.config(tenant), "licensed": agent.licensed(tenant), "usage": agent.usage(tenant["slug"]), "company": tenant.get("name") or ""}
+
+
+@app.put("/v1/agent/config")
+async def agent_config_save(req: AgentCfgReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        new = agent.clean_config(req.config)
+    except (ValueError, TypeError) as e:
+        raise HTTPException(422, str(e))
+    if new["mode"] == "auto" and not agent.licensed(tenant):
+        raise HTTPException(403, "La versión automática del comercial virtual no está activada para tu empresa. Pídela a tu proveedor; mientras tanto puedes dejar el modo manual y entrenar al agente.")
+    with db.pool.connection() as c:
+        c.execute("UPDATE tenants SET settings = jsonb_set(settings, '{agent}', %s::jsonb, true) WHERE slug = %s", (json.dumps(new), tenant["slug"]))
+    return {"config": new}
+
+
+@app.post("/v1/agent/test")
+async def agent_test(req: AgentTestReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return await agent.test_reply(tenant, req.sample)
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo generar la respuesta de prueba: {str(e)[:200]}")
+
+
+@app.get("/v1/agent/lead")
+async def agent_lead(leadId: str, tenant: dict = Depends(tenant_auth)):
+    return agent.lead_state(tenant, leadId)
+
+
+@app.post("/v1/agent/lead/action")
+async def agent_lead_action(req: AgentActionReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        await agent.lead_action(tenant, req.leadId, req.action, req.by)
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return agent.lead_state(tenant, req.leadId)
+
+
+@app.get("/v1/agent/stats")
+async def agent_stats(days: int = 30, tenant: dict = Depends(tenant_auth)):
+    return {**agent.stats(tenant["slug"], max(1, min(365, days))), "events": agent.events(tenant["slug"], None, 40)}
 
 
 if __name__ == "__main__":

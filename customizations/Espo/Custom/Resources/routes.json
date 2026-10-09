@@ -540,5 +540,53 @@
             "controller": "CrmHub",
             "action": "docDismiss"
         }
+    },
+    {
+        "route": "/CrmHub/agentConfig",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentConfig"
+        }
+    },
+    {
+        "route": "/CrmHub/agentConfigSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentConfigSave"
+        }
+    },
+    {
+        "route": "/CrmHub/agentTest",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentTest"
+        }
+    },
+    {
+        "route": "/CrmHub/agentStats",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentStats"
+        }
+    },
+    {
+        "route": "/CrmHub/agentLead",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentLead"
+        }
+    },
+    {
+        "route": "/CrmHub/agentAction",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentAction"
+        }
     }
 ]
