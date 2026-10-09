@@ -508,5 +508,21 @@
             "controller": "CrmHub",
             "action": "docHistory"
         }
+    },
+    {
+        "route": "/CrmHub/docRemember",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "docRemember"
+        }
+    },
+    {
+        "route": "/CrmHub/docRun",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "docRun"
+        }
     }
 ]

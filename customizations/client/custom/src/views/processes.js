@@ -4,7 +4,7 @@ define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (
     const VARS = [['{{identificacion}}', 'Identificación'], ['{{tipo_identificacion}}', 'Tipo de documento'], ['{{nombre}}', 'Nombre'], ['{{apellido}}', 'Apellido'], ['{{nombre_completo}}', 'Nombre completo'],
         ['{{telefono}}', 'Teléfono'], ['{{correo}}', 'Correo'], ['{{fuente}}', 'Fuente'], ['{{campana}}', 'Campaña'], ['{{formulario}}', 'Formulario de origen'], ['{{lead_id}}', 'ID del lead'], ['{{empresa}}', 'Empresa']];
     const FIELD_LABEL = {creditScore: 'Puntaje de crédito', totalDebt: 'Deuda total', overdueDebt: 'Deuda en mora', monthlyIncome: 'Ingresos mensuales', creditorCount: 'Cantidad de acreedores',
-        maxDaysOverdue: 'Máx. días de mora', defaultCount: 'Obligaciones castigadas', identificationType: 'Tipo de documento', processResult: 'Resultado de procesos', description: 'Descripción (añade al final)'};
+        maxDaysOverdue: 'Máx. días de mora', defaultCount: 'Obligaciones castigadas', identificationType: 'Tipo de documento', identification: 'Identificación', processResult: 'Resultado de procesos', description: 'Descripción (añade al final)'};
     const CAT = {buro: 'Buró de crédito', identidad: 'Validación de identidad', scraping: 'Web scraping', otro: 'Servicio'};
     const ST = {ok: ['Correcto', 'ok'], error: ['Con error', 'err'], running: ['En curso', 'info'], skipped: ['Omitido', 'skip']};
     const fmt = d => { try { return new Date(d).toLocaleString('es', {dateStyle: 'short', timeStyle: 'short'}); } catch (e) { return d || ''; } };

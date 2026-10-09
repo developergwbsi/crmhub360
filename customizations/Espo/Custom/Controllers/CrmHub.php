@@ -1163,15 +1163,29 @@ class CrmHub
             $att->set(['parentType' => 'Lead', 'parentId' => $lead->getId()]);
             $this->em->saveEntity($att);
         }
-        return (object) $this->hubCall('POST', '/v1/docs/extract', ['leadId' => $lead->getId(), 'attachmentId' => $att->getId(), 'profileId' => (string) ($d->profileId ?? ''), 'userId' => $this->user->getId()], 280);
+        return (object) $this->hubCall('POST', '/v1/docs/extract', ['leadId' => $lead->getId(), 'attachmentId' => $att->getId(), 'profileId' => (string) ($d->profileId ?? ''), 'userId' => $this->user->getId()], 30);
+    }
+
+    public function getActionDocRun(Request $request): \stdClass
+    {
+        $lead = $this->docLead((string) $request->getQueryParam('leadId'), true);
+        return (object) $this->hubCall('GET', '/v1/docs/run?leadId=' . rawurlencode($lead->getId()) . '&runId=' . (int) $request->getQueryParam('runId'), null, 10);
     }
 
     public function postActionDocApply(Request $request): \stdClass
     {
         $d = $request->getParsedBody();
         $lead = $this->docLead((string) ($d->leadId ?? ''), true);
-        return (object) $this->hubCall('POST', '/v1/docs/apply', ['leadId' => $lead->getId(), 'runId' => (int) ($d->runId ?? 0), 'values' => json_decode(json_encode($d->values ?? new \stdClass()), true),
+        return (object) $this->hubCall('POST', '/v1/docs/apply', ['leadId' => $lead->getId(), 'runId' => (int) ($d->runId ?? 0), 'values' => json_decode(json_encode($d->values ?? new \stdClass()), true), 'items' => isset($d->items) ? json_decode(json_encode($d->items), true) : null,
             'agent' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 60);
+    }
+
+    /** Recuerda la selección del usuario como perfil de lectura de la empresa (quien puede editar el lead). */
+    public function postActionDocRemember(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $this->docLead((string) ($d->leadId ?? ''), true);
+        return (object) $this->hubCall('POST', '/v1/docs/remember', ['name' => (string) ($d->name ?? ''), 'items' => json_decode(json_encode($d->items ?? []), true)], 20);
     }
 
     public function getActionDocHistory(Request $request): \stdClass

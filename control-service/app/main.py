@@ -1220,7 +1220,7 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
 # ---------------------------------------------------------------- servicios de consulta (buró de crédito, validación de identidad, scraping…)
 LOOKUP_CATEGORIES = {"buro": "Buró de crédito", "identidad": "Validación de identidad", "scraping": "Web scraping", "otro": "Otro servicio"}
 LOOKUP_TARGETS = {"note", "status", "field:creditScore", "field:totalDebt", "field:overdueDebt", "field:monthlyIncome", "field:creditorCount", "field:maxDaysOverdue", "field:defaultCount",
-                  "field:identificationType", "field:processResult", "field:description"}
+                  "field:identificationType", "field:identification", "field:processResult", "field:description"}
 
 
 def lookups_list() -> list:

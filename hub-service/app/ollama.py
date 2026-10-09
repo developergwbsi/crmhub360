@@ -5,13 +5,13 @@ import httpx
 from . import config
 
 
-async def chat_json(system: str, user: str, schema: dict) -> dict:
+async def chat_json(system: str, user: str, schema: dict, max_tokens: int | None = None) -> dict:
     """Llama a Ollama con salida estructurada (JSON schema) y temperatura 0."""
     payload = {
         "model": config.OLLAMA_MODEL,
         "stream": False,
         "format": schema,
-        "options": {"temperature": 0},
+        "options": {"temperature": 0, **({"num_predict": max_tokens} if max_tokens else {})},
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
     }
     async with httpx.AsyncClient(timeout=config.OLLAMA_TIMEOUT) as c:

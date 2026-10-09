@@ -915,8 +915,14 @@ class DocExtractReq(BaseModel):
 class DocApplyReq(BaseModel):
     leadId: str
     runId: int
-    values: dict
+    values: dict | list | None = None   # PHP envía [] cuando está vacío
+    items: list[dict] | None = None
     agent: str = "Asesor"
+
+
+class DocRememberReq(BaseModel):
+    name: str
+    items: list[dict]
 
 
 @app.get("/v1/docs/profiles")
@@ -937,21 +943,37 @@ async def docs_profiles_save(req: DocProfilesReq, tenant: dict = Depends(tenant_
 
 @app.post("/v1/docs/extract")
 async def docs_extract(req: DocExtractReq, tenant: dict = Depends(tenant_auth)):
-    async def llm(system: str, user: str, schema: dict) -> dict:
+    async def llm(system: str, user: str, schema: dict, max_tokens: int | None = None) -> dict:
         async with _llm_lock:
-            return await ollama.chat_json(system, user, schema)
+            return await ollama.chat_json(system, user, schema, max_tokens)
     try:
-        return await documents.extract(tenant, req.leadId, req.attachmentId, req.profileId, req.userId, llm)
+        return {"runId": await documents.start(tenant, req.leadId, req.attachmentId, req.profileId, req.userId, llm), "status": "reading"}
     except ValueError as e:
         raise HTTPException(422, str(e))
-    except Exception as e:
-        raise HTTPException(502, f"No se pudo leer el documento: {str(e)[:200]}")
+
+
+@app.get("/v1/docs/run")
+async def docs_run(leadId: str, runId: int, tenant: dict = Depends(tenant_auth)):
+    r = documents.get_run(tenant["slug"], leadId, runId)
+    if not r:
+        raise HTTPException(404, "Lectura inexistente.")
+    return r
 
 
 @app.post("/v1/docs/apply")
 async def docs_apply(req: DocApplyReq, tenant: dict = Depends(tenant_auth)):
     try:
-        return await documents.apply(tenant, req.leadId, req.runId, req.values, req.agent)
+        if req.items is not None:
+            return await documents.apply_items(tenant, req.leadId, req.runId, req.items, req.agent)
+        return await documents.apply(tenant, req.leadId, req.runId, req.values if isinstance(req.values, dict) else {}, req.agent)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/docs/remember")
+async def docs_remember(req: DocRememberReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return {"profile": documents.profile_from_items(tenant, req.name.strip()[:80] or "Documento", req.items)}
     except ValueError as e:
         raise HTTPException(422, str(e))
 
