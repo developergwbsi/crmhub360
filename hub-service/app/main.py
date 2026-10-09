@@ -796,13 +796,13 @@ class TplReq(BaseModel):
 
 @app.get("/v1/tpl")
 async def tpl_list(userId: str, tenant: dict = Depends(tenant_auth)):
-    return templates.list_for(tenant["slug"], userId)
+    return templates.list_for(tenant["slug"], userId, templates.limit_of(tenant))
 
 
 @app.post("/v1/tpl")
 async def tpl_save(req: TplReq, tenant: dict = Depends(tenant_auth)):
     try:
-        return templates.save(tenant["slug"], req.userId, req.model_dump())
+        return templates.save(tenant["slug"], req.userId, req.model_dump(), templates.limit_of(tenant))
     except ValueError as e:
         raise HTTPException(422, str(e))
     except PermissionError as e:

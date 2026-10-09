@@ -1054,6 +1054,7 @@ class ServicesReq(BaseModel):
     voice: Optional[dict] = None
     mail: Optional[str] = None            # 'shared' | 'own'
     cartera: Optional[bool] = None        # módulo «Cartera y cobranza» (tarjetas de deuda y mora)
+    templates: Optional[int] = None       # plantillas personales por usuario y canal (10 incluidas; más es un servicio adicional)
 
 
 async def tenant_mail_state(t: dict) -> dict:
@@ -1147,7 +1148,7 @@ async def get_services(slug: str, actor: str = Depends(me)):
             cartera = bool((await c.get("/Settings")).json().get("crmhubCartera"))
     except Exception:
         cartera = False
-    return {"cartera": cartera, "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
+    return {"cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10), "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
             "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
 
 
@@ -1193,6 +1194,12 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
     if req.mail in ("shared", "own") or (req.mail or "").startswith("p"):
         await set_company_mail(t, req.mail)
         sv["mail"] = req.mail
+    if req.templates is not None:
+        if not 10 <= req.templates <= 500:
+            raise HTTPException(400, "El límite de plantillas va de 10 (incluidas) a 500")
+        with db() as c2:   # solo el campo limits: el correo recién aplicado también escribió en settings y no debe pisarse
+            c2.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s",
+                       (json.dumps({"templates": req.templates}), slug))
     if req.cartera is not None:
         async with espo(t) as c:
             r = await c.put("/Settings", json={"crmhubCartera": bool(req.cartera)})
@@ -1200,7 +1207,7 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
             raise HTTPException(502, "No se pudo cambiar el módulo de cartera en la empresa")
         sv["cartera"] = bool(req.cartera)
     put_setting("services:" + slug, sv)
-    audit(actor, "asignar_servicios", slug, {"servicios": {k: (v or {}).get("provider") if isinstance(v, dict) else v for k, v in sv.items()}})
+    audit(actor, "asignar_servicios", slug, {"servicios": {k: (v or {}).get("provider") if isinstance(v, dict) else v for k, v in sv.items()}, "plantillas_por_canal": req.templates})
     return {"ok": True, "notes": notes}
 
 

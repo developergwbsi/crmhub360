@@ -1,7 +1,7 @@
 """Plantillas personales de cada usuario (correo, WhatsApp, Telegram y SMS): privadas, hasta MAX por canal."""
 from . import db
 
-MAX = 10
+MAX = 10   # incluidas en la licencia; la empresa puede tener más como servicio adicional (settings.limits.templates, lo asigna el Centro de control)
 CHANNELS = ("email", "whatsapp", "telegram", "sms")
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS user_templates (
@@ -16,13 +16,20 @@ def ensure_schema() -> None:
         c.execute(SCHEMA)
 
 
-def list_for(tenant: str, user_id: str) -> dict:
+def limit_of(tenant: dict) -> int:
+    try:
+        return max(MAX, int(((tenant.get("settings") or {}).get("limits") or {}).get("templates") or MAX))
+    except (TypeError, ValueError):
+        return MAX
+
+
+def list_for(tenant: str, user_id: str, limit: int = MAX) -> dict:
     with db.pool.connection() as c:
         rows = c.execute("SELECT id, channel, name, subject, body, updated_at FROM user_templates WHERE tenant=%s AND user_id=%s ORDER BY channel, lower(name)", (tenant, user_id)).fetchall()
-    return {"items": [dict(r) for r in rows], "max": MAX}
+    return {"items": [dict(r) for r in rows], "max": limit}
 
 
-def save(tenant: str, user_id: str, p: dict) -> dict:
+def save(tenant: str, user_id: str, p: dict, limit: int = MAX) -> dict:
     ch, name, body, subject = p.get("channel"), (p.get("name") or "").strip(), (p.get("body") or "").strip(), (p.get("subject") or "").strip()
     if ch not in CHANNELS:
         raise ValueError("Canal inválido.")
@@ -43,8 +50,8 @@ def save(tenant: str, user_id: str, p: dict) -> dict:
                 raise LookupError("Plantilla no encontrada.")
             return {"id": r["id"]}
         n = c.execute("SELECT count(*) n FROM user_templates WHERE tenant=%s AND user_id=%s AND channel=%s", (tenant, user_id, ch)).fetchone()["n"]
-        if n >= MAX:
-            raise PermissionError(f"Ya tienes {MAX} plantillas de este canal (el máximo). Elimina una para crear otra.")
+        if n >= limit:
+            raise PermissionError(f"Ya tienes {limit} plantillas de este canal (el máximo de tu licencia). Elimina una o pide a tu administrador ampliar el límite (servicio adicional).")
         r = c.execute("INSERT INTO user_templates (tenant, user_id, channel, name, subject, body) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id", (tenant, user_id, ch, name, subject[:250], body)).fetchone()
         return {"id": r["id"]}
 
