@@ -12,6 +12,8 @@ TABS = [
     "Campaign",
     {"type": "url", "id": "t8", "text": "Organigrama", "url": "#CrmHub/organigrama", "iconClass": "fas fa-sitemap", "aclScope": "Campaign"},
     {"type": "url", "id": "t13", "text": "Mensajes masivos", "url": "#CrmHub/difusion", "iconClass": "fas fa-bullhorn", "aclScope": "Campaign"},
+    {"type": "url", "id": "t14", "text": "Simulador", "url": "#CrmHub/simulador", "iconClass": "fas fa-flask-vial"},
+    {"type": "url", "id": "t15", "text": "Banco de conocimiento", "url": "#CrmHub/conocimiento", "iconClass": "fas fa-brain"},
     {"type": "url", "id": "t9", "text": "Equipos", "url": "#Team", "iconClass": "fas fa-users", "onlyAdmin": True},
     {"type": "url", "id": "t10", "text": "Usuarios", "url": "#User", "iconClass": "fas fa-user-gear", "onlyAdmin": True},
     {"type": "url", "id": "t11", "text": "Asignación de leads", "url": "#CrmHub/asignacion", "iconClass": "fas fa-shuffle", "onlyAdmin": True},

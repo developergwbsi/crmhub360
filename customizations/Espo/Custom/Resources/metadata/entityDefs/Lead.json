@@ -175,6 +175,12 @@
             "exportDisabled": true,
             "directAccessDisabled": true,
             "readOnly": false
+        },
+        "isSimulation": {
+            "type": "bool",
+            "default": false,
+            "readOnly": false,
+            "notStorable": false
         }
     }
 }

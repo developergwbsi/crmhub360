@@ -247,7 +247,7 @@ class CrmHub
 
         $builder = $this->selectBuilderFactory->create()->from('Lead')->withAccessControlFilter()->buildQueryBuilder();
         $builder->select(['id', 'status', 'source', 'assignedUserId', 'createdAt', 'totalDebt', 'overdueDebt',
-                          'qualificationStatus', 'suggestedService', 'campaignId'])->limit(0, 30000);
+                          'qualificationStatus', 'suggestedService', 'campaignId', 'isSimulation'])->limit(0, 30000);
         $leads = iterator_to_array($this->em->getRDBRepository('Lead')->clone($builder->build())->find(), false);
 
         $names = [];
@@ -275,6 +275,9 @@ class CrmHub
         $trendKeys = array_keys($trend);
 
         foreach ($leads as $l) {
+            if ($l->get('isSimulation')) {
+                continue;   // los leads de la simulación no cuentan en los reportes reales
+            }
             $status = (string) $l->get('status');
             $closed = in_array($status, $closedList, true);
             if (!$closed) {
@@ -835,5 +838,115 @@ class CrmHub
             throw new BadRequest();
         }
         return (object) $this->hubAny('POST', '/v1/broadcasts/' . (int) $request->getRouteParam('id') . '/' . $act, []);
+    }
+
+    // ---------- Simulador del proceso comercial y banco de conocimiento ----------
+    private function simGuard(): void
+    {
+        if ($this->user->isApi() || $this->user->isPortal()) {
+            throw new Forbidden();
+        }
+    }
+
+    private function simScope(): string
+    {
+        return $this->user->isAdmin() ? '' : $this->user->getId();   // el administrador ve las simulaciones de todos; cada usuario, las suyas
+    }
+
+    public function getActionSimConfig(Request $request): \stdClass
+    {
+        $this->simGuard();
+        return (object) ($this->hubAny('GET', '/v1/sim/config') + ['email' => (string) $this->user->get('emailAddress'), 'phone' => (string) $this->user->get('phoneNumber')]);
+    }
+
+    public function postActionSimRun(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        $steps = array_values(array_filter((array) ($d->steps ?? []), 'is_string'));
+        return (object) $this->hubAny('POST', '/v1/sim/runs', [
+            'userId' => $this->user->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName')),
+            'name' => mb_substr(trim((string) ($d->name ?? '')), 0, 80), 'email' => mb_substr(trim((string) ($d->email ?? '')), 0, 120),
+            'phone' => mb_substr(trim((string) ($d->phone ?? '')), 0, 30), 'real' => !isset($d->real) || (bool) $d->real, 'steps' => $steps,
+        ]);
+    }
+
+    public function getActionSimRuns(Request $request): \stdClass
+    {
+        $this->simGuard();
+        return (object) $this->hubAny('GET', '/v1/sim/runs?userId=' . rawurlencode($this->simScope()));
+    }
+
+    public function getActionSimRun(Request $request): \stdClass
+    {
+        $this->simGuard();
+        return (object) $this->hubAny('GET', '/v1/sim/runs/' . (int) $request->getQueryParam('id') . '?userId=' . rawurlencode($this->simScope()));
+    }
+
+    public function postActionSimDelete(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $id = (int) ($request->getParsedBody()->id ?? 0);
+        $hub = new HubClient($this->config);
+        try {
+            $run = $hub->request('GET', '/v1/sim/runs/' . $id . '?userId=' . rawurlencode($this->simScope()), null, 20);
+        } catch (\RuntimeException $e) {
+            throw new BadRequest('Simulación no encontrada.');
+        }
+        // solo se borra lo que creó la simulación y está marcado como tal (lead con isSimulation o nombre/asunto «[Simulación]…»), uno por uno
+        foreach (array_reverse((array) ($run['refs'] ?? [])) as $ref) {
+            $scope = (string) ($ref['scope'] ?? '');
+            if (!in_array($scope, ['Lead', 'Account', 'Contact', 'Opportunity', 'Call', 'Meeting', 'Task', 'Email'], true)) {
+                continue;
+            }
+            $e = $this->em->getEntityById($scope, (string) ($ref['id'] ?? ''));
+            if (!$e) {
+                continue;
+            }
+            $marked = $scope === 'Lead' ? (bool) $e->get('isSimulation') : str_starts_with((string) $e->get('name'), '[Simulación]');
+            if ($marked) {
+                $this->em->removeEntity($e);
+            }
+        }
+        try {
+            return (object) $hub->request('DELETE', '/v1/sim/runs/' . $id . '?userId=' . rawurlencode($this->simScope()), null, 20);
+        } catch (\RuntimeException $e) {
+            throw new BadRequest('No se pudo eliminar la simulación.');
+        }
+    }
+
+    public function getActionKb(Request $request): \stdClass
+    {
+        $this->simGuard();
+        return (object) $this->hubAny('GET', '/v1/kb');
+    }
+
+    public function postActionKbRefresh(Request $request): \stdClass
+    {
+        $this->simGuard();
+        try {
+            return (object) (new HubClient($this->config))->request('POST', '/v1/kb/refresh', [], 280);
+        } catch (\RuntimeException $e) {
+            throw new BadRequest('No se pudo actualizar el banco de conocimiento.');
+        }
+    }
+
+    public function postActionKbNote(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubAny('POST', '/v1/kb/notes', ['userId' => $this->user->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName')), 'text' => (string) ($d->text ?? '')]);
+    }
+
+    public function postActionKbNoteDelete(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        try {
+            $r = (new HubClient($this->config))->request('DELETE', '/v1/kb/notes/' . (int) ($d->id ?? 0) . '?userId=' . rawurlencode($this->simScope()), null, 20);
+        } catch (\RuntimeException $e) {
+            throw new BadRequest('No se pudo eliminar la nota.');
+        }
+        return (object) $r;
     }
 }

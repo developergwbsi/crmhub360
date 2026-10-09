@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout
+from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -23,6 +23,7 @@ _llm_lock = asyncio.Semaphore(1)
 async def lifespan(_: FastAPI):
     db.pool.open()
     push.keys()  # crea las claves VAPID la primera vez
+    simulate.ensure_schema()
     bg = asyncio.create_task(broadcast.worker())
     mb = asyncio.create_task(mailbox.worker())
     yield
@@ -705,6 +706,81 @@ def metrics(x_admin_token: str = Header(...)):
         tenants = c.execute("SELECT slug,name,plan,max_users,status,license_until FROM tenants ORDER BY slug").fetchall()
         jobs = c.execute("SELECT tenant,kind,status,count(*) n FROM ai_jobs GROUP BY 1,2,3 ORDER BY 1").fetchall()
     return {"tenants": tenants, "ai_jobs": jobs}
+
+
+# ---------------- simulador del proceso comercial y banco de conocimiento ----------------
+class SimReq(BaseModel):
+    userId: str
+    userName: str = ""
+    name: str = ""
+    email: str = ""
+    phone: str = ""
+    real: bool = True
+    steps: list[str] = []
+
+
+@app.get("/v1/sim/config")
+async def sim_config(tenant: dict = Depends(tenant_auth)):
+    return {"config": simulate.config_probe(tenant), "steps": [{"key": k, "label": l} for k, l in simulate.STEPS]}
+
+
+@app.post("/v1/sim/runs")
+async def sim_start(req: SimReq, tenant: dict = Depends(tenant_auth)):
+    return {"id": await simulate.start(tenant, req.model_dump())}
+
+
+@app.get("/v1/sim/runs")
+async def sim_list(userId: str = "", tenant: dict = Depends(tenant_auth)):
+    return {"items": simulate.list_runs(tenant["slug"], userId or None)}
+
+
+@app.get("/v1/sim/runs/{run_id}")
+async def sim_get(run_id: int, userId: str = "", tenant: dict = Depends(tenant_auth)):
+    r = simulate.get_run(tenant["slug"], run_id, userId or None)
+    if not r:
+        raise HTTPException(404, "Simulación no encontrada")
+    return r
+
+
+@app.delete("/v1/sim/runs/{run_id}")
+async def sim_delete(run_id: int, userId: str = "", tenant: dict = Depends(tenant_auth)):
+    if not await simulate.delete_run(tenant, run_id, userId or None):
+        raise HTTPException(404, "Simulación no encontrada")
+    return {"ok": True}
+
+
+class NoteReq(BaseModel):
+    userId: str
+    userName: str = ""
+    text: str
+
+
+@app.get("/v1/kb")
+async def kb_get(tenant: dict = Depends(tenant_auth)):
+    return knowledge.get(tenant["slug"])
+
+
+@app.post("/v1/kb/refresh")
+async def kb_refresh(tenant: dict = Depends(tenant_auth)):
+    async def llm(system: str, user: str) -> str:
+        async with _llm_lock:
+            return await ollama.chat_text(system, user)
+    return await knowledge.refresh(tenant, llm)
+
+
+@app.post("/v1/kb/notes")
+async def kb_note(req: NoteReq, tenant: dict = Depends(tenant_auth)):
+    if len(req.text.strip()) < 3:
+        raise HTTPException(422, "Escribe la nota.")
+    knowledge.add_note(tenant["slug"], req.userId, req.userName, req.text.strip())
+    return {"ok": True}
+
+
+@app.delete("/v1/kb/notes/{note_id}")
+async def kb_note_delete(note_id: int, userId: str = "", tenant: dict = Depends(tenant_auth)):
+    if not knowledge.delete_note(tenant["slug"], note_id, userId or None):
+        raise HTTPException(404, "Nota no encontrada")
+    return {"ok": True}
 
 
 if __name__ == "__main__":

@@ -14,6 +14,14 @@ define('custom:controllers/crm-hub', ['controller'], function (Dep) {
             this.main('custom:views/broadcasts', {});
         }
 
+        actionSimulador() {
+            this.main('custom:views/simulator', {});
+        }
+
+        actionConocimiento() {
+            this.main('custom:views/knowledge', {});
+        }
+
         actionAsignacion() {
             if (!this.getUser().isAdmin()) { this.error403(); return; }
             this.main('custom:views/assignment', {});

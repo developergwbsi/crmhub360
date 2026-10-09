@@ -324,5 +324,77 @@
             "controller": "CrmHub",
             "action": "emailSignature"
         }
+    },
+    {
+        "route": "/CrmHub/simConfig",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "simConfig"
+        }
+    },
+    {
+        "route": "/CrmHub/simRuns",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "simRuns"
+        }
+    },
+    {
+        "route": "/CrmHub/simRun",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "simRun"
+        }
+    },
+    {
+        "route": "/CrmHub/simRun",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "simRun"
+        }
+    },
+    {
+        "route": "/CrmHub/simDelete",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "simDelete"
+        }
+    },
+    {
+        "route": "/CrmHub/kb",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "kb"
+        }
+    },
+    {
+        "route": "/CrmHub/kbRefresh",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "kbRefresh"
+        }
+    },
+    {
+        "route": "/CrmHub/kbNote",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "kbNote"
+        }
+    },
+    {
+        "route": "/CrmHub/kbNoteDelete",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "kbNoteDelete"
+        }
     }
 ]
