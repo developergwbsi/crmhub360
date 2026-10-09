@@ -107,3 +107,7 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-dt-dots { color: var(--muted); padding: 0 2px; }
 .ch-dt-none { padding: 6px; }
 .card:has(> .ch-dt){padding:0;overflow:hidden}
+
+#ui-update{position:fixed;right:16px;bottom:16px;z-index:95;display:flex;align-items:center;gap:12px;max-width:min(460px,calc(100vw - 32px));padding:12px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--primary);box-shadow:var(--shadow);font-size:13.5px}
+#ui-update .ui-upd-ic{width:34px;height:34px;border-radius:10px;background:var(--tint);color:var(--primary);display:grid;place-items:center;font-size:17px;flex:none}
+#ui-update b{display:block} #ui-update .mut{font-size:12.5px} #ui-update [data-a=x]{cursor:pointer;font-size:20px;line-height:1;color:var(--muted);padding:0 4px}

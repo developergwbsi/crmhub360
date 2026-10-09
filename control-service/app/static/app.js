@@ -625,7 +625,7 @@
     const kinds = {create: 'Crear empresa', upgrade: 'Actualizar empresa', release: 'Publicar base', suspend: 'Suspender', resume: 'Reactivar'};
     main.innerHTML = `<h2>Actividad</h2><p class="sub">Trabajos del servidor y acciones hechas desde este centro.</p>
       <div class="card" style="margin-bottom:18px"><table><thead><tr><th>#</th><th>Trabajo</th><th>Empresa / nota</th><th>Estado</th><th>Cuándo</th></tr></thead><tbody>${state.jobs.map(j => `<tr data-j="${j.id}" style="cursor:pointer"><td>${j.id}</td><td>${esc(kinds[j.kind] || j.kind)}</td><td>${esc(j.target || '')}</td><td><span class="chip ${j.status === 'done' ? 'ok' : j.status === 'error' ? 'bad' : 'warn'}">${j.status === 'done' ? 'Terminado' : j.status === 'error' ? 'Con error' : j.status === 'running' ? 'En curso' : 'En cola'}</span></td><td class="mut">${esc(fmtDate(j.createdAt))}</td></tr>`).join('') || '<tr><td colspan="5">' + window.ChEmpty.html({compact: true, kind: 'calendar', title: 'Sin trabajos', text: 'Todo está al día.'}) + '</td></tr>'}</tbody></table></div>
-      <div class="card"><table><thead><tr><th>Fecha</th><th>Quién</th><th>Acción</th><th>Empresa</th></tr></thead><tbody>${state.audit.map(a => `<tr><td class="mut">${esc(fmtDate(a.at))}</td><td>${esc(a.actor)}</td><td>${esc(a.action.replace(/_/g, ' '))}</td><td>${esc(a.target || '')}</td></tr>`).join('') || '<tr><td colspan="4">' + window.ChEmpty.html({compact: true, kind: 'chat', title: 'Sin actividad', text: 'Aquí quedará el registro de lo que se haga.'}) + '</td></tr>'}</tbody></table></div>`;
+      <div class="card"><table><thead><tr><th>Fecha</th><th>Quién</th><th>Acción</th><th>Empresa / elemento</th></tr></thead><tbody>${state.audit.map(a => `<tr><td class="mut">${esc(fmtDate(a.at))}</td><td>${esc(a.actor)}</td><td>${esc(a.action.replace(/_/g, ' '))}</td><td>${a.targetName ? `<b>${esc(a.targetName)}</b>${a.targetKind ? ` <span class="mut">· ${esc(a.targetKind)}</span>` : ''}` : '<span class="mut">—</span>'}</td></tr>`).join('') || '<tr><td colspan="4">' + window.ChEmpty.html({compact: true, kind: 'chat', title: 'Sin actividad', text: 'Aquí quedará el registro de lo que se haga.'}) + '</td></tr>'}</tbody></table></div>`;
     main.querySelectorAll('[data-j]').forEach(r => r.onclick = () => watchJob(+r.dataset.j, 'Trabajo #' + r.dataset.j));
   }
 
@@ -636,4 +636,37 @@
     clearInterval(state.timer); state.timer = setInterval(() => { if (!document.querySelector('.back, .drawer')) { loadCompanies().catch(() => {}); loadSide().catch(() => {}); } }, 20000);
   }
   boot();
+})();
+
+// Aviso de nueva versión del Centro de control: si se publica una versión mientras hay sesiones abiertas, se les avisa para que actualicen.
+(function () {
+  const meta = document.querySelector('meta[name="ui-version"]');
+  const loaded = meta && meta.content;
+  if (!loaded || loaded.startsWith('__')) { return; }
+  let shown = false;
+  const title = document.title;
+  function announce() {
+    if (shown || document.getElementById('ui-update')) { return; }
+    shown = true;
+    const b = document.createElement('div');
+    b.id = 'ui-update'; b.setAttribute('role', 'status');
+    b.innerHTML = '<span class="ui-upd-ic">⬇</span><div><b>Nueva versión disponible</b><div class="mut">El Centro de control se actualizó. Actualiza para ver los cambios.</div></div><button class="btn primary sm" data-a="go">Actualizar ahora</button><a role="button" data-a="x" title="Cerrar">×</a>';
+    b.onclick = e => {
+      const t = e.target.closest('[data-a]'); if (!t) { return; }
+      if (t.dataset.a === 'go') { location.reload(); } else { b.remove(); document.title = title; shown = false; }
+    };
+    document.body.appendChild(b);
+    if (document.hidden) { document.title = '• Nueva versión · ' + title; }
+  }
+  async function check() {
+    try {
+      const r = await fetch('/api/ui-version?t=' + Date.now(), {cache: 'no-store'});
+      if (!r.ok) { return; }
+      const v = (await r.json()).version;
+      if (v && v !== loaded) { announce(); }
+    } catch (e) { /* sin red o reiniciando: se reintenta */ }
+  }
+  setInterval(check, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { check(); } });
+  window.addEventListener('online', check);
 })();

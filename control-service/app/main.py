@@ -8,7 +8,7 @@ import httpx
 import psycopg
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg.rows import dict_row
 from pydantic import BaseModel, Field
@@ -344,7 +344,39 @@ def job(jid: int, actor: str = Depends(me)):
 def audit_log(limit: int = 40, actor: str = Depends(me)):
     with db() as c:
         rows = c.execute("SELECT at, actor, action, target, detail FROM control_audit ORDER BY id DESC LIMIT %s", (min(limit, 200),)).fetchall()
-    return {"items": [{"at": r["at"].isoformat(), "actor": r["actor"], "action": r["action"], "target": r["target"], "detail": r["detail"]} for r in rows]}
+        companies = {t["slug"]: t["name"] for t in c.execute("SELECT slug, name FROM tenants").fetchall()}
+    providers = {p["id"]: p.get("name") or p["id"] for p in providers_list()}
+    with db() as c:   # proveedores ya borrados: se recupera el nombre de cuando se guardaron
+        old = {r["target"]: (r["detail"] or {}).get("nombre") for r in c.execute("SELECT target, detail FROM control_audit WHERE action='guardar_proveedor' ORDER BY id").fetchall() if r["target"]}
+    lookups = {l["id"]: l.get("name") or l["id"] for l in lookups_list()}
+
+    def what(r):
+        """Nombre legible y tipo de lo que se tocó (la columna guarda un identificador interno)."""
+        t, a, d = r["target"], r["action"], r["detail"] or {}
+        if not t:
+            n = d.get("nombre") if isinstance(d, dict) else None
+            return (n, "Servicio" if "servicio" in a else None) if n else (None, None)
+        if t in companies:
+            return companies[t], "Empresa"
+        if "proveedor" in a or "motor_ia" in a:
+            if t == "local":
+                return "Motor local (Ollama)", "Motor de IA"
+            gone = providers.get(t) is None
+            n = providers.get(t) or (d.get("nombre") if isinstance(d, dict) else None) or old.get(t)
+            return (n + " (eliminado)" if gone and n else n or "(eliminado)"), "Proveedor"
+        if "servicio_consulta" in a:
+            return lookups.get(t) or "(eliminado)", "Servicio"
+        if "plantilla_correo" in a:
+            return t.replace("_", " "), "Plantilla de correo"
+        if a.startswith(("login", "recuperacion", "clave_restablecida")):
+            return t, "Dirección IP"
+        return t, None
+
+    items = []
+    for r in rows:
+        name, kind = what(r)
+        items.append({"at": r["at"].isoformat(), "actor": r["actor"], "action": r["action"], "target": r["target"], "detail": r["detail"], "targetName": name, "targetKind": kind})
+    return {"items": items}
 
 
 # ---------------------------------------------------------------- usuarios, claves y modo lectura
@@ -974,8 +1006,9 @@ def delete_provider(pid: str, actor: str = Depends(me)):
         raise HTTPException(409, "Es el motor de IA global (predeterminado). Elige otro como global antes de borrarlo.")
     if used:
         raise HTTPException(409, "Está asignado a: " + ", ".join(sorted(set(used))) + ". Quítalo primero de esas empresas.")
+    gone = next((p.get("name") for p in providers_list() if p["id"] == pid), None)
     put_setting("providers", [p for p in providers_list() if p["id"] != pid])
-    audit(actor, "borrar_proveedor", pid)
+    audit(actor, "borrar_proveedor", pid, {"nombre": gone})
     return {"ok": True}
 
 
@@ -1393,9 +1426,32 @@ def delete_lookup(lid: str, actor: str = Depends(me)):
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 
 
+def _ui_version() -> str:
+    """Huella de los archivos de la interfaz: cambia cuando se publica una versión nueva del Centro de control."""
+    import hashlib
+    h = hashlib.sha1()
+    for name in sorted(os.listdir(STATIC)):
+        p = os.path.join(STATIC, name)
+        if os.path.isfile(p):
+            h.update(name.encode())
+            with open(p, "rb") as f:
+                h.update(f.read())
+    return h.hexdigest()[:12]
+
+
+UI_VERSION = _ui_version()
+
+
+@app.get("/api/ui-version")
+def ui_version():
+    return {"version": UI_VERSION}
+
+
 @app.get("/")
 def index():
-    return FileResponse(os.path.join(STATIC, "index.html"), headers={"Cache-Control": "no-store"})
+    with open(os.path.join(STATIC, "index.html"), encoding="utf-8") as f:
+        html = f.read().replace("__UI_VERSION__", UI_VERSION)
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
