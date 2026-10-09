@@ -20,7 +20,7 @@ CREATE INDEX IF NOT EXISTS process_runs_tenant ON process_runs (tenant, id DESC)
 MAX_PROCESSES = 20
 # Campos del lead que un proceso puede llenar y cómo se convierten
 FIELDS = {"creditScore": "int", "totalDebt": "num", "overdueDebt": "num", "monthlyIncome": "num", "creditorCount": "int", "maxDaysOverdue": "int", "defaultCount": "int",
-          "identificationType": "str", "processResult": "str", "description": "append"}
+          "identificationType": "str", "processResult": "str", "description": "append", "creditSummary": "str", "defaultHistory": "str"}
 _sem = asyncio.Semaphore(5)
 
 

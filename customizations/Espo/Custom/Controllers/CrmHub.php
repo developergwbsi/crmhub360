@@ -1125,4 +1125,58 @@ class CrmHub
         }
         return (object) $this->hubCall('POST', '/v1/process/trigger', ['leadId' => $lead->getId(), 'manual' => true, 'processId' => !empty($d->processId) ? (string) $d->processId : null], 30);
     }
+
+    // ---------- Lectura de documentos (PDF) ----------
+    private function docLead(string $id, bool $edit): \Espo\ORM\Entity
+    {
+        $lead = $this->em->getEntityById('Lead', $id);
+        if (!$lead || !($edit ? $this->acl->checkEntityEdit($lead) : $this->acl->checkEntityRead($lead))) {
+            throw new Forbidden();
+        }
+        return $lead;
+    }
+
+    public function getActionDocProfiles(Request $request): \stdClass
+    {
+        $this->simGuard();
+        return (object) $this->hubCall('GET', '/v1/docs/profiles', null, 10);
+    }
+
+    public function postActionDocProfilesSave(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('PUT', '/v1/docs/profiles', ['profiles' => json_decode(json_encode($d->profiles ?? []), true)], 20);
+    }
+
+    /** Lee un PDF que el usuario acaba de subir y devuelve los datos extraídos para que los revise (todavía no se guarda nada en el lead). */
+    public function postActionDocExtract(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->docLead((string) ($d->leadId ?? ''), true);
+        $att = $this->em->getEntityById('Attachment', (string) ($d->attachmentId ?? ''));
+        if (!$att || $att->get('createdById') !== $this->user->getId() || !str_contains((string) $att->get('type'), 'pdf')) {
+            throw new BadRequest('Sube un archivo PDF.');
+        }
+        // el adjunto se liga al lead: así el Hub (usuario de integración) puede leerlo con los permisos del lead
+        if ($att->get('parentId') !== $lead->getId()) {
+            $att->set(['parentType' => 'Lead', 'parentId' => $lead->getId()]);
+            $this->em->saveEntity($att);
+        }
+        return (object) $this->hubCall('POST', '/v1/docs/extract', ['leadId' => $lead->getId(), 'attachmentId' => $att->getId(), 'profileId' => (string) ($d->profileId ?? ''), 'userId' => $this->user->getId()], 280);
+    }
+
+    public function postActionDocApply(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->docLead((string) ($d->leadId ?? ''), true);
+        return (object) $this->hubCall('POST', '/v1/docs/apply', ['leadId' => $lead->getId(), 'runId' => (int) ($d->runId ?? 0), 'values' => json_decode(json_encode($d->values ?? new \stdClass()), true),
+            'agent' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 60);
+    }
+
+    public function getActionDocHistory(Request $request): \stdClass
+    {
+        $lead = $this->docLead((string) $request->getQueryParam('leadId'), false);
+        return (object) $this->hubCall('GET', '/v1/docs/history?leadId=' . rawurlencode($lead->getId()), null, 10);
+    }
 }

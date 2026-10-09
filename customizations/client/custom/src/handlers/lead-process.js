@@ -1,5 +1,7 @@
-define('custom:handlers/lead-process', ['action-handler'], function (Dep) {
+define('custom:handlers/lead-process', ['action-handler', 'custom:doc-reader'], function (Dep, Reader) {
     return class extends Dep {
+        actionDoc() { Reader.open(this.view.model); }
+
         // Vuelve a ejecutar los procesos configurados para este lead (p. ej. después de corregir su identificación)
         actionRun() {
             const m = this.view.model;

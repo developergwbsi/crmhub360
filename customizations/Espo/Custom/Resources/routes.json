@@ -468,5 +468,45 @@
             "controller": "CrmHub",
             "action": "processRun"
         }
+    },
+    {
+        "route": "/CrmHub/docProfiles",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "docProfiles"
+        }
+    },
+    {
+        "route": "/CrmHub/docProfilesSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "docProfilesSave"
+        }
+    },
+    {
+        "route": "/CrmHub/docExtract",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "docExtract"
+        }
+    },
+    {
+        "route": "/CrmHub/docApply",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "docApply"
+        }
+    },
+    {
+        "route": "/CrmHub/docHistory",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "docHistory"
+        }
     }
 ]

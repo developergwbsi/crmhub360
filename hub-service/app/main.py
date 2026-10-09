@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes
+from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +26,7 @@ async def lifespan(_: FastAPI):
     simulate.ensure_schema()
     routing.ensure_schema()
     processes.ensure_schema()
+    documents.ensure_schema()
     templates.ensure_schema()
     bg = asyncio.create_task(broadcast.worker())
     mb = asyncio.create_task(mailbox.worker())
@@ -897,6 +898,67 @@ async def proc_trigger(req: ProcTriggerReq, tenant: dict = Depends(tenant_auth))
 @app.get("/v1/process/runs")
 async def proc_runs(leadId: str = "", tenant: dict = Depends(tenant_auth)):
     return {"items": processes.runs(tenant["slug"], leadId or None)}
+
+
+# ---------------- lectura de documentos (PDF) con perfiles configurables ----------------
+class DocProfilesReq(BaseModel):
+    profiles: list[dict]
+
+
+class DocExtractReq(BaseModel):
+    leadId: str
+    attachmentId: str
+    profileId: str
+    userId: str | None = None
+
+
+class DocApplyReq(BaseModel):
+    leadId: str
+    runId: int
+    values: dict
+    agent: str = "Asesor"
+
+
+@app.get("/v1/docs/profiles")
+async def docs_profiles(tenant: dict = Depends(tenant_auth)):
+    return {"profiles": documents.profiles(tenant), "types": documents.TYPES, "targets": list(processes.FIELDS), "max": documents.MAX_PROFILES}
+
+
+@app.put("/v1/docs/profiles")
+async def docs_profiles_save(req: DocProfilesReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        new = documents.clean([p for p in req.profiles if not p.get("builtin")])
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    with db.pool.connection() as c:
+        c.execute("UPDATE tenants SET settings = jsonb_set(settings, '{doc_profiles}', %s::jsonb, true) WHERE slug = %s", (json.dumps(new), tenant["slug"]))
+    return {"profiles": documents.BUILTIN + new}
+
+
+@app.post("/v1/docs/extract")
+async def docs_extract(req: DocExtractReq, tenant: dict = Depends(tenant_auth)):
+    async def llm(system: str, user: str, schema: dict) -> dict:
+        async with _llm_lock:
+            return await ollama.chat_json(system, user, schema)
+    try:
+        return await documents.extract(tenant, req.leadId, req.attachmentId, req.profileId, req.userId, llm)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo leer el documento: {str(e)[:200]}")
+
+
+@app.post("/v1/docs/apply")
+async def docs_apply(req: DocApplyReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return await documents.apply(tenant, req.leadId, req.runId, req.values, req.agent)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/v1/docs/history")
+async def docs_history(leadId: str, tenant: dict = Depends(tenant_auth)):
+    return {"items": documents.history(tenant["slug"], leadId)}
 
 
 if __name__ == "__main__":

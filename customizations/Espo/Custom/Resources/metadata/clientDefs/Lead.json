@@ -80,6 +80,12 @@
                     "label": "Ejecutar procesos de nuevo",
                     "handler": "custom:handlers/lead-process",
                     "actionFunction": "actionRun"
+                },
+                {
+                    "name": "readDocument",
+                    "label": "Leer documento (PDF)",
+                    "handler": "custom:handlers/lead-process",
+                    "actionFunction": "actionDoc"
                 }
             ]
         }
@@ -116,6 +122,11 @@
                 "hidden": true,
                 "style": "success",
                 "isForm": true
+            },
+            {
+                "name": "chDocs",
+                "label": "Lectura de documentos",
+                "view": "custom:views/lead/panels/documents"
             },
             {
                 "name": "activities",
