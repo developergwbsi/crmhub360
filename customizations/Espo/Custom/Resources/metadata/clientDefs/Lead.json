@@ -107,6 +107,20 @@
                 "label": "Historial de estados",
                 "view": "custom:views/lead/panels/status-history",
                 "order": 3
+            },
+            {
+                "name": "chHistory",
+                "label": "Historial de actividades",
+                "view": "custom:views/lead/panels/activity-history",
+                "order": 2
+            }
+        ]
+    },
+    "sidePanels": {
+        "detail": [
+            {
+                "name": "history",
+                "disabled": true
             }
         ]
     }

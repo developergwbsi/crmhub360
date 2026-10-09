@@ -125,4 +125,36 @@ class LeadTimeline
         }
         return $best;
     }
+
+    /**
+     * Historial completo y ordenado de un registro: correos, llamadas, reuniones y tareas ya hechas, mensajes de WhatsApp/SMS/Telegram y cambios de estado.
+     * $id/$scope = el registro que se mira; $chatLeadId = lead donde viven sus conversaciones (el propio lead, o el hilo de una cuenta/contacto).
+     */
+    public function all(string $id, string $scope, ?string $chatLeadId): array
+    {
+        $out = [];
+        foreach ($this->emails($id, $scope) as $e) {
+            $out[] = ['id' => $e['id'], 'at' => $e['at'], 'type' => 'email', 'dir' => $e['dir'], 'title' => $e['subject'], 'text' => mb_substr((string) $e['text'], 0, 160), 'who' => $e['dir'] === 'out' ? ($e['from'] ?: '') : $e['from'], 'href' => '#Email/view/' . $e['id']];
+        }
+        foreach ($this->calls($id, $scope) as $c) {
+            $out[] = ['id' => $c['id'], 'at' => $c['at'], 'type' => 'call', 'dir' => $c['dir'], 'title' => $c['title'] ?: 'Llamada', 'text' => trim(($c['duration'] ? intdiv((int) $c['duration'], 60) . ' min · ' : '') . (string) $c['notes']), 'who' => $c['who'], 'href' => '#Call/view/' . $c['id']];
+        }
+        foreach (['Meeting' => ['meeting', ['Held', 'Not Held']], 'Task' => ['task', ['Completed', 'Canceled']]] as $ent => [$type, $done]) {
+            foreach ($this->em->getRDBRepository($ent)->where(['parentType' => $scope, 'parentId' => $id, 'status' => $done])->order('createdAt', 'DESC')->limit(0, 50)->find() as $m) {
+                $out[] = ['id' => $m->getId(), 'at' => $m->get('dateStart') ?: ($m->get('dateEnd') ?: $m->get('createdAt')), 'type' => $type, 'dir' => 'out', 'title' => (string) $m->get('name'),
+                    'text' => (string) $m->get('status'), 'who' => $this->userName($m->get('assignedUserId')), 'href' => '#' . $ent . '/view/' . $m->getId()];
+            }
+        }
+        if ($chatLeadId) {
+            $chat = array_slice(array_reverse($this->chat($chatLeadId, '')), 0, 80);
+            foreach ($chat as $m) {
+                $out[] = ['id' => $m['id'], 'at' => $m['at'], 'type' => $m['channel'], 'dir' => $m['dir'], 'title' => '', 'text' => mb_substr((string) $m['text'], 0, 200), 'who' => (string) ($m['who'] ?? ''), 'href' => null];
+            }
+            foreach ($this->statusLog($chatLeadId) as $st) {
+                $out[] = ['id' => $st['id'], 'at' => $st['at'], 'type' => 'status', 'dir' => 'out', 'title' => $st['from'] . ' → ' . $st['to'], 'text' => (string) $st['comment'], 'who' => $st['who'], 'href' => null];
+            }
+        }
+        usort($out, fn ($a, $b) => strcmp((string) $b['at'], (string) $a['at']));
+        return array_slice($out, 0, 150);
+    }
 }

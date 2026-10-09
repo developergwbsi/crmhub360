@@ -502,6 +502,7 @@ class CrmHub
             'calls' => $t->calls($lead->getId(), $scope),
             'emails' => $t->emails($lead->getId(), $scope),
             'status' => $scope === 'Lead' ? $t->statusLog($lead->getId()) : [],
+            'all' => $t->all($lead->getId(), $scope, $scope === 'Lead' ? $lead->getId() : $this->threadLeadId($lead)),
             default => $scope === 'Lead' ? $t->chat($lead->getId(), (string) $request->getQueryParam('channel')) : [],
         };
         $out = ['items' => $items];
@@ -1044,5 +1045,23 @@ class CrmHub
         } catch (\RuntimeException $e) {
             throw new BadRequest('No se pudo eliminar la plantilla.');
         }
+    }
+
+    /** Lead donde viven las conversaciones de una cuenta, contacto u oportunidad (sin crearlo): el lead del que nació o uno con el mismo teléfono. */
+    private function threadLeadId(\Espo\ORM\Entity $rec): ?string
+    {
+        $scope = $rec->getEntityType();
+        $account = $scope === 'Account' ? $rec : ($rec->get('accountId') ? $this->em->getEntityById('Account', (string) $rec->get('accountId')) : null);
+        $col = ['Account' => 'createdAccountId', 'Contact' => 'createdContactId', 'Opportunity' => 'createdOpportunityId'][$scope] ?? null;
+        $repo = $this->em->getRDBRepository('Lead');
+        $lead = $col ? $repo->where([$col => $rec->getId()])->findOne() : null;
+        if (!$lead && $account) {
+            $lead = $repo->where(['createdAccountId' => $account->getId()])->findOne();
+        }
+        $phone = trim((string) $rec->get('phoneNumber')) ?: trim((string) ($account?->get('phoneNumber') ?? ''));
+        if (!$lead && $phone !== '') {
+            $lead = $repo->where(['phoneNumber' => $phone])->findOne();
+        }
+        return $lead?->getId();
     }
 }
