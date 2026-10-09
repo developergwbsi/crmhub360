@@ -1,6 +1,16 @@
 // Tablero de cualquier entidad: al pulsar una tarjeta se abre la ficha en un panel lateral (pantalla dividida).
-define('custom:views/record/kanban-drawer', ['views/record/kanban'], function (Dep) {
+define('custom:views/record/kanban-drawer', ['views/record/kanban', 'custom:live-list'], function (Dep, Live) {
     return class extends Dep {
+        setup() {
+            super.setup();
+            Live.attach(this);   // lead nuevo → la lista se recarga sola
+        }
+
+        onRemove() {
+            Live.detach(this);
+            super.onRemove && super.onRemove();
+        }
+
         afterRender() {
             super.afterRender();
             this.setupCardOpen();

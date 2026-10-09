@@ -269,6 +269,9 @@ class PushUnsubReq(BaseModel):
 
 class PushSendReq(BaseModel):
     userId: str | None = None
+    userIds: list[str] | None = None
+    tag: str = "crmhub-test"
+    kind: str = "info"
     title: str = "Crm Hub 360"
     body: str
     url: str = "/"
@@ -615,7 +618,7 @@ def push_unsubscribe(req: PushUnsubReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/push/send")
 async def push_send(req: PushSendReq, tenant: dict = Depends(tenant_auth)):
-    return await push.send(tenant["slug"], title=req.title, body=req.body, url=req.url, kind="info", tag="crmhub-test", user_id=req.userId)
+    return await push.send(tenant["slug"], title=req.title, body=req.body, url=req.url, kind=req.kind[:20], tag=req.tag[:80], user_id=req.userId, user_ids=req.userIds)
 
 
 @app.post("/v1/admin/push/broadcast")

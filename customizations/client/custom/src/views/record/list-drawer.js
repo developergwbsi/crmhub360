@@ -1,6 +1,16 @@
 // Listas (modo tabla): al pulsar el nombre se abre la ficha en un panel lateral; con Ctrl/Cmd se abre la pantalla completa como siempre.
-define('custom:views/record/list-drawer', ['views/record/list'], function (Dep) {
+define('custom:views/record/list-drawer', ['views/record/list', 'custom:live-list'], function (Dep, Live) {
     return class extends Dep {
+        setup() {
+            super.setup();
+            Live.attach(this);   // lead nuevo → la lista se recarga sola
+        }
+
+        onRemove() {
+            Live.detach(this);
+            super.onRemove && super.onRemove();
+        }
+
         afterRender() {
             super.afterRender();
             if (this._chRowBound) { return; }

@@ -75,10 +75,13 @@ def _send_one(sub: dict, payload: str) -> int:
 
 
 async def send(tenant: str, *, title: str, body: str, url: str = "/", tag: str = "crmhub", kind: str = "info",
-               user_id: str | None = None) -> dict:
+               user_id: str | None = None, user_ids: list[str] | None = None) -> dict:
     with db.pool.connection() as c:
-        q = "SELECT * FROM push_subscriptions WHERE tenant = %s" + (" AND user_id = %s" if user_id else "")
-        subs = c.execute(q, (tenant, user_id) if user_id else (tenant,)).fetchall()
+        if user_ids is not None:
+            subs = c.execute("SELECT * FROM push_subscriptions WHERE tenant = %s AND user_id = ANY(%s)", (tenant, list(user_ids))).fetchall() if user_ids else []
+        else:
+            q = "SELECT * FROM push_subscriptions WHERE tenant = %s" + (" AND user_id = %s" if user_id else "")
+            subs = c.execute(q, (tenant, user_id) if user_id else (tenant,)).fetchall()
     payload = json.dumps({"title": title, "body": body, "url": url, "tag": tag, "type": kind})
     results = await asyncio.gather(*[asyncio.to_thread(_send_one, s, payload) for s in subs])
     sent = dead = 0
