@@ -100,16 +100,6 @@
         }
     },
     "model": "custom:models/lead",
-    "bottomPanels": {
-        "detail": [
-            {
-                "name": "statusHistory",
-                "label": "Historial de estados",
-                "view": "custom:views/lead/panels/status-history",
-                "order": 3
-            }
-        ]
-    },
     "sidePanels": {
         "detail": [
             {
@@ -132,8 +122,21 @@
                 "notRefreshable": false
             },
             {
+                "name": "statusHistory",
+                "label": "Historial de estados",
+                "view": "custom:views/lead/panels/status-history"
+            },
+            {
                 "name": "tasks",
                 "reference": "tasks"
+            }
+        ]
+    },
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "targetLists",
+                "disabled": true
             }
         ]
     }

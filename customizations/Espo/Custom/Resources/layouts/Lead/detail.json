@@ -46,7 +46,44 @@
                 },
                 false
             ]
-        ]
+        ],
+        "name": "overview",
+        "tabBreak": true,
+        "tabLabel": "Resumen"
+    },
+    {
+        "label": "Details",
+        "rows": [
+            [
+                {
+                    "name": "status"
+                },
+                {
+                    "name": "source"
+                }
+            ],
+            [
+                {
+                    "name": "opportunityAmount"
+                },
+                {
+                    "name": "campaign"
+                }
+            ],
+            [
+                {
+                    "name": "industry"
+                },
+                false
+            ],
+            [
+                {
+                    "name": "description",
+                    "fullWidth": true
+                }
+            ]
+        ],
+        "name": "details"
     },
     {
         "label": "Filtro y servicio sugerido",
@@ -65,7 +102,10 @@
                     "fullWidth": true
                 }
             ]
-        ]
+        ],
+        "name": "qualification",
+        "tabBreak": true,
+        "tabLabel": "Calificación"
     },
     {
         "label": "Reporte de crédito",
@@ -120,39 +160,7 @@
                     "fullWidth": true
                 }
             ]
-        ]
-    },
-    {
-        "label": "Details",
-        "rows": [
-            [
-                {
-                    "name": "status"
-                },
-                {
-                    "name": "source"
-                }
-            ],
-            [
-                {
-                    "name": "opportunityAmount"
-                },
-                {
-                    "name": "campaign"
-                }
-            ],
-            [
-                {
-                    "name": "industry"
-                },
-                false
-            ],
-            [
-                {
-                    "name": "description",
-                    "fullWidth": true
-                }
-            ]
-        ]
+        ],
+        "name": "credit"
     }
 ]
