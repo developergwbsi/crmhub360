@@ -1,3 +1,4 @@
+import json
 import logging
 
 import httpx
@@ -108,40 +109,109 @@ async def fetch_avatar(payload: dict, phone: str) -> str | None:
         return None
 
 
-async def whatsapp_inbound(tenant: dict, *, phone: str, name: str | None, text: str, from_me: bool = False,
-                           avatar_payload: dict | None = None) -> str:
-    """Mensaje de WhatsApp (de cualquier proveedor): busca/crea el lead por teléfono y lo registra en su flujo."""
-    from . import whatsapp  # import tardío: whatsapp importa este módulo
-    lead_id = await find_lead_by_phone(tenant, phone)
+def _jid_phone(j) -> str | None:
+    """Número de un identificador de WhatsApp (5731…@s.whatsapp.net o solo dígitos); los LID (…@lid) no son números."""
+    j = str(j or "")
+    if j.endswith("@lid") or "@" in j and not j.endswith("@s.whatsapp.net"):
+        return None
+    d = "".join(ch for ch in j.split("@")[0] if ch.isdigit())
+    return d if len(d) >= 8 else None
+
+
+async def notify_owner(tenant: dict, lead_id: str, name: str | None, text: str) -> None:
+    """La respuesta le llega a quien le escribió al cliente (la línea es compartida); si el lead no tenía asesor, queda a cargo de esa persona."""
+    from . import push, routing
+    espo = Espo(tenant)
+    try:
+        lead = await espo.get(f"Lead/{lead_id}", select="assignedUserId,name")
+        route = routing.route_of(tenant["slug"], lead_id) or {}
+        owner = route.get("user_id") or lead.get("assignedUserId")
+        if owner and not lead.get("assignedUserId"):
+            await espo.put(f"Lead/{lead_id}", {"assignedUserId": owner})
+        if owner:
+            await push.send(tenant["slug"], title=f"WhatsApp de {name or lead.get('name') or 'un cliente'}"[:90], body=(text or "")[:140], url=f"/#Lead/view/{lead_id}",
+                            tag=f"crmhub-wa-{lead_id}", kind="whatsapp", user_id=owner)
+    except Exception as e:
+        logging.getLogger("crmhub").warning("aviso de WhatsApp falló: %s", str(e)[:120])
+
+
+async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None, text: str, from_me: bool = False,
+                           avatar_payload: dict | None = None, lead_id: str | None = None, lid: str | None = None) -> str | None:
+    """Mensaje de WhatsApp (de cualquier proveedor): busca/crea el lead por teléfono (o por el LID ya conocido) y lo registra en su flujo."""
+    from . import whatsapp, routing  # import tardío: whatsapp importa este módulo
+    if not lead_id and phone:
+        lead_id = await find_lead_by_phone(tenant, phone)
     if not lead_id:
-        avatar = await fetch_avatar(avatar_payload, phone) if avatar_payload else None
-        lead_id = await upsert_lead(tenant, name=name or phone, phone=phone, email=None, source="WhatsApp",
-                                    extra={"avatarUrl": avatar, "preferredChannel": "WhatsApp"} if avatar else {"preferredChannel": "WhatsApp"})
+        if from_me:
+            return None   # eco de un mensaje enviado desde el teléfono a alguien que no está en el CRM
+        avatar = await fetch_avatar(avatar_payload, phone) if (avatar_payload and phone) else None
+        extra = {"avatarUrl": avatar, "preferredChannel": "WhatsApp"} if avatar else {"preferredChannel": "WhatsApp"}
+        if not phone:
+            extra["description"] = "Escribió por WhatsApp sin mostrar su número (identificador de WhatsApp). Pídele su número para poder escribirle."
+        lead_id = await upsert_lead(tenant, name=name or phone or "Contacto de WhatsApp", phone=phone, email=None, source="WhatsApp", extra=extra)
+    if lid:
+        routing.lid_set(tenant["slug"], lid, lead_id)
+    if phone and not from_me:
+        routing.note_in(tenant["slug"], lead_id, normalize_phone(phone))
     if from_me and whatsapp.recently_sent(lead_id, text):
         return lead_id  # eco del mensaje enviado desde el CRM; ya tiene su nota
     await Espo(tenant).note(lead_id, f"[WhatsApp] {'→ Asesor' if from_me else '← ' + (name or 'Cliente')}: {text}")
+    if not from_me:
+        await notify_owner(tenant, lead_id, name, text)
     if not from_me and is_optout(text):
         await apply_optout(tenant, lead_id, "WhatsApp")
         try:
-            await whatsapp.send_text(tenant, normalize_phone(phone), "Listo, no volverás a recibir mensajes masivos de nuestra parte.")
+            await whatsapp.send_text(tenant, normalize_phone(phone), "Listo, no volverás a recibir mensajes masivos de nuestra parte.") if phone else None
         except Exception:
             pass
     return lead_id
 
 
 async def from_evolution(tenant: dict, payload: dict) -> str | None:
+    from . import routing
     if payload.get("event", "").lower().replace("_", ".") != "messages.upsert":
         return None
     d = payload.get("data", {})
     key = d.get("key", {})
-    if key.get("remoteJid", "").endswith("@g.us"):
+    remote = key.get("remoteJid", "") or ""
+    if remote.endswith("@g.us"):
         return None  # ignorar grupos
-    phone = key.get("remoteJid", "").split("@")[0]
     msg = d.get("message", {})
     text = msg.get("conversation") or (msg.get("extendedTextMessage") or {}).get("text")
-    if not phone or not text:
+    if not text:
         return None
-    return await whatsapp_inbound(tenant, phone=phone, name=d.get("pushName"), text=text, from_me=bool(key.get("fromMe")), avatar_payload=payload)
+    from_me = bool(key.get("fromMe"))
+    slug = tenant["slug"]
+    phone = _jid_phone(remote)
+    lead_id = lid = None
+    if not phone:   # WhatsApp a veces identifica al contacto con un LID y trae el número en otro campo
+        for alt in (key.get("remoteJidAlt"), key.get("senderPn"), d.get("senderPn"), d.get("remoteJidAlt"), key.get("participantAlt"), key.get("participantPn")):
+            phone = _jid_phone(alt)
+            if phone:
+                break
+    if not phone and remote.endswith("@lid"):
+        lid = remote
+        lead_id = routing.lid_get(slug, lid)
+        if not lead_id and not from_me:
+            cands = routing.recent_out(slug)
+            if len(cands) == 1:
+                lead_id = cands[0]
+            elif cands:   # varios a quienes se les escribió hace poco: se elige el que coincide con el nombre del contacto
+                push_name = (d.get("pushName") or "").strip().lower()
+                hits = []
+                for c in cands:
+                    try:
+                        nm = ((await Espo(tenant).get(f"Lead/{c}", select="name")).get("name") or "").lower()
+                    except Exception:
+                        continue
+                    if push_name and (push_name in nm or nm.split(" ")[0] in push_name):
+                        hits.append(c)
+                lead_id = hits[0] if len(hits) == 1 else None
+        if not lead_id:
+            logging.getLogger("crmhub").warning("WhatsApp sin número resoluble (%s): %s", remote, json.dumps(payload, ensure_ascii=False)[:700])
+    if not phone and not lead_id and not lid:
+        return None
+    return await whatsapp_inbound(tenant, phone=phone, name=d.get("pushName"), text=text, from_me=from_me, avatar_payload=payload, lead_id=lead_id, lid=lid)
 
 
 OPTOUT = {"baja", "stop", "alto", "cancelar", "no mas", "no mas mensajes", "no quiero mas mensajes", "unsubscribe", "salir"}

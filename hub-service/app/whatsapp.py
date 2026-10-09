@@ -5,7 +5,7 @@ import time
 
 import httpx
 
-from . import config, httpgen, twilio
+from . import config, httpgen, routing, twilio
 from .espo import Espo
 from .ingest import normalize_phone
 
@@ -135,13 +135,37 @@ async def send_text(tenant: dict, phone: str, text: str) -> None:
         raise ValueError(f"{PROVIDERS[p]} rechazó el mensaje ({r.status_code}): {_err(r)}")
 
 
-async def send(tenant: dict, lead_id: str, text: str, agent: str) -> dict:
+def lead_numbers(lead: dict) -> list[str]:
+    """Todos los números del lead (principal primero), normalizados."""
+    out = []
+    for x in sorted(lead.get("phoneNumberData") or [], key=lambda d: not d.get("primary")):
+        n = normalize_phone(x.get("phoneNumber"))
+        if n and not x.get("invalid") and n not in out:
+            out.append(n)
+    main = normalize_phone(lead.get("phoneNumber"))
+    if main and main not in out:
+        out.insert(0, main)
+    return out
+
+
+def pick_number(lead: dict, wanted: str | None) -> str:
+    nums = lead_numbers(lead)
+    if not nums:
+        raise ValueError("El lead no tiene teléfono.")
+    if wanted:
+        w = normalize_phone(wanted)
+        if w not in nums:
+            raise ValueError("Ese número no pertenece a este cliente.")
+        return w
+    return nums[0]
+
+
+async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str | None = None, phone: str | None = None) -> dict:
     espo = Espo(tenant)
     lead = await espo.get(f"Lead/{lead_id}")
-    phone = normalize_phone(lead.get("phoneNumber"))
-    if not phone:
-        raise ValueError("El lead no tiene teléfono.")
-    await send_text(tenant, phone, text)
+    number = pick_number(lead, phone)
+    await send_text(tenant, number, text)
     _sent[(lead_id, text)] = time.time()
     await espo.note(lead_id, f"[WhatsApp] → {agent}: {text}")
-    return {"ok": True}
+    routing.note_out(tenant["slug"], lead_id, user_id, number)   # la respuesta del cliente le llega a quien le escribió
+    return {"ok": True, "phone": number}

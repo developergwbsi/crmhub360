@@ -32,12 +32,11 @@ async def send_text(tenant: dict, phone: str, text: str, lead: dict | None = Non
         raise ValueError("SMS no está configurado (Integraciones → SMS).")
 
 
-async def send(tenant: dict, lead_id: str, text: str, agent: str) -> dict:
+async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str | None = None, number: str | None = None) -> dict:
+    from . import whatsapp   # elección del número del cliente (misma regla que WhatsApp)
     espo = Espo(tenant)
     lead = await espo.get(f"Lead/{lead_id}")
-    phone = normalize_phone(lead.get("phoneNumber"))
-    if not phone:
-        raise ValueError("El lead no tiene teléfono.")
+    phone = whatsapp.pick_number(lead, number)
     await send_text(tenant, phone, text, lead, agent)
     i = info(text)
     await espo.note(lead_id, f"[SMS] → {agent}: {text}")

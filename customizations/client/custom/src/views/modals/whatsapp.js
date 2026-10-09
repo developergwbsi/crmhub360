@@ -15,6 +15,7 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
             'keydown [name="text"]': function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); this.send(); } },
             'click [data-action="send"]': function () { this.send(); },
             'click [data-action="aiDraft"]': function () { this.aiDraft(); },
+            'change [data-role="phoneSel"]': function (e) { this.phone = e.currentTarget.value; this.paintTo(); },
             'click [data-action="myTpls"]': function (e) { e.stopPropagation(); this.toggleTpls(); },
             'click [data-action="pickMine"]': function (e) { this.useTpl(e.currentTarget.dataset.id); },
             'click [data-action="copyLink"]': function () {
@@ -45,6 +46,12 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
 
         load(first) {
             return Espo.Ajax.getRequest('CrmHub/leadTimeline', {leadId: this.options.leadId, kind: 'chat', channel: this.channel}).then(r => {
+                const norm = x => String(x || '').replace(/\D/g, '');
+                if (r.phones && !this.phones) {   // primer arranque: se escribe al número desde el que respondió el cliente por última vez, o al principal
+                    this.phones = r.phones;
+                    const pref = r.preferred && r.phones.find(x => norm(x.phone) === norm(r.preferred)), main = r.phones.find(x => x.primary) || r.phones[0];
+                    this.phone = (pref || main || {}).phone || this.options.phone; this.paintTo();
+                }
                 const sig = (r.items || []).map(i => i.id).join(',');
                 if (sig !== this.signature || first) { this.signature = sig; this.items = r.items || []; this.paint(); }
             }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
@@ -92,12 +99,24 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
                 });
                 return;
             }
-            foot.innerHTML = '<div class="ch-chat-composer"><div class="ch-chat-err" hidden></div>' +
+            foot.innerHTML = '<div class="ch-chat-composer"><div class="ch-chat-err" hidden></div><div class="ch-chat-to" data-role="to"></div>' +
                 '<div class="ch-chat-row"><textarea name="text" rows="1" maxlength="4000" placeholder="Escribe un mensaje…"></textarea>' +
                 '<button type="button" class="ch-chat-send" data-action="send" title="Enviar" style="background:' + this.meta.color + '"><span class="fas fa-paper-plane"></span></button></div>' +
                 '<div class="ch-chat-tools"><button type="button" class="btn btn-default btn-xs" data-action="myTpls"><span class="far fa-file-lines"></span> Mis plantillas</button> <button type="button" class="btn btn-default btn-xs" data-action="aiDraft"><span class="fas fa-wand-magic-sparkles"></span> Sugerir con IA</button>' +
                 '<span class="ch-chat-counter"></span></div></div>';
+            this.paintTo();
             setTimeout(() => { const t = this.el.querySelector('[name="text"]'); t && t.focus(); }, 100);
+        }
+
+        // A qué número va el mensaje: si el cliente tiene varios se elige aquí (por defecto, el último desde el que respondió)
+        paintTo() {
+            const to = this.el.querySelector('[data-role="to"]'), cur = this.phone || this.options.phone || '';
+            const sub = this.el.querySelector('.ch-chat-title small'); if (sub && cur) { sub.textContent = cur + ' · ' + this.meta.title; }
+            if (!to || this.channel === 'telegram') { return; }
+            const list = this.phones || [];
+            if (list.length > 1) {
+                to.innerHTML = '<label>Enviar a</label><select data-role="phoneSel" class="form-control">' + list.map(x => `<option value="${ChUi.esc(x.phone)}" ${x.phone === cur ? 'selected' : ''}>${ChUi.esc(x.phone)}${x.type ? ' · ' + ChUi.esc(({Mobile: 'Móvil', Work: 'Trabajo', Home: 'Casa', Office: 'Oficina', Fax: 'Fax', Other: 'Otro'})[x.type] || x.type) : ''}${x.primary ? ' (principal)' : ''}</option>`).join('') + '</select>';
+            } else { to.innerHTML = cur ? `<span class="ch-muted"><span class="fas fa-phone"></span> Se enviará a <b>${ChUi.esc(cur)}</b></span>` : ''; }
         }
 
         // Plantillas personales de este canal: se rellenan con el nombre del cliente, el asesor y la empresa; siguen siendo editables antes de enviar
@@ -148,7 +167,7 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
             const t = this.el.querySelector('[name="text"]'), text = (t.value || '').trim(), btn = this.el.querySelector('[data-action="send"]');
             if (!text || btn.disabled) { return; }
             this.error(''); btn.disabled = true;
-            Espo.Ajax.postRequest('CrmHub/' + this.channel + '/send', {leadId: this.options.leadId, text}).then(() => {
+            Espo.Ajax.postRequest('CrmHub/' + this.channel + '/send', {leadId: this.options.leadId, text, phone: this.channel === 'telegram' ? undefined : this.phone}).then(() => {
                 t.value = ''; this.autosize(); this.counter(); this.justSent = true; this.trigger('done');
                 return this.load(true);
             }).catch(xhr => {

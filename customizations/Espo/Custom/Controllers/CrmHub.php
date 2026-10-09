@@ -440,7 +440,7 @@ class CrmHub
         try {
             return (object) (new HubClient($this->config))->request('POST', '/v1/whatsapp/send', [
                 'leadId' => $lead->getId(), 'text' => (string) ($d->text ?? ''),
-                'agent' => $this->user->get('name') ?: $this->user->get('userName'),
+                'agent' => $this->user->get('name') ?: $this->user->get('userName'), 'userId' => $this->user->getId(), 'phone' => !empty($d->phone) ? (string) $d->phone : null,
             ], 30);
         } catch (\RuntimeException $e) {
             preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
@@ -504,7 +504,24 @@ class CrmHub
             'status' => $scope === 'Lead' ? $t->statusLog($lead->getId()) : [],
             default => $scope === 'Lead' ? $t->chat($lead->getId(), (string) $request->getQueryParam('channel')) : [],
         };
-        return (object) ['items' => $items];
+        $out = ['items' => $items];
+        if ($kind === 'chat' && $scope === 'Lead') {   // números del cliente y a cuál se le escribe por defecto (el último desde el que respondió)
+            $phones = [];
+            foreach ((array) $this->em->getRepository('PhoneNumber')->getPhoneNumberData($lead) as $p) {
+                $p = (array) $p;
+                if (!empty($p['phoneNumber']) && empty($p['invalid'])) {
+                    $phones[] = ['phone' => (string) $p['phoneNumber'], 'primary' => !empty($p['primary']), 'type' => (string) ($p['type'] ?? '')];
+                }
+            }
+            $out['phones'] = $phones;
+            try {
+                $r = (new HubClient($this->config))->request('GET', '/v1/wa/route?leadId=' . rawurlencode($lead->getId()), null, 5);
+                $out['preferred'] = $r['phone'] ?? null;
+            } catch (\RuntimeException $e) {
+                $out['preferred'] = null;
+            }
+        }
+        return (object) $out;
     }
 
     /** ¿Ya hubo una acción con el lead desde el último cambio de estado? Si no, el cambio exige comentario. */
@@ -720,7 +737,7 @@ class CrmHub
             throw new Forbidden();
         }
         return (object) $this->hubAny('POST', '/v1/sms/send', ['leadId' => $lead->getId(), 'text' => (string) ($d->text ?? ''),
-            'agent' => $this->user->get('name') ?: $this->user->get('userName')]);
+            'agent' => $this->user->get('name') ?: $this->user->get('userName'), 'userId' => $this->user->getId(), 'phone' => !empty($d->phone) ? (string) $d->phone : null]);
     }
 
     public function postActionSmsTest(Request $request): \stdClass

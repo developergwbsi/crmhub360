@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates
+from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -24,6 +24,7 @@ async def lifespan(_: FastAPI):
     db.pool.open()
     push.keys()  # crea las claves VAPID la primera vez
     simulate.ensure_schema()
+    routing.ensure_schema()
     templates.ensure_schema()
     bg = asyncio.create_task(broadcast.worker())
     mb = asyncio.create_task(mailbox.worker())
@@ -249,6 +250,8 @@ class SendReq(BaseModel):
     leadId: str
     text: str
     agent: str = 'Asesor'
+    userId: str | None = None
+    phone: str | None = None
 
 
 class PushSubReq(BaseModel):
@@ -414,7 +417,7 @@ async def sms_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
         raise HTTPException(422, "El SMS debe tener entre 1 y 1000 caracteres")
     job = db.log_job(tenant["slug"], "sms_send", req.leadId)
     try:
-        res = await sms.send(tenant, req.leadId, text, req.agent); db.finish_job(job); return res
+        res = await sms.send(tenant, req.leadId, text, req.agent, req.userId, req.phone); db.finish_job(job); return res
     except ValueError as e:
         db.finish_job(job, str(e)[:500]); raise HTTPException(422, str(e))
     except Exception as e:
@@ -675,7 +678,7 @@ async def wa_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
         raise HTTPException(422, "El mensaje debe tener entre 1 y 4000 caracteres")
     job = db.log_job(tenant["slug"], "whatsapp_send", req.leadId)
     try:
-        res = await whatsapp.send(tenant, req.leadId, text, req.agent)
+        res = await whatsapp.send(tenant, req.leadId, text, req.agent, req.userId, req.phone)
         db.finish_job(job)
         return res
     except ValueError as e:
@@ -817,6 +820,13 @@ async def tpl_delete(tid: int, userId: str, tenant: dict = Depends(tenant_auth))
     if not templates.delete(tenant["slug"], userId, tid):
         raise HTTPException(404, "Plantilla no encontrada.")
     return {"ok": True}
+
+
+@app.get("/v1/wa/route")
+async def wa_route(leadId: str, tenant: dict = Depends(tenant_auth)):
+    """Número preferido para escribirle al cliente (el último desde el que respondió, o al que se le escribió) y quién le escribió."""
+    r = routing.route_of(tenant["slug"], leadId) or {}
+    return {"phone": r.get("last_in_phone") or r.get("last_out_phone"), "userId": r.get("user_id")}
 
 
 if __name__ == "__main__":
