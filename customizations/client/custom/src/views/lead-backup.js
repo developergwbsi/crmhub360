@@ -39,6 +39,9 @@ define('custom:views/lead-backup', ['view', 'custom:ui'], function (Dep, ChUi) {
             root.onclick = e => { const a = e.target.closest('[data-act]'); if (a && !a.disabled) { this.act(a.dataset.act, a.dataset.id); } };
         }
 
+        // la lista de leads queda guardada en memoria al salir de ella: se descarta para que muestre el cambio sin recargar la página
+        refreshLeadLists() { try { this.getBaseController().clearScopeStoredMainView('Lead'); } catch (e) { /* sin lista guardada */ } }
+
         fail(msg) { return xhr => { if (xhr) { xhr.errorIsHandled = true; } this.busy = ''; this.draw(); Espo.Ui.error(msg); }; }
 
         act(act, id) {
@@ -57,7 +60,7 @@ define('custom:views/lead-backup', ['view', 'custom:ui'], function (Dep, ChUi) {
                     if (t.trim() !== 'LIMPIAR') { Espo.Ui.warning('No coincide: escribe LIMPIAR'); return; }
                     this.busy = 'clean'; this.draw();
                     Espo.Ajax.postRequest('CrmHub/leadClean', {confirm: 'LIMPIAR'}).then(r => {
-                        this.busy = ''; Espo.Ui.success(`Se limpiaron ${r.removed} leads. Copia guardada.`); this.load();
+                        this.busy = ''; this.refreshLeadLists(); Espo.Ui.success(`Se limpiaron ${r.removed} leads. Copia guardada.`); this.load();
                     }).catch(this.fail('No se pudo limpiar. La copia (si se alcanzó a crear) queda en la lista.'));
                 });
             } else if (act === 'restore') {
@@ -65,7 +68,7 @@ define('custom:views/lead-backup', ['view', 'custom:ui'], function (Dep, ChUi) {
                     if (!y) { return; }
                     this.busy = 'restore'; this.draw();
                     Espo.Ajax.postRequest('CrmHub/leadRestore', {id}).then(r => {
-                        this.busy = ''; Espo.Ui.success(`Restaurados ${r.restored.Lead} leads` + (r.skipped ? ` (${r.skipped} ya existían)` : '')); this.load();
+                        this.busy = ''; this.refreshLeadLists(); Espo.Ui.success(`Restaurados ${r.restored.Lead} leads` + (r.skipped ? ` (${r.skipped} ya existían)` : '')); this.load();
                     }).catch(this.fail('No se pudo restaurar'));
                 });
             } else if (act === 'del') {
