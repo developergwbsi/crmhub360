@@ -29,7 +29,7 @@ def _control() -> tuple[list, str | None]:
 
 def _from_provider(p: dict) -> dict:
     f = p.get("fields", {})
-    return {"kind": f.get("engine") or "openai", "model": f.get("model") or "", "base_url": (f.get("base_url") or "").strip(), "api_key": f.get("api_key") or "", "label": p["name"], "source": f"global:{p['id']}", "check_url": False}
+    return {"kind": f.get("engine") or "openai", "model": f.get("model") or "", "base_url": (f.get("base_url") or "").strip(), "api_key": f.get("api_key") or "", "workspace_id": f.get("workspace_id") or "", "label": p["name"], "source": f"global:{p['id']}", "check_url": False}
 
 
 def resolve(tenant: dict | None) -> dict:
@@ -39,7 +39,7 @@ def resolve(tenant: dict | None) -> dict:
     providers, default = _control()
     if mode == "own" and (ai.get("own") or {}).get("kind"):
         o = ai["own"]
-        return {"kind": o["kind"], "model": o.get("model") or "", "base_url": (o.get("base_url") or "").strip(), "api_key": o.get("api_key") or "", "label": "Motor propio de la empresa", "source": "own", "check_url": True}
+        return {"kind": o["kind"], "model": o.get("model") or "", "base_url": (o.get("base_url") or "").strip(), "api_key": o.get("api_key") or "", "workspace_id": o.get("workspace_id") or "", "label": "Motor propio de la empresa", "source": "own", "check_url": True}
     if mode.startswith("provider:"):
         p = next((x for x in providers if x["id"] == mode[9:]), None)
         if p:
@@ -95,6 +95,8 @@ async def _post(cfg: dict, url: str, headers: dict, body: dict, timeout: float =
                 except Exception:
                     msg = r.text[:160]
                 hint = " (clave de API inválida)" if r.status_code in (401, 403) else (" (modelo inexistente)" if r.status_code == 404 else "")
+                if "workspace" in str(msg).lower():
+                    hint = " (tu clave de Anthropic no está asociada a un workspace: pega el ID del workspace en la configuración del motor)"
                 raise RuntimeError(f"El proveedor de IA respondió {r.status_code}{hint}: {str(msg)[:200]}")
             return r.json()
         await asyncio.sleep(1)
@@ -111,7 +113,7 @@ async def _anthropic(cfg: dict, system: str, user: str, schema: dict | None, max
     if schema:   # salida estructurada: se obliga a «llamar» a una herramienta cuyo esquema es el pedido
         body["tools"] = [{"name": "responder", "description": "Entrega la respuesta con la estructura pedida.", "input_schema": schema}]
         body["tool_choice"] = {"type": "tool", "name": "responder"}
-    j = await _post(cfg, f"{base}/v1/messages", {"x-api-key": cfg["api_key"], "anthropic-version": "2023-06-01", "content-type": "application/json"}, body)
+    j = await _post(cfg, f"{base}/v1/messages", {"x-api-key": cfg["api_key"], "anthropic-version": "2023-06-01", "content-type": "application/json", **({"anthropic-workspace-id": cfg["workspace_id"]} if cfg.get("workspace_id") else {})}, body)
     u = j.get("usage") or {}
     if schema:
         blk = next((b for b in j.get("content", []) if b.get("type") == "tool_use"), None)

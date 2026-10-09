@@ -1094,6 +1094,7 @@ class AiOwnReq(BaseModel):
     model: str = ""
     base_url: str = ""
     api_key: str = ""
+    workspace_id: str = ""
 
 
 def _ai_public(tenant: dict) -> dict:
@@ -1103,7 +1104,7 @@ def _ai_public(tenant: dict) -> dict:
     k = own.get("api_key") or ""
     return {"mode": ai.get("mode") or "global", "kinds": llm.KINDS, "usage": llm.usage(tenant["slug"]),
             "effective": {"label": eff["label"], "kind": eff["kind"], "model": eff["model"], "source": eff["source"]},
-            "own": {"kind": own.get("kind") or "anthropic", "model": own.get("model") or "", "base_url": own.get("base_url") or "", "secretSet": bool(k), "secretHint": ("…" + k[-4:]) if k else ""}}
+            "own": {"kind": own.get("kind") or "anthropic", "model": own.get("model") or "", "base_url": own.get("base_url") or "", "workspace_id": own.get("workspace_id") or "", "secretSet": bool(k), "secretHint": ("…" + k[-4:]) if k else ""}}
 
 
 @app.get("/v1/ai/config")
@@ -1125,7 +1126,8 @@ async def ai_own_save(req: AiOwnReq, tenant: dict = Depends(tenant_auth)):
         except ValueError as e:
             raise HTTPException(422, str(e))
     old = ai.get("own") or {}
-    own = {"kind": req.kind, "model": req.model.strip()[:80], "base_url": url, "api_key": req.api_key.strip()[:500] or old.get("api_key", "")}
+    import re as _re
+    own = {"kind": req.kind, "model": req.model.strip()[:80], "base_url": url, "api_key": req.api_key.strip()[:500] or old.get("api_key", ""), "workspace_id": _re.sub(r"[^\w\-]", "", req.workspace_id)[:80]}
     with db.pool.connection() as c:
         c.execute("UPDATE tenants SET settings = jsonb_set(settings, '{ai}', COALESCE(settings->'ai', '{}'::jsonb) || jsonb_build_object('own', %s::jsonb), true) WHERE slug = %s", (json.dumps(own), tenant["slug"]))
     llm._cache["at"] = 0
@@ -1138,7 +1140,7 @@ async def ai_test(req: AiOwnReq | None = None, tenant: dict = Depends(tenant_aut
     cfg = llm.resolve(tenant)
     if req and req.kind and (((tenant.get("settings") or {}).get("ai") or {}).get("mode") == "own"):
         old = (((tenant.get("settings") or {}).get("ai") or {}).get("own") or {})
-        cfg = {"kind": req.kind, "model": req.model.strip(), "base_url": req.base_url.strip(), "api_key": req.api_key.strip() or old.get("api_key", ""), "check_url": True}
+        cfg = {"kind": req.kind, "model": req.model.strip(), "base_url": req.base_url.strip(), "api_key": req.api_key.strip() or old.get("api_key", ""), "workspace_id": req.workspace_id.strip(), "check_url": True}
     try:
         return await llm.test(cfg)
     except Exception as e:

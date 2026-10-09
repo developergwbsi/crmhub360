@@ -930,6 +930,7 @@ def _clean_fields(kind: str, fields: dict, old: dict) -> dict:
             raise HTTPException(400, "Falta la clave de la API")
         out["model"] = str(out.get("model") or "").strip()
         out["base_url"] = str(out.get("base_url") or "").strip()
+        out["workspace_id"] = re.sub(r"[^\w\-]", "", str(out.get("workspace_id") or ""))[:80]
     if kind == "email":
         if not out.get("host") or not re.match(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$", str(out.get("from_address") or out.get("user") or "")):
             raise HTTPException(400, "Escribe el servidor SMTP y un correo remitente válido")
@@ -1002,7 +1003,7 @@ async def test_provider_ai(pid: str, actor: str = Depends(me)):
     try:
         async with httpx.AsyncClient(timeout=120) as c:
             if eng == "anthropic":
-                r = await c.post((base or "https://api.anthropic.com") + "/v1/messages", headers={"x-api-key": f.get("api_key", ""), "anthropic-version": "2023-06-01"},
+                r = await c.post((base or "https://api.anthropic.com") + "/v1/messages", headers={"x-api-key": f.get("api_key", ""), "anthropic-version": "2023-06-01", **({"anthropic-workspace-id": f["workspace_id"]} if f.get("workspace_id") else {})},
                                  json={"model": f.get("model") or "claude-haiku-5-5", "max_tokens": 16, "messages": [{"role": "user", "content": "Di listo."}]})
             elif eng == "openai":
                 r = await c.post((base or "https://api.openai.com/v1") + "/chat/completions", headers={"Authorization": "Bearer " + f.get("api_key", "")},
