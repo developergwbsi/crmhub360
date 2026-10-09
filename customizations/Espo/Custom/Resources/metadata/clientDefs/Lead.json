@@ -107,20 +107,33 @@
                 "label": "Historial de estados",
                 "view": "custom:views/lead/panels/status-history",
                 "order": 3
-            },
-            {
-                "name": "chHistory",
-                "label": "Historial de actividades",
-                "view": "custom:views/lead/panels/activity-history",
-                "order": 2
             }
         ]
     },
     "sidePanels": {
         "detail": [
             {
-                "name": "history",
-                "disabled": true
+                "name": "convertedTo",
+                "label": "Converted To",
+                "view": "crm:views/lead/record/panels/converted-to",
+                "notRefreshable": true,
+                "hidden": true,
+                "style": "success",
+                "isForm": true
+            },
+            {
+                "name": "activities",
+                "reference": "activities"
+            },
+            {
+                "name": "chHistory",
+                "label": "Historial de actividades",
+                "view": "custom:views/lead/panels/activity-history",
+                "notRefreshable": false
+            },
+            {
+                "name": "tasks",
+                "reference": "tasks"
             }
         ]
     }

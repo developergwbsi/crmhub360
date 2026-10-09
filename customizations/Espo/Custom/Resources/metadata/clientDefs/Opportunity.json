@@ -64,21 +64,22 @@
             ]
         }
     },
-    "bottomPanels": {
+    "sidePanels": {
         "detail": [
+            {
+                "name": "activities",
+                "reference": "activities",
+                "view": "crm:views/opportunity/record/panels/activities"
+            },
             {
                 "name": "chHistory",
                 "label": "Historial de actividades",
                 "view": "custom:views/lead/panels/activity-history",
-                "order": 2
-            }
-        ]
-    },
-    "sidePanels": {
-        "detail": [
+                "notRefreshable": false
+            },
             {
-                "name": "history",
-                "disabled": true
+                "name": "tasks",
+                "reference": "tasks"
             }
         ]
     }
