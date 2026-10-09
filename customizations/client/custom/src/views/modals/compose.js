@@ -49,7 +49,7 @@ define('custom:views/modals/compose', ['views/modal', 'custom:ui', 'custom:split
 
         applyMine(id) {
             const t = (this.mine || []).find(x => String(x.id) === String(id)); if (!t) { return; }
-            const v = Tpl.vars(this.attrs.name || '', this.getUser().get('name'), this.getConfig().get('applicationName'));
+            const v = Tpl.ctx(this, this.attrs.name || '');
             this.el.querySelector('[name="subject"]').value = Tpl.fill(t.subject, v); this.el.querySelector('[name="body"]').value = Tpl.fill(t.body, v);
         }
 

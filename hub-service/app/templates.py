@@ -5,8 +5,9 @@ MAX = 10   # incluidas en la licencia; la empresa puede tener más como servicio
 CHANNELS = ("email", "whatsapp", "telegram", "sms")
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS user_templates (
-    id SERIAL PRIMARY KEY, tenant TEXT NOT NULL, user_id TEXT NOT NULL, channel TEXT NOT NULL, name TEXT NOT NULL, subject TEXT NOT NULL DEFAULT '', body TEXT NOT NULL,
+    id SERIAL PRIMARY KEY, tenant TEXT NOT NULL, user_id TEXT NOT NULL, channel TEXT NOT NULL, name TEXT NOT NULL, subject TEXT NOT NULL DEFAULT '', body TEXT NOT NULL, design JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
+ALTER TABLE user_templates ADD COLUMN IF NOT EXISTS design JSONB;
 CREATE INDEX IF NOT EXISTS user_templates_owner ON user_templates (tenant, user_id, channel);
 """
 
@@ -25,7 +26,7 @@ def limit_of(tenant: dict) -> int:
 
 def list_for(tenant: str, user_id: str, limit: int = MAX) -> dict:
     with db.pool.connection() as c:
-        rows = c.execute("SELECT id, channel, name, subject, body, updated_at FROM user_templates WHERE tenant=%s AND user_id=%s ORDER BY channel, lower(name)", (tenant, user_id)).fetchall()
+        rows = c.execute("SELECT id, channel, name, subject, body, design, updated_at FROM user_templates WHERE tenant=%s AND user_id=%s ORDER BY channel, lower(name)", (tenant, user_id)).fetchall()
     return {"items": [dict(r) for r in rows], "max": limit}
 
 
@@ -37,22 +38,31 @@ def save(tenant: str, user_id: str, p: dict, limit: int = MAX) -> dict:
         raise ValueError("El nombre debe tener entre 2 y 80 caracteres.")
     if not body:
         raise ValueError("Escribe el contenido de la plantilla.")
-    if len(body) > (20000 if ch == "email" else 4000):
+    if len(body) > (80000 if ch == "email" else 4000):
         raise ValueError("El contenido es demasiado largo.")
     if ch == "email" and not subject:
         raise ValueError("Escribe el asunto del correo.")
+    design = p.get("design")
+    if design is not None:
+        if ch != "email" or len(design) > 120000:
+            raise ValueError("Diseño inválido.")
+        import json as _j
+        try:
+            _j.loads(design)
+        except ValueError:
+            raise ValueError("Diseño inválido.")
     with db.pool.connection() as c:
         tid = p.get("id")
         if tid:
-            r = c.execute("UPDATE user_templates SET name=%s, subject=%s, body=%s, updated_at=now() WHERE id=%s AND tenant=%s AND user_id=%s AND channel=%s RETURNING id",
-                          (name, subject[:250], body, int(tid), tenant, user_id, ch)).fetchone()
+            r = c.execute("UPDATE user_templates SET name=%s, subject=%s, body=%s, design=%s, updated_at=now() WHERE id=%s AND tenant=%s AND user_id=%s AND channel=%s RETURNING id",
+                          (name, subject[:250], body, design, int(tid), tenant, user_id, ch)).fetchone()
             if not r:
                 raise LookupError("Plantilla no encontrada.")
             return {"id": r["id"]}
         n = c.execute("SELECT count(*) n FROM user_templates WHERE tenant=%s AND user_id=%s AND channel=%s", (tenant, user_id, ch)).fetchone()["n"]
         if n >= limit:
             raise PermissionError(f"Ya tienes {limit} plantillas de este canal (el máximo de tu licencia). Elimina una o pide a tu administrador ampliar el límite (servicio adicional).")
-        r = c.execute("INSERT INTO user_templates (tenant, user_id, channel, name, subject, body) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id", (tenant, user_id, ch, name, subject[:250], body)).fetchone()
+        r = c.execute("INSERT INTO user_templates (tenant, user_id, channel, name, subject, body, design) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id", (tenant, user_id, ch, name, subject[:250], body, design)).fetchone()
         return {"id": r["id"]}
 
 

@@ -47,8 +47,21 @@ async def test(tenant: dict) -> dict:
             "lastError": info.get("last_error_message") or ""}
 
 
-async def send_text(tenant: dict, chat_id: str, text: str, markup: dict | None = None) -> None:
-    body = {"chat_id": chat_id, "text": text}
+def tg_html(text: str) -> str:
+    """Texto con formato sencillo (*negrita*, _cursiva_, ~tachado~, `código`, [texto](https://enlace)) → HTML de Telegram; todo lo demás se escapa."""
+    import html as _h, re as _re
+    t = _h.escape(text, quote=False)
+    t = _re.sub(r"\[([^\]\n]{1,200})\]\((https?://[^\s)]{3,500})\)", lambda m: f'<a href="{m.group(2)}">{m.group(1)}</a>', t)
+    t = _re.sub(r"`([^`\n]+)`", r"<code>\1</code>", t)
+    for mark, tag in (("*", "b"), ("_", "i"), ("~", "s")):
+        t = _re.sub(rf"(?<![\w{_re.escape(mark)}]){_re.escape(mark)}(?=\S)([^\n{_re.escape(mark)}]*?\S){_re.escape(mark)}(?![\w{_re.escape(mark)}])", rf"<{tag}>\1</{tag}>", t)
+    return t
+
+
+async def send_text(tenant: dict, chat_id: str, text: str, markup: dict | None = None, html: bool = False) -> None:
+    body = {"chat_id": chat_id, "text": tg_html(text) if html else text}
+    if html:
+        body["parse_mode"] = "HTML"
     if markup:
         body["reply_markup"] = markup
     await _call(tenant, "sendMessage", body)
@@ -60,7 +73,10 @@ async def send(tenant: dict, lead_id: str, text: str, agent: str) -> dict:
     chat = lead.get("telegramChatId")
     if not chat:
         raise ValueError("Este lead aún no ha abierto el chat con el bot. Envíale el enlace de invitación (botón «Invitar por Telegram»).")
-    await send_text(tenant, chat, text)
+    try:
+        await send_text(tenant, chat, text, html=True)
+    except ValueError:   # Telegram rechazó el formato: se reenvía como texto plano
+        await send_text(tenant, chat, text)
     await espo.note(lead_id, f"[Telegram] → {agent}: {text}")
     return {"ok": True}
 

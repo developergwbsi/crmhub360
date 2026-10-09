@@ -63,7 +63,7 @@ define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:
 
         applyMine(id) {
             const t = (this.mine || []).find(x => String(x.id) === String(id)); if (!t) { return; }
-            const box = this.el.querySelector('[data-role="compose"]'), v = Tpl.vars(this.options.name, this.getUser().get('name'), this.getConfig().get('applicationName'));
+            const box = this.el.querySelector('[data-role="compose"]'), v = Tpl.ctx(this, this.options.name);
             box.querySelector('[name="subject"]').value = Tpl.fill(t.subject, v); box.querySelector('[name="body"]').value = Tpl.fill(t.body, v);
             box.querySelectorAll('.ch-tpl').forEach(b => b.classList.toggle('on', b.dataset.id === String(id)));
         }

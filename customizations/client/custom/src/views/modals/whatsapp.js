@@ -117,7 +117,7 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
 
         useTpl(id) {
             const t = (this.tplList || []).find(x => String(x.id) === String(id)); if (!t) { return; }
-            const v = Tpl.vars(this.options.name, this.getUser().get('name'), this.getConfig().get('applicationName'));
+            const v = Tpl.ctx(this, this.options.name);
             const ta = this.el.querySelector('[name="text"]'); ta.value = Tpl.fill(t.body, v); this.autosize(); this.counter(); ta.focus();
             const pop = this.el.querySelector('.ch-tpl-pop'); if (pop) { pop.remove(); }
         }

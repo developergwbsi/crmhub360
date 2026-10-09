@@ -1,6 +1,6 @@
 // Envío de correo «como el usuario»: lo manda el Hub con tu nombre, tu firma y un Reply-To personal (las respuestas vuelven solo a ti).
 // Si la empresa no tiene el correo del Centro de control, se usa el envío normal de Espo.
-define('custom:mail-send', [], function () {
+define('custom:mail-send', ['custom:ui'], function (ChUi) {
     const toText = h => String(h || '').replace(/<\s*br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h\d|blockquote)>/gi, '\n').replace(/<li[^>]*>/gi, '• ').replace(/<[^>]+>/g, '')
         .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\n{3,}/g, '\n\n').trim();
 
@@ -24,7 +24,18 @@ define('custom:mail-send', [], function () {
             ed.querySelector('.ch-ed-bar').addEventListener('click', e => {
                 const b = e.target.closest('button'); if (!b) { return; }
                 area.focus();
-                if (b.dataset.cmd === 'createLink') { const u = window.prompt('Dirección del enlace (https://…)'); if (u && /^(https?:|mailto:)/i.test(u)) { document.execCommand('createLink', false, u); } return; }
+                if (b.dataset.cmd === 'createLink') {   // diálogo propio (nunca el del navegador); se conserva la selección mientras se escribe la dirección
+                    const sel = window.getSelection(), range = sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+                    ChUi.prompt({title: 'Insertar enlace', icon: 'fas fa-link', label: 'Dirección del enlace', placeholder: 'https://…', required: true, min: 4, rows: 1, max: 500, ok: 'Insertar',
+                        hint: 'Selecciona antes el texto que quieres convertir en enlace.', requiredText: 'Escribe la dirección completa (https://…).'}).then(u => {
+                        if (!u) { return; }
+                        const url = /^(https?:|mailto:|tel:)/i.test(u) ? u : 'https://' + u;
+                        area.focus();
+                        if (range) { sel.removeAllRanges(); sel.addRange(range); }
+                        if (sel.isCollapsed) { document.execCommand('insertHTML', false, '<a href="' + url.replace(/"/g, '&quot;') + '">' + url.replace(/</g, '&lt;') + '</a>'); } else { document.execCommand('createLink', false, url); }
+                    });
+                    return;
+                }
                 document.execCommand(b.dataset.cmd, false, null);
             });
             area.addEventListener('paste', e => { e.preventDefault(); const t = (e.clipboardData || window.clipboardData).getData('text/plain'); document.execCommand('insertText', false, t); });

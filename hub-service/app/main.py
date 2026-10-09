@@ -791,6 +791,7 @@ class TplReq(BaseModel):
     name: str
     subject: str = ""
     body: str
+    design: str | None = None
     id: int | None = None
 
 

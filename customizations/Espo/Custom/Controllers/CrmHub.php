@@ -597,7 +597,9 @@ class CrmHub
             $parentId = $parent->getId();
         }
         $body = !empty($d->isHtml) ? $this->cleanHtml($text) : nl2br(htmlspecialchars($text, ENT_QUOTES, 'UTF-8'));
-        $html = $this->brandedHtml($body, mb_substr(trim((string) ($d->subject ?? '')), 0, 250));
+        // una plantilla diseñada en el lienzo ya trae su cabecera y su estilo: no se envuelve de nuevo, solo se le añade la firma
+        $html = str_contains($body, 'data-ch-design') ? '<!doctype html><html><body style="margin:0">' . $body . '<div style="max-width:600px;margin:0 auto;padding:6px 8px 18px">' . $this->signatureHtml() . '</div></body></html>'
+            : $this->brandedHtml($body, mb_substr(trim((string) ($d->subject ?? '')), 0, 250));
         $payload = ['userId' => $this->user->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName')), 'to' => array_values($to), 'cc' => array_values($cc),
             'subject' => mb_substr(trim((string) ($d->subject ?? '')), 0, 250), 'html' => $html, 'parentType' => $parentType, 'parentId' => $parentId,
             'inReplyTo' => !empty($d->inReplyTo) ? (string) $d->inReplyTo : null, 'references' => array_values(array_filter((array) ($d->references ?? []), 'is_string')), 'record' => false];
@@ -1008,6 +1010,7 @@ class CrmHub
             return (object) (new HubClient($this->config))->request('POST', '/v1/tpl', [
                 'userId' => $this->user->getId(), 'channel' => $channel, 'name' => (string) ($d->name ?? ''), 'subject' => (string) ($d->subject ?? ''),
                 'body' => $channel === 'email' ? $this->cleanHtml($body) : $body, 'id' => !empty($d->id) ? (int) $d->id : null,
+                'design' => $channel === 'email' && !empty($d->design) && is_string($d->design) ? $d->design : null,
             ], 20);
         } catch (\RuntimeException $e) {
             preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
