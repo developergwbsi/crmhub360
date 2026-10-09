@@ -22,6 +22,10 @@
     ProxyPassReverse / http://127.0.0.1:${WEB_PORT}/
     # X-Forwarded-Proto lo fija el vhost SSL generado por certbot (https)
 
+    # Código propio de la aplicación: el navegador lo revalida en cada carga (ETag); así una función nueva no queda atrapada en caché vieja
+    <LocationMatch "^/client/custom/(src|css|res)/">
+        Header set Cache-Control "no-cache"
+    </LocationMatch>
     # PWA: el service worker debe poder controlar todo el sitio y no cachearse
     <Location "/client/custom/sw.js">
         Header set Service-Worker-Allowed "/"
