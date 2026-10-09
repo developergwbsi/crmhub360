@@ -163,8 +163,9 @@ table.table thead th.checkbox-cell .checkbox-dropdown > a { padding: 0 4px !impo
 .list-kanban .group-header, .kanban-head-container .group-header { border-radius: 10px; font-weight: 600; }
 
 /* ---------- Tarjetas Kanban de Lead: avatar, más datos y señal de arrastre ---------- */
-.group-column-list .item { cursor: grab; transition: transform .12s ease, box-shadow .12s ease; }
-.group-column-list .item:hover { transform: translateY(-2px); }
+.group-column-list .item { cursor: grab; position: relative; top: 0; transition: top .12s ease, box-shadow .12s ease; }
+/* el levantado al pasar el cursor usa «top», no «transform»: un transform haría que el menú de opciones de la tarjeta (posición fija) se abriera lejos de ella */
+.group-column-list .item:hover { top: -2px; }
 .group-column-list .item:hover .ch-card { border-color: var(--ch-tint-line); box-shadow: 0 6px 18px rgba(40, 55, 140, .14); }
 .group-column-list .item:active, .group-column-list .item.ui-sortable-helper { cursor: grabbing; }
 .group-column-list .item.ui-sortable-helper .ch-card { box-shadow: 0 14px 30px rgba(40, 55, 140, .28); transform: rotate(1.2deg); }
