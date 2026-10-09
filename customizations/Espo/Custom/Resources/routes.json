@@ -684,5 +684,69 @@
             "controller": "CrmHub",
             "action": "whatsappUnlink"
         }
+    },
+    {
+        "route": "/CrmHub/lines",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "lines"
+        }
+    },
+    {
+        "route": "/CrmHub/lineSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "lineSave"
+        }
+    },
+    {
+        "route": "/CrmHub/lineEnable",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "lineEnable"
+        }
+    },
+    {
+        "route": "/CrmHub/lineDefault",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "lineDefault"
+        }
+    },
+    {
+        "route": "/CrmHub/lineDelete",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "lineDelete"
+        }
+    },
+    {
+        "route": "/CrmHub/lineTest",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "lineTest"
+        }
+    },
+    {
+        "route": "/CrmHub/lineSendTest",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "lineSendTest"
+        }
+    },
+    {
+        "route": "/CrmHub/linesActive",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "linesActive"
+        }
     }
 ]

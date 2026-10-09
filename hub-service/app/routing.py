@@ -8,6 +8,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS wa_routes (
     tenant TEXT NOT NULL, lead_id TEXT NOT NULL, user_id TEXT, last_out_phone TEXT, last_in_phone TEXT, out_at TIMESTAMPTZ, updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (tenant, lead_id));
+ALTER TABLE wa_routes ADD COLUMN IF NOT EXISTS last_line TEXT;
 CREATE TABLE IF NOT EXISTS wa_lids (tenant TEXT NOT NULL, lid TEXT NOT NULL, lead_id TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant, lid));
 """
 
@@ -17,11 +18,17 @@ def ensure_schema() -> None:
         c.execute(SCHEMA)
 
 
-def note_out(tenant: str, lead_id: str, user_id: str | None, phone: str | None) -> None:
+def note_out(tenant: str, lead_id: str, user_id: str | None, phone: str | None, line: str | None = None) -> None:
     with db.pool.connection() as c:
-        c.execute("INSERT INTO wa_routes (tenant, lead_id, user_id, last_out_phone, out_at) VALUES (%s,%s,%s,%s,now()) ON CONFLICT (tenant, lead_id) DO UPDATE SET "
-                  "user_id = COALESCE(EXCLUDED.user_id, wa_routes.user_id), last_out_phone = COALESCE(EXCLUDED.last_out_phone, wa_routes.last_out_phone), out_at = now(), updated_at = now()",
-                  (tenant, lead_id, user_id, phone))
+        c.execute("INSERT INTO wa_routes (tenant, lead_id, user_id, last_out_phone, out_at, last_line) VALUES (%s,%s,%s,%s,now(),%s) ON CONFLICT (tenant, lead_id) DO UPDATE SET "
+                  "user_id = COALESCE(EXCLUDED.user_id, wa_routes.user_id), last_out_phone = COALESCE(EXCLUDED.last_out_phone, wa_routes.last_out_phone), out_at = now(), updated_at = now(), "
+                  "last_line = COALESCE(EXCLUDED.last_line, wa_routes.last_line)", (tenant, lead_id, user_id, phone, line))
+
+
+def note_line(tenant: str, lead_id: str, line: str) -> None:
+    """El cliente escribió por esta línea: las respuestas salen por ahí."""
+    with db.pool.connection() as c:
+        c.execute("INSERT INTO wa_routes (tenant, lead_id, last_line) VALUES (%s,%s,%s) ON CONFLICT (tenant, lead_id) DO UPDATE SET last_line = EXCLUDED.last_line, updated_at = now()", (tenant, lead_id, line))
 
 
 def note_in(tenant: str, lead_id: str, phone: str | None) -> None:
@@ -32,7 +39,7 @@ def note_in(tenant: str, lead_id: str, phone: str | None) -> None:
 
 def route_of(tenant: str, lead_id: str) -> dict | None:
     with db.pool.connection() as c:
-        r = c.execute("SELECT user_id, last_out_phone, last_in_phone, out_at FROM wa_routes WHERE tenant=%s AND lead_id=%s", (tenant, lead_id)).fetchone()
+        r = c.execute("SELECT user_id, last_out_phone, last_in_phone, out_at, last_line FROM wa_routes WHERE tenant=%s AND lead_id=%s", (tenant, lead_id)).fetchone()
     return dict(r) if r else None
 
 

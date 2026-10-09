@@ -5,7 +5,7 @@ import time
 
 import httpx
 
-from . import config, httpgen, routing, twilio
+from . import config, httpgen, lines, routing, twilio
 from .espo import Espo
 from .ingest import normalize_phone
 
@@ -26,7 +26,7 @@ def _st(tenant: dict) -> dict:
 
 
 def provider(tenant: dict) -> str:
-    st = _st(tenant)
+    st = _st(lines.effective(tenant, "whatsapp"))
     p = st.get("wa_provider")
     if p in PROVIDERS:
         return p
@@ -43,6 +43,7 @@ def _need(tenant: dict, *keys: str) -> list[str]:
 
 # ---------------- prueba de conexión ----------------
 async def test(tenant: dict) -> dict:
+    tenant = lines.effective(tenant, "whatsapp")
     p = provider(tenant)
     async with httpx.AsyncClient(timeout=12) as c:
         if p == "evolution":
@@ -75,6 +76,7 @@ async def test(tenant: dict) -> dict:
 
 async def qr(tenant: dict) -> dict:
     """Vinculación por QR (solo Evolution): devuelve el estado y, si aún no está conectado, el código QR actual."""
+    tenant = lines.effective(tenant, "whatsapp")
     if provider(tenant) != "evolution":
         raise ValueError("La vinculación por QR solo aplica a Evolution API.")
     url, key, inst = _need(tenant, "evolution_url", "evolution_apikey", "evolution_instance")
@@ -97,6 +99,7 @@ async def qr(tenant: dict) -> dict:
 
 async def unlink(tenant: dict) -> dict:
     """Cierra la sesión de WhatsApp de la instancia (el teléfono queda desvinculado) para que se pueda escanear el QR de otro número."""
+    tenant = lines.effective(tenant, "whatsapp")
     if provider(tenant) != "evolution":
         raise ValueError("Cambiar de número por QR solo aplica a Evolution API.")
     url, key, inst = _need(tenant, "evolution_url", "evolution_apikey", "evolution_instance")
@@ -118,6 +121,7 @@ def _err(r: httpx.Response) -> str:
 
 # ---------------- envío ----------------
 async def send_text(tenant: dict, phone: str, text: str) -> None:
+    tenant = lines.effective(tenant, "whatsapp")
     p = provider(tenant)
     number = phone.lstrip("+")
     async with httpx.AsyncClient(timeout=25) as c:
@@ -172,14 +176,19 @@ def pick_number(lead: dict, wanted: str | None) -> str:
     return nums[0]
 
 
-async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str | None = None, phone: str | None = None) -> dict:
+async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str | None = None, phone: str | None = None, line_id: str | None = None) -> dict:
+    if not line_id:   # sin elección explícita se responde por la línea por la que el cliente escribió (si sigue encendida)
+        last = (routing.route_of(tenant["slug"], lead_id) or {}).get("last_line")
+        if last and any(c["id"] == last for c in lines.active_lines(tenant, "whatsapp")):
+            line_id = last
+    tenant = lines.effective(tenant, "whatsapp", line_id)
     espo = Espo(tenant)
     lead = await espo.get(f"Lead/{lead_id}")
     number = pick_number(lead, phone)
     await send_text(tenant, number, text)
     _sent[(lead_id, text)] = time.time()
     await espo.note(lead_id, f"[WhatsApp] → {agent}: {text}")
-    routing.note_out(tenant["slug"], lead_id, user_id, number)   # la respuesta del cliente le llega a quien le escribió
+    routing.note_out(tenant["slug"], lead_id, user_id, number, (tenant.get("_line") or {}).get("id"))   # la respuesta del cliente le llega a quien le escribió
     if user_id:   # una persona escribió: el comercial virtual se hace a un lado un rato
         from . import agent
         agent.note_human(tenant["slug"], lead_id, agent.config(tenant)["cadence"]["human_hold_minutes"])

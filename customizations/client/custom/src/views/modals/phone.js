@@ -51,6 +51,13 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split']
                     `<input name="agent" value="${ChUi.esc(agent)}" placeholder="3001234567 o 101" autocomplete="tel"><div class="ch-phone-err" hidden></div>` +
                     `<div class="ch-phone-actions"><button type="button" class="btn btn-success" data-action="startNow">Llamar ahora</button><button type="button" class="btn btn-default" data-action="cancelForm">Cancelar</button></div>`;
                 setTimeout(() => { const i = f.querySelector('input'); i && i.focus(); }, 50);
+                // varias troncales encendidas: se puede elegir desde cuál se llama
+                Espo.Ajax.getRequest('CrmHub/linesActive').then(l => {
+                    const v = l && l.voice; if (!v || !v.lines || v.lines.length < 2 || this.mode !== 'start') { return; }
+                    const acts = f.querySelector('.ch-phone-actions'); if (!acts || f.querySelector('[name="line"]')) { return; }
+                    acts.insertAdjacentHTML('beforebegin', '<label>Llamar desde</label><select name="line"><option value="">Automática (el proveedor principal)</option>' +
+                        v.lines.map(x => `<option value="${ChUi.esc(x.id)}">${ChUi.esc(x.name)} · ${ChUi.esc(x.type)}${x.id === v.default ? ' (principal)' : ''}</option>`).join('') + '</select>');
+                }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
             } else {
                 f.innerHTML = `<p>${opts && opts.fromDialer ? 'Cuando termines la llamada, cuenta cómo fue:' : 'Registra una llamada que ya hiciste:'}</p>` +
                     `<label>Resultado</label><select name="result"><option>Contactado</option><option>No contesta</option><option>Buzón de voz</option><option>Número equivocado</option><option>Reagendar</option></select>` +
@@ -78,7 +85,7 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split']
             if (!agent) { this.formError('Escribe tu teléfono o extensión.'); return; }
             try { localStorage.setItem(this.key(), agent); } catch (e) { /* privado */ }
             this.formError(''); this.el.querySelector('[data-role="hint"]').textContent = 'Llamando…';
-            Espo.Ajax.postRequest('CrmHub/voice/call', {leadId: this.options.leadId, agentPhone: agent}).then(() => {
+            Espo.Ajax.postRequest('CrmHub/voice/call', {leadId: this.options.leadId, agentPhone: agent, lineId: (this.el.querySelector('[name="line"]') || {}).value || undefined}).then(() => {
                 this.el.querySelector('[data-role="hint"]').textContent = 'Te estamos llamando: contesta para conectar';
                 this.setMode(null); this.load(); this.trigger('done');
             }).catch(xhr => {

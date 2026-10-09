@@ -217,7 +217,15 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
             logging.getLogger("crmhub").warning("WhatsApp sin número resoluble (%s): %s", remote, json.dumps(payload, ensure_ascii=False)[:700])
     if not phone and not lead_id and not lid:
         return None
-    return await whatsapp_inbound(tenant, phone=phone, name=d.get("pushName"), text=text, from_me=from_me, avatar_payload=payload, lead_id=lead_id, lid=lid)
+    res = await whatsapp_inbound(tenant, phone=phone, name=d.get("pushName"), text=text, from_me=from_me, avatar_payload=payload, lead_id=lead_id, lid=lid)
+    try:   # varias líneas de Evolution: se recuerda por cuál escribió el cliente para responderle por la misma
+        from . import lines
+        ln = lines.line_for_instance(tenant, payload.get("instance"))
+        if res and ln:
+            routing.note_line(slug, res, ln)
+    except Exception:
+        logging.getLogger("crmhub").exception("no se pudo registrar la línea de entrada")
+    return res
 
 
 OPTOUT = {"baja", "stop", "alto", "cancelar", "no mas", "no mas mensajes", "no quiero mas mensajes", "unsubscribe", "salir"}

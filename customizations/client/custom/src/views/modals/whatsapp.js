@@ -40,6 +40,8 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
             this.load(true);
             this.timer = setInterval(() => this.load(false), 6000);
             Espo.Ajax.getRequest('CrmHub/channels').catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } return {}; }).then(ch => { this.channels = ch || {}; this.paintFoot(); });
+            // varios proveedores encendidos en el canal: se puede elegir desde cuál enviar
+            Espo.Ajax.getRequest('CrmHub/linesActive').catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } return {}; }).then(l => { this.lines = l || {}; this.paintLine(); });
         }
 
         onRemove() { clearInterval(this.timer); if (this._chSplit) { this._chSplit = false; Split.close('ch'); } }
@@ -99,7 +101,7 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
                 });
                 return;
             }
-            foot.innerHTML = '<div class="ch-chat-composer"><div class="ch-chat-err" hidden></div><div class="ch-chat-to" data-role="to"></div>' +
+            foot.innerHTML = '<div class="ch-chat-composer"><div class="ch-chat-err" hidden></div><div class="ch-chat-to" data-role="to"></div><div class="ch-chat-to" data-role="line"></div>' +
                 '<div class="ch-chat-row"><textarea name="text" rows="1" maxlength="4000" placeholder="Escribe un mensaje…"></textarea>' +
                 '<button type="button" class="ch-chat-send" data-action="send" title="Enviar" style="background:' + this.meta.color + '"><span class="fas fa-paper-plane"></span></button></div>' +
                 '<div class="ch-chat-tools"><button type="button" class="btn btn-default btn-xs" data-action="myTpls"><span class="far fa-file-lines"></span> Mis plantillas</button> <button type="button" class="btn btn-default btn-xs" data-action="aiDraft"><span class="fas fa-wand-magic-sparkles"></span> Sugerir con IA</button>' +
@@ -109,7 +111,17 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
         }
 
         // A qué número va el mensaje: si el cliente tiene varios se elige aquí (por defecto, el último desde el que respondió)
+        paintLine() {
+            const box = this.el.querySelector('[data-role="line"]'), L = this.lines && this.lines[this.channel];
+            if (!box) { return; }
+            if (!L || !L.lines || L.lines.length < 2) { box.innerHTML = ''; return; }
+            box.innerHTML = '<label>Enviar desde</label><select data-role="lineSel" class="form-control"><option value="">' + (this.channel === 'whatsapp' ? 'Automático (la línea por la que escribió el cliente)' : 'Automático (el proveedor principal)') + '</option>' +
+                L.lines.map(x => `<option value="${ChUi.esc(x.id)}" ${x.id === this.lineId ? 'selected' : ''}>${ChUi.esc(x.name)} · ${ChUi.esc(x.type)}${x.id === L.default ? ' (principal)' : ''}</option>`).join('') + '</select>';
+            box.querySelector('select').onchange = e => { this.lineId = e.target.value || null; };
+        }
+
         paintTo() {
+            this.paintLine();
             const to = this.el.querySelector('[data-role="to"]'), cur = this.phone || this.options.phone || '';
             const sub = this.el.querySelector('.ch-chat-title small'); if (sub && cur) { sub.textContent = cur + ' · ' + this.meta.title; }
             if (!to || this.channel === 'telegram') { return; }
@@ -167,7 +179,7 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
             const t = this.el.querySelector('[name="text"]'), text = (t.value || '').trim(), btn = this.el.querySelector('[data-action="send"]');
             if (!text || btn.disabled) { return; }
             this.error(''); btn.disabled = true;
-            Espo.Ajax.postRequest('CrmHub/' + this.channel + '/send', {leadId: this.options.leadId, text, phone: this.channel === 'telegram' ? undefined : this.phone}).then(() => {
+            Espo.Ajax.postRequest('CrmHub/' + this.channel + '/send', {leadId: this.options.leadId, text, phone: this.channel === 'telegram' ? undefined : this.phone, lineId: this.channel === 'telegram' ? undefined : (this.lineId || undefined)}).then(() => {
                 t.value = ''; this.autosize(); this.counter(); this.justSent = true; this.trigger('done');
                 return this.load(true);
             }).catch(xhr => {

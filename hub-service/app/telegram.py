@@ -59,6 +59,8 @@ def tg_html(text: str) -> str:
 
 
 async def send_text(tenant: dict, chat_id: str, text: str, markup: dict | None = None, html: bool = False) -> None:
+    if (tenant.get("settings") or {}).get("telegram_off") is True:
+        raise ValueError("Telegram está apagado en Integraciones.")
     body = {"chat_id": chat_id, "text": tg_html(text) if html else text}
     if html:
         body["parse_mode"] = "HTML"

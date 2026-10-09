@@ -409,11 +409,76 @@ class CrmHub
                          'canManage' => $this->user->isAdmin()];
     }
 
+    // ---------- Proveedores (líneas) de mensajería ----------
+    private function lineIdOf(Request $request): ?string
+    {
+        $b = $request->getParsedBody();
+        return is_object($b) && !empty($b->lineId) && is_string($b->lineId) ? $b->lineId : null;
+    }
+
+    private function lineCall(string $method, string $path, ?array $body = null, string $fallback = 'No se pudo completar la acción.'): array
+    {
+        try {
+            return $this->hub()->request($method, $path, $body, 40);
+        } catch (\RuntimeException $e) {
+            preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
+            throw new BadRequest($m[1] ?? $fallback);
+        }
+    }
+
+    private function bodyArray(Request $request): array
+    {
+        return json_decode(json_encode($request->getParsedBody()), true) ?: [];
+    }
+
+    public function getActionLines(Request $request): \stdClass
+    {
+        return (object) $this->lineCall('GET', '/v1/lines');
+    }
+
+    public function postActionLineSave(Request $request): \stdClass
+    {
+        return (object) $this->lineCall('POST', '/v1/lines', $this->bodyArray($request), 'No se pudo guardar el proveedor.');
+    }
+
+    public function postActionLineEnable(Request $request): \stdClass
+    {
+        return (object) $this->lineCall('POST', '/v1/lines/enabled', ['id' => (string) ($request->getParsedBody()->id ?? ''), 'enabled' => !empty($request->getParsedBody()->enabled)]);
+    }
+
+    public function postActionLineDefault(Request $request): \stdClass
+    {
+        return (object) $this->lineCall('POST', '/v1/lines/default', ['id' => (string) ($request->getParsedBody()->id ?? '')]);
+    }
+
+    public function postActionLineDelete(Request $request): \stdClass
+    {
+        return (object) $this->lineCall('POST', '/v1/lines/delete', ['id' => (string) ($request->getParsedBody()->id ?? '')]);
+    }
+
+    public function postActionLineTest(Request $request): \stdClass
+    {
+        return (object) $this->lineCall('POST', '/v1/lines/test', ['id' => (string) ($request->getParsedBody()->id ?? '')], 'No se pudo probar la conexión.');
+    }
+
+    public function postActionLineSendTest(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        return (object) $this->lineCall('POST', '/v1/lines/send-test', ['id' => (string) ($d->id ?? ''), 'to' => (string) ($d->to ?? ''), 'text' => (string) ($d->text ?? '')], 'No se pudo enviar la prueba.');
+    }
+
+    /** Líneas encendidas por canal: para elegir «enviar desde» (cualquier usuario del CRM). */
+    public function getActionLinesActive(Request $request): \stdClass
+    {
+        $this->simGuard();
+        return (object) $this->hubAny('GET', '/v1/lines/active');
+    }
+
     // ---------- WhatsApp (envío) y llamadas ----------
     public function postActionWhatsappUnlink(Request $request): \stdClass
     {
         try {
-            return (object) $this->hub()->request('POST', '/v1/whatsapp/unlink', []);
+            return (object) $this->hub()->request('POST', '/v1/whatsapp/unlink', ['lineId' => $this->lineIdOf($request)]);
         } catch (\RuntimeException $e) {
             preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
             throw new BadRequest($m[1] ?? 'No se pudo desvincular el número.');
@@ -423,7 +488,7 @@ class CrmHub
     public function postActionWhatsappQr(Request $request): \stdClass
     {
         try {
-            return (object) $this->hub()->request('POST', '/v1/whatsapp/qr', []);
+            return (object) $this->hub()->request('POST', '/v1/whatsapp/qr', ['lineId' => $this->lineIdOf($request)]);
         } catch (\RuntimeException $e) {
             preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
             throw new BadRequest($m[1] ?? 'No se pudo obtener el código QR.');
@@ -433,7 +498,7 @@ class CrmHub
     public function postActionWhatsappTest(Request $request): \stdClass
     {
         try {
-            return (object) $this->hub()->request('POST', '/v1/whatsapp/test', []);
+            return (object) $this->hub()->request('POST', '/v1/whatsapp/test', ['lineId' => $this->lineIdOf($request)]);
         } catch (\RuntimeException $e) {
             preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
             throw new BadRequest($m[1] ?? 'No se pudo probar la conexión.');
@@ -450,7 +515,7 @@ class CrmHub
         try {
             return (object) (new HubClient($this->config))->request('POST', '/v1/whatsapp/send', [
                 'leadId' => $lead->getId(), 'text' => (string) ($d->text ?? ''),
-                'agent' => $this->user->get('name') ?: $this->user->get('userName'), 'userId' => $this->user->getId(), 'phone' => !empty($d->phone) ? (string) $d->phone : null,
+                'agent' => $this->user->get('name') ?: $this->user->get('userName'), 'userId' => $this->user->getId(), 'phone' => !empty($d->phone) ? (string) $d->phone : null, 'lineId' => $this->lineIdOf($request),
             ], 30);
         } catch (\RuntimeException $e) {
             preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
@@ -748,7 +813,7 @@ class CrmHub
             throw new Forbidden();
         }
         return (object) $this->hubAny('POST', '/v1/sms/send', ['leadId' => $lead->getId(), 'text' => (string) ($d->text ?? ''),
-            'agent' => $this->user->get('name') ?: $this->user->get('userName'), 'userId' => $this->user->getId(), 'phone' => !empty($d->phone) ? (string) $d->phone : null]);
+            'agent' => $this->user->get('name') ?: $this->user->get('userName'), 'userId' => $this->user->getId(), 'phone' => !empty($d->phone) ? (string) $d->phone : null, 'lineId' => $this->lineIdOf($request)]);
     }
 
     public function postActionSmsTest(Request $request): \stdClass
@@ -767,7 +832,7 @@ class CrmHub
             throw new Forbidden();
         }
         return (object) $this->hubAny('POST', '/v1/voice/call', ['leadId' => $lead->getId(), 'agentPhone' => (string) ($d->agentPhone ?? ''),
-            'agent' => $this->user->get('name') ?: $this->user->get('userName'), 'agentId' => $this->user->getId()]);
+            'agent' => $this->user->get('name') ?: $this->user->get('userName'), 'agentId' => $this->user->getId(), 'lineId' => $this->lineIdOf($request)]);
     }
 
     /** Qué canales están listos (el botón de llamar decide entre click-to-call y el marcador del equipo). */

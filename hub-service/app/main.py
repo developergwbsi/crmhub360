@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -254,6 +254,7 @@ class SendReq(BaseModel):
     agent: str = 'Asesor'
     userId: str | None = None
     phone: str | None = None
+    lineId: str | None = None
 
 
 class PushSubReq(BaseModel):
@@ -399,6 +400,7 @@ class CallReq(BaseModel):
     agentPhone: str
     agent: str = "Asesor"
     agentId: str = ""
+    lineId: str | None = None
 
 
 class BroadcastCreate(BaseModel):
@@ -419,7 +421,7 @@ async def sms_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
         raise HTTPException(422, "El SMS debe tener entre 1 y 1000 caracteres")
     job = db.log_job(tenant["slug"], "sms_send", req.leadId)
     try:
-        res = await sms.send(tenant, req.leadId, text, req.agent, req.userId, req.phone); db.finish_job(job); return res
+        res = await sms.send(tenant, req.leadId, text, req.agent, req.userId, req.phone, req.lineId); db.finish_job(job); return res
     except ValueError as e:
         db.finish_job(job, str(e)[:500]); raise HTTPException(422, str(e))
     except Exception as e:
@@ -464,7 +466,7 @@ def support_exchange(req: SupportExchangeReq, tenant: dict = Depends(tenant_auth
 async def voice_call(req: CallReq, tenant: dict = Depends(tenant_auth)):
     job = db.log_job(tenant["slug"], "voice_call", req.leadId)
     try:
-        res = await voice.call(tenant, req.leadId, req.agentPhone, req.agent, req.agentId); db.finish_job(job); return res
+        res = await voice.call(tenant, req.leadId, req.agentPhone, req.agent, req.agentId, req.lineId); db.finish_job(job); return res
     except ValueError as e:
         db.finish_job(job, str(e)[:500]); raise HTTPException(422, str(e))
     except Exception as e:
@@ -626,10 +628,15 @@ async def push_broadcast(req: BroadcastReq, x_admin_token: str = Header(...)):
     return await push.send(req.tenant, title=req.title, body=req.body, url=req.url, tag="crmhub-update", kind="update")
 
 
+def _lid(body) -> str | None:
+    """lineId opcional del cuerpo (el CRM puede enviar un objeto o una lista vacía)."""
+    return body.get("lineId") if isinstance(body, dict) and isinstance(body.get("lineId"), str) else None
+
+
 @app.post("/v1/whatsapp/test")
-async def wa_test(tenant: dict = Depends(tenant_auth)):
+async def wa_test(body: dict | list | None = Body(None), tenant: dict = Depends(tenant_auth)):
     try:
-        return await whatsapp.test(tenant)
+        return await whatsapp.test(lines.effective(tenant, "whatsapp", _lid(body), allow_off=True))
     except ValueError as e:
         raise HTTPException(422, str(e))
     except Exception as e:
@@ -637,9 +644,9 @@ async def wa_test(tenant: dict = Depends(tenant_auth)):
 
 
 @app.post("/v1/whatsapp/qr")
-async def wa_qr(tenant: dict = Depends(tenant_auth)):
+async def wa_qr(body: dict | list | None = Body(None), tenant: dict = Depends(tenant_auth)):
     try:
-        return await whatsapp.qr(tenant)
+        return await whatsapp.qr(lines.effective(tenant, "whatsapp", _lid(body), allow_off=True))
     except ValueError as e:
         raise HTTPException(422, str(e))
     except Exception as e:
@@ -647,10 +654,10 @@ async def wa_qr(tenant: dict = Depends(tenant_auth)):
 
 
 @app.post("/v1/whatsapp/unlink")
-async def wa_unlink(tenant: dict = Depends(tenant_auth)):
+async def wa_unlink(body: dict | list | None = Body(None), tenant: dict = Depends(tenant_auth)):
     """Cierra la sesión del número vinculado (Evolution) para poder escanear otro número."""
     try:
-        return await whatsapp.unlink(tenant)
+        return await whatsapp.unlink(lines.effective(tenant, "whatsapp", _lid(body), allow_off=True))
     except ValueError as e:
         raise HTTPException(422, str(e))
     except Exception as e:
@@ -691,7 +698,7 @@ async def wa_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
         raise HTTPException(422, "El mensaje debe tener entre 1 y 4000 caracteres")
     job = db.log_job(tenant["slug"], "whatsapp_send", req.leadId)
     try:
-        res = await whatsapp.send(tenant, req.leadId, text, req.agent, req.userId, req.phone)
+        res = await whatsapp.send(tenant, req.leadId, text, req.agent, req.userId, req.phone, req.lineId)
         db.finish_job(job)
         return res
     except ValueError as e:
@@ -1156,6 +1163,100 @@ async def ai_test(req: AiOwnReq | None = None, tenant: dict = Depends(tenant_aut
         return await llm.test(cfg)
     except Exception as e:
         raise HTTPException(502, str(e)[:240])
+
+
+# --- Proveedores (líneas) de mensajería: varios por canal, cada uno con su interruptor ---
+class LineSaveReq(BaseModel):
+    id: str | None = None
+    channel: str
+    type: str
+    name: str = ""
+    fields: dict = {}
+    http: dict | None = None
+    voice_record: bool = False
+
+
+class LineIdReq(BaseModel):
+    id: str
+
+
+class LineEnableReq(BaseModel):
+    id: str
+    enabled: bool
+
+
+class LineSendReq(BaseModel):
+    id: str
+    to: str
+    text: str = ""
+
+
+def _line_err(e: Exception):
+    if isinstance(e, ValueError):
+        raise HTTPException(422, str(e))
+    raise HTTPException(502, f"No se pudo completar la prueba: {str(e)[:240]}")
+
+
+@app.get("/v1/lines")
+def lines_overview(tenant: dict = Depends(tenant_auth)):
+    return lines.overview(tenant)
+
+
+@app.post("/v1/lines")
+def lines_save(req: LineSaveReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return lines.save(tenant, req.model_dump())
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/lines/enabled")
+def lines_enabled(req: LineEnableReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        lines.set_enabled(tenant, req.id, req.enabled)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
+
+
+@app.post("/v1/lines/default")
+def lines_default(req: LineIdReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        lines.set_default(tenant, req.id)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
+
+
+@app.post("/v1/lines/delete")
+def lines_delete(req: LineIdReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        lines.delete(tenant, req.id)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
+
+
+@app.post("/v1/lines/test")
+async def lines_test(req: LineIdReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return await lines.connection_test(tenant, req.id)
+    except Exception as e:
+        _line_err(e)
+
+
+@app.post("/v1/lines/send-test")
+async def lines_send_test(req: LineSendReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return await lines.send_test(tenant, req.id, req.to, req.text)
+    except Exception as e:
+        _line_err(e)
+
+
+@app.get("/v1/lines/active")
+def lines_active(tenant: dict = Depends(tenant_auth)):
+    """Líneas encendidas por canal (para elegir «enviar desde» al escribir un mensaje)."""
+    return {ch: {"lines": lines.active_lines(tenant, ch), "default": lines._default_id(lines._st(tenant), ch, lines.raw_cards(tenant, ch))} for ch in ("whatsapp", "sms", "voice")}
 
 
 if __name__ == "__main__":

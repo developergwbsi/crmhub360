@@ -62,7 +62,7 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
             const opts = (map, cur) => [{value: '', label: 'Sin configurar'}].concat(Object.keys(map).map(k => ({value: k, label: map[k]}))).map(o => ({...o, selected: o.value === cur}));
             const smsOptions = opts(s.sms.providers, s.sms.provider), voiceOptions = opts(s.voice.providers, s.voice.provider);
             const tabs = [
-                {key: 'canales', icon: 'fas fa-comments', label: 'Canales de mensajería'}, {key: 'telefonia', icon: 'fas fa-phone-volume', label: 'SMS y llamadas'}, {key: 'formularios', icon: 'fas fa-file-lines', label: 'Formularios web'},
+                {key: 'canales', icon: 'fas fa-comments', label: 'Canales de mensajería'}, {key: 'formularios', icon: 'fas fa-file-lines', label: 'Formularios web'},
                 {key: 'meta', icon: 'fab fa-facebook', label: 'Meta'}, {key: 'reglas', icon: 'fas fa-sliders', label: 'Servicios y filtros'},
                 {key: 'sistema', icon: 'fas fa-gear', label: 'Sistema'},
             ].map(t => ({...t, active: t.key === this.tab}));
@@ -88,84 +88,9 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                 Object.keys(p).forEach(k => this.$el.find(`[data-http="${kind}.${k}"]`).val(p[k]));
                 Espo.Ui.success('Plantilla aplicada: reemplaza los datos de ejemplo por los de tu proveedor');
             },
-            'click [data-action="saveTwilio"]': function () {
-                const v = n => (this.$el.find(`[name="${n}"]`).val() || '').trim();
-                this.save({twilio_account_sid: v('tw_sid'), twilio_auth_token: v('tw_token'), twilio_sms_from: v('tw_sms_from'), twilio_voice_from: v('tw_voice_from')});
-            },
             'click [data-action="testTwilio"]': function () {
                 const $s = this.$el.find('[data-role="twStatus"]').text('Probando…').removeClass('text-danger text-success');
                 Espo.Ajax.postRequest('CrmHub/twilio/test', {}).then(r => $s.text('Conectado ✔ ' + (r.name || '')).addClass('text-success')).catch(xhr => this.showError($s, xhr, 'No se pudo probar'));
-            },
-            'click [data-action="saveSms"]': function () {
-                this.save({sms_provider: this.$el.find('[name="sms_provider"]').val(), generic_sms: this.collectHttp('sms')});
-            },
-            'click [data-action="testSms"]': function () {
-                const $s = this.$el.find('[data-role="smsStatus"]').text('Enviando…').removeClass('text-danger text-success');
-                Espo.Ajax.postRequest('CrmHub/sms/test', {to: this.$el.find('[name="sms_test_to"]').val()})
-                    .then(r => $s.text('Enviado a ' + r.to + ' ✔').addClass('text-success')).catch(xhr => this.showError($s, xhr, 'No se pudo enviar'));
-            },
-            'click [data-action="saveVoice"]': function () {
-                this.save({voice_provider: this.$el.find('[name="voice_provider"]').val(), voice_record: this.$el.find('[name="voice_record"]').is(':checked'), generic_voice: this.collectHttp('voice')});
-            },
-            'click [data-action="saveWhatsapp"]': function () {
-                const v = n => (this.$el.find(`[name="${n}"]`).val() || '').trim();
-                this.save({twilio_wa_from: v('wa_tw_from'), generic_whatsapp: this.collectHttp('whatsapp'), wa_provider: v('wa_provider'), evolution_url: v('wa_url'), evolution_instance: v('wa_instance'), evolution_apikey: v('wa_key'),
-                    meta_phone_number_id: v('meta_pid'), meta_access_token: v('meta_token'),
-                    gupshup_source: v('gs_source'), gupshup_app_name: v('gs_app'), gupshup_api_key: v('gs_key')});
-            },
-            'click [data-action="testWhatsapp"]': function () {
-                const $s = this.$el.find('[data-role="waStatus"]');
-                $s.text('Probando…').removeClass('text-danger text-success');
-                Espo.Ajax.postRequest('CrmHub/whatsapp/test', {})
-                    .then(r => $s.text(r.connected ? 'Conectado ✔ ' + (r.state || '') + (r.note ? ' — ' + r.note : '') : 'Conectado, pero el estado es «' + r.state + '». Vincula el teléfono.')
-                        .addClass(r.connected ? 'text-success' : 'text-danger'))
-                    .catch(xhr => this.showError($s, xhr, 'No se pudo probar'));
-            },
-            // Vincular el teléfono por código QR (Evolution): se renueva el código y se detecta la conexión sola
-            'click [data-action="linkWhatsapp"]': function () {
-                let alive = true, timer = null;
-                const tick = body => Espo.Ajax.postRequest('CrmHub/whatsapp/qr', {}).then(r => {
-                    if (!alive) { return; }
-                    if (r.connected) {
-                        body.innerHTML = '<div class="ch-qr-ok"><span class="fas fa-circle-check"></span><b>¡WhatsApp vinculado!</b><p>Ya puedes enviar y recibir mensajes desde el CRM.</p><p class="ch-muted">¿Quieres usar otro número? Cierra este panel y pulsa «Cambiar de número».</p></div>';
-                        Espo.Ui.success('WhatsApp vinculado'); this.load(true); return;
-                    }
-                    body.innerHTML = (r.qr ? `<div class="ch-qr"><img alt="Código QR de WhatsApp" src="${ChUi.esc(r.qr)}"></div>` : '<div class="ch-qr-wait"><span class="fas fa-spinner fa-spin"></span> Generando el código…</div>') +
-                        '<ol class="ch-qr-steps"><li>Abre WhatsApp en el teléfono de la empresa.</li><li>Ve a <b>Ajustes → Dispositivos vinculados → Vincular un dispositivo</b>.</li><li>Escanea este código. Se renueva solo cada pocos segundos.</li></ol>' +
-                        (r.pairingCode ? `<p class="ch-muted">¿Sin cámara? Usa el código de emparejamiento: <b>${ChUi.esc(r.pairingCode)}</b></p>` : '');
-                    timer = setTimeout(() => tick(body), 4000);
-                }).catch(xhr => {
-                    const reason = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason');
-                    if (xhr) { xhr.errorIsHandled = true; }
-                    body.innerHTML = `<div class="ch-warn">${ChUi.esc(reason || 'No se pudo obtener el código QR. Revisa que el proveedor sea Evolution API y que la configuración esté guardada.')}</div>`;
-                });
-                ChUi.panel({title: 'Vincular WhatsApp', icon: 'fab fa-whatsapp', mount: body => { body.innerHTML = '<div class="ch-qr-wait"><span class="fas fa-spinner fa-spin"></span> Generando el código…</div>'; tick(body); }})
-                    .then(() => { alive = false; clearTimeout(timer); });
-            },
-            // Cambiar el número de WhatsApp (Evolution): se cierra la sesión del número actual y se muestra el QR para escanear el nuevo
-            'click [data-action="changeWhatsapp"]': function () {
-                ChUi.confirm({title: 'Cambiar de número de WhatsApp', ok: 'Cerrar sesión y escanear otro', danger: true,
-                    html: '<p>Se cierra la sesión del número vinculado ahora: dejará de enviar y recibir mensajes desde el CRM hasta que escanees el nuevo.</p><p class="ch-muted">Tus conversaciones y leads se conservan. Ten a la mano el teléfono del nuevo número.</p>'}).then(yes => {
-                    if (!yes) { return; }
-                    Espo.Ui.notify('Cerrando la sesión…');
-                    Espo.Ajax.postRequest('CrmHub/whatsapp/unlink', {}).then(() => { Espo.Ui.notify(false); this.$el.find('[data-action="linkWhatsapp"]').trigger('click'); })
-                        .catch(xhr => { const r = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error(r || 'No se pudo cerrar la sesión del número actual'); });
-                });
-            },
-            'click [data-action="saveTelegram"]': function () {
-                const v = n => (this.$el.find(`[name="${n}"]`).val() || '').trim();
-                const $s = this.$el.find('[data-role="tgStatus"]').text('Guardando y conectando…').removeClass('text-danger text-success');
-                Espo.Ajax.putRequest('CrmHub/integrations', {telegram_bot_token: v('tg_token'), telegram_welcome: v('tg_welcome')})
-                    .then(() => Espo.Ajax.postRequest('CrmHub/telegram/setup', {}))
-                    .then(r => { Espo.Ui.success('Bot conectado: @' + r.bot); this.load(true); })
-                    .catch(xhr => this.showError($s, xhr, 'No se pudo conectar el bot'));
-            },
-            'click [data-action="testTelegram"]': function () {
-                const $s = this.$el.find('[data-role="tgStatus"]').text('Probando…').removeClass('text-danger text-success');
-                Espo.Ajax.postRequest('CrmHub/telegram/test', {})
-                    .then(r => $s.text(`@${r.bot} ✔ · webhook ${r.webhook ? 'registrado' : 'SIN registrar'}${r.pending ? ' · ' + r.pending + ' pendientes' : ''}${r.lastError ? ' · último error: ' + r.lastError : ''}`)
-                        .addClass(r.webhook && !r.lastError ? 'text-success' : 'text-danger'))
-                    .catch(xhr => this.showError($s, xhr, 'No se pudo probar'));
             },
             'click [data-action="saveMeta"]': function () {
                 const v = n => (this.$el.find(`[name="${n}"]`).val() || '').trim();
@@ -272,8 +197,10 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
         afterRender() {
             super.afterRender();
             if (!this.state || this.state.error) { return; }
-            this.applyTab(); this.applyProvider();
-            this.renderHttp(); this.applyProvider();
+            if (this.tab === 'telefonia') { this.tab = 'canales'; }
+            this.applyTab();
+            // proveedores por canal (WhatsApp, SMS, llamadas, Telegram): vista propia con un cuadro por proveedor
+            this.createView('lines', 'custom:views/channel-lines', {selector: '[data-role="lines"]', httpVars: this.state.httpVars || {}}).then(v => v.render());
             if (this.services) { this.renderServices(); }
             if (this.forms) { this.renderForms(); }
         }

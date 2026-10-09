@@ -1,6 +1,6 @@
 """SMS: Twilio o cualquier proveedor por API HTTP. El remitente puede ser un número largo, un código corto o un ID alfanumérico
 (lo que tu proveedor haya habilitado para tu cuenta)."""
-from . import httpgen, twilio
+from . import httpgen, lines, twilio
 from .espo import Espo
 from .ingest import normalize_phone
 
@@ -8,7 +8,7 @@ PROVIDERS = {"twilio": "Twilio", "generic": "Otro proveedor (API HTTP)"}
 
 
 def provider(tenant: dict) -> str:
-    p = (tenant.get("settings") or {}).get("sms_provider")
+    p = (lines.effective(tenant, "sms").get("settings") or {}).get("sms_provider")
     return p if p in PROVIDERS else ""
 
 
@@ -22,6 +22,7 @@ def info(text: str) -> dict:
 
 
 async def send_text(tenant: dict, phone: str, text: str, lead: dict | None = None, agent: str = "") -> None:
+    tenant = lines.effective(tenant, "sms")
     p = provider(tenant)
     if p == "twilio":
         await twilio.post(tenant, "Messages.json", {**twilio.sender(tenant, "twilio_sms_from"), "To": phone, "Body": text})
@@ -32,8 +33,9 @@ async def send_text(tenant: dict, phone: str, text: str, lead: dict | None = Non
         raise ValueError("SMS no está configurado (Integraciones → SMS).")
 
 
-async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str | None = None, number: str | None = None) -> dict:
+async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str | None = None, number: str | None = None, line_id: str | None = None) -> dict:
     from . import whatsapp   # elección del número del cliente (misma regla que WhatsApp)
+    tenant = lines.effective(tenant, "sms", line_id)
     espo = Espo(tenant)
     lead = await espo.get(f"Lead/{lead_id}")
     phone = whatsapp.pick_number(lead, number)

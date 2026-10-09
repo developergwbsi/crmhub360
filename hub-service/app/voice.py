@@ -1,6 +1,6 @@
 """Llamadas desde el CRM (click-to-call): el proveedor/central llama PRIMERO al teléfono o extensión del asesor y, al contestar,
 lo conecta con el cliente. La troncal SIP vive en el proveedor (Twilio, Telnyx…) o en tu central (Asterisk/FreePBX, 3CX…)."""
-from . import config, httpgen, twilio
+from . import config, httpgen, lines, twilio
 from .espo import Espo
 from .ingest import normalize_phone
 
@@ -8,7 +8,7 @@ PROVIDERS = {"twilio": "Twilio Voice", "generic": "Otra central / proveedor (API
 
 
 def provider(tenant: dict) -> str:
-    p = (tenant.get("settings") or {}).get("voice_provider")
+    p = (lines.effective(tenant, "voice").get("settings") or {}).get("voice_provider")
     return p if p in PROVIDERS else ""
 
 
@@ -21,7 +21,22 @@ def bridge_twiml(tenant: dict, customer: str) -> str:
             f'<Dial{f" callerId={chr(34)}{escape(caller)}{chr(34)}" if caller else ""}{rec}><Number>{escape(customer)}</Number></Dial></Response>')
 
 
-async def call(tenant: dict, lead_id: str, agent_phone: str, agent: str, agent_id: str = "") -> dict:
+async def test_call(tenant: dict, to: str) -> None:
+    """Llamada de prueba: el proveedor llama a `to` y le dice una frase."""
+    tenant = lines.effective(tenant, "voice")
+    p = provider(tenant)
+    if p == "twilio":
+        data = {**{"To": to}, **{k: v for k, v in twilio.sender(tenant, "twilio_voice_from").items() if k == "From"},
+                "Twiml": '<Response><Say language="es-MX">Esta es una llamada de prueba de Crm Hub 360. Tu línea de llamadas funciona correctamente.</Say></Response>'}
+        await twilio.post(tenant, "Calls.json", data)
+    elif p == "generic":
+        await httpgen.call((tenant.get("settings") or {}).get("generic_voice"), {"to": to, "agent_phone": to, "lead_id": "", "name": "Prueba", "agent": "Prueba"})
+    else:
+        raise ValueError("Las llamadas no están configuradas (Integraciones).")
+
+
+async def call(tenant: dict, lead_id: str, agent_phone: str, agent: str, agent_id: str = "", line_id: str | None = None) -> dict:
+    tenant = lines.effective(tenant, "voice", line_id)
     p = provider(tenant)
     if not p:
         raise ValueError("Las llamadas desde el CRM no están configuradas (Integraciones → Telefonía).")
