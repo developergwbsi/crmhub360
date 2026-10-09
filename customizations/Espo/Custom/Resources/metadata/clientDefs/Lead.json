@@ -131,13 +131,5 @@
                 "reference": "tasks"
             }
         ]
-    },
-    "bottomPanels": {
-        "detail": [
-            {
-                "name": "targetLists",
-                "disabled": true
-            }
-        ]
     }
 }
