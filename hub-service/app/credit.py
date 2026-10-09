@@ -2,7 +2,7 @@ import io
 
 from pypdf import PdfReader
 
-from . import config, ollama, qualify
+from . import config, llm, qualify
 from .espo import Espo
 
 SCHEMA = {
@@ -48,7 +48,7 @@ async def process(tenant: dict, lead_id: str, attachment_id: str) -> None:
         text = extract_text(await espo.file(attachment_id))
         if len(text) < 80:
             raise ValueError("El PDF no contiene texto extraíble (¿escaneado?). Se requiere OCR.")
-        data = await ollama.chat_json(SYSTEM, text[: config.MAX_PDF_CHARS], SCHEMA)
+        data = await llm.chat_json(tenant, SYSTEM, text[: config.MAX_PDF_CHARS], SCHEMA)
     except Exception as e:  # el lead queda en revisión manual con el motivo
         await espo.put(f"Lead/{lead_id}", {"creditParseStatus": "Error", "qualificationStatus": "Revisión Manual",
                                            "creditSummary": f"No se pudo procesar el reporte: {e}"})

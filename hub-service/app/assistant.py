@@ -1,4 +1,4 @@
-from . import ollama
+from . import llm
 from .espo import Espo
 
 PROMPTS = {
@@ -20,4 +20,4 @@ async def run(tenant: dict, lead_id: str, action: str) -> str:
         return "No hay conversación registrada para este lead."
     name = f"{lead.get('firstName') or ''} {lead.get('lastName') or ''}".strip()
     context = f"Cliente: {name}\nEstado: {lead.get('status')}\n\nConversación:\n" + "\n".join(lines)
-    return await ollama.chat_text(PROMPTS[action] + " No inventes datos que no estén en la conversación.", context[:12000])
+    return await llm.chat_text(tenant, PROMPTS[action] + " No inventes datos que no estén en la conversación.", context[:12000])

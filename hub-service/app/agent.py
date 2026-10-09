@@ -5,7 +5,7 @@ import asyncio, html as _html, json, logging, re, time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from . import db, mailout, ollama, push, routing, sms, whatsapp
+from . import db, llm, mailout, push, routing, sms, whatsapp
 from .espo import Espo
 
 log = logging.getLogger("hub.agent")
@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS agent_events_lead ON agent_events (tenant, lead_id, i
 CREATE INDEX IF NOT EXISTS agent_events_tenant ON agent_events (tenant, at DESC);
 """
 DEFAULTS = {
-    "mode": "manual", "dry_run": True, "disclose": True, "allow_status_changes": True,
+    "mode": "manual", "dry_run": True, "approval": False, "disclose": True, "allow_status_changes": True,
     "persona": {"name": "Sofía", "role": "asesora virtual"},
     "company": {"about": "", "services": "", "policies": "", "tone": "Cercano, claro y respetuoso. Trátalo de tú.", "language": "español", "forbidden": "",
                 "escalate_when": "El cliente pide hablar con una persona, quiere negociar precio o condiciones, se queja o está molesto, o la consulta es legal o sensible."},
@@ -61,7 +61,7 @@ def clean_config(new: dict) -> dict:
     """Valida lo que llega de la interfaz (solo campos conocidos, con límites)."""
     c = _merge(DEFAULTS, new or {})
     t = lambda v, n: str(v or "").strip()[:n]
-    out = {"mode": "auto" if c["mode"] == "auto" else "manual", "dry_run": bool(c["dry_run"]), "disclose": bool(c["disclose"]), "allow_status_changes": bool(c["allow_status_changes"]),
+    out = {"mode": "auto" if c["mode"] == "auto" else "manual", "dry_run": bool(c["dry_run"]), "approval": bool(c["approval"]), "disclose": bool(c["disclose"]), "allow_status_changes": bool(c["allow_status_changes"]),
            "persona": {"name": t(c["persona"].get("name"), 40) or "Sofía", "role": t(c["persona"].get("role"), 60) or "asesora virtual"},
            "company": {k: t(c["company"].get(k), 3000 if k in ("about", "services", "policies") else 600) for k in DEFAULTS["company"]},
            "goals": t(c["goals"], 600), "handoff_user_id": t(c["handoff_user_id"], 40), "channels": {k: bool(c["channels"].get(k)) for k in ("whatsapp", "email", "sms")}}
@@ -130,10 +130,10 @@ def _set(tenant: str, lead_id: str, **kw) -> None:
         c.execute(f"UPDATE agent_leads SET {cols}, updated_at=now() WHERE tenant=%s AND lead_id=%s", (*kw.values(), tenant, lead_id))
 
 
-def log_event(tenant: str, lead_id: str, kind: str, *, lead_name: str = "", channel: str = "", title: str = "", detail: str = "", reason: str = "", sent: bool = False, dry: bool = False, data: dict | None = None) -> None:
+def log_event(tenant: str, lead_id: str, kind: str, *, lead_name: str = "", channel: str = "", title: str = "", detail: str = "", reason: str = "", sent: bool = False, dry: bool = False, data: dict | None = None) -> int:
     with db.pool.connection() as c:
-        c.execute("INSERT INTO agent_events (tenant, lead_id, lead_name, kind, channel, title, detail, reason, sent, dry, data) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                  (tenant, lead_id, lead_name[:120], kind, channel, title[:200], detail[:4000], reason[:600], sent, dry, json.dumps(data or {})))
+        return c.execute("INSERT INTO agent_events (tenant, lead_id, lead_name, kind, channel, title, detail, reason, sent, dry, data) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+                         (tenant, lead_id, lead_name[:120], kind, channel, title[:200], detail[:4000], reason[:600], sent, dry, json.dumps(data or {}))).fetchone()["id"]
 
 
 def events(tenant: str, lead_id: str | None = None, limit: int = 60) -> list[dict]:
@@ -300,8 +300,7 @@ async def decide(tenant: dict, cfg: dict, lead: dict, hist: list[dict], kind: st
     conv = "\n".join(f"[{h['channel']}] {h['who']}: {_clip(h['text'], 400)}" for h in hist) or "(todavía no hay mensajes)"
     user = (f"DATOS DEL LEAD:\n{lead_brief(lead)}\n\nCONVERSACIÓN HASTA AHORA (cronológica):\n{conv}\n\nSITUACIÓN: {situation_text(kind, attempts, len(cfg['cadence']['follow_ups']), channel, cfg['disclose'], persona, company)}\n"
             f"Canal por el que vas a escribir: {channel}.")
-    async with ollama.LOCK:
-        d = await ollama.chat_json(system_prompt(cfg, tenant, channel), user, AGENT_SCHEMA, 600)
+    d = await llm.chat_json(tenant, system_prompt(cfg, tenant, channel), user, AGENT_SCHEMA, 600)
     _usage(tenant["slug"], llm=1)
     return d
 
@@ -452,7 +451,7 @@ async def step(tenant: dict, row: dict) -> None:
     message = _clean_message(d.get("message"), channel)
     # estado sugerido (solo si la empresa lo permite y es un estado distinto)
     ns = d.get("new_status") or ""
-    if cfg["allow_status_changes"] and ns in STATUSES and ns and ns != lead.get("status") and action in ("send", "close", "wait") and not dry:
+    if cfg["allow_status_changes"] and ns in STATUSES and ns and ns != lead.get("status") and action in ("send", "close", "wait") and not dry and not (cfg["approval"] and action == "send"):
         try:
             await espo.put(f"Lead/{lead_id}", {"status": ns, "statusComment": f"[Comercial virtual] {reason or summary}"})
             log_event(slug, lead_id, "status", lead_name=lname, title=f"Estado → {ns}", detail=summary, reason=reason)
@@ -494,6 +493,17 @@ async def step(tenant: dict, row: dict) -> None:
             first_response = int((now - datetime.strptime(lead["createdAt"][:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)).total_seconds())
         except Exception:
             pass
+    if cfg["approval"] and not dry:   # una persona aprueba cada mensaje antes de que salga
+        ev = log_event(slug, lead_id, "proposal", lead_name=lname, channel=channel, title={"first": "Primer contacto propuesto", "followup": "Seguimiento propuesto", "reply": "Respuesta propuesta"}[kind] + " · pendiente de aprobación", detail=message, reason=reason,
+                       data={"kind": kind, "subject": d.get("subject") or "", "new_status": ns, "summary": summary, "attempts": row["attempts"], "first_response": first_response})
+        _set(slug, lead_id, state="awaiting_approval", next_at=None, errors=0)
+        to = lead.get("assignedUserId") or cfg.get("handoff_user_id")
+        if to:
+            try:
+                await push.send(slug, title=f"Mensaje listo para aprobar: {lname}"[:90], body=message[:140], url=f"/#Lead/view/{lead_id}", tag=f"crmhub-appr-{lead_id}", kind="agent", user_id=to)
+            except Exception:
+                pass
+        return
     sent = False
     if not dry:
         try:
@@ -508,7 +518,13 @@ async def step(tenant: dict, row: dict) -> None:
             else:
                 _set(slug, lead_id, errors=errs, next_at=now + timedelta(minutes=15))
             return
-    # programación del siguiente paso
+    await _after_send(tenant, cfg, lead, row, kind, channel, message, d.get("subject") or "", reason, summary, sent=sent, dry=dry, first_response=first_response)
+
+
+async def _after_send(tenant: dict, cfg: dict, lead: dict, row: dict, kind: str, channel: str, message: str, subject: str, reason: str, summary: str, *, sent: bool, dry: bool,
+                      first_response: int | None, by: str = "") -> None:
+    """Después de un envío (o de su simulación): programa el siguiente seguimiento y deja la huella en la bitácora."""
+    slug, lead_id, espo, now = tenant["slug"], lead["id"], Espo(tenant), datetime.now(timezone.utc)
     fu = cfg["cadence"]["follow_ups"]
     attempts = 1 if kind == "reply" else row["attempts"] + 1
     delay = fu[attempts - 1] if attempts - 1 < len(fu) else None
@@ -521,11 +537,62 @@ async def step(tenant: dict, row: dict) -> None:
             except Exception:
                 pass
     else:
-        when = now + timedelta(minutes=delay)
-        _set(slug, lead_id, state="waiting_reply", attempts=attempts, last_out_at=now, next_at=when, next_kind="followup", errors=0)
+        _set(slug, lead_id, state="waiting_reply", attempts=attempts, last_out_at=now, next_at=now + timedelta(minutes=delay), next_kind="followup", errors=0)
         nxt = f"Próximo seguimiento en {delay // 60} h" if delay >= 60 else f"Próximo seguimiento en {delay} min"
-    log_event(slug, lead_id, "send", lead_name=lname, channel=channel, title={"first": "Primer contacto", "followup": f"Seguimiento {attempts}", "reply": "Respuesta al cliente"}[kind], detail=message, reason=reason, sent=sent, dry=dry,
-              data={"summary": summary, "next": nxt, "subject": d.get("subject") or "", **({"response_seconds": first_response} if first_response is not None else {})})
+    log_event(slug, lead_id, "send", lead_name=lead.get("name") or "", channel=channel, title={"first": "Primer contacto", "followup": f"Seguimiento {attempts}", "reply": "Respuesta al cliente"}[kind] + (f" · aprobado por {by}" if by else ""),
+              detail=message, reason=reason, sent=sent, dry=dry, data={"summary": summary, "next": nxt, "subject": subject, **({"response_seconds": first_response} if first_response is not None else {})})
+
+
+# ---------------- aprobación previa
+def pending_proposals(tenant: str, lead_id: str | None = None) -> list[dict]:
+    with db.pool.connection() as c:
+        q = ("SELECT e.id, e.lead_id, e.lead_name, e.at, e.channel, e.title, e.detail, e.reason, e.data FROM agent_events e JOIN agent_leads l ON l.tenant=e.tenant AND l.lead_id=e.lead_id AND l.state='awaiting_approval' "
+             "WHERE e.tenant=%s AND e.kind='proposal' AND NOT (e.data ? 'resolved')" + (" AND e.lead_id=%s" if lead_id else "") + " ORDER BY e.id DESC LIMIT 30")
+        return [dict(r) for r in c.execute(q, (tenant, lead_id) if lead_id else (tenant,)).fetchall()]
+
+
+def _resolve(event_id: int, how: str, by: str) -> None:
+    with db.pool.connection() as c:
+        c.execute("UPDATE agent_events SET data = data || %s::jsonb WHERE id=%s", (json.dumps({"resolved": how, "by": by}), event_id))
+
+
+async def approve(tenant: dict, lead_id: str, event_id: int, message: str | None, by: str) -> None:
+    slug, cfg = tenant["slug"], config(tenant)
+    prop = next((p for p in pending_proposals(slug, lead_id) if p["id"] == event_id), None)
+    if not prop:
+        raise ValueError("Ese mensaje ya fue aprobado o descartado.")
+    espo, lead = Espo(tenant), await Espo(tenant).get(f"Lead/{lead_id}")
+    if lead.get("doNotContact"):
+        raise ValueError("El cliente pidió no recibir mensajes.")
+    data, channel = prop["data"], prop["channel"]
+    text = _clean_message(message if message and message.strip() else prop["detail"], channel)
+    if not text:
+        raise ValueError("El mensaje está vacío.")
+    try:
+        await _deliver(tenant, cfg, lead, channel, text, data.get("subject") or "", lead.get("assignedUserId"))
+    except Exception as e:
+        raise RuntimeError(f"No se pudo enviar: {str(e)[:160]}")
+    _usage(slug, msgs=1)
+    _resolve(event_id, "approved", by)
+    ns = data.get("new_status") or ""
+    if cfg["allow_status_changes"] and ns and ns != lead.get("status"):
+        try:
+            await espo.put(f"Lead/{lead_id}", {"status": ns, "statusComment": f"[Comercial virtual] {prop['reason']}"})
+            log_event(slug, lead_id, "status", lead_name=lead.get("name") or "", title=f"Estado → {ns}", detail=data.get("summary") or "", reason=prop["reason"])
+        except Exception as e:
+            log.warning("cambio de estado: %s", str(e)[:100])
+    row = _row(slug, lead_id) or {"attempts": data.get("attempts", 0)}
+    row = {**row, "attempts": data.get("attempts", row.get("attempts", 0))}
+    await _after_send(tenant, cfg, lead, row, data.get("kind", "followup"), channel, text, data.get("subject") or "", prop["reason"], data.get("summary") or "", sent=True, dry=False, first_response=data.get("first_response"), by=by)
+
+
+async def reject(tenant: dict, lead_id: str, event_id: int, by: str) -> None:
+    prop = next((p for p in pending_proposals(tenant["slug"], lead_id) if p["id"] == event_id), None)
+    if not prop:
+        raise ValueError("Ese mensaje ya fue aprobado o descartado.")
+    _resolve(event_id, "rejected", by)
+    _set(tenant["slug"], lead_id, state="paused", next_at=None)
+    log_event(tenant["slug"], lead_id, "control", lead_name=prop["lead_name"], title=f"{by} descartó el mensaje propuesto; el comercial virtual queda en pausa para este lead")
 
 
 # ---------------- ciclo de trabajo
@@ -557,7 +624,8 @@ def lead_state(tenant: dict, lead_id: str) -> dict:
     cfg = config(tenant)
     return {"licensed": licensed(tenant), "companyMode": cfg["mode"], "effective": effective_mode(tenant, row), "dry_run": cfg["dry_run"], "persona": cfg["persona"]["name"],
             "state": (row or {}).get("state"), "attempts": (row or {}).get("attempts", 0), "nextAt": (row or {}).get("next_at"), "nextKind": (row or {}).get("next_kind"), "reason": (row or {}).get("reason", ""),
-            "holdUntil": (row or {}).get("hold_until"), "mode": (row or {}).get("mode"), "events": events(tenant["slug"], lead_id, 40)}
+            "holdUntil": (row or {}).get("hold_until"), "mode": (row or {}).get("mode"), "events": events(tenant["slug"], lead_id, 40),
+            "approval": cfg["approval"], "proposal": next(iter(pending_proposals(tenant["slug"], lead_id)), None)}
 
 
 async def lead_action(tenant: dict, lead_id: str, action: str, by: str) -> None:

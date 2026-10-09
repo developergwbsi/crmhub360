@@ -1241,6 +1241,20 @@ class CrmHub
         return (object) $this->hubCall('GET', '/v1/agent/lead?leadId=' . rawurlencode($lead->getId()), null, 10);
     }
 
+    public function getActionAgentPending(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/agent/pending', null, 10);
+    }
+
+    public function postActionAgentApproval(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->docLead((string) ($d->leadId ?? ''), true);
+        return (object) $this->hubCall('POST', '/v1/agent/approval', ['leadId' => $lead->getId(), 'eventId' => (int) ($d->eventId ?? 0), 'message' => isset($d->message) ? (string) $d->message : null,
+            'approve' => !empty($d->approve), 'by' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 60);
+    }
+
     public function postActionAgentAction(Request $request): \stdClass
     {
         $d = $request->getParsedBody();
@@ -1250,5 +1264,27 @@ class CrmHub
             throw new BadRequest();
         }
         return (object) $this->hubCall('POST', '/v1/agent/lead/action', ['leadId' => $lead->getId(), 'action' => $action, 'by' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 20);
+    }
+
+    // ---------- Motor de IA de la empresa ----------
+    public function getActionAiConfig(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/ai/config', null, 10);
+    }
+
+    public function postActionAiOwnSave(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('PUT', '/v1/ai/own', ['kind' => (string) ($d->kind ?? ''), 'model' => (string) ($d->model ?? ''), 'base_url' => (string) ($d->base_url ?? ''), 'api_key' => (string) ($d->api_key ?? '')], 20);
+    }
+
+    public function postActionAiTest(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        $body = !empty($d->kind) ? ['kind' => (string) $d->kind, 'model' => (string) ($d->model ?? ''), 'base_url' => (string) ($d->base_url ?? ''), 'api_key' => (string) ($d->api_key ?? '')] : null;
+        return (object) $this->hubCall('POST', '/v1/ai/test', $body, 150);
     }
 }

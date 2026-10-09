@@ -588,5 +588,45 @@
             "controller": "CrmHub",
             "action": "agentAction"
         }
+    },
+    {
+        "route": "/CrmHub/aiConfig",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "aiConfig"
+        }
+    },
+    {
+        "route": "/CrmHub/aiOwnSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "aiOwnSave"
+        }
+    },
+    {
+        "route": "/CrmHub/aiTest",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "aiTest"
+        }
+    },
+    {
+        "route": "/CrmHub/agentPending",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentPending"
+        }
+    },
+    {
+        "route": "/CrmHub/agentApproval",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentApproval"
+        }
     }
 ]

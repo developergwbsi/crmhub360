@@ -11,12 +11,11 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent
+from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
 # Ollama atiende una inferencia a la vez con modelos locales; serializamos para no saturar la RAM.
-_llm_lock = ollama.LOCK
 
 
 @asynccontextmanager
@@ -66,8 +65,7 @@ class AssistReq(BaseModel):
 async def _job(tenant: dict, kind: str, entity_id: str, coro_fn):
     job = db.log_job(tenant["slug"], kind, entity_id)
     try:
-        async with _llm_lock:
-            await coro_fn()
+        await coro_fn()
         db.finish_job(job)
     except Exception as e:
         log.exception("job %s falló", job)
@@ -92,8 +90,7 @@ async def assist(action: str, req: AssistReq, tenant: dict = Depends(tenant_auth
         raise HTTPException(404, "Acción desconocida")
     job = db.log_job(tenant["slug"], f"assistant_{action}", req.leadId)
     try:
-        async with _llm_lock:
-            text = await assistant.run(tenant, req.leadId, action)
+        text = await assistant.run(tenant, req.leadId, action)
         db.finish_job(job)
         return {"text": text}
     except Exception as e:
@@ -771,10 +768,9 @@ async def kb_get(tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/kb/refresh")
 async def kb_refresh(tenant: dict = Depends(tenant_auth)):
-    async def llm(system: str, user: str) -> str:
-        async with _llm_lock:
-            return await ollama.chat_text(system, user)
-    return await knowledge.refresh(tenant, llm)
+    async def ask(system: str, user: str) -> str:
+        return await llm.chat_text(tenant, system, user)
+    return await knowledge.refresh(tenant, ask)
 
 
 @app.post("/v1/kb/notes")
@@ -953,11 +949,10 @@ async def docs_profiles_save(req: DocProfilesReq, tenant: dict = Depends(tenant_
 
 @app.post("/v1/docs/extract")
 async def docs_extract(req: DocExtractReq, tenant: dict = Depends(tenant_auth)):
-    async def llm(system: str, user: str, schema: dict, max_tokens: int | None = None) -> dict:
-        async with _llm_lock:
-            return await ollama.chat_json(system, user, schema, max_tokens)
+    async def ask(system: str, user: str, schema: dict, max_tokens: int | None = None) -> dict:
+        return await llm.chat_json(tenant, system, user, schema, max_tokens)
     try:
-        return {"runId": await documents.start(tenant, req.leadId, req.attachmentId, req.profileId, req.userId, llm, req.engine, req.leadName), "status": "reading"}
+        return {"runId": await documents.start(tenant, req.leadId, req.attachmentId, req.profileId, req.userId, ask, req.engine, req.leadName), "status": "reading"}
     except ValueError as e:
         raise HTTPException(422, str(e))
 
@@ -1013,6 +1008,14 @@ class AgentTestReq(BaseModel):
     sample: dict
 
 
+class AgentApprovalReq(BaseModel):
+    leadId: str
+    eventId: int
+    message: str | None = None
+    approve: bool = True
+    by: str = "Un usuario"
+
+
 class AgentActionReq(BaseModel):
     leadId: str
     action: str
@@ -1061,9 +1064,85 @@ async def agent_lead_action(req: AgentActionReq, tenant: dict = Depends(tenant_a
     return agent.lead_state(tenant, req.leadId)
 
 
+@app.get("/v1/agent/pending")
+async def agent_pending(tenant: dict = Depends(tenant_auth)):
+    return {"items": agent.pending_proposals(tenant["slug"])}
+
+
+@app.post("/v1/agent/approval")
+async def agent_approval(req: AgentApprovalReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        if req.approve:
+            await agent.approve(tenant, req.leadId, req.eventId, req.message, req.by)
+        else:
+            await agent.reject(tenant, req.leadId, req.eventId, req.by)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except RuntimeError as e:
+        raise HTTPException(502, str(e))
+    return agent.lead_state(tenant, req.leadId)
+
+
 @app.get("/v1/agent/stats")
 async def agent_stats(days: int = 30, tenant: dict = Depends(tenant_auth)):
     return {**agent.stats(tenant["slug"], max(1, min(365, days))), "events": agent.events(tenant["slug"], None, 40)}
+
+
+# ---------------- motor de IA (por empresa)
+class AiOwnReq(BaseModel):
+    kind: str
+    model: str = ""
+    base_url: str = ""
+    api_key: str = ""
+
+
+def _ai_public(tenant: dict) -> dict:
+    ai = (tenant.get("settings") or {}).get("ai") or {}
+    eff = llm.resolve(tenant)
+    own = ai.get("own") or {}
+    k = own.get("api_key") or ""
+    return {"mode": ai.get("mode") or "global", "kinds": llm.KINDS, "usage": llm.usage(tenant["slug"]),
+            "effective": {"label": eff["label"], "kind": eff["kind"], "model": eff["model"], "source": eff["source"]},
+            "own": {"kind": own.get("kind") or "anthropic", "model": own.get("model") or "", "base_url": own.get("base_url") or "", "secretSet": bool(k), "secretHint": ("…" + k[-4:]) if k else ""}}
+
+
+@app.get("/v1/ai/config")
+async def ai_config(tenant: dict = Depends(tenant_auth)):
+    return _ai_public(tenant)
+
+
+@app.put("/v1/ai/own")
+async def ai_own_save(req: AiOwnReq, tenant: dict = Depends(tenant_auth)):
+    ai = (tenant.get("settings") or {}).get("ai") or {}
+    if (ai.get("mode") or "global") != "own":
+        raise HTTPException(403, "Tu empresa usa el motor de IA del sistema. Si quieres usar el tuyo, pídelo a tu proveedor.")
+    if req.kind not in llm.KINDS:
+        raise HTTPException(422, "Tipo de motor no válido.")
+    url = req.base_url.strip()[:300]
+    if url:
+        try:
+            httpgen.check_url(url)
+        except ValueError as e:
+            raise HTTPException(422, str(e))
+    old = ai.get("own") or {}
+    own = {"kind": req.kind, "model": req.model.strip()[:80], "base_url": url, "api_key": req.api_key.strip()[:500] or old.get("api_key", "")}
+    with db.pool.connection() as c:
+        c.execute("UPDATE tenants SET settings = jsonb_set(settings, '{ai}', COALESCE(settings->'ai', '{}'::jsonb) || jsonb_build_object('own', %s::jsonb), true) WHERE slug = %s", (json.dumps(own), tenant["slug"]))
+    llm._cache["at"] = 0
+    return {**_ai_public({**tenant, "settings": {**(tenant.get("settings") or {}), "ai": {**ai, "own": own}}})}
+
+
+@app.post("/v1/ai/test")
+async def ai_test(req: AiOwnReq | None = None, tenant: dict = Depends(tenant_auth)):
+    """Prueba el motor que usa la empresa (o, si se envía un borrador del propio, ese)."""
+    cfg = llm.resolve(tenant)
+    if req and req.kind and (((tenant.get("settings") or {}).get("ai") or {}).get("mode") == "own"):
+        old = (((tenant.get("settings") or {}).get("ai") or {}).get("own") or {})
+        cfg = {"kind": req.kind, "model": req.model.strip(), "base_url": req.base_url.strip(), "api_key": req.api_key.strip() or old.get("api_key", ""), "check_url": True}
+    try:
+        return await llm.test(cfg)
+    except Exception as e:
+        raise HTTPException(502, str(e)[:240])
 
 
 if __name__ == "__main__":

@@ -867,6 +867,7 @@ KINDS = {
     "generic_sms": {"label": "Proveedor de SMS (API HTTP)", "channels": ["sms"], "secrets": ["auth_secret"]},
     "generic_voice": {"label": "Central / proveedor de llamadas (API HTTP)", "channels": ["voice"], "secrets": ["auth_secret"]},
     "email": {"label": "Proveedor de correo (SMTP: Gmail, Outlook, SendGrid…)", "channels": ["email"], "secrets": ["password"]},
+    "ai": {"label": "Motor de IA (Anthropic, OpenAI y compatibles, Ollama)", "channels": ["ai"], "secrets": ["api_key"]},
 }
 
 
@@ -898,7 +899,7 @@ def list_providers(actor: str = Depends(me)):
                 uses.setdefault(v["provider"], []).append(sl)
             elif ch == "mail" and isinstance(v, str) and v.startswith("p"):
                 uses.setdefault(v, []).append(sl)
-    return {"kinds": {k: {"label": v["label"], "channels": v["channels"]} for k, v in KINDS.items()},
+    return {"aiDefault": get_setting("ai_default"), "kinds": {k: {"label": v["label"], "channels": v["channels"]} for k, v in KINDS.items()},
             "items": [dict(mask_provider(p), companies=sorted(set(uses.get(p["id"], [])))) for p in providers_list()]}
 
 
@@ -920,6 +921,15 @@ def _clean_fields(kind: str, fields: dict, old: dict) -> dict:
     for k in KINDS[kind]["secrets"]:
         if not out.get(k):
             out[k] = old.get(k, "")
+    if kind == "ai":
+        if out.get("engine") not in ("anthropic", "openai", "ollama"):
+            raise HTTPException(400, "Elige el tipo de motor: anthropic, openai (o compatible) u ollama")
+        if out.get("base_url") and not re.match(r"^https?://", str(out["base_url"]).strip()):
+            raise HTTPException(400, "La dirección de la API debe empezar por http:// o https://")
+        if out["engine"] != "ollama" and not out.get("api_key"):
+            raise HTTPException(400, "Falta la clave de la API")
+        out["model"] = str(out.get("model") or "").strip()
+        out["base_url"] = str(out.get("base_url") or "").strip()
     if kind == "email":
         if not out.get("host") or not re.match(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$", str(out.get("from_address") or out.get("user") or "")):
             raise HTTPException(400, "Escribe el servidor SMTP y un correo remitente válido")
@@ -957,11 +967,54 @@ def delete_provider(pid: str, actor: str = Depends(me)):
     with db() as c:
         slugs = [r["slug"] for r in c.execute("SELECT slug FROM tenants").fetchall()]
     used = [sl for sl in slugs for v in services_of(sl).values() if (isinstance(v, dict) and v.get("provider") == pid) or v == pid]
+    with db() as c2:
+        used += [r["slug"] for r in c2.execute("SELECT slug FROM tenants WHERE settings->'ai'->>'mode' = %s", ("provider:" + pid,)).fetchall()]
+    if get_setting("ai_default") == pid:
+        raise HTTPException(409, "Es el motor de IA global (predeterminado). Elige otro como global antes de borrarlo.")
     if used:
         raise HTTPException(409, "Está asignado a: " + ", ".join(sorted(set(used))) + ". Quítalo primero de esas empresas.")
     put_setting("providers", [p for p in providers_list() if p["id"] != pid])
     audit(actor, "borrar_proveedor", pid)
     return {"ok": True}
+
+
+class AiDefaultReq(BaseModel):
+    id: Optional[str] = None
+
+
+@app.put("/api/ai/default")
+def set_ai_default(req: AiDefaultReq, actor: str = Depends(me)):
+    """Motor de IA global: lo usan todas las empresas que no tengan uno asignado o propio. Sin elegir ninguno se usa el Ollama local del sistema."""
+    if req.id and not any(p["id"] == req.id and p["kind"] == "ai" for p in providers_list()):
+        raise HTTPException(404, "Motor de IA no encontrado")
+    put_setting("ai_default", req.id)
+    audit(actor, "motor_ia_global", req.id or "local")
+    return {"ok": True, "default": req.id}
+
+
+@app.post("/api/providers/{pid}/test-ai")
+async def test_provider_ai(pid: str, actor: str = Depends(me)):
+    p = next((x for x in providers_list() if x["id"] == pid and x["kind"] == "ai"), None)
+    if not p:
+        raise HTTPException(404, "Motor de IA no encontrado")
+    f, t0 = p["fields"], time.time()
+    eng, base = f.get("engine"), (f.get("base_url") or "").rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=120) as c:
+            if eng == "anthropic":
+                r = await c.post((base or "https://api.anthropic.com") + "/v1/messages", headers={"x-api-key": f.get("api_key", ""), "anthropic-version": "2023-06-01"},
+                                 json={"model": f.get("model") or "claude-haiku-5-5", "max_tokens": 16, "messages": [{"role": "user", "content": "Di listo."}]})
+            elif eng == "openai":
+                r = await c.post((base or "https://api.openai.com/v1") + "/chat/completions", headers={"Authorization": "Bearer " + f.get("api_key", "")},
+                                 json={"model": f.get("model") or "gpt-4o-mini", "max_tokens": 16, "messages": [{"role": "user", "content": "Di listo."}]})
+            else:
+                r = await c.post((base or "http://127.0.0.1:11434") + "/api/chat", json={"model": f.get("model") or "llama3.1:8b", "stream": False, "options": {"num_predict": 16}, "messages": [{"role": "user", "content": "Di listo."}]})
+    except Exception as e:
+        raise HTTPException(502, "No se pudo conectar: " + str(e)[:160])
+    if r.status_code >= 400:
+        raise HTTPException(502, f"El proveedor respondió {r.status_code}: {r.text[:200]}")
+    audit(actor, "probar_motor_ia", pid)
+    return {"ok": True, "seconds": round(time.time() - t0, 1)}
 
 
 @app.post("/api/providers/{pid}/test")
@@ -1054,6 +1107,7 @@ class ServicesReq(BaseModel):
     voice: Optional[dict] = None
     mail: Optional[str] = None            # 'shared' | 'own'
     cartera: Optional[bool] = None        # módulo «Cartera y cobranza» (tarjetas de deuda y mora)
+    ai: Optional[str] = None              # motor de IA de la empresa: 'global' | 'provider:<id>' | 'own' (lo configura la propia empresa)
     agent: Optional[str] = None           # comercial virtual: 'off' (solo manual) | 'auto' (versión automática, con costo propio)
     lookups: Optional[list] = None        # servicios de consulta del sistema habilitados para la empresa
     templates: Optional[int] = None       # plantillas personales por usuario y canal (10 incluidas; más es un servicio adicional)
@@ -1155,7 +1209,14 @@ async def get_services(slug: str, actor: str = Depends(me)):
             u = c4.execute("SELECT messages, llm_calls, escalations FROM agent_usage WHERE tenant=%s AND month=to_char(now() AT TIME ZONE 'UTC','YYYY-MM')", (slug,)).fetchone()
     except Exception:
         u = None
-    return {"agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
+    try:
+        with db() as c6:
+            au = [dict(r) for r in c6.execute("SELECT engine, calls, tokens_in, tokens_out FROM ai_usage WHERE tenant=%s AND month=to_char(now() AT TIME ZONE 'UTC','YYYY-MM') ORDER BY calls DESC", (slug,)).fetchall()]
+    except Exception:
+        au = []
+    return {"ai": ((t["settings"] or {}).get("ai") or {}).get("mode") or "global", "aiProviders": [{"id": p["id"], "name": p["name"], "engine": p["fields"].get("engine"), "model": p["fields"].get("model")} for p in providers_list() if p["kind"] == "ai"],
+            "aiDefault": get_setting("ai_default"), "aiUsage": au,
+            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
             "lookups": list(((t["settings"] or {}).get("lookups")) or []), "lookupCatalog": [{"id": l["id"], "name": l["name"], "category": l.get("category", "otro")} for l in lookups_list()], "cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10), "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
             "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
 
@@ -1202,6 +1263,12 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
     if req.mail in ("shared", "own") or (req.mail or "").startswith("p"):
         await set_company_mail(t, req.mail)
         sv["mail"] = req.mail
+    if req.ai is not None:
+        ok = req.ai in ("global", "own") or (req.ai.startswith("provider:") and any(p["id"] == req.ai[9:] and p["kind"] == "ai" for p in providers_list()))
+        if not ok:
+            raise HTTPException(400, "Motor de IA no válido")
+        with db() as c7:
+            c7.execute("UPDATE tenants SET settings = jsonb_set(settings, '{ai}', COALESCE(settings->'ai', '{}'::jsonb) || jsonb_build_object('mode', %s::text), true) WHERE slug=%s", (req.ai, slug))
     if req.agent is not None:
         if req.agent not in ("off", "auto"):
             raise HTTPException(400, "Valor no válido para el comercial virtual")
