@@ -628,5 +628,53 @@
             "controller": "CrmHub",
             "action": "agentApproval"
         }
+    },
+    {
+        "route": "/CrmHub/leadBackups",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "leadBackups"
+        }
+    },
+    {
+        "route": "/CrmHub/leadBackupCreate",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "leadBackupCreate"
+        }
+    },
+    {
+        "route": "/CrmHub/leadBackupDelete",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "leadBackupDelete"
+        }
+    },
+    {
+        "route": "/CrmHub/leadBackupDownload",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "leadBackupDownload"
+        }
+    },
+    {
+        "route": "/CrmHub/leadClean",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "leadClean"
+        }
+    },
+    {
+        "route": "/CrmHub/leadRestore",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "leadRestore"
+        }
     }
 ]

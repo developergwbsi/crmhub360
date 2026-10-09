@@ -860,6 +860,189 @@ class CrmHub
         return (object) $this->hubAny('POST', '/v1/broadcasts/' . (int) $request->getRouteParam('id') . '/' . $act, []);
     }
 
+    // ---------- Copias y limpieza de leads (solo administrador) ----------
+    private const BK_CHILDREN = ['Note', 'Task', 'Call', 'Meeting'];
+
+    private function bkDir(): string
+    {
+        $d = 'data/lead-backups';
+        if (!is_dir($d)) {
+            @mkdir($d, 0770, true);
+        }
+        return $d;
+    }
+
+    private function bkIndex(): array
+    {
+        $f = $this->bkDir() . '/index.json';
+        $a = is_file($f) ? json_decode((string) file_get_contents($f), true) : [];
+        return is_array($a) ? $a : [];
+    }
+
+    private function bkSaveIndex(array $a): void
+    {
+        file_put_contents($this->bkDir() . '/index.json', json_encode(array_values($a), JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+
+    private function bkFind(string $id): array
+    {
+        foreach ($this->bkIndex() as $b) {
+            if (($b['id'] ?? '') === $id && preg_match('/^[a-f0-9]{16}$/', $id)) {
+                return $b;
+            }
+        }
+        throw new BadRequest('Copia no encontrada.');
+    }
+
+    /** Crea una copia (JSON por líneas comprimido) de todos los leads y de sus notas, tareas, llamadas y reuniones. */
+    private function bkCreate(string $reason, string $note): array
+    {
+        @set_time_limit(0);
+        $id = bin2hex(random_bytes(8));
+        $path = $this->bkDir() . '/' . $id . '.jsonl.gz';
+        $gz = gzopen($path, 'wb6');
+        $counts = ['Lead' => 0, 'Note' => 0, 'Task' => 0, 'Call' => 0, 'Meeting' => 0];
+        $repo = $this->em->getRDBRepository('Lead');
+        $leadIds = [];
+        foreach ($repo->select(['id'])->order('createdAt')->find() as $l) {
+            $leadIds[] = $l->getId();
+        }
+        foreach (array_chunk($leadIds, 200) as $chunk) {
+            foreach ($repo->where(['id' => $chunk])->find() as $lead) {
+                $lead->loadLinkMultipleField('teams');
+                gzwrite($gz, json_encode(['t' => 'Lead', 'd' => $lead->getValueMap()], JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR) . "\n");
+                $counts['Lead']++;
+            }
+            foreach (self::BK_CHILDREN as $t) {
+                foreach ($this->em->getRDBRepository($t)->where(['parentType' => 'Lead', 'parentId' => $chunk])->find() as $r) {
+                    gzwrite($gz, json_encode(['t' => $t, 'd' => $r->getValueMap()], JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR) . "\n");
+                    $counts[$t]++;
+                }
+            }
+        }
+        gzclose($gz);
+        $b = ['id' => $id, 'createdAt' => gmdate('Y-m-d H:i:s'), 'by' => (string) ($this->user->get('name') ?: $this->user->get('userName')),
+            'reason' => $reason, 'note' => mb_substr($note, 0, 120), 'counts' => $counts, 'size' => filesize($path)];
+        $idx = $this->bkIndex();
+        array_unshift($idx, $b);
+        $this->bkSaveIndex($idx);
+        return $b;
+    }
+
+    public function getActionLeadBackups(Request $request): \stdClass
+    {
+        $this->admin();
+        $n = $this->em->getRDBRepository('Lead')->count();
+        return (object) ['items' => $this->bkIndex(), 'leads' => $n];
+    }
+
+    public function postActionLeadBackupCreate(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->bkCreate('manual', trim((string) ($request->getParsedBody()->note ?? '')));
+    }
+
+    public function postActionLeadBackupDelete(Request $request): \stdClass
+    {
+        $this->admin();
+        $b = $this->bkFind((string) ($request->getParsedBody()->id ?? ''));
+        @unlink($this->bkDir() . '/' . $b['id'] . '.jsonl.gz');
+        $this->bkSaveIndex(array_filter($this->bkIndex(), fn($x) => ($x['id'] ?? '') !== $b['id']));
+        return (object) ['ok' => true];
+    }
+
+    /** Devuelve el contenido de la copia para descargarlo como archivo. */
+    public function getActionLeadBackupDownload(Request $request): \stdClass
+    {
+        $this->admin();
+        $b = $this->bkFind((string) $request->getQueryParam('id'));
+        $rows = [];
+        $gz = gzopen($this->bkDir() . '/' . $b['id'] . '.jsonl.gz', 'rb');
+        while ($gz && !gzeof($gz)) {
+            $line = gzgets($gz);
+            if ($line !== false && trim($line) !== '') {
+                $rows[] = json_decode($line);
+            }
+        }
+        if ($gz) {
+            gzclose($gz);
+        }
+        return (object) ['backup' => $b, 'rows' => $rows];
+    }
+
+    /** Limpia todos los leads (y sus notas, tareas, llamadas y reuniones). Siempre crea antes una copia. */
+    public function postActionLeadClean(Request $request): \stdClass
+    {
+        $this->admin();
+        if (trim((string) ($request->getParsedBody()->confirm ?? '')) !== 'LIMPIAR') {
+            throw new BadRequest('Escribe LIMPIAR para confirmar.');
+        }
+        if ($this->em->getRDBRepository('Lead')->count() === 0) {
+            return (object) ['backup' => null, 'removed' => 0];
+        }
+        @set_time_limit(0);
+        $b = $this->bkCreate('before-clean', 'Copia automática antes de limpiar');
+        $repo = $this->em->getRDBRepository('Lead');
+        $removed = 0;
+        do {
+            $batch = iterator_to_array($repo->limit(0, 200)->find(), false);
+            foreach ($batch as $lead) {
+                foreach (self::BK_CHILDREN as $t) {
+                    foreach ($this->em->getRDBRepository($t)->where(['parentType' => 'Lead', 'parentId' => $lead->getId()])->find() as $r) {
+                        $this->em->removeEntity($r, ['skipProcesses' => true]);
+                    }
+                }
+                $this->em->removeEntity($lead, ['skipProcesses' => true]);
+                $removed++;
+            }
+        } while (count($batch) === 200);
+        return (object) ['backup' => $b, 'removed' => $removed];
+    }
+
+    /** Restaura una copia: recupera los registros que faltan (no toca los leads que ya existen). */
+    public function postActionLeadRestore(Request $request): \stdClass
+    {
+        $this->admin();
+        $b = $this->bkFind((string) ($request->getParsedBody()->id ?? ''));
+        @set_time_limit(0);
+        $opts = ['skipHooks' => true, 'silent' => true, 'skipProcesses' => true];
+        $done = ['Lead' => 0, 'Note' => 0, 'Task' => 0, 'Call' => 0, 'Meeting' => 0];
+        $skipped = 0;
+        $gz = gzopen($this->bkDir() . '/' . $b['id'] . '.jsonl.gz', 'rb');
+        while ($gz && !gzeof($gz)) {
+            $line = gzgets($gz);
+            $row = $line === false ? null : json_decode($line, true);
+            if (!$row || !in_array($row['t'] ?? '', array_merge(['Lead'], self::BK_CHILDREN), true) || empty($row['d']['id'])) {
+                continue;
+            }
+            $t = $row['t'];
+            $data = $row['d'];
+            unset($data['deleted']);
+            $repo = $this->em->getRDBRepository($t);
+            if ($this->em->getEntityById($t, $data['id'])) {
+                $skipped++;
+                continue;
+            }
+            $trash = $repo->clone($this->em->getQueryBuilder()->select()->from($t)->where(['id' => $data['id']])->withDeleted()->build())->findOne();
+            if ($trash) {
+                $repo->restoreDeleted($data['id']);
+                $e = $this->em->getEntityById($t, $data['id']);
+            } else {
+                $e = $this->em->getNewEntity($t);
+            }
+            if (!$e) {
+                continue;
+            }
+            $e->set($data);
+            $this->em->saveEntity($e, $opts);
+            $done[$t]++;
+        }
+        if ($gz) {
+            gzclose($gz);
+        }
+        return (object) ['restored' => $done, 'skipped' => $skipped];
+    }
+
     // ---------- Simulador del proceso comercial y banco de conocimiento ----------
     private function simGuard(): void
     {

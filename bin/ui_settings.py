@@ -20,6 +20,7 @@ TABS = [
     {"type": "url", "id": "t11", "text": "Asignación de leads", "url": "#CrmHub/asignacion", "iconClass": "fas fa-shuffle", "onlyAdmin": True},
     {"type": "url", "id": "t18", "text": "Comercial virtual", "url": "#CrmHub/agente", "iconClass": "fas fa-robot", "onlyAdmin": True},
     {"type": "url", "id": "t17", "text": "Procesos de leads", "url": "#CrmHub/procesos", "iconClass": "fas fa-gears", "onlyAdmin": True},
+    {"type": "url", "id": "t19", "text": "Copias de leads", "url": "#CrmHub/copiasLeads", "iconClass": "fas fa-box-archive", "onlyAdmin": True},
     {"type": "url", "id": "t12", "text": "Estados del pipeline", "url": "#CrmHub/pipeline", "iconClass": "fas fa-timeline", "onlyAdmin": True},
     {"type": "divider", "id": "t4", "text": "Ayuda"},
     {"type": "url", "id": "t5", "text": "Manual de usuario", "url": "#CrmHub/manual", "iconClass": "fas fa-book"},
