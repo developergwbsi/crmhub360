@@ -109,7 +109,7 @@ def _schema_text(schema: dict) -> str:
 
 async def _anthropic(cfg: dict, system: str, user: str, schema: dict | None, max_tokens: int | None, temp: float) -> tuple[object, int, int]:
     base = (cfg["base_url"] or DEFAULT_URL["anthropic"]).rstrip("/")
-    body = {"model": cfg["model"] or "claude-haiku-5-5", "max_tokens": max_tokens or 2048, "temperature": temp, "system": system, "messages": [{"role": "user", "content": user}]}
+    body = {"model": cfg["model"] or "claude-haiku-5-5", "max_tokens": max_tokens or 2048, "system": system, "messages": [{"role": "user", "content": user}]}
     if schema:   # salida estructurada: se obliga a «llamar» a una herramienta cuyo esquema es el pedido
         body["tools"] = [{"name": "responder", "description": "Entrega la respuesta con la estructura pedida.", "input_schema": schema}]
         body["tool_choice"] = {"type": "tool", "name": "responder"}
