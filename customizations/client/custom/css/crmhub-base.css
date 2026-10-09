@@ -598,6 +598,8 @@ td.group-column .show-more > a.btn.hidden { display: none; }
 .kanban-head-container.sticked { top: var(--ch-ph-h, 56px) !important; z-index: 85; background: var(--ch-bg); padding: 6px 0 4px; }
 .kanban-head th.ch-head-search-cell { background: transparent !important; border: 0 !important; padding: 6px 0 2px !important; font-weight: 400; }
 .kanban-head .ch-head-search .ch-col-search { margin: 0; }
+div.list-kanban > div.kanban-head-container > table > thead tr.kanban-row.ch-head-search { overflow: visible; }
+div.list-kanban > div.kanban-head-container > table > thead tr.kanban-row.ch-head-search > th { max-height: none; overflow: visible; }
 
 /* ===== Pantalla dividida: el tablero se achica y las fichas quedan al lado ===== */
 body.ch-split .container.content { width: calc(100% - var(--ch-split-w, 0px)) !important; max-width: none !important; margin-right: var(--ch-split-w, 0px) !important; transition: width .2s, margin .2s; }

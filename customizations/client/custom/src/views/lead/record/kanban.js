@@ -19,7 +19,9 @@ define('custom:views/lead/record/kanban', ['custom:views/record/kanban-drawer'],
             let cells = headRow.querySelectorAll('.ch-head-search-cell');
             if (!cells.length) {
                 const tr = document.createElement('tr');
-                tr.className = 'ch-head-search';
+                const first = headRow.querySelector('tr.kanban-row');
+                tr.className = 'kanban-row ch-head-search';   // misma rejilla que la fila de estados: cada buscador queda justo bajo su columna
+                if (first) { tr.style.cssText = first.style.cssText; }
                 headRow.querySelectorAll('th.group-header').forEach(() => {
                     const th = document.createElement('th'); th.className = 'ch-head-search-cell'; tr.appendChild(th);
                 });
