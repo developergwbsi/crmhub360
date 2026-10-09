@@ -63,14 +63,14 @@ define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (
             return gallery + tpls + `<div class="ch-sim-card"><h4>Mis procesos</h4>${list.map(p => { const lr = lastOf(p.id), s = lr && ST[lr.status];
                 return `<div class="ch-proc-item"><label class="ch-switch"><input type="checkbox" data-act="toggle" data-id="${esc(p.id)}" ${p.enabled ? 'checked' : ''}><i></i></label>` +
                     `<a data-act="edit" data-id="${esc(p.id)}"><b>${esc(p.name)}</b><span>${p.managed ? 'Servicio del sistema: ' + esc(((this.data0.catalog || []).find(c => c.id === p.managed) || {}).name || p.managed) : esc(p.http.method) + ' ' + esc((p.http.url || '').slice(0, 70))}</span><span>${p.trigger.sources.length ? 'Fuentes: ' + esc(p.trigger.sources.join(', ')) : 'Todos los leads'}${p.trigger.forms.length ? ' · Formularios: ' + esc(p.trigger.forms.join(', ')) : ''}</span></a>` +
-                    `${s ? `<span class="ch-ah-chip st-${s[1]}">${s[0]}</span>` : ''}<a class="ch-tpl-del" data-act="del" data-id="${esc(p.id)}" title="Eliminar"><span class="far fa-trash-can"></span></a></div>`; }).join('') || '<div class="ch-muted">Aún no hay procesos.</div>'}
+                    `${s ? `<span class="ch-ah-chip st-${s[1]}">${s[0]}</span>` : ''}<a class="ch-tpl-del" data-act="del" data-id="${esc(p.id)}" title="Eliminar"><span class="far fa-trash-can"></span></a></div>`; }).join('') || ChUi.empty({kind: 'robot', title: 'Aún no hay procesos', text: 'Crea uno o elige un servicio del sistema para empezar.', compact: true})}
                 <div class="ch-mail-actions"><button class="btn btn-primary btn-sm" data-act="new" ${list.length >= this.data0.max ? 'disabled' : ''}><span class="fas fa-plus"></span> Nuevo proceso</button></div></div>`;
         }
 
         runsHtml() {
             return `<div class="ch-sim-card"><table class="table ch-proc-runs"><thead><tr><th>Cuándo</th><th>Proceso</th><th>Lead</th><th>Resultado</th><th>Detalle</th></tr></thead><tbody>` +
                 (this.runs.map(r => { const s = ST[r.status] || ST.info;
-                    return `<tr><td>${esc(fmt(r.started_at))}</td><td>${esc(r.process_name)}</td><td><a href="#Lead/view/${esc(r.lead_id)}">Abrir lead</a></td><td><span class="ch-ah-chip st-${s[1]}">${s[0]}${r.http_status ? ' · ' + r.http_status : ''}</span></td><td>${esc(r.error || (r.applied || []).map(a => a.to + ': ' + a.value).join(' · '))}</td></tr>`; }).join('') || '<tr><td colspan="5" class="ch-muted">Aún no se ha ejecutado ningún proceso.</td></tr>') + '</tbody></table></div>';
+                    return `<tr><td>${esc(fmt(r.started_at))}</td><td>${esc(r.process_name)}</td><td><a href="#Lead/view/${esc(r.lead_id)}">Abrir lead</a></td><td><span class="ch-ah-chip st-${s[1]}">${s[0]}${r.http_status ? ' · ' + r.http_status : ''}</span></td><td>${esc(r.error || (r.applied || []).map(a => a.to + ': ' + a.value).join(' · '))}</td></tr>`; }).join('') || '<tr><td colspan="5">' + ChUi.empty({kind: 'calendar', title: 'Aún no se ha ejecutado ningún proceso', text: 'Cuando llegue un lead aparecerá aquí cada ejecución.', compact: true}) + '</td></tr>') + '</tbody></table></div>';
         }
 
         editorHtml() {

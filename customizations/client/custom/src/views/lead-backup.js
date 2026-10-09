@@ -35,7 +35,7 @@ define('custom:views/lead-backup', ['view', 'custom:ui'], function (Dep, ChUi) {
                 <div class="ch-mail-actions"><button class="btn btn-primary btn-sm" data-act="create" ${dis}><span class="fas fa-copy"></span> ${this.busy === 'create' ? 'Creando copia…' : 'Crear copia ahora'}</button>
                 <button class="btn btn-danger btn-sm" data-act="clean" ${dis || (d.leads ? '' : 'disabled')}><span class="fas fa-broom"></span> ${this.busy === 'clean' ? 'Limpiando…' : 'Limpiar todos los leads'}</button></div>
                 <p class="ch-muted" style="margin-top:8px">Los correos enviados o recibidos no se tocan. Los clientes, cuentas y oportunidades ya convertidos tampoco: solo se limpian los leads.</p></div>
-                <div class="ch-sim-card"><h4><span class="fas fa-clock-rotate-left"></span> Copias guardadas</h4>${rows || '<div class="ch-muted">Aún no hay copias.</div>'}</div>`;
+                <div class="ch-sim-card"><h4><span class="fas fa-clock-rotate-left"></span> Copias guardadas</h4>${rows || ChUi.empty({kind: 'box', title: 'Aún no hay copias', text: 'Crea la primera con «Crear copia ahora».', compact: true})}</div>`;
             root.onclick = e => { const a = e.target.closest('[data-act]'); if (a && !a.disabled) { this.act(a.dataset.act, a.dataset.id); } };
         }
 

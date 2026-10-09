@@ -65,7 +65,7 @@ define('custom:views/broadcasts', ['view', 'custom:ui'], function (Dep, ChUi) {
                         ${b.status === 'paused' ? `<button class="btn btn-default btn-sm" data-action="bcAct" data-id="${b.id}" data-act="resume">Reanudar</button>` : ''}
                         ${['running', 'scheduled', 'paused'].includes(b.status) ? `<button class="btn btn-link text-danger btn-sm" data-action="bcAct" data-id="${b.id}" data-act="cancel">Cancelar</button>` : ''}
                         <button class="btn btn-link btn-sm" data-action="bcDetail" data-id="${b.id}">Detalle</button></td></tr>`;
-            }).join('') || '<tr><td colspan="5" class="ch-muted">Aún no hay campañas. Crea la primera con «Nueva campaña».</td></tr>';
+            }).join('') || '<tr><td colspan="5">' + ChUi.empty({kind: 'chat', title: 'Aún no hay campañas', text: 'Crea la primera con «Nueva campaña».', compact: true}) + '</td></tr>';
             this.$el.find('.ch-bc-list').html(rows);
         }
 

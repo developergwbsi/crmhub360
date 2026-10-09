@@ -55,6 +55,8 @@ define('custom:ui', [], function () {
                 o.mount(box.querySelector('[data-role="body"]'), close);
             });
         },
+        // Estado vacío con ilustración: ChUi.empty({kind, title, text, compact})
+        empty(o) { return window.ChEmpty ? window.ChEmpty.html(o) : `<div class="ch-muted">${esc((o && o.title) || '')}</div>`; },
         // Aviso con un solo botón
         notice(o) {
             return open((box, close) => {

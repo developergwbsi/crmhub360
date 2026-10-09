@@ -31,7 +31,7 @@ define('custom:views/lead/panels/documents', ['views/record/panels/bottom', 'cus
                     const st = i.status === 'applied' ? ['fa-circle-check', '#2fa36b', 'Guardado'] : i.status === 'reading' ? ['fa-spinner fa-spin', '#4f63e8', 'Leyendo…'] : i.status === 'failed' ? ['fa-circle-xmark', '#d64545', 'No se pudo leer'] : i.status === 'read' ? ['fa-circle-half-stroke', '#f59e0b', 'Lista para revisar'] : null;
                     if (!st) { return ''; }
                     return `<div class="ch-docs-i"><span class="fas ${st[0]}" style="color:${st[1]}"></span><div style="flex:1"><b>${ChUi.esc(i.profile_name)}</b><small>${st[2]} · ${ChUi.esc(ChUi.fmt.dt(i.created_at))}</small></div>${i.status === 'read' ? `<button class="btn btn-default btn-xs" data-open="${i.id}">Revisar</button>` : ''}</div>`;
-                }).join('') || '<div class="ch-muted" style="margin-top:8px">Aún no se ha leído ningún documento.</div>';
+                }).join('') || ChUi.empty({kind: 'doc', title: 'Aún no se ha leído ningún documento', text: 'Sube un PDF y lo leemos por ti.', compact: true});
                 if (rows.some(i => i.status === 'reading')) { this._t = setTimeout(() => this.load(), 4000); }
             }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
         }

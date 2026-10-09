@@ -52,7 +52,7 @@ define('custom:views/simulator', ['view', 'custom:ui'], function (Dep, ChUi) {
         }
 
         runsHtml() {
-            if (!this.runs.length) { return '<div class="ch-muted">Aún no has ejecutado simulaciones.</div>'; }
+            if (!this.runs.length) { return ChUi.empty({kind: 'robot', title: 'Aún no has ejecutado simulaciones', text: 'Ejecuta la primera y verás aquí cómo se comporta tu proceso comercial.', compact: true}); }
             return this.runs.map(r => `<a class="ch-sim-run ${this.run && this.run.id === r.id ? 'on' : ''}" data-act="open" data-id="${r.id}"><b>#${r.id}</b> ${esc(ST[r.status] || r.status)}<span>${esc(fmt(r.started_at))}${r.user_name ? ' · ' + esc(r.user_name) : ''}</span></a>`).join('');
         }
 

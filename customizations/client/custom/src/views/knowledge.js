@@ -19,7 +19,7 @@ define('custom:views/knowledge', ['view', 'custom:ui'], function (Dep, ChUi) {
         }
 
         bars(rows, label) {
-            if (!rows || !rows.length) { return '<div class="ch-muted">Sin datos todavía.</div>'; }
+            if (!rows || !rows.length) { return ChUi.empty({kind: 'chart', title: 'Sin datos todavía', text: 'Pronto entrarán datos.', compact: true}); }
             const max = Math.max(1, ...rows.map(r => r.rate != null ? r.rate : (r.n ? 100 * r.won / r.n : 0)));
             return rows.map(r => { const rate = r.rate != null ? r.rate : (r.n ? Math.round(100 * r.won / r.n) : 0);
                 return `<div class="ch-kb-row"><span class="ch-kb-n">${esc(r.name)}</span><span class="ch-kb-bar"><i style="width:${Math.max(2, 100 * rate / max)}%"></i></span><span class="ch-kb-v">${rate}% <small>(${r.won}/${r.n})</small></span></div>`; }).join('');

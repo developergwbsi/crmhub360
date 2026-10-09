@@ -407,7 +407,7 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                         ${f._saved ? `<a class="btn btn-default btn-sm" href="${esc(url)}" target="_blank" rel="noopener"><span class="fas fa-up-right-from-square"></span> Abrir</a>` : '<span class="ch-muted ch-small">Guarda para publicarlo</span>'}</div>
                     ${editor}
                 </div>`;
-            }).join('') || '<div class="ch-muted">Aún no tienes formularios. Pulsa «Nuevo formulario» para crear el primero con una plantilla lista.</div>';
+            }).join('') || ChUi.empty({kind: 'doc', title: 'Aún no tienes formularios', text: 'Pulsa «Nuevo formulario» para crear el primero con una plantilla lista.', compact: true});
             this.$el.find('.ch-forms').html(html);
         }
 
