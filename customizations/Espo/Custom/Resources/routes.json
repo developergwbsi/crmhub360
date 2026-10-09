@@ -676,5 +676,13 @@
             "controller": "CrmHub",
             "action": "leadRestore"
         }
+    },
+    {
+        "route": "/CrmHub/whatsapp/unlink",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "whatsappUnlink"
+        }
     }
 ]

@@ -1144,6 +1144,7 @@ class ServicesReq(BaseModel):
     ai: Optional[str] = None              # motor de IA de la empresa: 'global' | 'provider:<id>' | 'own' (lo configura la propia empresa)
     agent: Optional[str] = None           # comercial virtual: 'off' (solo manual) | 'auto' (versión automática, con costo propio)
     lookups: Optional[list] = None        # servicios de consulta del sistema habilitados para la empresa
+    wa_bulk: Optional[dict] = None        # envío masivo por WhatsApp no oficial (Evolution): {max: destinatarios por campaña, every_s: segundos entre mensajes}
     templates: Optional[int] = None       # plantillas personales por usuario y canal (10 incluidas; más es un servicio adicional)
 
 
@@ -1251,7 +1252,8 @@ async def get_services(slug: str, actor: str = Depends(me)):
     return {"ai": ((t["settings"] or {}).get("ai") or {}).get("mode") or "global", "aiProviders": [{"id": p["id"], "name": p["name"], "engine": p["fields"].get("engine"), "model": p["fields"].get("model")} for p in providers_list() if p["kind"] == "ai"],
             "aiDefault": get_setting("ai_default"), "aiUsage": au,
             "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
-            "lookups": list(((t["settings"] or {}).get("lookups")) or []), "lookupCatalog": [{"id": l["id"], "name": l["name"], "category": l.get("category", "otro")} for l in lookups_list()], "cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10), "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
+            "lookups": list(((t["settings"] or {}).get("lookups")) or []), "lookupCatalog": [{"id": l["id"], "name": l["name"], "category": l.get("category", "otro")} for l in lookups_list()], "cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10),
+            "waBulk": {"max": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("max") or 100), "every_s": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("every_s") or 120)}, "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
             "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
 
 
@@ -1313,6 +1315,13 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
         ids = [str(i) for i in req.lookups if str(i) in known]
         with db() as c3:
             c3.execute("UPDATE tenants SET settings = jsonb_set(settings, '{lookups}', %s::jsonb, true) WHERE slug=%s", (json.dumps(ids), slug))
+    if req.wa_bulk is not None:
+        mx, ev = int(req.wa_bulk.get("max") or 100), int(req.wa_bulk.get("every_s") or 120)
+        if not 10 <= mx <= 5000 or not 30 <= ev <= 1800:
+            raise HTTPException(400, "El máximo por campaña va de 10 a 5000 y el intervalo de 30 a 1800 segundos")
+        with db() as c8:
+            c8.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s",
+                       (json.dumps({"wa_bulk": {"max": mx, "every_s": ev}}), slug))
     if req.templates is not None:
         if not 10 <= req.templates <= 500:
             raise HTTPException(400, "El límite de plantillas va de 10 (incluidas) a 500")

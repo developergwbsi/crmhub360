@@ -95,6 +95,18 @@ async def qr(tenant: dict) -> dict:
         return {"connected": False, "state": state, "qr": d.get("base64") or "", "pairingCode": d.get("pairingCode") or ""}
 
 
+async def unlink(tenant: dict) -> dict:
+    """Cierra la sesión de WhatsApp de la instancia (el teléfono queda desvinculado) para que se pueda escanear el QR de otro número."""
+    if provider(tenant) != "evolution":
+        raise ValueError("Cambiar de número por QR solo aplica a Evolution API.")
+    url, key, inst = _need(tenant, "evolution_url", "evolution_apikey", "evolution_instance")
+    async with httpx.AsyncClient(timeout=20) as c:
+        r = await c.delete(f"{url.rstrip('/')}/instance/logout/{inst}", headers={"apikey": key})
+        if r.status_code not in (200, 201, 400, 404):   # 400/404: ya estaba desconectada
+            r.raise_for_status()
+    return {"ok": True}
+
+
 def _err(r: httpx.Response) -> str:
     try:
         j = r.json()

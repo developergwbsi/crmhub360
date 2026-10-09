@@ -30,7 +30,8 @@ define('custom:views/broadcasts', ['view', 'custom:ui'], function (Dep, ChUi) {
             const opts = (path, tr) => (meta.get(path) || []).filter(Boolean).map(v => ({value: v, label: this.getLanguage().translateOption(v, tr, 'Lead')}));
             return {
                 loading: false, wizard: this.wizard, vars: ['{nombre}', '{primer_nombre}', '{servicio}', '{asesor}', '{empresa}'].map(v => ({v})),
-                channels: Object.keys(s.channels).map(k => ({key: k, label: s.channels[k].label, ready: s.channels[k].ready, max: s.channels[k].max})),
+                channels: Object.keys(s.channels).map(k => ({key: k, label: s.channels[k].label, ready: s.channels[k].ready, max: s.channels[k].max,
+                    rateText: s.channels[k].policy ? `1 mensaje cada ${this.every(s.channels[k].policy.every_s)} · máx. ${s.channels[k].policy.max} por campaña` : `hasta ${s.channels[k].max} por minuto`})),
                 anyReady: Object.values(s.channels).some(c => c.ready),
                 statuses: opts('entityDefs.Lead.fields.status.options', 'status'), quals: opts('entityDefs.Lead.fields.qualificationStatus.options', 'qualificationStatus'),
                 sources: opts('entityDefs.Lead.fields.source.options', 'source'), prefs: opts('entityDefs.Lead.fields.preferredChannel.options', 'preferredChannel'),
@@ -46,7 +47,7 @@ define('custom:views/broadcasts', ['view', 'custom:ui'], function (Dep, ChUi) {
                     us.forEach(u => $sel.append(`<option value="${esc(u.id)}">${esc(u.name)}</option>`));
                 }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
                 const first = this.$el.find('[name="bc_channel"]:not(:disabled)').first(); if (first.length) { first.prop('checked', true); }
-                this.updatePreview();
+                this.updatePreview(); this.applyPolicy();
             }
         }
 
@@ -76,6 +77,18 @@ define('custom:views/broadcasts', ['view', 'custom:ui'], function (Dep, ChUi) {
                 assigned: this.$el.find('[name="f_assigned"]').val() || null};
         }
 
+        every(sec) { return sec % 60 === 0 ? (sec / 60) + (sec === 60 ? ' minuto' : ' minutos') : sec + ' segundos'; }
+        policy() { const c = this.state && this.state.channels && this.state.channels[this.channel()]; return c && c.policy ? {...c.policy, support: c.support} : null; }
+        // WhatsApp por Evolution (no oficial): ritmo fijo y tope por campaña para no bloquear la línea
+        applyPolicy() {
+            const pol = this.policy(), $n = this.$el.find('[data-role="polNote"]'), $r = this.$el.find('[data-role="rateBox"]');
+            $r.toggle(!pol);
+            if (!pol) { $n.prop('hidden', true); return; }
+            const hrs = this.audience ? Math.ceil(this.audience * pol.every_s / 3600 * 10) / 10 : 0;
+            $n.prop('hidden', false).html(`<b>WhatsApp por Evolution API:</b> para no bloquear tu línea, cada campaña admite hasta <b>${pol.max}</b> destinatarios y se envía <b>1 mensaje cada ${this.every(pol.every_s)}</b>` +
+                (hrs ? ` (tu audiencia de ${this.audience} tardaría ≈ ${hrs} h)` : '') + `. ${esc(pol.support || '')}` +
+                (this.audience && this.audience > pol.max ? `<br><b class="text-danger">Tu audiencia (${this.audience}) supera el máximo de ${pol.max}: acota los filtros para continuar.</b>` : ''));
+        }
         channel() { return this.$el.find('[name="bc_channel"]:checked').val(); }
 
         updatePreview() {
@@ -89,7 +102,7 @@ define('custom:views/broadcasts', ['view', 'custom:ui'], function (Dep, ChUi) {
         events = {
             'click [data-action="bcNew"]': function () { this.wizard = true; this.audience = null; this.reRender(); },
             'click [data-action="bcCancelWizard"]': function () { this.wizard = false; this.reRender(); },
-            'input [name="bc_text"], change [name="bc_footer"], change [name="bc_channel"]': function () { this.updatePreview(); },
+            'input [name="bc_text"], change [name="bc_footer"], change [name="bc_channel"]': function () { this.updatePreview(); this.applyPolicy(); },
             'click [data-action="bcVar"]': function (e) {
                 const ta = this.$el.find('[name="bc_text"]')[0], v = e.currentTarget.dataset.v;
                 ta.setRangeText(v, ta.selectionStart, ta.selectionEnd, 'end'); ta.focus(); this.updatePreview();
@@ -97,16 +110,18 @@ define('custom:views/broadcasts', ['view', 'custom:ui'], function (Dep, ChUi) {
             'click [data-action="bcAudience"]': function () {
                 const $s = this.$el.find('[data-role="audience"]').text('Calculando…');
                 Espo.Ajax.postRequest('CrmHub/broadcast/audience', {channel: this.channel(), filters: this.filters()})
-                    .then(r => { this.audience = r.count; $s.html(`<b>${r.count}</b> destinatarios con medio de contacto${r.sample.length ? ' · p. ej.: ' + r.sample.map(esc).join(', ') : ''}`); })
+                    .then(r => { this.audience = r.count; this.applyPolicy(); $s.html(`<b>${r.count}</b> destinatarios con medio de contacto${r.sample.length ? ' · p. ej.: ' + r.sample.map(esc).join(', ') : ''}`); })
                     .catch(xhr => { $s.text('No se pudo calcular'); if (xhr) { xhr.errorIsHandled = true; } });
             },
             'click [data-action="bcSend"]': function () {
                 const name = (this.$el.find('[name="bc_name"]').val() || '').trim(), text = this.$el.find('[name="bc_text"]').val() || '';
                 if (!name || !text.trim()) { Espo.Ui.warning('Escribe el nombre y el mensaje de la campaña.'); return; }
                 if (!this.audience) { Espo.Ui.warning('Primero pulsa «Calcular audiencia».'); return; }
+                const pol = this.policy();
+                if (pol && this.audience > pol.max) { Espo.Ui.warning(`Con WhatsApp por Evolution API cada campaña admite hasta ${pol.max} destinatarios. ${pol.support || ''}`); return; }
                 const when = parseInt(this.$el.find('[name="bc_when"]').val() || '0', 10), per = parseInt(this.$el.find('[name="bc_rate"]').val() || '20', 10);
                 const mins = Math.ceil(this.audience / per);
-                ChUi.confirm({title: 'Confirmar envío masivo', ok: 'Enviar campaña', text: `Se enviará «${name}» por ${this.channel().toUpperCase()} a ${this.audience} personas, ${per} por minuto (≈ ${mins} min). ¿Confirmas el envío?`}).then(yes => {
+                ChUi.confirm({title: 'Confirmar envío masivo', ok: 'Enviar campaña', text: pol ? `Se enviará «${name}» por WHATSAPP a ${this.audience} personas, 1 mensaje cada ${this.every(pol.every_s)} (≈ ${Math.ceil(this.audience * pol.every_s / 3600 * 10) / 10} h) para no bloquear tu línea. ¿Confirmas el envío?` : `Se enviará «${name}» por ${this.channel().toUpperCase()} a ${this.audience} personas, ${per} por minuto (≈ ${mins} min). ¿Confirmas el envío?`}).then(yes => {
                     if (!yes) { return; }
                     Espo.Ui.notify('Creando campaña…');
                     Espo.Ajax.postRequest('CrmHub/broadcast', {name, channel: this.channel(), text, filters: this.filters(), perMinute: per, footer: this.$el.find('[name="bc_footer"]').is(':checked'), startInMinutes: when})

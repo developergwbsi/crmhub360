@@ -73,6 +73,7 @@
         <button class="btn btn-primary" data-action="saveWhatsapp">Guardar</button>
         <button class="btn btn-default" data-action="testWhatsapp"><span class="fas fa-plug"></span> Probar conexión</button>
         <button class="btn btn-default" data-action="linkWhatsapp" title="Solo Evolution API"><span class="fas fa-qrcode"></span> Vincular WhatsApp (QR)</button>
+        <button class="btn btn-default" data-action="changeWhatsapp" title="Solo Evolution API: cierra la sesión del número actual y te deja escanear otro"><span class="fas fa-right-left"></span> Cambiar de número</button>
         <span class="ch-small" data-role="waStatus"></span>
       </div>
     </div>

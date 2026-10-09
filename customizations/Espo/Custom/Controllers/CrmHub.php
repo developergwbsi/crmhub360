@@ -410,6 +410,16 @@ class CrmHub
     }
 
     // ---------- WhatsApp (envío) y llamadas ----------
+    public function postActionWhatsappUnlink(Request $request): \stdClass
+    {
+        try {
+            return (object) $this->hub()->request('POST', '/v1/whatsapp/unlink', []);
+        } catch (\RuntimeException $e) {
+            preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
+            throw new BadRequest($m[1] ?? 'No se pudo desvincular el número.');
+        }
+    }
+
     public function postActionWhatsappQr(Request $request): \stdClass
     {
         try {

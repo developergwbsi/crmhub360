@@ -13,7 +13,20 @@ log = logging.getLogger("crmhub.broadcast")
 CHANNELS = {"whatsapp": "WhatsApp", "sms": "SMS", "telegram": "Telegram"}
 MAX_AUDIENCE = 5000
 LIMITS = {"whatsapp": 120, "sms": 600, "telegram": 300}
+# WhatsApp por Evolution API (no oficial): para no poner en riesgo la línea se limita el tamaño de cada campaña y se envía muy despacio.
+# Por defecto 100 destinatarios por campaña y un mensaje cada 2 minutos en toda la empresa; el Centro de control puede ampliarlo (settings.limits.wa_bulk).
+WA_MAX, WA_EVERY = 100, 120
+SUPPORT_HINT = "Si necesitas enviar más, contacta con soporte de Crm Hub 360."
+_last_wa: dict[str, float] = {}
 FOOTER = {"whatsapp": "\nPara no recibir más mensajes responde BAJA.", "sms": " Responde BAJA para no recibir mas.", "telegram": "\nPara no recibir más mensajes responde BAJA."}
+
+
+def policy(tenant: dict, channel: str) -> dict | None:
+    """Reglas de ritmo del WhatsApp no oficial (Evolution); None para el resto de canales y proveedores."""
+    if channel != "whatsapp" or whatsapp.provider(tenant) != "evolution":
+        return None
+    lim = ((tenant.get("settings") or {}).get("limits") or {}).get("wa_bulk") or {}
+    return {"max": max(10, int(lim.get("max") or WA_MAX)), "every_s": max(30, int(lim.get("every_s") or WA_EVERY))}
 
 
 def configured(tenant: dict, channel: str) -> bool:
@@ -41,7 +54,13 @@ def create(tenant: dict, *, name: str, channel: str, text: str, lead_ids: list[s
         raise ValueError("La audiencia está vacía.")
     if len(ids) > MAX_AUDIENCE:
         raise ValueError(f"La audiencia supera el máximo de {MAX_AUDIENCE} destinatarios por campaña.")
-    per_minute = max(1, min(int(per_minute or 20), LIMITS[channel]))
+    pol = policy(tenant, channel)
+    if pol:
+        if len(ids) > pol["max"]:
+            raise ValueError(f"Con WhatsApp por Evolution API cada campaña admite hasta {pol['max']} destinatarios, para no poner en riesgo tu línea (hoy son {len(ids)}). {SUPPORT_HINT}")
+        per_minute = 1   # el ritmo real lo manda la política (un mensaje cada pocos minutos)
+    else:
+        per_minute = max(1, min(int(per_minute or 20), LIMITS[channel]))
     if footer and "BAJA" not in text.upper():
         text += FOOTER[channel]
     with db.pool.connection() as c:
@@ -111,13 +130,29 @@ async def tick() -> None:
         tenant = db.get_tenant(b["tenant"])
         if not tenant or tenant["status"] != "active":
             continue
+        pol = policy(tenant, b["channel"])
+        if pol:   # una sola línea: ninguna campaña de la empresa envía antes de que pase el intervalo desde el último mensaje
+            last = _last_wa.get(b["tenant"])
+            if last is None:
+                with db.pool.connection() as c:
+                    r = c.execute("""SELECT extract(epoch FROM now() - max(i.sent_at)) AS ago FROM broadcast_items i JOIN broadcasts x ON x.id = i.broadcast_id
+                                     WHERE x.tenant = %s AND x.channel = 'whatsapp' AND i.sent_at IS NOT NULL""", (b["tenant"],)).fetchone()
+                last = time.monotonic() - float(r["ago"]) if r and r["ago"] is not None else time.monotonic() - 10 ** 6
+                _last_wa[b["tenant"]] = last
+            wait = pol["every_s"] - (time.monotonic() - last)
+            if wait > 0:
+                with db.pool.connection() as c:
+                    c.execute("UPDATE broadcasts SET next_send_at = now() + make_interval(secs => %s) WHERE id=%s", (wait + 0.5, b["id"]))
+                continue
         with db.pool.connection() as c:
             item = c.execute("""UPDATE broadcast_items SET status='sent' WHERE id = (SELECT id FROM broadcast_items WHERE broadcast_id=%s AND status='pending'
                                 ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, lead_id""", (b["id"],)).fetchone()
             if not item:
                 c.execute("UPDATE broadcasts SET status='done', finished_at=now() WHERE id=%s", (b["id"],))
                 continue
-            c.execute("UPDATE broadcasts SET status='running', next_send_at = now() + make_interval(secs => %s) WHERE id=%s", (60.0 / b["per_minute"], b["id"]))
+            c.execute("UPDATE broadcasts SET status='running', next_send_at = now() + make_interval(secs => %s) WHERE id=%s", (pol["every_s"] if pol else 60.0 / b["per_minute"], b["id"]))
+        if pol:
+            _last_wa[b["tenant"]] = time.monotonic()
         try:
             st, err = await _send_one(tenant, b, item)
         except Exception as e:

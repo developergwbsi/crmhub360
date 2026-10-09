@@ -11,7 +11,7 @@
     <div class="panel-body">
       {{#unless anyReady}}<div class="ch-warn">No hay ningún canal configurado. Conecta WhatsApp, SMS o Telegram en <b>Integraciones</b> primero.</div>{{/unless}}
       <div class="ch-radios">{{#each channels}}<label class="ch-radio-card {{#unless ready}}ch-off{{/unless}}"><input type="radio" name="bc_channel" value="{{key}}" {{#unless ready}}disabled{{/unless}}> <b>{{label}}</b>
-        <span class="ch-muted ch-small">{{#if ready}}hasta {{max}} por minuto{{else}}sin configurar{{/if}}</span></label>{{/each}}</div>
+        <span class="ch-muted ch-small">{{#if ready}}{{rateText}}{{else}}sin configurar{{/if}}</span></label>{{/each}}</div>
       <div class="ch-help"><b>Antes de enviar:</b> con <b>WhatsApp oficial (Meta)</b> los mensajes que inicia la empresa fuera de las 24 h requieren <b>plantillas aprobadas</b>; con una instancia no oficial (<b>Evolution</b>) el envío masivo puede hacer que bloqueen tu número, usa ritmo bajo. Envía solo a quienes <b>autorizaron</b> ser contactados (Ley 1581): quien responda <b>BAJA</b> queda excluido automáticamente.</div>
     </div>
   </div>
@@ -49,9 +49,10 @@
         <div>
           <label>Así lo verá el cliente</label><pre class="ch-pre" data-role="preview">Aquí verás cómo queda el mensaje.</pre>
           <div class="ch-cols2">
-            <div class="form-group"><label>Mensajes por minuto</label><input type="number" name="bc_rate" class="form-control" value="20" min="1"></div>
+            <div class="form-group" data-role="rateBox"><label>Mensajes por minuto</label><input type="number" name="bc_rate" class="form-control" value="20" min="1"></div>
             <div class="form-group"><label>Empezar</label><select name="bc_when" class="form-control"><option value="0">Ahora</option><option value="30">En 30 minutos</option><option value="60">En 1 hora</option><option value="240">En 4 horas</option><option value="720">En 12 horas</option><option value="1440">Mañana (24 h)</option></select></div>
           </div>
+          <div class="ch-warn" data-role="polNote" hidden></div>
         </div>
       </div>
       <div class="ch-row ch-services-actions"><button class="btn btn-default" data-action="bcCancelWizard">Volver</button><button class="btn btn-primary" data-action="bcSend"><span class="fas fa-paper-plane"></span> Crear y enviar campaña</button></div>

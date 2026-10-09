@@ -127,7 +127,7 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                 const tick = body => Espo.Ajax.postRequest('CrmHub/whatsapp/qr', {}).then(r => {
                     if (!alive) { return; }
                     if (r.connected) {
-                        body.innerHTML = '<div class="ch-qr-ok"><span class="fas fa-circle-check"></span><b>¡WhatsApp vinculado!</b><p>Ya puedes enviar y recibir mensajes desde el CRM.</p></div>';
+                        body.innerHTML = '<div class="ch-qr-ok"><span class="fas fa-circle-check"></span><b>¡WhatsApp vinculado!</b><p>Ya puedes enviar y recibir mensajes desde el CRM.</p><p class="ch-muted">¿Quieres usar otro número? Cierra este panel y pulsa «Cambiar de número».</p></div>';
                         Espo.Ui.success('WhatsApp vinculado'); this.load(true); return;
                     }
                     body.innerHTML = (r.qr ? `<div class="ch-qr"><img alt="Código QR de WhatsApp" src="${ChUi.esc(r.qr)}"></div>` : '<div class="ch-qr-wait"><span class="fas fa-spinner fa-spin"></span> Generando el código…</div>') +
@@ -141,6 +141,16 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                 });
                 ChUi.panel({title: 'Vincular WhatsApp', icon: 'fab fa-whatsapp', mount: body => { body.innerHTML = '<div class="ch-qr-wait"><span class="fas fa-spinner fa-spin"></span> Generando el código…</div>'; tick(body); }})
                     .then(() => { alive = false; clearTimeout(timer); });
+            },
+            // Cambiar el número de WhatsApp (Evolution): se cierra la sesión del número actual y se muestra el QR para escanear el nuevo
+            'click [data-action="changeWhatsapp"]': function () {
+                ChUi.confirm({title: 'Cambiar de número de WhatsApp', ok: 'Cerrar sesión y escanear otro', danger: true,
+                    html: '<p>Se cierra la sesión del número vinculado ahora: dejará de enviar y recibir mensajes desde el CRM hasta que escanees el nuevo.</p><p class="ch-muted">Tus conversaciones y leads se conservan. Ten a la mano el teléfono del nuevo número.</p>'}).then(yes => {
+                    if (!yes) { return; }
+                    Espo.Ui.notify('Cerrando la sesión…');
+                    Espo.Ajax.postRequest('CrmHub/whatsapp/unlink', {}).then(() => { Espo.Ui.notify(false); this.$el.find('[data-action="linkWhatsapp"]').trigger('click'); })
+                        .catch(xhr => { const r = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error(r || 'No se pudo cerrar la sesión del número actual'); });
+                });
             },
             'click [data-action="saveTelegram"]': function () {
                 const v = n => (this.$el.find(`[name="${n}"]`).val() || '').trim();

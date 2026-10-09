@@ -474,7 +474,7 @@ async def voice_call(req: CallReq, tenant: dict = Depends(tenant_auth)):
 @app.get("/v1/broadcasts")
 def bc_list(tenant: dict = Depends(tenant_auth)):
     return {"items": [{**b, "created_at": str(b["created_at"]), "scheduled_at": str(b["scheduled_at"]) if b["scheduled_at"] else None}
-                      for b in broadcast.listing(tenant["slug"])], "channels": {k: {"label": v, "ready": broadcast.configured(tenant, k), "max": broadcast.LIMITS[k]} for k, v in broadcast.CHANNELS.items()}}
+                      for b in broadcast.listing(tenant["slug"])], "channels": {k: {"label": v, "ready": broadcast.configured(tenant, k), "max": broadcast.LIMITS[k], "policy": broadcast.policy(tenant, k), "support": broadcast.SUPPORT_HINT} for k, v in broadcast.CHANNELS.items()}}
 
 
 @app.post("/v1/broadcasts")
@@ -644,6 +644,17 @@ async def wa_qr(tenant: dict = Depends(tenant_auth)):
         raise HTTPException(422, str(e))
     except Exception as e:
         raise HTTPException(502, f"No se pudo obtener el código QR: {e}")
+
+
+@app.post("/v1/whatsapp/unlink")
+async def wa_unlink(tenant: dict = Depends(tenant_auth)):
+    """Cierra la sesión del número vinculado (Evolution) para poder escanear otro número."""
+    try:
+        return await whatsapp.unlink(tenant)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo desvincular el número: {e}")
 
 
 class EmailSendReq(BaseModel):
