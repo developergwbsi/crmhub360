@@ -459,10 +459,17 @@
     evolution: [['url', 'URL del servidor Evolution', 'https://evolution.tudominio.com'], ['apikey', 'API key global', '', 1]],
     gupshup: [['api_key', 'API key', '', 1], ['source', 'Número de origen', '57300…'], ['app_name', 'Nombre de la app', '']],
     twilio: [['account_sid', 'Account SID', 'AC…'], ['auth_token', 'Auth token', '', 1], ['sms_from', 'Remitente de SMS (número, código corto o MG…)', ''], ['wa_from', 'Número de WhatsApp (whatsapp:+…)', ''], ['voice_from', 'Número para llamadas (caller ID)', '']],
-    ai: [['engine', 'Tipo de motor (anthropic = Claude · openai = OpenAI o compatible · ollama = local)', '', 0, ['anthropic', 'openai', 'ollama']], ['model', 'Modelo', 'claude-haiku-5-5 · gpt-4o-mini · llama3.1:8b'], ['base_url', 'Dirección de la API (opcional; vacío = la oficial del proveedor)', 'https://api.anthropic.com'], ['api_key', 'Clave de la API', '', 1]],
+    ai: [['engine', 'Formato de conexión (se rellena solo al elegir el proveedor: anthropic = Claude · openai = OpenAI y compatibles · ollama = local)', '', 0, ['anthropic', 'openai', 'ollama']], ['model', 'Modelo (el «cerebro» que responderá)', 'claude-haiku-5-5 · gpt-4o-mini · llama3.1:8b'], ['base_url', 'Dirección de la API — déjala vacía con Anthropic u OpenAI', 'https://api.groq.com/openai/v1'], ['api_key', 'Clave de la API (API key) que te da el proveedor', '', 1]],
     email: [['host', 'Servidor SMTP', 'smtp.gmail.com'], ['port', 'Puerto', '587'], ['security', 'Seguridad', '', 0, ['TLS', 'SSL', 'NONE']], ['user', 'Usuario (correo completo)', 'tucuenta@gmail.com'], ['password', 'Contraseña (en Gmail: contraseña de aplicación)', '', 1], ['from_address', 'Correo remitente', 'tucuenta@gmail.com'], ['from_name', 'Nombre del remitente', 'Crm Hub 360']],
     generic: [['url', 'URL de la API', 'https://api.proveedor.com/v1/…'], ['method', 'Método', '', 0, ['POST', 'GET']], ['auth_type', 'Autenticación', '', 0, ['none', 'bearer', 'basic', 'header']], ['auth_user', 'Usuario / nombre de la cabecera', ''], ['auth_secret', 'Token o clave', '', 1], ['body_type', 'Formato del cuerpo', '', 0, ['json', 'form', 'query']], ['body', 'Plantilla del cuerpo', '{"to":"{{to}}","text":"{{text}}"}', 0, 'area'], ['sender', 'Remitente / caller ID', '']],
   };
+  // Motores de IA: datos que se rellenan al elegir el proveedor
+  const AI_PRESETS = {anthropic: {label: 'Anthropic (Claude)', engine: 'anthropic', model: 'claude-haiku-5-5', base_url: '', help: 'Cuenta en console.anthropic.com → API Keys. La dirección se deja vacía. Modelos: claude-haiku-5-5 (rápido y barato), claude-sonnet-5-5 (más capaz).'},
+    openai: {label: 'OpenAI (ChatGPT)', engine: 'openai', model: 'gpt-4o-mini', base_url: '', help: 'Cuenta en platform.openai.com → API keys. La dirección se deja vacía.'},
+    groq: {label: 'Groq (muy rápido)', engine: 'openai', model: 'llama-3.3-70b-versatile', base_url: 'https://api.groq.com/openai/v1', help: 'Clave en console.groq.com. Usa el tipo «openai» porque es compatible.'},
+    openrouter: {label: 'OpenRouter (varios modelos)', engine: 'openai', model: 'anthropic/claude-3.5-haiku', base_url: 'https://openrouter.ai/api/v1', help: 'Clave en openrouter.ai. El modelo se escribe como «proveedor/modelo».'},
+    ollama: {label: 'Ollama (modelo en tu propio servidor)', engine: 'ollama', model: 'llama3.1:8b', base_url: 'http://127.0.0.1:11434', help: 'No necesita clave. La dirección es la de tu servidor Ollama.'},
+    other: {label: 'Otro compatible con OpenAI', engine: 'openai', model: '', base_url: '', help: 'Cualquier servicio que acepte el formato de OpenAI (Azure OpenAI, vLLM, LM Studio…). Escribe su dirección y modelo.'}};
   const fieldsFor = kind => FIELDS[kind.startsWith('generic') ? 'generic' : kind];
   async function drawProviders() {
     const main = document.getElementById('main');
@@ -470,8 +477,9 @@
     let r; try { r = await api('GET', '/providers'); } catch (e) { main.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
     state.providers = r;
     main.innerHTML = `<h2>Proveedores aliados</h2><p class="sub">Servicios que nosotros contratamos para revenderlos a las empresas: WhatsApp, SMS, llamadas. Se configuran una sola vez aquí y se asignan a cada empresa desde su panel (Servicios); la empresa no ve nuestras claves.</p>
-      <div class="bar"><button class="btn primary" id="np">+ Agregar proveedor</button></div><div class="card">${r.items.length ? `<table><thead><tr><th>Proveedor</th><th>Tipo</th><th>Canales</th><th>Empresas que lo usan</th><th></th></tr></thead><tbody>${r.items.map(p => `<tr><td><div class="name">${esc(p.name)}</div><div class="mut">${esc(p.notes || '')}</div></td><td>${esc(r.kinds[p.kind].label)}</td><td>${r.kinds[p.kind].channels.map(c => `<span class="chip info">${esc({whatsapp: 'WhatsApp', sms: 'SMS', voice: 'Llamadas', email: 'Correo', ai: 'IA'}[c])}</span>`).join(' ')}</td><td>${p.companies.length ? p.companies.map(esc).join(', ') : '<span class="mut">Ninguna</span>'}</td><td style="text-align:right;white-space:nowrap">${p.kind === 'email' ? `<button class="btn sm" data-pt="${esc(p.id)}">Probar</button> ` : ''}${p.kind === 'ai' ? `<button class="btn sm" data-ait="${esc(p.id)}">Probar</button> ${r.aiDefault === p.id ? '<span class="chip ok">Global</span>' : `<button class="btn sm" data-aid="${esc(p.id)}">Usar como global</button>`} ` : ''}<button class="btn sm" data-ed="${esc(p.id)}">Editar</button> <button class="btn sm danger" data-del="${esc(p.id)}">Eliminar</button></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Aún no hay proveedores. Agrega el primero (por ejemplo, tu cuenta de Twilio o tu servidor Evolution).</div>'}</div>`;
+      <div class="bar"><button class="btn primary" id="np">+ Agregar proveedor</button> <button class="btn" id="nai">+ Agregar motor de IA</button></div><div class="card">${r.items.length ? `<table><thead><tr><th>Proveedor</th><th>Tipo</th><th>Canales</th><th>Empresas que lo usan</th><th></th></tr></thead><tbody>${r.items.map(p => `<tr><td><div class="name">${esc(p.name)}</div><div class="mut">${esc(p.notes || '')}</div></td><td>${esc(r.kinds[p.kind].label)}</td><td>${r.kinds[p.kind].channels.map(c => `<span class="chip info">${esc({whatsapp: 'WhatsApp', sms: 'SMS', voice: 'Llamadas', email: 'Correo', ai: 'IA'}[c])}</span>`).join(' ')}</td><td>${p.companies.length ? p.companies.map(esc).join(', ') : '<span class="mut">Ninguna</span>'}</td><td style="text-align:right;white-space:nowrap">${p.kind === 'email' ? `<button class="btn sm" data-pt="${esc(p.id)}">Probar</button> ` : ''}${p.kind === 'ai' ? `<button class="btn sm" data-ait="${esc(p.id)}">Probar</button> ${r.aiDefault === p.id ? '<span class="chip ok">Global</span>' : `<button class="btn sm" data-aid="${esc(p.id)}">Usar como global</button>`} ` : ''}<button class="btn sm" data-ed="${esc(p.id)}">Editar</button> <button class="btn sm danger" data-del="${esc(p.id)}">Eliminar</button></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Aún no hay proveedores. Agrega el primero (por ejemplo, tu cuenta de Twilio o tu servidor Evolution).</div>'}</div>`;
     document.getElementById('np').onclick = () => providerDialog(null);
+    document.getElementById('nai').onclick = () => providerDialog(null, 'ai');
     main.querySelectorAll('[data-ed]').forEach(b => b.onclick = () => providerDialog(r.items.find(x => x.id === b.dataset.ed)));
     main.querySelectorAll('[data-ait]').forEach(b => b.onclick = async () => {
       b.disabled = true; b.textContent = 'Probando…';
@@ -492,22 +500,28 @@
       try { await api('DELETE', '/providers/' + b.dataset.del); toast('Proveedor eliminado'); drawProviders(); } catch (e) { toast(e.message); }
     });
   }
-  function providerDialog(p) {
-    const kinds = state.providers.kinds, cur = p ? p.kind : 'twilio';
+  function providerDialog(p, startKind) {
+    const kinds = state.providers.kinds, cur = p ? p.kind : (startKind || 'twilio');
     const m = modal(`<h3>${p ? 'Editar' : 'Agregar'} proveedor</h3><label>Tipo</label><select id="k" ${p ? 'disabled' : ''}>${Object.keys(kinds).map(k => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(kinds[k].label)}</option>`).join('')}</select>
       <label>Nombre para identificarlo</label><input id="pn" maxlength="80" value="${esc(p ? p.name : '')}" placeholder="Ej.: Twilio principal"><label>Notas (opcional)</label><input id="pt" maxlength="300" value="${esc(p ? p.notes : '')}">
       <div id="ff"></div><div class="err" id="pe" hidden></div><div class="foot"><button class="btn" data-x="n">Cancelar</button><button class="btn primary" data-x="y">Guardar</button></div>`, 'wide');
     const ff = m.el.querySelector('#ff');
     const draw = () => {
       const kind = m.el.querySelector('#k').value, f = (p && p.kind === kind) ? p.fields : {};
+      const aiHtml = kind === 'ai' ? `<label>¿Qué proveedor de IA vas a usar?</label><select id="aip"><option value="">Elige uno para rellenar los datos…</option>${Object.keys(AI_PRESETS).map(k => `<option value="${k}">${esc(AI_PRESETS[k].label)}</option>`).join('')}</select><div class="notice" id="aih">Esto es la conexión con la inteligencia artificial que usarán el comercial virtual, la lectura de documentos y el asistente. Necesitas una cuenta y una clave (API key) del proveedor que elijas.</div>` : '';
       const presetHtml = kind === 'email' ? `<label>Proveedor de correo</label><select id="mp"><option value="">Elige un proveedor…</option>${Object.keys(MAIL_PRESETS).map(k => `<option value="${k}" ${presetOf(f.host || '') === k ? 'selected' : ''}>${esc(MAIL_PRESETS[k].label)}</option>`).join('')}</select><div class="notice" id="mh" hidden></div>` : '';
-      ff.innerHTML = presetHtml + fieldsFor(kind).map(([key, label, ph, secret, opts]) => {
+      ff.innerHTML = aiHtml + presetHtml + fieldsFor(kind).map(([key, label, ph, secret, opts]) => {
         const v = f[key] == null ? '' : f[key];
         if (opts === 'area') { return `<label>${esc(label)}</label><textarea data-f="${key}" rows="3" placeholder="${esc(ph)}">${esc(v)}</textarea>`; }
         if (opts) { return `<label>${esc(label)}</label><select data-f="${key}">${opts.map(o => `<option ${o === (v || opts[0]) ? 'selected' : ''}>${o}</option>`).join('')}</select>`; }
         const set = secret && f[key + '_set'];
         return `<label>${esc(label)} ${set ? `<span class="mut">(guardada ${esc(f[key + '_hint'])}; vacía = conservar)</span>` : ''}</label><input data-f="${key}" ${secret ? 'type="password" autocomplete="new-password"' : ''} value="${secret ? '' : esc(v)}" placeholder="${esc(ph)}">`;
       }).join('');
+      const aip = ff.querySelector('#aip');
+      if (aip) {
+        const fld = n => ff.querySelector(`[data-f="${n}"]`);
+        aip.onchange = () => { const pr = AI_PRESETS[aip.value]; if (!pr) { return; } fld('engine').value = pr.engine; fld('model').value = pr.model; fld('base_url').value = pr.base_url; const h = ff.querySelector('#aih'); h.textContent = pr.help; const nm = m.el.querySelector('#pn'); if (!nm.value.trim()) { nm.value = pr.label; } };
+      }
       const mp = ff.querySelector('#mp');
       if (mp) {
         const fld = n => ff.querySelector(`[data-f="${n}"]`), help = () => { const pr = MAIL_PRESETS[mp.value] || {}, h = ff.querySelector('#mh'); h.innerHTML = pr.help || ''; h.hidden = !pr.help; };
