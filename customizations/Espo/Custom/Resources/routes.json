@@ -404,5 +404,29 @@
             "controller": "CrmHub",
             "action": "thread"
         }
+    },
+    {
+        "route": "/CrmHub/templates",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "templates"
+        }
+    },
+    {
+        "route": "/CrmHub/templateSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "templateSave"
+        }
+    },
+    {
+        "route": "/CrmHub/templateDelete",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "templateDelete"
+        }
     }
 ]

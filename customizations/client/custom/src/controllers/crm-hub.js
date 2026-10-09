@@ -22,6 +22,10 @@ define('custom:controllers/crm-hub', ['controller'], function (Dep) {
             this.main('custom:views/knowledge', {});
         }
 
+        actionPlantillas() {
+            this.main('custom:views/my-templates', {});
+        }
+
         actionAsignacion() {
             if (!this.getUser().isAdmin()) { this.error403(); return; }
             this.main('custom:views/assignment', {});

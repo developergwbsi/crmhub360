@@ -990,4 +990,39 @@ class CrmHub
         return (object) ['leadId' => $lead->getId(), 'phone' => $phone ?: (string) $lead->get('phoneNumber'), 'email' => $email ?: (string) $lead->get('emailAddress'),
             'name' => (string) ($rec->get('name') ?: $lead->get('name')), 'telegramUsername' => (string) $lead->get('telegramUsername'), 'telegramChatId' => (string) $lead->get('telegramChatId')];
     }
+
+    // ---------- Plantillas personales de cada usuario (hasta 10 por canal) ----------
+    public function getActionTemplates(Request $request): \stdClass
+    {
+        $this->simGuard();
+        return (object) $this->hubAny('GET', '/v1/tpl?userId=' . rawurlencode($this->user->getId()));
+    }
+
+    public function postActionTemplateSave(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        $channel = (string) ($d->channel ?? '');
+        $body = (string) ($d->body ?? '');
+        try {
+            return (object) (new HubClient($this->config))->request('POST', '/v1/tpl', [
+                'userId' => $this->user->getId(), 'channel' => $channel, 'name' => (string) ($d->name ?? ''), 'subject' => (string) ($d->subject ?? ''),
+                'body' => $channel === 'email' ? $this->cleanHtml($body) : $body, 'id' => !empty($d->id) ? (int) $d->id : null,
+            ], 20);
+        } catch (\RuntimeException $e) {
+            preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
+            throw new BadRequest(isset($m[1]) ? json_decode('"' . $m[1] . '"') : 'No se pudo guardar la plantilla.');
+        }
+    }
+
+    public function postActionTemplateDelete(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        try {
+            return (object) (new HubClient($this->config))->request('DELETE', '/v1/tpl/' . (int) ($d->id ?? 0) . '?userId=' . rawurlencode($this->user->getId()), null, 20);
+        } catch (\RuntimeException $e) {
+            throw new BadRequest('No se pudo eliminar la plantilla.');
+        }
+    }
 }

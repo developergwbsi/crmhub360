@@ -724,3 +724,22 @@ body.minimized #navbar .navbar-brand.ch-has-brand .ch-brand { display: none; }
 .ch-kb-v { text-align: right; } .ch-kb-v small { color: var(--ch-muted); }
 .ch-kb-list { margin: 0; padding-left: 18px; } .ch-kb-list li { margin: 4px 0; } .ch-kb-ai { white-space: pre-wrap; line-height: 1.55; }
 .ch-kb-note { border-top: 1px solid var(--ch-line); padding: 8px 0; } .ch-kb-note small { color: var(--ch-muted); } .ch-kb-note a { cursor: pointer; color: var(--ch-muted); margin-left: 8px; }
+
+/* Mis plantillas */
+.ch-tpl-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.ch-tpl-tab { cursor: pointer; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--ch-line); background: var(--ch-surface); color: var(--ch-ink); }
+.ch-tpl-tab.on { background: var(--ch-primary, #4f63e8); color: #fff; border-color: transparent; } .ch-tpl-tab small { opacity: .7; margin-left: 4px; } .ch-tpl-tab:hover { text-decoration: none; }
+.ch-tpl-item { display: flex; align-items: center; border: 1px solid var(--ch-line); border-radius: 12px; margin: 6px 0; background: var(--ch-surface); }
+.ch-tpl-item.on { border-color: var(--ch-primary, #4f63e8); background: var(--ch-soft); }
+.ch-tpl-item > a:first-child { flex: 1; min-width: 0; padding: 8px 12px; cursor: pointer; color: var(--ch-ink); display: flex; flex-direction: column; text-decoration: none; }
+.ch-tpl-item span { font-size: 12.5px; color: var(--ch-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ch-tpl-del { padding: 8px 12px; color: var(--ch-muted); cursor: pointer; }
+.ch-var-row { margin: 8px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; } .ch-var { cursor: pointer; padding: 2px 9px; border-radius: 999px; background: var(--ch-soft); border: 1px solid var(--ch-line); font-size: 12px; color: var(--ch-ink); }
+.ch-tpl-prev { margin-top: 12px; border-top: 1px dashed var(--ch-line-strong); padding-top: 10px; }
+.ch-prev-msg { background: #e7f6ec; color: #11331f; border-radius: 12px 12px 12px 3px; padding: 8px 12px; max-width: 420px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ch-prev-mail { border: 1px solid var(--ch-line); border-radius: 10px; padding: 10px 12px; background: #fff; color: #161b2e; }
+.ch-sim-card textarea[data-f] { resize: vertical; }
+.ch-tpl-pop { position: absolute; bottom: 100%; left: 0; z-index: 30; width: min(320px, 92%); max-height: 260px; overflow-y: auto; background: var(--ch-surface); border: 1px solid var(--ch-line); border-radius: 12px; box-shadow: 0 10px 30px rgba(15, 20, 40, .2); padding: 6px; }
+.ch-tpl-pop a { display: block; padding: 7px 10px; border-radius: 8px; cursor: pointer; color: var(--ch-ink); text-decoration: none; } .ch-tpl-pop a:hover { background: var(--ch-soft); } .ch-tpl-pop a span { display: block; font-size: 12px; color: var(--ch-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ch-chat-tools { position: relative; }
+.ch-tpl.mine { border-color: var(--ch-primary, #4f63e8); } .ch-tpl.mine .fas { color: #8b5cf6; }

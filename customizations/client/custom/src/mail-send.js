@@ -44,7 +44,11 @@ define('custom:mail-send', [], function () {
             status: 'Sending', from: ch.emailFrom || undefined, parentType: o.parentType || undefined, parentId: o.parentId || undefined});
     }
 
-    function reason(xhr) { return (xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || 'No se pudo enviar el correo. Revisa la configuración de correo de la empresa.'; }
+    function reason(xhr) {
+        let s = (xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || '';
+        for (let i = 0; i < 2 && /[\u00c2\u00c3]/.test(s); i++) { try { s = decodeURIComponent(escape(s)); } catch (e) { break; } }   // la cabecera llega como Latin-1
+        return s || 'No se pudo enviar el correo. Revisa la configuración de correo de la empresa.';
+    }
 
     return {toText, editorMarkup, mountEditor, quoteHtml, signature, send, reason};
 });

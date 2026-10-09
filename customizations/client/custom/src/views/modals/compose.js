@@ -1,5 +1,5 @@
 // Redactar correo (botón «Nuevo», «Responder», «Reenviar»): panel lateral que envía como el usuario, con su nombre y su firma.
-define('custom:views/modals/compose', ['views/modal', 'custom:ui', 'custom:split', 'custom:mail-send'], function (Dep, ChUi, Split, MailSend) {
+define('custom:views/modals/compose', ['views/modal', 'custom:ui', 'custom:split', 'custom:mail-send', 'custom:tpl'], function (Dep, ChUi, Split, MailSend, Tpl) {
     return class extends Dep {
         className = 'dialog ch-ch-panel ch-mail-modal'
         backdrop = false
@@ -9,6 +9,7 @@ define('custom:views/modals/compose', ['views/modal', 'custom:ui', 'custom:split
             'click [data-action="sendMail"]': function () { this.send(); },
             'click [data-action="cancelMail"]': function () { this.close(); },
             'click [data-action="pickTpl"]': function (e) { this.applyTemplate(e.currentTarget.dataset.id); },
+            'click [data-action="pickMine"]': function (e) { this.applyMine(e.currentTarget.dataset.id); },
         }
 
         setup() {
@@ -36,11 +37,20 @@ define('custom:views/modals/compose', ['views/modal', 'custom:ui', 'custom:split
                 '<div class="ch-mail-actions"><button type="button" class="btn btn-primary btn-sm" data-action="sendMail"><span class="fas fa-paper-plane"></span> Enviar</button><button type="button" class="btn btn-default btn-sm" data-action="cancelMail">Cancelar</button></div></div>';
             MailSend.mountEditor(this.el); if (quoted) { this.el.querySelector('[name="body"]').value = quoted; }
             MailSend.signature().then(r => { const s = this.el.querySelector('[data-role="sig"]'); if (s) { s.innerHTML = '<div class="ch-sig-h">Se envía como <b>' + ChUi.esc(r.name || '') + '</b> con esta firma:</div>' + (r.html || ''); } });
-            Espo.Ajax.getRequest('EmailTemplate', {maxSize: 60, orderBy: 'name', select: 'name,subject'}).then(r => {
+            Promise.all([Espo.Ajax.getRequest('EmailTemplate', {maxSize: 60, orderBy: 'name', select: 'name,subject'}).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } return {list: []}; }), Tpl.load()]).then(([r, t]) => {
                 const box = this.el.querySelector('[data-role="tpls"]'); if (!box) { return; }
-                box.innerHTML = (r.list || []).map(x => `<button type="button" class="ch-tpl" data-action="pickTpl" data-id="${ChUi.esc(x.id)}" title="${ChUi.esc(x.subject || '')}"><span class="fas fa-file-lines"></span><b>${ChUi.esc(x.name)}</b></button>`).join('') || '<span class="ch-muted">Sin plantillas.</span>';
-            }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
+                this.mine = Tpl.forChannel(t, 'email');
+                const chips = (mine, shared) => mine.map(x => `<button type="button" class="ch-tpl mine" data-action="pickMine" data-id="${x.id}" title="Mi plantilla"><span class="fas fa-user"></span><b>${ChUi.esc(x.name)}</b></button>`).join('') +
+                    shared.map(x => `<button type="button" class="ch-tpl" data-action="pickTpl" data-id="${ChUi.esc(x.id)}" title="${ChUi.esc(x.subject || '')}"><span class="fas fa-file-lines"></span><b>${ChUi.esc(x.name)}</b></button>`).join('');
+                box.innerHTML = chips(this.mine, r.list || []) || '<span class="ch-muted">Sin plantillas. Crea las tuyas en «Mis plantillas».</span>';
+            });
             setTimeout(() => { const f = this.el.querySelector(to ? '[name="subject"]' : '[name="to"]'); f && f.focus(); }, 120);
+        }
+
+        applyMine(id) {
+            const t = (this.mine || []).find(x => String(x.id) === String(id)); if (!t) { return; }
+            const v = Tpl.vars(this.attrs.name || '', this.getUser().get('name'), this.getConfig().get('applicationName'));
+            this.el.querySelector('[name="subject"]').value = Tpl.fill(t.subject, v); this.el.querySelector('[name="body"]').value = Tpl.fill(t.body, v);
         }
 
         applyTemplate(id) {

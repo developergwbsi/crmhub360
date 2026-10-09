@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge
+from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -24,6 +24,7 @@ async def lifespan(_: FastAPI):
     db.pool.open()
     push.keys()  # crea las claves VAPID la primera vez
     simulate.ensure_schema()
+    templates.ensure_schema()
     bg = asyncio.create_task(broadcast.worker())
     mb = asyncio.create_task(mailbox.worker())
     yield
@@ -780,6 +781,40 @@ async def kb_note(req: NoteReq, tenant: dict = Depends(tenant_auth)):
 async def kb_note_delete(note_id: int, userId: str = "", tenant: dict = Depends(tenant_auth)):
     if not knowledge.delete_note(tenant["slug"], note_id, userId or None):
         raise HTTPException(404, "Nota no encontrada")
+    return {"ok": True}
+
+
+# ---------------- plantillas personales (correo, WhatsApp, Telegram, SMS) ----------------
+class TplReq(BaseModel):
+    userId: str
+    channel: str
+    name: str
+    subject: str = ""
+    body: str
+    id: int | None = None
+
+
+@app.get("/v1/tpl")
+async def tpl_list(userId: str, tenant: dict = Depends(tenant_auth)):
+    return templates.list_for(tenant["slug"], userId)
+
+
+@app.post("/v1/tpl")
+async def tpl_save(req: TplReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return templates.save(tenant["slug"], req.userId, req.model_dump())
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except PermissionError as e:
+        raise HTTPException(409, str(e))
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.delete("/v1/tpl/{tid}")
+async def tpl_delete(tid: int, userId: str, tenant: dict = Depends(tenant_auth)):
+    if not templates.delete(tenant["slug"], userId, tid):
+        raise HTTPException(404, "Plantilla no encontrada.")
     return {"ok": True}
 
 

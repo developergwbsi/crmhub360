@@ -1,5 +1,5 @@
 // Conversación con el lead por WhatsApp, Telegram o SMS, con aspecto de app de mensajería.
-define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:split'], function (Dep, ChUi, Split) {
+define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:split', 'custom:tpl'], function (Dep, ChUi, Split, Tpl) {
     const META = {
         whatsapp: {title: 'WhatsApp', icon: 'fab fa-whatsapp', color: '#25d366'},
         telegram: {title: 'Telegram', icon: 'fab fa-telegram', color: '#229ed9'},
@@ -15,6 +15,8 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
             'keydown [name="text"]': function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); this.send(); } },
             'click [data-action="send"]': function () { this.send(); },
             'click [data-action="aiDraft"]': function () { this.aiDraft(); },
+            'click [data-action="myTpls"]': function (e) { e.stopPropagation(); this.toggleTpls(); },
+            'click [data-action="pickMine"]': function (e) { this.useTpl(e.currentTarget.dataset.id); },
             'click [data-action="copyLink"]': function () {
                 (navigator.clipboard ? navigator.clipboard.writeText(this.inviteLink) : Promise.reject()).then(() => Espo.Ui.success('Enlace copiado')).catch(() => { const i = this.el.querySelector('.ch-chat-invite input'); i && i.select(); Espo.Ui.warning('Cópialo manualmente (Ctrl+C)'); });
             },
@@ -93,9 +95,31 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
             foot.innerHTML = '<div class="ch-chat-composer"><div class="ch-chat-err" hidden></div>' +
                 '<div class="ch-chat-row"><textarea name="text" rows="1" maxlength="4000" placeholder="Escribe un mensaje…"></textarea>' +
                 '<button type="button" class="ch-chat-send" data-action="send" title="Enviar" style="background:' + this.meta.color + '"><span class="fas fa-paper-plane"></span></button></div>' +
-                '<div class="ch-chat-tools"><button type="button" class="btn btn-default btn-xs" data-action="aiDraft"><span class="fas fa-wand-magic-sparkles"></span> Sugerir con IA</button>' +
+                '<div class="ch-chat-tools"><button type="button" class="btn btn-default btn-xs" data-action="myTpls"><span class="far fa-file-lines"></span> Mis plantillas</button> <button type="button" class="btn btn-default btn-xs" data-action="aiDraft"><span class="fas fa-wand-magic-sparkles"></span> Sugerir con IA</button>' +
                 '<span class="ch-chat-counter"></span></div></div>';
             setTimeout(() => { const t = this.el.querySelector('[name="text"]'); t && t.focus(); }, 100);
+        }
+
+        // Plantillas personales de este canal: se rellenan con el nombre del cliente, el asesor y la empresa; siguen siendo editables antes de enviar
+        toggleTpls() {
+            const tools = this.el.querySelector('.ch-chat-tools'), open = tools.querySelector('.ch-tpl-pop');
+            if (open) { open.remove(); return; }
+            Tpl.load().then(r => {
+                const list = Tpl.forChannel(r, this.channel), pop = document.createElement('div'); pop.className = 'ch-tpl-pop';
+                this.tplList = list;
+                pop.innerHTML = list.map(t => `<a data-action="pickMine" data-id="${t.id}"><b>${ChUi.esc(t.name)}</b><span>${ChUi.esc(String(t.body).slice(0, 80))}</span></a>`).join('') ||
+                    '<div class="ch-muted" style="padding:8px 10px">Aún no tienes plantillas de este canal. <a href="#CrmHub/plantillas">Crear una</a></div>';
+                tools.appendChild(pop);
+                const close = ev => { if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('click', close); } };
+                setTimeout(() => document.addEventListener('click', close), 0);
+            });
+        }
+
+        useTpl(id) {
+            const t = (this.tplList || []).find(x => String(x.id) === String(id)); if (!t) { return; }
+            const v = Tpl.vars(this.options.name, this.getUser().get('name'), this.getConfig().get('applicationName'));
+            const ta = this.el.querySelector('[name="text"]'); ta.value = Tpl.fill(t.body, v); this.autosize(); this.counter(); ta.focus();
+            const pop = this.el.querySelector('.ch-tpl-pop'); if (pop) { pop.remove(); }
         }
 
         autosize() { const t = this.el.querySelector('[name="text"]'); t.style.height = 'auto'; t.style.height = Math.min(140, t.scrollHeight) + 'px'; }
