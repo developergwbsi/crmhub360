@@ -62,7 +62,7 @@
 <div class="panel panel-default">
   <div class="panel-heading"><h4 class="panel-title">Campañas</h4></div>
   <div class="panel-body">
-    <table class="table table-bordered ch-table"><thead><tr><th>Campaña</th><th>Canal</th><th>Estado</th><th>Avance</th><th></th></tr></thead><tbody class="ch-bc-list"></tbody></table>
+    <table class="table table-bordered ch-table" data-ch-table><thead><tr><th>Campaña</th><th>Canal</th><th>Estado</th><th>Avance</th><th></th></tr></thead><tbody class="ch-bc-list"></tbody></table>
   </div>
 </div>
 {{/if}}

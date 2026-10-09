@@ -68,7 +68,7 @@ define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (
         }
 
         runsHtml() {
-            return `<div class="ch-sim-card"><table class="table ch-proc-runs"><thead><tr><th>Cuándo</th><th>Proceso</th><th>Lead</th><th>Resultado</th><th>Detalle</th></tr></thead><tbody>` +
+            return `<div class="ch-sim-card"><table class="table ch-proc-runs" data-ch-table><thead><tr><th>Cuándo</th><th>Proceso</th><th>Lead</th><th>Resultado</th><th>Detalle</th></tr></thead><tbody>` +
                 (this.runs.map(r => { const s = ST[r.status] || ST.info;
                     return `<tr><td>${esc(fmt(r.started_at))}</td><td>${esc(r.process_name)}</td><td><a href="#Lead/view/${esc(r.lead_id)}">Abrir lead</a></td><td><span class="ch-ah-chip st-${s[1]}">${s[0]}${r.http_status ? ' · ' + r.http_status : ''}</span></td><td>${esc(r.error || (r.applied || []).map(a => a.to + ': ' + a.value).join(' · '))}</td></tr>`; }).join('') || '<tr><td colspan="5">' + ChUi.empty({kind: 'calendar', title: 'Aún no se ha ejecutado ningún proceso', text: 'Cuando llegue un lead aparecerá aquí cada ejecución.', compact: true}) + '</td></tr>') + '</tbody></table></div>';
         }
