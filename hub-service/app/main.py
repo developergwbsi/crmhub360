@@ -849,13 +849,13 @@ class ProcTriggerReq(BaseModel):
 
 @app.get("/v1/processes")
 async def proc_list(tenant: dict = Depends(tenant_auth)):
-    return {"processes": processes.public(processes.load(tenant)), "fields": list(processes.FIELDS), "max": processes.MAX_PROCESSES}
+    return {"processes": processes.public(processes.load(tenant)), "fields": list(processes.FIELDS), "max": processes.MAX_PROCESSES, "catalog": processes.catalog(tenant)}
 
 
 @app.put("/v1/processes")
 async def proc_save(req: ProcSaveReq, tenant: dict = Depends(tenant_auth)):
     try:
-        new = processes.clean(req.processes, processes.load(tenant))
+        new = processes.clean(req.processes, processes.load(tenant), processes.assigned(tenant))
     except ValueError as e:
         raise HTTPException(422, str(e))
     with db.pool.connection() as c:
@@ -867,7 +867,7 @@ async def proc_save(req: ProcSaveReq, tenant: dict = Depends(tenant_auth)):
 async def proc_test(req: ProcTestReq, tenant: dict = Depends(tenant_auth)):
     """Prueba una definición contra un lead real (o datos de ejemplo) sin guardar nada en el lead."""
     try:
-        proc = processes.clean([req.process], processes.load(tenant))[0]
+        proc = processes.clean([req.process], processes.load(tenant), processes.assigned(tenant))[0]
     except ValueError as e:
         raise HTTPException(422, str(e))
     if req.leadId:

@@ -1054,6 +1054,7 @@ class ServicesReq(BaseModel):
     voice: Optional[dict] = None
     mail: Optional[str] = None            # 'shared' | 'own'
     cartera: Optional[bool] = None        # módulo «Cartera y cobranza» (tarjetas de deuda y mora)
+    lookups: Optional[list] = None        # servicios de consulta del sistema habilitados para la empresa
     templates: Optional[int] = None       # plantillas personales por usuario y canal (10 incluidas; más es un servicio adicional)
 
 
@@ -1148,7 +1149,7 @@ async def get_services(slug: str, actor: str = Depends(me)):
             cartera = bool((await c.get("/Settings")).json().get("crmhubCartera"))
     except Exception:
         cartera = False
-    return {"cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10), "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
+    return {"lookups": list(((t["settings"] or {}).get("lookups")) or []), "lookupCatalog": [{"id": l["id"], "name": l["name"], "category": l.get("category", "otro")} for l in lookups_list()], "cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10), "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
             "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
 
 
@@ -1194,6 +1195,11 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
     if req.mail in ("shared", "own") or (req.mail or "").startswith("p"):
         await set_company_mail(t, req.mail)
         sv["mail"] = req.mail
+    if req.lookups is not None:
+        known = {l["id"] for l in lookups_list()}
+        ids = [str(i) for i in req.lookups if str(i) in known]
+        with db() as c3:
+            c3.execute("UPDATE tenants SET settings = jsonb_set(settings, '{lookups}', %s::jsonb, true) WHERE slug=%s", (json.dumps(ids), slug))
     if req.templates is not None:
         if not 10 <= req.templates <= 500:
             raise HTTPException(400, "El límite de plantillas va de 10 (incluidas) a 500")
@@ -1209,6 +1215,98 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
     put_setting("services:" + slug, sv)
     audit(actor, "asignar_servicios", slug, {"servicios": {k: (v or {}).get("provider") if isinstance(v, dict) else v for k, v in sv.items()}, "plantillas_por_canal": req.templates})
     return {"ok": True, "notes": notes}
+
+
+# ---------------------------------------------------------------- servicios de consulta (buró de crédito, validación de identidad, scraping…)
+LOOKUP_CATEGORIES = {"buro": "Buró de crédito", "identidad": "Validación de identidad", "scraping": "Web scraping", "otro": "Otro servicio"}
+LOOKUP_TARGETS = {"note", "status", "field:creditScore", "field:totalDebt", "field:overdueDebt", "field:monthlyIncome", "field:creditorCount", "field:maxDaysOverdue", "field:defaultCount",
+                  "field:identificationType", "field:processResult", "field:description"}
+
+
+def lookups_list() -> list:
+    return get_setting("lookups", []) or []
+
+
+def mask_lookup(l: dict) -> dict:
+    h = dict(l.get("http") or {})
+    s = h.pop("auth_secret", "")
+    h["secretSet"] = bool(s)
+    h["secretHint"] = ("…" + s[-4:]) if s else ""
+    return {**l, "http": h}
+
+
+@app.get("/api/lookups")
+def list_lookups(actor: str = Depends(me)):
+    with db() as c:
+        trows = c.execute("SELECT slug, settings FROM tenants").fetchall()
+        try:
+            usage = c.execute("SELECT tenant, managed_id, count(*) FILTER (WHERE status='ok') AS ok, count(*) AS total FROM process_runs WHERE managed_id IS NOT NULL "
+                              "AND started_at >= date_trunc('month', now()) GROUP BY 1, 2").fetchall()
+        except Exception:
+            usage = []
+    uses: dict = {}
+    for r in trows:
+        for lid in ((r["settings"] or {}).get("lookups") or []):
+            uses.setdefault(lid, []).append(r["slug"])
+    cnt: dict = {}
+    for u in usage:
+        cnt.setdefault(u["managed_id"], {})[u["tenant"]] = {"ok": u["ok"], "total": u["total"]}
+    return {"categories": LOOKUP_CATEGORIES, "targets": sorted(LOOKUP_TARGETS),
+            "items": [dict(mask_lookup(l), companies=sorted(uses.get(l["id"], [])), usage=cnt.get(l["id"], {})) for l in lookups_list()]}
+
+
+class LookupReq(BaseModel):
+    name: str = Field(min_length=2, max_length=80)
+    category: str = "otro"
+    description: str = Field("", max_length=400)
+    unit_price: str = Field("", max_length=40)
+    enabled: bool = True
+    http: dict = {}
+    map: list = []
+
+
+@app.put("/api/lookups/{lid}")
+def put_lookup(lid: str, req: LookupReq, actor: str = Depends(me)):
+    items = lookups_list()
+    old = next((l for l in items if l["id"] == lid), None)
+    if lid != "new" and not old:
+        raise HTTPException(404, "Servicio inexistente")
+    h = req.http or {}
+    url = str(h.get("url", "")).strip()[:500]
+    if not re.match(r"^https?://", url.replace("{{", "x").replace("}}", "x")):
+        raise HTTPException(400, "La URL debe empezar por http:// o https://")
+    hdr = str(h.get("headers", "")).strip()
+    if hdr:
+        try:
+            v = json.loads(hdr)
+            assert isinstance(v, dict)
+        except Exception:
+            raise HTTPException(400, "Las cabeceras deben ser un JSON de pares clave/valor")
+    secret = str(h.get("auth_secret", ""))[:500] or ((old or {}).get("http") or {}).get("auth_secret", "")
+    http = {"url": url, "method": h.get("method") if h.get("method") in ("POST", "GET", "PUT") else "POST", "body_type": h.get("body_type") if h.get("body_type") in ("json", "form", "query") else "json",
+            "body": str(h.get("body", ""))[:4000], "auth_type": h.get("auth_type") if h.get("auth_type") in ("none", "basic", "bearer", "header") else "none",
+            "auth_user": str(h.get("auth_user", ""))[:200], "auth_header": str(h.get("auth_header", ""))[:80], "auth_secret": secret, "headers": hdr[:1500]}
+    rows = []
+    for r in (req.map or [])[:20]:
+        path, to = str(r.get("path", "")).strip()[:120], str(r.get("to", ""))
+        if path and to in LOOKUP_TARGETS:
+            rows.append({"path": path, "to": to})
+    item = {"id": old["id"] if old else "l" + secrets.token_hex(4), "name": req.name.strip(), "category": req.category if req.category in LOOKUP_CATEGORIES else "otro",
+            "description": req.description.strip(), "unit_price": req.unit_price.strip(), "enabled": req.enabled, "http": http, "map": rows}
+    put_setting("lookups", [item if l["id"] == item["id"] else l for l in items] if old else items + [item])
+    audit(actor, "servicio_consulta", None, {"nombre": item["name"], "categoria": item["category"]})
+    return {"ok": True, "id": item["id"]}
+
+
+@app.delete("/api/lookups/{lid}")
+def delete_lookup(lid: str, actor: str = Depends(me)):
+    with db() as c:
+        used = [r["slug"] for r in c.execute("SELECT slug, settings FROM tenants").fetchall() if lid in ((r["settings"] or {}).get("lookups") or [])]
+    if used:
+        raise HTTPException(409, "Lo usan estas empresas: " + ", ".join(used) + ". Quítalo primero de cada una (panel Servicios).")
+    put_setting("lookups", [l for l in lookups_list() if l["id"] != lid])
+    audit(actor, "eliminar_servicio_consulta", None, {"id": lid})
+    return {"ok": True}
 
 
 # ---------------------------------------------------------------- interfaz

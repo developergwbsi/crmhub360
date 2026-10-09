@@ -120,7 +120,7 @@
   function shell() {
     $app.innerHTML = `<div class="top"><div class="brand"><i>◆</i><span>Crm Hub 360 <small>· Centro de control</small></span></div><span class="grow"></span>
       <button class="btn sm" id="acc"><span id="who">Mi cuenta</span></button><button class="btn sm" id="out">Salir</button></div>
-      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="actividad">Actividad</button></div>
+      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="actividad">Actividad</button></div>
       <main id="main"></main>`;
     document.getElementById('acc').onclick = accountDialog;
     document.getElementById('out').onclick = async () => { try { await api('POST', '/logout'); } catch (e) { /* ya cerrada */ } renderLogin(); };
@@ -128,7 +128,7 @@
   }
   function draw() {
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.t === state.tab));
-    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, correo: drawMail, bienvenida: drawTemplates, actividad: drawActivity}[state.tab])();
+    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, servicios: drawLookups, correo: drawMail, bienvenida: drawTemplates, actividad: drawActivity}[state.tab])();
   }
 
   // ---------- empresas
@@ -516,6 +516,52 @@
     };
   }
 
+  // ---------- servicios de consulta: buró de crédito, validación de identidad, scraping… los definimos aquí y se habilitan por empresa
+  const TARGET_LABEL = {note: 'Nota en el historial', status: 'Estado del lead', 'field:creditScore': 'Campo: Puntaje de crédito', 'field:totalDebt': 'Campo: Deuda total', 'field:overdueDebt': 'Campo: Deuda en mora', 'field:monthlyIncome': 'Campo: Ingresos mensuales',
+    'field:creditorCount': 'Campo: Cantidad de acreedores', 'field:maxDaysOverdue': 'Campo: Máx. días de mora', 'field:defaultCount': 'Campo: Obligaciones castigadas', 'field:identificationType': 'Campo: Tipo de documento', 'field:processResult': 'Campo: Resultado de procesos', 'field:description': 'Campo: Descripción'};
+  async function drawLookups() {
+    const main = document.getElementById('main');
+    main.innerHTML = '<h2>Servicios de consulta</h2><p class="sub">Cargando…</p>';
+    let r; try { r = await api('GET', '/lookups'); } catch (e) { main.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
+    state.lookups = r;
+    main.innerHTML = `<h2>Servicios de consulta</h2><p class="sub">Consultas que nosotros ofrecemos a las empresas: buró de crédito, validación de identidad, web scraping y más. Defines aquí la dirección de la API, las credenciales (que la empresa nunca ve) y qué datos se guardan por defecto; después las habilitas por empresa desde su panel (Servicios). La empresa las usa desde «Procesos de leads».</p>
+      <div class="bar"><button class="btn primary" id="nl">+ Agregar servicio</button></div><div class="card">${r.items.length ? `<table><thead><tr><th>Servicio</th><th>Categoría</th><th>Precio por consulta</th><th>Empresas y consultas del mes</th><th></th></tr></thead><tbody>${r.items.map(l => `<tr><td><div class="name">${esc(l.name)} ${l.enabled ? '' : '<span class="mut">(desactivado)</span>'}</div><div class="mut">${esc(l.description)}</div></td><td>${esc(r.categories[l.category] || l.category)}</td><td>${esc(l.unit_price || '—')}</td><td>${l.companies.length ? l.companies.map(c => `${esc(c)} <span class="mut">(${(l.usage[c] || {ok: 0}).ok} correctas)</span>`).join('<br>') : '<span class="mut">Ninguna</span>'}</td><td><button class="btn sm" data-ed="${esc(l.id)}">Editar</button> <button class="btn sm" data-del="${esc(l.id)}">Eliminar</button></td></tr>`).join('')}</tbody></table>` : '<div class="mut" style="padding:18px">Aún no hay servicios. Agrega el primero (por ejemplo, la consulta a un buró de crédito).</div>'}</div>`;
+    document.getElementById('nl').onclick = () => lookupDialog(null);
+    main.querySelectorAll('[data-ed]').forEach(b => b.onclick = () => lookupDialog(r.items.find(x => x.id === b.dataset.ed)));
+    main.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      if (!await confirmBox('Eliminar servicio', 'Se borra este servicio del Centro. Las empresas que lo usan deben quitarlo primero.', 'Eliminar', true)) { return; }
+      try { await api('DELETE', '/lookups/' + b.dataset.del); toast('Servicio eliminado'); drawLookups(); } catch (e) { toast(e.message); }
+    });
+  }
+  function lookupDialog(l) {
+    const r = state.lookups, h = (l && l.http) || {method: 'POST', body_type: 'json', auth_type: 'bearer', body: '{\n  "documento": "{{identificacion}}"\n}'}, rows = ((l && l.map) || []).slice();
+    const opt = (list, cur) => list.map(([v, t]) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(t)}</option>`).join('');
+    const m = modal(`<h3>${l ? 'Editar' : 'Agregar'} servicio de consulta</h3><label>Nombre</label><input id="ln" maxlength="80" value="${esc(l ? l.name : '')}" placeholder="Ej.: Consulta a buró de crédito">
+      <div class="grid2"><div><label>Categoría</label><select id="lc">${opt(Object.entries(r.categories), l ? l.category : 'buro')}</select></div><div><label>Precio por consulta (informativo)</label><input id="lp" maxlength="40" value="${esc(l ? l.unit_price : '')}" placeholder="Ej.: 1.500 COP"></div></div>
+      <label>Descripción (la ve la empresa)</label><input id="ld" maxlength="400" value="${esc(l ? l.description : '')}" placeholder="Qué consulta hace y qué devuelve">
+      <label><input type="checkbox" id="le" ${!l || l.enabled ? 'checked' : ''}> Activo</label>
+      <h4 style="margin:14px 0 4px">Llamada a la API</h4><div class="grid2"><div><label>Método</label><select id="hm">${opt([['POST', 'POST'], ['GET', 'GET'], ['PUT', 'PUT']], h.method)}</select></div><div><label>Cuerpo</label><select id="hb">${opt([['json', 'JSON'], ['form', 'Formulario'], ['query', 'En la URL']], h.body_type)}</select></div></div>
+      <label>URL (variables: {{identificacion}}, {{tipo_identificacion}}, {{nombre}}, {{apellido}}, {{telefono}}, {{correo}}…)</label><input id="hu" value="${esc(h.url || '')}" placeholder="https://api.buro.com/v1/consulta">
+      <label>Cuerpo (plantilla)</label><textarea id="hq" rows="4">${esc(h.body || '')}</textarea>
+      <div class="grid2"><div><label>Autenticación</label><select id="ha">${opt([['none', 'Sin autenticación'], ['bearer', 'Token (Bearer)'], ['basic', 'Usuario y contraseña'], ['header', 'Cabecera con clave']], h.auth_type)}</select></div><div><label>Usuario / nombre de la cabecera</label><input id="hx" value="${esc(h.auth_type === 'header' ? h.auth_header : h.auth_user)}"></div></div>
+      <label>Token o clave ${h.secretSet ? `<span class="mut">(guardada ${esc(h.secretHint)}; vacía = conservar)</span>` : ''}</label><input id="hs" type="password" autocomplete="new-password">
+      <label>Otras cabeceras (JSON, opcional)</label><input id="hh" value="${esc(h.headers || '')}" placeholder='{"X-Api-Version": "2"}'>
+      <h4 style="margin:14px 0 4px">Qué se guarda por defecto de la respuesta</h4><div id="mp"></div><button class="btn sm" id="am">+ Añadir dato</button>
+      <div class="err" id="le2" hidden></div><div class="foot"><button class="btn" data-x="n">Cancelar</button><button class="btn primary" data-x="y">Guardar</button></div>`, 'wide');
+    const drawMap = () => { m.el.querySelector('#mp').innerHTML = rows.map((x, i) => `<div class="grid2" style="margin-bottom:6px"><input data-p="${i}" value="${esc(x.path)}" placeholder="Ruta en la respuesta, p. ej. data.score"><select data-t="${i}">${opt(r.targets.map(t => [t, TARGET_LABEL[t] || t]), x.to)}</select></div>`).join(''); };
+    drawMap();
+    m.el.querySelector('#am').onclick = () => { rows.length = 0; m.el.querySelectorAll('[data-p]').forEach((el, i) => rows.push({path: el.value, to: m.el.querySelector(`[data-t="${i}"]`).value})); rows.push({path: '', to: 'note'}); drawMap(); };
+    m.el.querySelector('[data-x=n]').onclick = m.close;
+    m.el.querySelector('[data-x=y]').onclick = async () => {
+      const er = m.el.querySelector('#le2'); er.hidden = true;
+      const map = []; m.el.querySelectorAll('[data-p]').forEach((el, i) => map.push({path: el.value.trim(), to: m.el.querySelector(`[data-t="${i}"]`).value}));
+      const at = m.el.querySelector('#ha').value, hx = m.el.querySelector('#hx').value;
+      const http = {method: m.el.querySelector('#hm').value, body_type: m.el.querySelector('#hb').value, url: m.el.querySelector('#hu').value.trim(), body: m.el.querySelector('#hq').value, auth_type: at, auth_user: at === 'header' ? '' : hx, auth_header: at === 'header' ? hx : '', auth_secret: m.el.querySelector('#hs').value, headers: m.el.querySelector('#hh').value};
+      try { await api('PUT', '/lookups/' + (l ? l.id : 'new'), {name: m.el.querySelector('#ln').value.trim(), category: m.el.querySelector('#lc').value, unit_price: m.el.querySelector('#lp').value, description: m.el.querySelector('#ld').value, enabled: m.el.querySelector('#le').checked, http, map}); m.close(); toast('Servicio guardado'); drawLookups(); }
+      catch (e) { er.hidden = false; er.textContent = e.message; }
+    };
+  }
+
   // servicios (proveedores y correo) de una empresa, dentro de su panel
   async function loadServices(slug, box) {
     let r; try { r = await api('GET', `/companies/${slug}/services`); } catch (e) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
@@ -524,10 +570,10 @@
       return `<div class="svc" data-ch="${ch}"><label>${label}</label><div class="grid2"><select data-p><option value="">Propio de la empresa (sin nuestro servicio)</option>${opts.map(p => `<option value="${esc(p.id)}" ${cur.provider === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
         <input data-x placeholder="${ch === 'whatsapp' ? 'Instancia (Evolution) o número' : 'Remitente / caller ID (opcional)'}" value="${esc(cur.instance || cur.from || '')}"></div></div>`;
     }).join('');
-    box.innerHTML = `${rows}<div class="svc"><label>Módulo «Cartera y cobranza»</label><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="cart" ${r.cartera ? 'checked' : ''}> Mostrar deuda en cartera y deuda en mora (dashboard y ficha del lead). Actívalo solo si la empresa gestiona cobranza.</label></div><div class="svc"><label>Plantillas personales por usuario y canal</label><div class="grid2"><input type="number" id="tplmax" min="10" max="500" value="${r.templates || 10}"><div class="mut" style="align-self:center">10 incluidas en la licencia. Más es un servicio adicional con costo.</div></div></div><div class="svc"><label>Correo de salida</label><select id="ml"><option value="own">Propio de la empresa${r.mail.hasOwn ? ' (tiene SMTP configurado)' : ' (aún sin configurar)'}</option>${r.mail.systemReady ? `<option value="shared" ${r.mail.mode === 'shared' ? 'selected' : ''}>Prestado: correo general del sistema</option>` : ''}${r.providers.filter(p => p.kind === 'email').map(p => `<option value="${esc(p.id)}" ${r.mail.mode === p.id ? 'selected' : ''}>Prestado: ${esc(p.name)}</option>`).join('')}</select></div>
+    box.innerHTML = `${rows}<div class="svc"><label>Módulo «Cartera y cobranza»</label><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="cart" ${r.cartera ? 'checked' : ''}> Mostrar deuda en cartera y deuda en mora (dashboard y ficha del lead). Actívalo solo si la empresa gestiona cobranza.</label></div><div class="svc"><label>Servicios de consulta habilitados (buró, validación, scraping…)</label>${(r.lookupCatalog || []).length ? r.lookupCatalog.map(l => `<label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" class="lk" value="${esc(l.id)}" ${(r.lookups || []).includes(l.id) ? 'checked' : ''}> ${esc(l.name)} <span class="mut">${esc(l.category)}</span></label>`).join('') : '<div class="mut">Aún no hay servicios definidos (pestaña «Servicios de consulta»).</div>'}</div><div class="svc"><label>Plantillas personales por usuario y canal</label><div class="grid2"><input type="number" id="tplmax" min="10" max="500" value="${r.templates || 10}"><div class="mut" style="align-self:center">10 incluidas en la licencia. Más es un servicio adicional con costo.</div></div></div><div class="svc"><label>Correo de salida</label><select id="ml"><option value="own">Propio de la empresa${r.mail.hasOwn ? ' (tiene SMTP configurado)' : ' (aún sin configurar)'}</option>${r.mail.systemReady ? `<option value="shared" ${r.mail.mode === 'shared' ? 'selected' : ''}>Prestado: correo general del sistema</option>` : ''}${r.providers.filter(p => p.kind === 'email').map(p => `<option value="${esc(p.id)}" ${r.mail.mode === p.id ? 'selected' : ''}>Prestado: ${esc(p.name)}</option>`).join('')}</select></div>
       <div class="acts"><button class="btn primary sm" id="sv">Aplicar servicios</button></div><div class="mut">Al aplicar, la empresa recibe las credenciales en su configuración; no las puede ver. Quitar el servicio las retira.</div>`;
     box.querySelector('#sv').onclick = async () => {
-      const body = {mail: box.querySelector('#ml').value, cartera: box.querySelector('#cart').checked, templates: parseInt(box.querySelector('#tplmax').value, 10) || 10};
+      const body = {mail: box.querySelector('#ml').value, cartera: box.querySelector('#cart').checked, templates: parseInt(box.querySelector('#tplmax').value, 10) || 10, lookups: [...box.querySelectorAll('.lk:checked')].map(i => i.value)};
       box.querySelectorAll('.svc[data-ch]').forEach(row => { const ch = row.dataset.ch, pid = row.querySelector('[data-p]').value, x = row.querySelector('[data-x]').value.trim(); body[ch] = pid ? {provider: pid, instance: ch === 'whatsapp' && !/^\+?\d[\d\s-]{6,}$/.test(x) ? x : '', from: ch === 'whatsapp' && !/^\+?\d[\d\s-]{6,}$/.test(x) ? '' : x} : {provider: null}; });
       try { const res = await api('PUT', `/companies/${slug}/services`, body); toast('Servicios aplicados'); if (res.notes && res.notes.length) { modal(`<h3>Servicios aplicados</h3><p>${res.notes.map(esc).join('<br>')}</p><div class="foot"><button class="btn primary" data-x="k">Cerrar</button></div>`).el.querySelector('[data-x=k]').onclick = ev => ev.target.closest('.back').remove(); } loadServices(slug, box); }
       catch (e) { toast(e.message); }

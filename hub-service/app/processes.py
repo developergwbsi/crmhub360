@@ -11,8 +11,9 @@ log = logging.getLogger("hub.proc")
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS process_runs (
     id SERIAL PRIMARY KEY, tenant TEXT NOT NULL, lead_id TEXT NOT NULL, process_id TEXT NOT NULL, process_name TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'running',
-    http_status INT, error TEXT NOT NULL DEFAULT '', response TEXT NOT NULL DEFAULT '', applied JSONB NOT NULL DEFAULT '[]', attempts INT NOT NULL DEFAULT 0,
+    managed_id TEXT, http_status INT, error TEXT NOT NULL DEFAULT '', response TEXT NOT NULL DEFAULT '', applied JSONB NOT NULL DEFAULT '[]', attempts INT NOT NULL DEFAULT 0,
     started_at TIMESTAMPTZ NOT NULL DEFAULT now(), finished_at TIMESTAMPTZ);
+ALTER TABLE process_runs ADD COLUMN IF NOT EXISTS managed_id TEXT;
 CREATE INDEX IF NOT EXISTS process_runs_lead ON process_runs (tenant, lead_id, id DESC);
 CREATE INDEX IF NOT EXISTS process_runs_tenant ON process_runs (tenant, id DESC);
 """
@@ -28,12 +29,33 @@ def ensure_schema() -> None:
         c.execute(SCHEMA)
 
 
+# ---------------- servicios del sistema (los define y mantiene el Centro de control; sus credenciales nunca salen de ahí)
+def lookup(lid: str) -> dict | None:
+    with db.pool.connection() as c:
+        r = c.execute("SELECT value FROM control_settings WHERE key='lookups'").fetchone()
+    return next((x for x in (r["value"] if r else []) if x.get("id") == lid), None)
+
+
+def assigned(tenant: dict) -> list[str]:
+    return list((tenant.get("settings") or {}).get("lookups") or [])
+
+
+def catalog(tenant: dict) -> list[dict]:
+    """Servicios que esta empresa tiene habilitados (sin credenciales)."""
+    out = []
+    for lid in assigned(tenant):
+        lk = lookup(lid)
+        if lk and lk.get("enabled", True):
+            out.append({"id": lk["id"], "name": lk["name"], "description": lk.get("description", ""), "category": lk.get("category", "otro"), "map": lk.get("map", []), "unitPrice": lk.get("unit_price", "")})
+    return out
+
+
 # ---------------- configuración
 def _list(v, n: int, m: int) -> list[str]:
     return [str(x).strip()[:m] for x in (v or []) if str(x).strip()][:n]
 
 
-def clean(new: list, old: list | None) -> list[dict]:
+def clean(new: list, old: list | None, tenant_assigned: list[str] | None = None) -> list[dict]:
     """Valida los procesos que llegan de la interfaz; los secretos vacíos conservan el valor guardado."""
     olds = {p.get("id"): p for p in (old or [])}
     out = []
@@ -52,12 +74,18 @@ def clean(new: list, old: list | None) -> list[dict]:
             if not (to in ("note", "status") or (to.startswith("field:") and to[6:] in FIELDS)):
                 raise ValueError(f"Destino no válido: {to}")
             rows.append({"path": path, "to": to})
-        http = httpgen.merge((olds.get(pid) or {}).get("http"), p.get("http") or {})
-        if not http["url"]:
-            raise ValueError(f"«{name}»: falta la URL de la API.")
+        managed = str(p.get("managed") or "")
+        if managed:
+            if managed not in tenant_assigned:
+                raise ValueError(f"«{name}»: este servicio no está habilitado para tu empresa.")
+            http = {}
+        else:
+            http = httpgen.merge((olds.get(pid) or {}).get("http"), p.get("http") or {})
+            if not http["url"]:
+                raise ValueError(f"«{name}»: falta la URL de la API.")
         out.append({"id": pid, "name": name, "enabled": bool(p.get("enabled", True)),
                     "trigger": {"sources": _list(tr.get("sources"), 20, 60), "forms": _list(tr.get("forms"), 20, 80), "requireId": bool(tr.get("requireId", True)), "runOnChange": bool(tr.get("runOnChange", True))},
-                    "http": http, "map": rows, "recalc": bool(p.get("recalc", False)), "timeout": min(60, max(5, int(p.get("timeout") or 25)))})
+                    "http": http, "managed": managed, "map": rows, "recalc": bool(p.get("recalc", False)), "timeout": min(60, max(5, int(p.get("timeout") or 25)))})
     return out
 
 
@@ -97,8 +125,14 @@ def _cast(kind: str, v):
     return str(v if not isinstance(v, (dict, list)) else json.dumps(v, ensure_ascii=False))[:4000]
 
 
-async def _request(proc: dict, values: dict) -> tuple[int, str]:
-    method, url, kw, extra = httpgen.build(proc["http"], values)
+async def _request(proc: dict, values: dict, tenant: dict | None = None) -> tuple[int, str]:
+    cfg = proc["http"]
+    if proc.get("managed"):   # servicio del sistema: la dirección y las credenciales las pone el Centro de control
+        lk = lookup(proc["managed"])
+        if not lk or not lk.get("enabled", True) or (tenant is not None and proc["managed"] not in assigned(tenant)):
+            raise ValueError("Este servicio ya no está disponible para tu empresa. Contacta a tu proveedor.")
+        cfg = lk["http"]
+    method, url, kw, extra = httpgen.build(cfg, values)
     httpgen.check_url(url)
     async with httpx.AsyncClient(timeout=proc.get("timeout", 25), follow_redirects=False) as c:
         r = await c.request(method, url, headers=extra["headers"], auth=extra["auth"], **kw)
@@ -116,7 +150,7 @@ def preview(proc: dict, text: str) -> list[dict]:
 
 async def test(tenant: dict, proc: dict, values: dict) -> dict:
     try:
-        status, text = await _request(proc, values)
+        status, text = await _request(proc, values, tenant)
     except Exception as e:
         return {"ok": False, "error": str(e)[:300]}
     return {"ok": status < 400, "status": status, "response": text[:4000], "preview": preview(proc, text)}
@@ -173,7 +207,7 @@ async def execute(tenant: dict, proc: dict, lead: dict, run_id: int) -> None:
             with db.pool.connection() as c:
                 c.execute("UPDATE process_runs SET attempts=%s WHERE id=%s", (attempt + 1, run_id))
             try:
-                status_code, text = await _request(proc, values)
+                status_code, text = await _request(proc, values, tenant)
                 if status_code < 500 and status_code != 429:
                     break
                 last_err = f"La API respondió {status_code}"
@@ -216,8 +250,8 @@ async def run_for_lead(tenant: dict, lead_id: str, *, process_id: str | None = N
             continue
         skip = (p.get("trigger") or {}).get("requireId", True) and not (lead.get("identification") or "").strip()
         with db.pool.connection() as c:
-            rid = c.execute("INSERT INTO process_runs (tenant, lead_id, process_id, process_name, status, error, finished_at) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id",
-                            (tenant["slug"], lead_id, p["id"], p["name"], "skipped" if skip else "running", "El lead no tiene identificación." if skip else "", "now()" if False else None)).fetchone()["id"]
+            rid = c.execute("INSERT INTO process_runs (tenant, lead_id, process_id, process_name, managed_id, status, error) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+                            (tenant["slug"], lead_id, p["id"], p["name"], p.get("managed") or None, "skipped" if skip else "running", "El lead no tiene identificación." if skip else "")).fetchone()["id"]
             if skip:
                 c.execute("UPDATE process_runs SET finished_at=now() WHERE id=%s", (rid,))
         ids.append(rid)
@@ -237,5 +271,5 @@ async def _safe(tenant, proc, lead, rid):
 
 def runs(tenant: str, lead_id: str | None = None, limit: int = 60) -> list[dict]:
     with db.pool.connection() as c:
-        q = "SELECT id, lead_id, process_id, process_name, status, http_status, error, applied, attempts, started_at, finished_at FROM process_runs WHERE tenant=%s" + (" AND lead_id=%s" if lead_id else "") + " ORDER BY id DESC LIMIT %s"
+        q = "SELECT id, lead_id, process_id, process_name, managed_id, status, http_status, error, applied, attempts, started_at, finished_at FROM process_runs WHERE tenant=%s" + (" AND lead_id=%s" if lead_id else "") + " ORDER BY id DESC LIMIT %s"
         return [dict(r) for r in c.execute(q, (tenant, lead_id, limit) if lead_id else (tenant, limit)).fetchall()]

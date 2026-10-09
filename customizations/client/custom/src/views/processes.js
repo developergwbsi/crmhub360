@@ -5,6 +5,7 @@ define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (
         ['{{telefono}}', 'Teléfono'], ['{{correo}}', 'Correo'], ['{{fuente}}', 'Fuente'], ['{{campana}}', 'Campaña'], ['{{formulario}}', 'Formulario de origen'], ['{{lead_id}}', 'ID del lead'], ['{{empresa}}', 'Empresa']];
     const FIELD_LABEL = {creditScore: 'Puntaje de crédito', totalDebt: 'Deuda total', overdueDebt: 'Deuda en mora', monthlyIncome: 'Ingresos mensuales', creditorCount: 'Cantidad de acreedores',
         maxDaysOverdue: 'Máx. días de mora', defaultCount: 'Obligaciones castigadas', identificationType: 'Tipo de documento', processResult: 'Resultado de procesos', description: 'Descripción (añade al final)'};
+    const CAT = {buro: 'Buró de crédito', identidad: 'Validación de identidad', scraping: 'Web scraping', otro: 'Servicio'};
     const ST = {ok: ['Correcto', 'ok'], error: ['Con error', 'err'], running: ['En curso', 'info'], skipped: ['Omitido', 'skip']};
     const fmt = d => { try { return new Date(d).toLocaleString('es', {dateStyle: 'short', timeStyle: 'short'}); } catch (e) { return d || ''; } };
     const blank = () => ({id: '', name: '', enabled: true, trigger: {sources: [], forms: [], requireId: true, runOnChange: true}, recalc: false, timeout: 25, map: [],
@@ -42,9 +43,12 @@ define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (
         listHtml() {
             const list = this.data0.processes || [];
             const lastOf = id => this.runs.find(r => r.process_id === id);
-            return `<div class="ch-sim-card">${list.map(p => { const lr = lastOf(p.id), s = lr && ST[lr.status];
+            const cat = (this.data0.catalog || []);
+            const gallery = cat.length ? `<div class="ch-sim-card"><h4><span class="fas fa-plug-circle-check"></span> Servicios del sistema para tu empresa</h4><p class="ch-muted">Consultas ya configuradas por DigitalAlliance Hub (buró de crédito, validación de identidad, web scraping…). Elige una, decide cuándo se ejecuta y qué se guarda; no necesitas credenciales.</p>` +
+                cat.map(c => `<div class="ch-proc-item"><span class="ch-ah-ic" style="background:#4f63e8"><span class="fas fa-magnifying-glass-chart"></span></span><a style="cursor:default"><b>${esc(c.name)} <small class="ch-muted">${esc(CAT[c.category] || '')}${c.unitPrice ? ' · ' + esc(c.unitPrice) + ' por consulta' : ''}</small></b><span>${esc(c.description)}</span></a><button class="btn btn-primary btn-sm" data-act="usesvc" data-id="${esc(c.id)}">Usar</button></div>`).join('') + '</div>' : '';
+            return gallery + `<div class="ch-sim-card"><h4>Mis procesos</h4>${list.map(p => { const lr = lastOf(p.id), s = lr && ST[lr.status];
                 return `<div class="ch-proc-item"><label class="ch-switch"><input type="checkbox" data-act="toggle" data-id="${esc(p.id)}" ${p.enabled ? 'checked' : ''}><i></i></label>` +
-                    `<a data-act="edit" data-id="${esc(p.id)}"><b>${esc(p.name)}</b><span>${esc(p.http.method)} ${esc(p.http.url.slice(0, 70))}</span><span>${p.trigger.sources.length ? 'Fuentes: ' + esc(p.trigger.sources.join(', ')) : 'Todos los leads'}${p.trigger.forms.length ? ' · Formularios: ' + esc(p.trigger.forms.join(', ')) : ''}</span></a>` +
+                    `<a data-act="edit" data-id="${esc(p.id)}"><b>${esc(p.name)}</b><span>${p.managed ? 'Servicio del sistema: ' + esc(((this.data0.catalog || []).find(c => c.id === p.managed) || {}).name || p.managed) : esc(p.http.method) + ' ' + esc((p.http.url || '').slice(0, 70))}</span><span>${p.trigger.sources.length ? 'Fuentes: ' + esc(p.trigger.sources.join(', ')) : 'Todos los leads'}${p.trigger.forms.length ? ' · Formularios: ' + esc(p.trigger.forms.join(', ')) : ''}</span></a>` +
                     `${s ? `<span class="ch-ah-chip st-${s[1]}">${s[0]}</span>` : ''}<a class="ch-tpl-del" data-act="del" data-id="${esc(p.id)}" title="Eliminar"><span class="far fa-trash-can"></span></a></div>`; }).join('') || '<div class="ch-muted">Aún no hay procesos.</div>'}
                 <div class="ch-mail-actions"><button class="btn btn-primary btn-sm" data-act="new" ${list.length >= this.data0.max ? 'disabled' : ''}><span class="fas fa-plus"></span> Nuevo proceso</button></div></div>`;
         }
@@ -68,8 +72,8 @@ define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (
                 <label>Formularios (vacío = cualquiera; separa con comas el nombre corto de la URL)</label><input data-f="forms" value="${esc(t.forms.join(', '))}" placeholder="formulario-1, creditos">
                 <label class="ch-dz-chk"><input type="checkbox" data-f="requireId" ${t.requireId ? 'checked' : ''}> Solo si el lead tiene identificación</label>
                 <label class="ch-dz-chk"><input type="checkbox" data-f="runOnChange" ${t.runOnChange ? 'checked' : ''}> Ejecutar también cuando se escribe o cambia la identificación</label>
-                <h5>2. Llamada a la API</h5>
-                <div class="ch-proc-row"><select data-h="method">${['POST', 'GET', 'PUT'].map(m => `<option ${h.method === m ? 'selected' : ''}>${m}</option>`).join('')}</select><input data-h="url" value="${esc(h.url)}" placeholder="https://api.ejemplo.com/consulta/{{identificacion}}"></div>
+                ${e.managed ? `<h5>2. Servicio del sistema</h5><div class="ch-dlg-note ok"><span class="fas fa-circle-check"></span> Este proceso usa el servicio <b>${esc(((this.data0.catalog || []).find(c => c.id === e.managed) || {}).name || 'del sistema')}</b>. La dirección de la API y las credenciales las gestiona DigitalAlliance Hub; tú decides cuándo se ejecuta y qué se guarda.</div>` : `<h5>2. Llamada a la API</h5>`}
+                ${e.managed ? '<div hidden>' : ''}                <div class="ch-proc-row"><select data-h="method">${['POST', 'GET', 'PUT'].map(m => `<option ${h.method === m ? 'selected' : ''}>${m}</option>`).join('')}</select><input data-h="url" value="${esc(h.url)}" placeholder="https://api.ejemplo.com/consulta/{{identificacion}}"></div>
                 <label>Cuerpo</label><div class="ch-proc-row"><select data-h="body_type"><option value="json" ${h.body_type === 'json' ? 'selected' : ''}>JSON</option><option value="form" ${h.body_type === 'form' ? 'selected' : ''}>Formulario</option><option value="query" ${h.body_type === 'query' ? 'selected' : ''}>En la URL (query)</option></select></div>
                 <textarea data-h="body" rows="5" placeholder='{"documento": "{{identificacion}}"}'>${esc(h.body)}</textarea>
                 <div class="ch-var-row"><span class="ch-muted">Variables:</span> ${VARS.map(([v, tt]) => `<a class="ch-var" data-act="var" data-v="${esc(v)}" title="${esc(tt)}">${esc(v)}</a>`).join('')}</div>
@@ -77,6 +81,7 @@ define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (
                     ${h.auth_type === 'basic' ? `<input data-h="auth_user" value="${esc(h.auth_user)}" placeholder="Usuario">` : ''}${h.auth_type === 'header' ? `<input data-h="auth_header" value="${esc(h.auth_header)}" placeholder="Nombre de la cabecera (X-Api-Key)">` : ''}
                     ${h.auth_type !== 'none' ? `<input data-h="auth_secret" type="password" value="${esc(h.auth_secret)}" placeholder="${h.secretSet ? 'Clave guardada (' + esc(h.secretHint) + '); déjalo vacío para conservarla' : 'Clave o token'}">` : ''}</div>
                 <label>Otras cabeceras (JSON, opcional)</label><input data-h="headers" value="${esc(h.headers)}" placeholder='{"X-Api-Version": "2"}'>
+                ${e.managed ? '</div>' : ''}
                 <h5>3. Qué se guarda de la respuesta</h5>
                 <div data-role="maps">${e.map.map(selRow).join('')}</div><a class="ch-dz-link" data-act="addmap"><span class="fas fa-plus"></span> Añadir dato a guardar</a>
                 <label class="ch-dz-chk"><input type="checkbox" data-f="recalc" ${e.recalc ? 'checked' : ''}> Volver a calcular la calificación del lead al terminar</label>
@@ -109,6 +114,7 @@ define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (
             const a = e.target.closest('[data-act]'); if (!a) { return; }
             const act = a.dataset.act, list = this.data0.processes;
             if (act === 'tab') { this.tab = a.dataset.t; this.editing = null; this.draw(); return; }
+            if (act === 'usesvc') { const c = (this.data0.catalog || []).find(x => x.id === a.dataset.id); this.editing = Object.assign(blank(), {name: c.name, managed: c.id, map: (c.map || []).map(x => ({...x}))}); this.editing.http = {}; this.testOut = null; this.draw(); return; }
             if (act === 'new') { this.editing = blank(); this.testOut = null; this.draw(); return; }
             if (act === 'edit') { this.editing = JSON.parse(JSON.stringify(list.find(p => p.id === a.dataset.id))); this.editing.http.auth_secret = ''; this.testOut = null; this.draw(); return; }
             if (act === 'cancel') { this.editing = null; this.draw(); return; }
@@ -135,7 +141,7 @@ define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (
         save() {
             const e = this.editing, list = this.data0.processes.filter(p => p.id !== e.id);
             if (e.name.trim().length < 2) { this.err('Escribe el nombre del proceso.'); return; }
-            if (!e.http.url.trim()) { this.err('Escribe la URL de la API.'); return; }
+            if (!e.managed && !(e.http.url || '').trim()) { this.err('Escribe la URL de la API.'); return; }
             const all = this.data0.processes.map(p => p.id === e.id ? e : p); if (!e.id) { all.push(e); }
             this.persist(all, 'Proceso guardado');
         }
