@@ -18,7 +18,11 @@
         "telegramUsername": "Usuario de Telegram",
         "telegramChatId": "Chat de Telegram",
         "telegramStartToken": "Código de invitación de Telegram",
-        "doNotContact": "No contactar (pidió BAJA)"
+        "doNotContact": "No contactar (pidió BAJA)",
+        "identification": "Identificación",
+        "identificationType": "Tipo de documento",
+        "originForm": "Formulario de origen",
+        "processResult": "Resultado de procesos"
     },
     "options": {
         "status": {

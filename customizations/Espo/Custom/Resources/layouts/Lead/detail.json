@@ -12,6 +12,14 @@
             ],
             [
                 {
+                    "name": "identification"
+                },
+                {
+                    "name": "identificationType"
+                }
+            ],
+            [
+                {
                     "name": "emailAddress"
                 },
                 {
@@ -99,6 +107,12 @@
             [
                 {
                     "name": "qualificationReasons",
+                    "fullWidth": true
+                }
+            ],
+            [
+                {
+                    "name": "processResult",
                     "fullWidth": true
                 }
             ]

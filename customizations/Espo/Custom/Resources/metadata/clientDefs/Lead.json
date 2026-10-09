@@ -74,6 +74,12 @@
                     "label": "Invitar por Telegram",
                     "handler": "custom:handlers/lead-contact",
                     "actionFunction": "actionTelegramInvite"
+                },
+                {
+                    "name": "runProcesses",
+                    "label": "Ejecutar procesos de nuevo",
+                    "handler": "custom:handlers/lead-process",
+                    "actionFunction": "actionRun"
                 }
             ]
         }

@@ -1064,4 +1064,65 @@ class CrmHub
         }
         return $lead?->getId();
     }
+
+    // ---------- Procesos al llegar un lead (API/webhook con la identificación y datos del lead) ----------
+    private function hubCall(string $method, string $path, ?array $body, int $timeout = 30): array
+    {
+        try {
+            return (new HubClient($this->config))->request($method, $path, $body, $timeout);
+        } catch (\RuntimeException $e) {
+            preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
+            throw new BadRequest(isset($m[1]) ? (string) json_decode('"' . $m[1] . '"') : 'No se pudo completar la operación.');
+        }
+    }
+
+    public function getActionProcesses(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/processes', null, 10);
+    }
+
+    public function postActionProcessesSave(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('PUT', '/v1/processes', ['processes' => json_decode(json_encode($d->processes ?? []), true)], 20);
+    }
+
+    public function postActionProcessTest(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        $leadId = null;
+        if (!empty($d->leadId)) {
+            $lead = $this->em->getEntityById('Lead', (string) $d->leadId);
+            $leadId = $lead && $this->acl->checkEntityRead($lead) ? $lead->getId() : null;
+        }
+        return (object) $this->hubCall('POST', '/v1/processes/test', ['process' => json_decode(json_encode($d->process ?? []), true), 'leadId' => $leadId], 60);
+    }
+
+    public function getActionProcessRuns(Request $request): \stdClass
+    {
+        $leadId = (string) $request->getQueryParam('leadId');
+        if ($leadId !== '') {
+            $lead = $this->em->getEntityById('Lead', $leadId);
+            if (!$lead || !$this->acl->checkEntityRead($lead)) {
+                throw new Forbidden();
+            }
+        } else {
+            $this->admin();
+        }
+        return (object) $this->hubCall('GET', '/v1/process/runs?leadId=' . rawurlencode($leadId), null, 10);
+    }
+
+    /** Ejecuta de nuevo los procesos de un lead (quien puede editar el lead). */
+    public function postActionProcessRun(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->em->getEntityById('Lead', (string) ($d->leadId ?? ''));
+        if (!$lead || !$this->acl->checkEntityEdit($lead)) {
+            throw new Forbidden();
+        }
+        return (object) $this->hubCall('POST', '/v1/process/trigger', ['leadId' => $lead->getId(), 'manual' => true, 'processId' => !empty($d->processId) ? (string) $d->processId : null], 30);
+    }
 }

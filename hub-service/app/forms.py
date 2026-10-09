@@ -12,7 +12,8 @@ from .espo import Espo
 
 FIELD_TYPES = ["text", "email", "tel", "textarea", "select", "number", "checkbox", "channel"]
 MAPS = {"name": "Nombre", "phone": "Teléfono", "email": "Correo", "description": "Descripción / notas", "monthlyIncome": "Ingresos mensuales",
-        "totalDebt": "Deuda total", "overdueDebt": "Deuda en mora", "creditorCount": "Cantidad de acreedores"}
+        "totalDebt": "Deuda total", "overdueDebt": "Deuda en mora", "creditorCount": "Cantidad de acreedores",
+        "identification": "Identificación (cédula, NIT…)", "identificationType": "Tipo de documento"}
 CHANNELS = ["Teléfono", "WhatsApp", "Telegram", "Correo"]
 MAX_FORMS, MAX_FIELDS = 20, 20
 _hits: dict[str, deque] = defaultdict(deque)
@@ -214,6 +215,7 @@ async def submit(tenant: dict, form: dict, data: dict[str, str], ip: str) -> dic
         elif m in ("monthlyIncome", "totalDebt", "overdueDebt"):
             lead[m] = float(re.sub(r"[^\d.]", "", v.replace(",", ".")) or 0)
         elif m == "creditorCount": lead[m] = int(float(v.replace(",", ".")))
+        elif m in ("identification", "identificationType"): lead[m] = re.sub(r"[^\w.\- ]", "", v)[:40]
         else: desc.append(f"{fd['label']}: {v}")
     utm = {k: data.get(k, "")[:120] for k in ("utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term") if data.get(k)}
     if utm:
@@ -229,6 +231,10 @@ async def submit(tenant: dict, form: dict, data: dict[str, str], ip: str) -> dic
             extra[m] = lead[m]; extra[m + "Currency"] = "COP"
     if "creditorCount" in lead:
         extra["creditorCount"] = lead["creditorCount"]
+    for k in ("identification", "identificationType"):
+        if lead.get(k):
+            extra[k] = lead[k]
+    extra["originForm"] = form["slug"][:80]
     if desc:
         extra["description"] = "\n".join(desc)
     if channel:

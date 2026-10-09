@@ -18,6 +18,7 @@ TABS = [
     {"type": "url", "id": "t9", "text": "Equipos", "url": "#Team", "iconClass": "fas fa-users", "onlyAdmin": True},
     {"type": "url", "id": "t10", "text": "Usuarios", "url": "#User", "iconClass": "fas fa-user-gear", "onlyAdmin": True},
     {"type": "url", "id": "t11", "text": "Asignación de leads", "url": "#CrmHub/asignacion", "iconClass": "fas fa-shuffle", "onlyAdmin": True},
+    {"type": "url", "id": "t17", "text": "Procesos de leads", "url": "#CrmHub/procesos", "iconClass": "fas fa-gears", "onlyAdmin": True},
     {"type": "url", "id": "t12", "text": "Estados del pipeline", "url": "#CrmHub/pipeline", "iconClass": "fas fa-timeline", "onlyAdmin": True},
     {"type": "divider", "id": "t4", "text": "Ayuda"},
     {"type": "url", "id": "t5", "text": "Manual de usuario", "url": "#CrmHub/manual", "iconClass": "fas fa-book"},

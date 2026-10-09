@@ -185,6 +185,25 @@
         "isThread": {
             "type": "bool",
             "default": false
+        },
+        "identification": {
+            "type": "varchar",
+            "maxLength": 40,
+            "trim": true
+        },
+        "identificationType": {
+            "type": "varchar",
+            "maxLength": 30,
+            "trim": true
+        },
+        "originForm": {
+            "type": "varchar",
+            "maxLength": 80,
+            "readOnly": false
+        },
+        "processResult": {
+            "type": "text",
+            "rows": 4
         }
     }
 }

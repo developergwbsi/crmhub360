@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing
+from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -25,6 +25,7 @@ async def lifespan(_: FastAPI):
     push.keys()  # crea las claves VAPID la primera vez
     simulate.ensure_schema()
     routing.ensure_schema()
+    processes.ensure_schema()
     templates.ensure_schema()
     bg = asyncio.create_task(broadcast.worker())
     mb = asyncio.create_task(mailbox.worker())
@@ -827,6 +828,75 @@ async def wa_route(leadId: str, tenant: dict = Depends(tenant_auth)):
     """Número preferido para escribirle al cliente (el último desde el que respondió, o al que se le escribió) y quién le escribió."""
     r = routing.route_of(tenant["slug"], leadId) or {}
     return {"phone": r.get("last_in_phone") or r.get("last_out_phone"), "userId": r.get("user_id")}
+
+
+# ---------------- procesos al llegar un lead (API/webhook con la identificación y datos del lead) ----------------
+class ProcSaveReq(BaseModel):
+    processes: list[dict]
+
+
+class ProcTestReq(BaseModel):
+    process: dict
+    leadId: str | None = None
+
+
+class ProcTriggerReq(BaseModel):
+    leadId: str
+    changed: bool = False
+    processId: str | None = None
+    manual: bool = False
+
+
+@app.get("/v1/processes")
+async def proc_list(tenant: dict = Depends(tenant_auth)):
+    return {"processes": processes.public(processes.load(tenant)), "fields": list(processes.FIELDS), "max": processes.MAX_PROCESSES}
+
+
+@app.put("/v1/processes")
+async def proc_save(req: ProcSaveReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        new = processes.clean(req.processes, processes.load(tenant))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    with db.pool.connection() as c:
+        c.execute("UPDATE tenants SET settings = jsonb_set(settings, '{processes}', %s::jsonb, true) WHERE slug = %s", (json.dumps(new), tenant["slug"]))
+    return {"processes": processes.public(new)}
+
+
+@app.post("/v1/processes/test")
+async def proc_test(req: ProcTestReq, tenant: dict = Depends(tenant_auth)):
+    """Prueba una definición contra un lead real (o datos de ejemplo) sin guardar nada en el lead."""
+    try:
+        proc = processes.clean([req.process], processes.load(tenant))[0]
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    if req.leadId:
+        lead = await Espo(tenant).get(f"Lead/{req.leadId}")
+        values = processes.values_of(lead, tenant)
+    else:
+        values = {"identificacion": "1234567890", "tipo_identificacion": "CC", "nombre": "María", "apellido": "Pérez", "nombre_completo": "María Pérez", "telefono": "+573001234567",
+                  "correo": "maria@example.com", "fuente": "Formulario Web", "campana": "", "formulario": "", "lead_id": "ejemplo", "empresa": tenant.get("name") or ""}
+    return await processes.test(tenant, proc, values)
+
+
+@app.post("/v1/process/trigger")
+async def proc_trigger(req: ProcTriggerReq, tenant: dict = Depends(tenant_auth)):
+    if req.manual:
+        return {"runs": await processes.run_for_lead(tenant, req.leadId, process_id=req.processId, manual=True)}
+
+    async def later():   # el CRM avisa dentro del guardado: se espera un instante a que el lead quede confirmado
+        await asyncio.sleep(1.5)
+        try:
+            await processes.run_for_lead(tenant, req.leadId, process_id=req.processId, changed=req.changed)
+        except Exception:
+            logging.getLogger("hub.proc").exception("disparo de procesos")
+    asyncio.create_task(later())
+    return {"queued": True}
+
+
+@app.get("/v1/process/runs")
+async def proc_runs(leadId: str = "", tenant: dict = Depends(tenant_auth)):
+    return {"items": processes.runs(tenant["slug"], leadId or None)}
 
 
 if __name__ == "__main__":

@@ -806,3 +806,15 @@ body.minimized #navbar .navbar-brand.ch-has-brand .ch-brand { display: none; }
 .ch-ah-ic { width: 30px; height: 30px; border-radius: 50%; color: #fff; display: grid; place-items: center; flex: none; font-size: 13px; } .ch-ah-b { min-width: 0; flex: 1; }
 .ch-ah-t { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; } .ch-ah-k { color: var(--ch-muted); font-size: 12px; margin-right: 4px; }
 .ch-ah-in { color: #2fa36b; font-size: 11px; } .ch-ah-out { color: #4f63e8; font-size: 11px; }
+
+/* Procesos de leads */
+.ch-proc { padding-bottom: 30px; } .ch-proc-ed h5 { margin: 16px 0 6px; font-size: 14px; font-weight: 700; border-top: 1px solid var(--ch-line); padding-top: 12px; }
+.ch-proc-item { display: flex; gap: 12px; align-items: center; border: 1px solid var(--ch-line); border-radius: 12px; padding: 8px 12px; margin: 6px 0; background: var(--ch-surface); }
+.ch-proc-item > a:first-of-type { flex: 1; min-width: 0; color: var(--ch-ink); cursor: pointer; display: flex; flex-direction: column; text-decoration: none; } .ch-proc-item span { font-size: 12.5px; color: var(--ch-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ch-switch { position: relative; width: 38px; height: 22px; flex: none; margin: 0; } .ch-switch input { opacity: 0; width: 0; height: 0; } .ch-switch i { position: absolute; inset: 0; background: #c9d0e6; border-radius: 999px; transition: .15s; } .ch-switch i::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .15s; } .ch-switch input:checked + i { background: #2fa36b; } .ch-switch input:checked + i::after { transform: translateX(16px); }
+.ch-proc-row { display: flex; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; } .ch-proc-row select { width: auto; } .ch-proc-row input { flex: 1; min-width: 180px; }
+.ch-proc-ed input:not([type=checkbox]), .ch-proc-ed select, .ch-proc-ed textarea { width: 100%; border: 1px solid var(--ch-line-strong); border-radius: 10px; padding: 7px 10px; background: var(--ch-soft); color: var(--ch-ink); font: inherit; outline: 0; } .ch-proc-ed textarea { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+.ch-proc-map { display: grid; grid-template-columns: 1fr 20px 1fr 24px; gap: 8px; align-items: center; margin-bottom: 6px; } .ch-proc-map a { cursor: pointer; color: var(--ch-muted); }
+.ch-proc-chips { display: flex; flex-wrap: wrap; gap: 6px; } .ch-ah-chip.st-ok { background: #e4f6ec; color: #1f7a4d; border-color: #bfe6cf; } .ch-ah-chip.st-err { background: #fde8e8; color: #b42318; border-color: #f5c2c0; } .ch-ah-chip.st-skip { background: var(--ch-soft); color: var(--ch-muted); }
+.ch-proc-pre { max-height: 220px; overflow: auto; background: #0f172a; color: #d6deeb; border-radius: 10px; padding: 10px 12px; font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ch-proc-test { margin-top: 12px; } .ch-proc-runs td { vertical-align: top; }

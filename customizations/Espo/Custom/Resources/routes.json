@@ -428,5 +428,45 @@
             "controller": "CrmHub",
             "action": "templateDelete"
         }
+    },
+    {
+        "route": "/CrmHub/processes",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "processes"
+        }
+    },
+    {
+        "route": "/CrmHub/processesSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "processesSave"
+        }
+    },
+    {
+        "route": "/CrmHub/processTest",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "processTest"
+        }
+    },
+    {
+        "route": "/CrmHub/processRuns",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "processRuns"
+        }
+    },
+    {
+        "route": "/CrmHub/processRun",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "processRun"
+        }
     }
 ]

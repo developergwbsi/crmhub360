@@ -2,7 +2,7 @@
 define('custom:views/lead/panels/activity-history', ['views/record/panels/bottom', 'custom:ui', 'custom:handlers/lead-contact'], function (Dep, ChUi, ContactHandler) {
     const T = {
         email: ['fas fa-envelope', '#f59e0b', 'Correo'], call: ['fas fa-phone', '#2fa36b', 'Llamada'], meeting: ['fas fa-calendar-check', '#8b5cf6', 'Reunión'], task: ['fas fa-list-check', '#64748b', 'Tarea'],
-        whatsapp: ['fab fa-whatsapp', '#25d366', 'WhatsApp'], sms: ['fas fa-comment-sms', '#0ea5e9', 'SMS'], telegram: ['fab fa-telegram', '#229ed9', 'Telegram'], status: ['fas fa-right-left', '#4f63e8', 'Estado'],
+        whatsapp: ['fab fa-whatsapp', '#25d366', 'WhatsApp'], sms: ['fas fa-comment-sms', '#0ea5e9', 'SMS'], telegram: ['fab fa-telegram', '#229ed9', 'Telegram'], status: ['fas fa-right-left', '#4f63e8', 'Estado'], process: ['fas fa-gears', '#0d9488', 'Proceso'],
     };
     return class extends Dep {
         templateContent = '<div class="ch-ah"><div class="ch-ah-f" data-role="f"></div><div class="ch-ah-l" data-role="l"><div class="ch-chat-empty">Cargando…</div></div></div>'
