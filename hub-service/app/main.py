@@ -910,6 +910,8 @@ class DocExtractReq(BaseModel):
     attachmentId: str
     profileId: str
     userId: str | None = None
+    engine: str = "internal"
+    leadName: str = ""
 
 
 class DocApplyReq(BaseModel):
@@ -947,7 +949,7 @@ async def docs_extract(req: DocExtractReq, tenant: dict = Depends(tenant_auth)):
         async with _llm_lock:
             return await ollama.chat_json(system, user, schema, max_tokens)
     try:
-        return {"runId": await documents.start(tenant, req.leadId, req.attachmentId, req.profileId, req.userId, llm), "status": "reading"}
+        return {"runId": await documents.start(tenant, req.leadId, req.attachmentId, req.profileId, req.userId, llm, req.engine, req.leadName), "status": "reading"}
     except ValueError as e:
         raise HTTPException(422, str(e))
 
@@ -976,6 +978,17 @@ async def docs_remember(req: DocRememberReq, tenant: dict = Depends(tenant_auth)
         return {"profile": documents.profile_from_items(tenant, req.name.strip()[:80] or "Documento", req.items)}
     except ValueError as e:
         raise HTTPException(422, str(e))
+
+
+@app.get("/v1/docs/pending")
+async def docs_pending(userId: str, tenant: dict = Depends(tenant_auth)):
+    return {"items": documents.pending(tenant["slug"], userId)}
+
+
+@app.post("/v1/docs/dismiss")
+async def docs_dismiss(req: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    documents.dismiss(tenant["slug"], str(req.get("userId", "")), int(req.get("runId", 0)))
+    return {"ok": True}
 
 
 @app.get("/v1/docs/history")

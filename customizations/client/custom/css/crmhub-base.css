@@ -830,3 +830,13 @@ body.minimized #navbar .navbar-brand.ch-has-brand .ch-brand { display: none; }
 .ch-doc-frow { display: grid; grid-template-columns: 1.3fr 1fr 1.3fr 1.6fr 24px; gap: 8px; align-items: center; margin-bottom: 6px; } .ch-doc-frow a { cursor: pointer; color: var(--ch-muted); }
 
 .ch-doc-bar { font-size: 12.5px; margin: 6px 0; } .ch-doc-bar a { cursor: pointer; } .ch-doc-tbl input.input-sm, .ch-doc-tbl select.input-sm { height: 32px; padding: 3px 8px; font-size: 13px; } .ch-dlg:has(.ch-doc) { width: min(860px, 100%); }
+
+/* Indicador global de lecturas de documentos */
+#ch-doc-watch { position: fixed; right: 18px; bottom: 18px; z-index: 1900; display: flex; flex-direction: column; gap: 8px; max-width: min(360px, calc(100vw - 36px)); } #ch-doc-watch[hidden] { display: none; }
+.ch-dw { display: flex; align-items: center; gap: 10px; background: var(--ch-surface); color: var(--ch-ink); border: 1px solid var(--ch-line); border-left: 4px solid #4f63e8; border-radius: 12px; padding: 10px 12px; box-shadow: 0 8px 26px rgba(15, 20, 40, .22); }
+.ch-dw > div { flex: 1; min-width: 0; } .ch-dw small { display: block; color: var(--ch-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ch-dw a { cursor: pointer; font-size: 20px; line-height: 1; color: var(--ch-muted); text-decoration: none; }
+.ch-dw-ok { border-left-color: #2fa36b; } .ch-dw-ok .fas { color: #2fa36b; font-size: 18px; } .ch-dw-err { border-left-color: #d64545; } .ch-dw-err .fas { color: #d64545; font-size: 18px; }
+.ch-doc-eng { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; } .ch-doc-eng label { display: flex; gap: 8px; align-items: baseline; font-weight: 400; margin: 0; } .ch-doc-eng small { color: var(--ch-muted); }
+.ch-doc-engbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12.5px; padding: 6px 10px; border-radius: 10px; background: var(--ch-soft); margin-bottom: 8px; color: var(--ch-muted); } .ch-doc-engbar.warn { background: #fff6e0; color: #7a4e00; } .ch-doc-engbar a { cursor: pointer; font-weight: 600; }
+
+.ch-dw-more { font-size: 12px; color: var(--ch-muted); border-left-color: var(--ch-line); }

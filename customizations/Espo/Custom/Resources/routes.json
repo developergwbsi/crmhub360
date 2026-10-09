@@ -524,5 +524,21 @@
             "controller": "CrmHub",
             "action": "docRun"
         }
+    },
+    {
+        "route": "/CrmHub/docPending",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "docPending"
+        }
+    },
+    {
+        "route": "/CrmHub/docDismiss",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "docDismiss"
+        }
     }
 ]

@@ -1163,7 +1163,8 @@ class CrmHub
             $att->set(['parentType' => 'Lead', 'parentId' => $lead->getId()]);
             $this->em->saveEntity($att);
         }
-        return (object) $this->hubCall('POST', '/v1/docs/extract', ['leadId' => $lead->getId(), 'attachmentId' => $att->getId(), 'profileId' => (string) ($d->profileId ?? ''), 'userId' => $this->user->getId()], 30);
+        return (object) $this->hubCall('POST', '/v1/docs/extract', ['leadId' => $lead->getId(), 'attachmentId' => $att->getId(), 'profileId' => (string) ($d->profileId ?? ''), 'userId' => $this->user->getId(),
+            'engine' => ($d->engine ?? '') === 'ai' ? 'ai' : 'internal', 'leadName' => (string) $lead->get('name')], 30);
     }
 
     public function getActionDocRun(Request $request): \stdClass
@@ -1186,6 +1187,19 @@ class CrmHub
         $d = $request->getParsedBody();
         $this->docLead((string) ($d->leadId ?? ''), true);
         return (object) $this->hubCall('POST', '/v1/docs/remember', ['name' => (string) ($d->name ?? ''), 'items' => json_decode(json_encode($d->items ?? []), true)], 20);
+    }
+
+    public function getActionDocPending(Request $request): \stdClass
+    {
+        $this->simGuard();
+        return (object) $this->hubCall('GET', '/v1/docs/pending?userId=' . rawurlencode($this->user->getId()), null, 10);
+    }
+
+    public function postActionDocDismiss(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/docs/dismiss', ['userId' => $this->user->getId(), 'runId' => (int) ($d->runId ?? 0)], 10);
     }
 
     public function getActionDocHistory(Request $request): \stdClass

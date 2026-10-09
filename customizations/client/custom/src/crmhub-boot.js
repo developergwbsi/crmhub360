@@ -74,6 +74,10 @@
         refreshInstallButton();
         refreshPushButton();
         if (!pushSynced && window.Espo && Espo.Ajax && document.querySelector('#navbar .navbar-right')) { pushSynced = true; syncPush(); }
+        if (!docWatchStarted && window.Espo && Espo.Ajax && Espo.loader && document.querySelector('#navbar .navbar-right')) {
+            docWatchStarted = true;
+            try { Espo.loader.require('custom:doc-watch', function (m) { m.init(); }); } catch (e) { /* sin indicador de lecturas */ }
+        }
         applyTheme();
     }
 
@@ -104,7 +108,7 @@
     }
 
     /* ---------------- Notificaciones push (llegan con la app cerrada) ---------------- */
-    var pushOn = false, pushSynced = false;
+    var pushOn = false, pushSynced = false, docWatchStarted = false;
     function pushSupported() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext; }
     function api(method, url, data) {
         return (window.Espo && Espo.Ajax) ? Espo.Ajax[method + 'Request'](url, data) : Promise.reject(new Error('app no lista'));

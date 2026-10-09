@@ -2,7 +2,7 @@
 la empresa necesita. Cada empresa tiene «perfiles de lectura» (qué documento es y qué datos sacar y dónde guardarlos); nosotros entregamos perfiles listos y ella puede crear los suyos."""
 import json, logging, re, secrets
 
-from . import config, credit, db, ollama, processes, qualify
+from . import config, credit, db, docparse, ollama, processes, push, qualify
 from .espo import Espo
 
 log = logging.getLogger("hub.docs")
@@ -10,6 +10,7 @@ SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS doc_runs (
     id SERIAL PRIMARY KEY, tenant TEXT NOT NULL, lead_id TEXT NOT NULL, user_id TEXT, profile_id TEXT NOT NULL, profile_name TEXT NOT NULL DEFAULT '', attachment_id TEXT,
     status TEXT NOT NULL DEFAULT 'read', error TEXT NOT NULL DEFAULT '', result JSONB NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), applied_at TIMESTAMPTZ);
+ALTER TABLE doc_runs ADD COLUMN IF NOT EXISTS lead_name TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS doc_runs_lead ON doc_runs (tenant, lead_id, id DESC);
 """
 TYPES = {"text": "Texto", "number": "Número (monto)", "integer": "Número entero", "date": "Fecha", "bool": "Sí / No"}
@@ -19,6 +20,8 @@ MAX_PROFILES, MAX_FIELDS = 15, 25
 def ensure_schema() -> None:
     with db.pool.connection() as c:
         c.execute(SCHEMA_SQL)
+        # una lectura que estaba en curso cuando el servicio se reinició ya no va a terminar: se marca para que el usuario pueda reintentar
+        c.execute("UPDATE doc_runs SET status='failed', error='El servicio se reinició durante la lectura. Vuelve a subir el documento.' WHERE status='reading'")
 
 
 def F(key, label, typ, to, hint=""):
@@ -57,7 +60,8 @@ AUTO_SCHEMA = {"type": "object", "properties": {
 # a qué campo del lead corresponde un dato, según su nombre (así la IA solo lista los datos y el destino no depende de ella)
 RULES = [(r"puntaje|score|calificaci[oó]n crediticia", "creditScore", "num"), (r"(deuda|saldo|valor)[^a-z]*(en )?mora|mora total", "overdueDebt", "num"), (r"deuda total|saldo total|total adeudado|total deuda|total obligaciones", "totalDebt", "num"),
          (r"ingreso|salario|sueldo|asignaci[oó]n salarial|remuneraci[oó]n|devengado", "monthlyIncome", "num"), (r"d[ií]as de mora|m[aá]x.*mora", "maxDaysOverdue", "num"), (r"castigad", "defaultCount", "num"),
-         (r"acreedor|cantidad de obligaciones|n[uú]mero de obligaciones", "creditorCount", "num"), (r"tipo de (documento|identificaci[oó]n)", "identificationType", "short"), (r"^(n[uú]mero de )?(documento|identificaci[oó]n|c[eé]dula|nit)( de identidad)?$", "identification", "id")]
+         (r"acreedor|cantidad de obligaciones|n[uú]mero de obligaciones", "creditorCount", "num"), (r"tipo de (documento|identificaci[oó]n)", "identificationType", "short"), (r"^(n[uú]mero de )?(documento|identificaci[oó]n|c[eé]dula|nit)( de identidad)?$", "identification", "id"),
+         (r"detalle de obligaciones", "defaultHistory", "any"), (r"resumen financiero", "creditSummary", "any")]
 
 
 def guess_target(label: str, value: str) -> str:
@@ -69,7 +73,9 @@ def guess_target(label: str, value: str) -> str:
                 return "field:" + field
             if kind == "short" and len(v) <= 12:
                 return "field:" + field
-            if kind == "id" and re.search(r"\d{5,}", v) and len(v) <= 25:
+            if kind == "any":
+                return "field:" + field
+            if kind == "id" and len(re.sub(r"\D", "", v)) >= 5 and len(v) <= 25:
                 return "field:" + field
     return "note"
 
@@ -262,35 +268,82 @@ def profile_from_items(tenant: dict, name: str, items: list[dict]) -> dict:
     return new[-1]
 
 
-# ---------------- ejecución en segundo plano: la lectura puede tardar minutos si el servidor está ocupado
-async def _work(tenant: dict, run_id: int, lead_id: str, attachment_id: str, profile_id: str, user_id: str | None, llm_json) -> None:
+# ---------------- lectura interna (sin IA)
+async def extract_internal(tenant: dict, lead_id: str, attachment_id: str, profile_id: str) -> dict:
+    import asyncio
+    data = await Espo(tenant).file(attachment_id)
+    if not data[:5] == b"%PDF-":
+        raise ValueError("El archivo no es un PDF.")
+    doc = await asyncio.to_thread(docparse.read_pdf, data)
+    if len(doc["layout"]) < 80:
+        raise ValueError("El PDF no tiene texto que se pueda leer (parece una imagen escaneada). Sube la versión digital del documento.")
+    if profile_id == AUTO_ID:
+        dtype, items = docparse.auto_items(doc)
+        for it in items:
+            it["to"] = guess_target(it["label"], it["value"])
+        return {"name": dtype, "payload": {"mode": "auto", "engine": "internal", "documentType": dtype, "items": items, "pages": doc["pages"]}}
+    prof = next((p for p in profiles(tenant) if p["id"] == profile_id), None)
+    if not prof:
+        raise ValueError("Perfil de lectura inexistente.")
+    values = await asyncio.to_thread(docparse.profile_values, prof, doc)
+    return {"name": prof["name"], "payload": {"engine": "internal", "profile": {"id": prof["id"], "name": prof["name"], "fields": prof["fields"]}, "values": values, "pages": doc["pages"]}}
+
+
+# ---------------- ejecución en segundo plano: la lectura con IA puede tardar minutos si el servidor está ocupado
+async def _work(tenant: dict, run_id: int, lead_id: str, attachment_id: str, profile_id: str, user_id: str | None, llm_json, engine: str, lead_name: str) -> None:
+    import time
+    t0 = time.time()
     try:
-        res = await (extract_auto(tenant, lead_id, attachment_id, user_id, llm_json) if profile_id == AUTO_ID else extract(tenant, lead_id, attachment_id, profile_id, user_id, llm_json))
+        if engine == "ai":
+            res = await (extract_auto(tenant, lead_id, attachment_id, user_id, llm_json) if profile_id == AUTO_ID else extract(tenant, lead_id, attachment_id, profile_id, user_id, llm_json))
+            res["payload"]["engine"] = "ai"
+        else:
+            res = await extract_internal(tenant, lead_id, attachment_id, profile_id)
         with db.pool.connection() as c:
             c.execute("UPDATE doc_runs SET status='read', profile_name=%s, result=%s WHERE id=%s", (res["name"], json.dumps(res["payload"], ensure_ascii=False), run_id))
+        if user_id and time.time() - t0 > 10:   # tardó: seguramente el usuario ya cerró la ventana, se le avisa
+            try:
+                await push.send(tenant["slug"], title="Lectura de documento lista", body=f"{lead_name or 'Lead'}: {res['name']}", url=f"/#Lead/view/{lead_id}", tag=f"crmhub-doc-{run_id}", kind="doc", user_id=user_id)
+            except Exception as e:
+                log.warning("aviso de lectura: %s", str(e)[:100])
     except Exception as e:
         log.warning("lectura de documento: %s", str(e)[:200])
         with db.pool.connection() as c:
             c.execute("UPDATE doc_runs SET status='failed', error=%s WHERE id=%s", (str(e)[:300], run_id))
 
 
-async def start(tenant: dict, lead_id: str, attachment_id: str, profile_id: str, user_id: str | None, llm_json) -> int:
+async def start(tenant: dict, lead_id: str, attachment_id: str, profile_id: str, user_id: str | None, llm_json, engine: str = "internal", lead_name: str = "") -> int:
     import asyncio
     if profile_id != AUTO_ID and not any(p["id"] == profile_id for p in profiles(tenant)):
         raise ValueError("Perfil de lectura inexistente.")
+    engine = "ai" if engine == "ai" else "internal"
     with db.pool.connection() as c:
-        rid = c.execute("INSERT INTO doc_runs (tenant, lead_id, user_id, profile_id, profile_name, attachment_id, status) VALUES (%s,%s,%s,%s,%s,%s,'reading') RETURNING id",
-                        (tenant["slug"], lead_id, user_id, profile_id, "Documento", attachment_id)).fetchone()["id"]
-    asyncio.create_task(_work(tenant, rid, lead_id, attachment_id, profile_id, user_id, llm_json))
+        rid = c.execute("INSERT INTO doc_runs (tenant, lead_id, lead_name, user_id, profile_id, profile_name, attachment_id, status) VALUES (%s,%s,%s,%s,%s,%s,%s,'reading') RETURNING id",
+                        (tenant["slug"], lead_id, lead_name[:120], user_id, profile_id, "Documento", attachment_id)).fetchone()["id"]
+    asyncio.create_task(_work(tenant, rid, lead_id, attachment_id, profile_id, user_id, llm_json, engine, lead_name))
     return rid
 
 
 def get_run(tenant: str, lead_id: str, run_id: int) -> dict | None:
     with db.pool.connection() as c:
-        r = c.execute("SELECT id, status, error, profile_name, result FROM doc_runs WHERE id=%s AND tenant=%s AND lead_id=%s", (run_id, tenant, lead_id)).fetchone()
+        r = c.execute("SELECT id, status, error, profile_name, attachment_id, result FROM doc_runs WHERE id=%s AND tenant=%s AND lead_id=%s", (run_id, tenant, lead_id)).fetchone()
     if not r:
         return None
-    out = {"runId": r["id"], "status": r["status"], "error": r["error"]}
-    if r["status"] == "read":
+    out = {"runId": r["id"], "status": r["status"], "error": r["error"], "attachmentId": r["attachment_id"], "profileId": None}
+    if r["status"] in ("read", "applied"):
         out.update(r["result"])
     return out
+
+
+def pending(tenant: str, user_id: str) -> list[dict]:
+    """Lecturas del usuario en curso o ya leídas que todavía no guardó ni descartó (últimas 24 h)."""
+    with db.pool.connection() as c:
+        c.execute("UPDATE doc_runs SET status='failed', error='La lectura tardó demasiado y se canceló. Inténtalo de nuevo.' WHERE status='reading' AND created_at < now() - interval '30 minutes'")
+        rows = c.execute("SELECT id, lead_id, lead_name, profile_id, profile_name, status, created_at FROM doc_runs WHERE tenant=%s AND user_id=%s AND (status='reading' OR (status IN ('read','failed') AND created_at > now() - interval '24 hours')) "
+                         "ORDER BY id DESC LIMIT 10", (tenant, user_id)).fetchall()
+    return [dict(r) for r in rows]
+
+
+def dismiss(tenant: str, user_id: str, run_id: int) -> None:
+    with db.pool.connection() as c:
+        c.execute("UPDATE doc_runs SET status='dismissed' WHERE id=%s AND tenant=%s AND user_id=%s AND status IN ('read','failed')", (run_id, tenant, user_id))
