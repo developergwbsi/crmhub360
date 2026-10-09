@@ -74,7 +74,7 @@ self.addEventListener('fetch', e => {
 async function networkFirst(req) {
     const cache = await caches.open(STATIC);
     try {
-        const res = await withTimeout(fetch(req), 4000);
+        const res = await withTimeout(fetch(req, {cache: 'no-cache'}), 4000);   // revalidar siempre: ignora copias viejas del caché HTTP del navegador
         if (res.ok) { cache.put(req, res.clone()); }
         return res;
     } catch (err) {
