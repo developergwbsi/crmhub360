@@ -283,7 +283,11 @@ body { --navbar-height: 36px; --navbar-tab-vertical-padding: 7px; }
 
 /* ======================= Listas como tarjetas (usuarios, campañas, equipos, roles…) ======================= */
 #main .list-container > .list, #main .list-container .list { margin-left: 0 !important; margin-right: 0 !important; }
-#main .list-container > .list { background: var(--ch-surface); border: 1px solid var(--ch-line) !important; border-radius: 12px !important; overflow: hidden; box-shadow: var(--default-box-shadow); }
+#main .list-container > .list { background: var(--ch-surface); border: 1px solid var(--ch-line) !important; border-radius: 12px !important; overflow: visible; box-shadow: var(--default-box-shadow); }
+/* sin overflow:hidden las listas desplegables de cada fila no se cortan; las esquinas redondeadas se pintan en las celdas */
+#main .list-container > .list > table, #main .list-container > .list .table { border-radius: 12px; }
+#main .list-container > .list thead tr:first-child > *:first-child { border-top-left-radius: 11px; } #main .list-container > .list thead tr:first-child > *:last-child { border-top-right-radius: 11px; }
+#main .list-container > .list tbody tr:last-child > *:first-child { border-bottom-left-radius: 11px; } #main .list-container > .list tbody tr:last-child > *:last-child { border-bottom-right-radius: 11px; }
 #main .list-container > .list > table, #main .list-container > .list > table.table { margin-bottom: 0; border-radius: 12px; }
 #main .list-container > .list > table thead th { background: var(--ch-soft); border-bottom: 1px solid var(--ch-line); }
 #main .list-container > .list tr:last-child > td { border-bottom: 0; }
@@ -292,7 +296,8 @@ body { --navbar-height: 36px; --navbar-tab-vertical-padding: 7px; }
 
 /* ======================= Buscadores ======================= */
 /* Barra de búsqueda de las listas: una sola pieza redondeada, con el filtro a la izquierda y la lupa a la derecha */
-.search-container .search-row .input-group { display: flex; align-items: stretch; flex-wrap: nowrap; border: 1px solid var(--ch-line); border-radius: 12px; background: var(--ch-surface); overflow: hidden; transition: box-shadow .15s, border-color .15s; }
+.search-container .search-row .input-group { display: flex; align-items: stretch; flex-wrap: nowrap; border: 1px solid var(--ch-line); border-radius: 12px; background: var(--ch-surface); overflow: visible; transition: box-shadow .15s, border-color .15s; }
+.search-container .search-row .input-group > :first-child, .search-container .search-row .input-group > :first-child > .btn { border-top-left-radius: 11px; border-bottom-left-radius: 11px; } .search-container .search-row .input-group > :last-child, .search-container .search-row .input-group > :last-child > .btn { border-top-right-radius: 11px; border-bottom-right-radius: 11px; }
 .search-container .search-row .input-group:focus-within { border-color: var(--ch-primary); box-shadow: 0 0 0 3px var(--input-border-focus-rgba); }
 .search-container .input-group > .input-group-btn { width: auto; display: flex; position: static; }
 .search-container .input-group .btn { border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; height: 40px; color: var(--ch-ink); }
@@ -436,7 +441,8 @@ input[type=color].form-control { width: 96px; cursor: pointer; }
 @media (max-width: 700px) { .ch-lh-kpis { grid-template-columns: repeat(2, 1fr); } .ch-lh-name { font-size: 19px; } }
 
 /* secciones de la ficha como tarjetas con acento y etiquetas discretas */
-.record .detail .panel, .detail-container .panel { border-radius: 14px; border: 1px solid var(--ch-line); overflow: hidden; }
+.record .detail .panel, .detail-container .panel { border-radius: 14px; border: 1px solid var(--ch-line); overflow: visible; }
+.record .detail .panel > .panel-heading, .detail-container .panel > .panel-heading { border-radius: 13px 13px 0 0; } .record .detail .panel > .panel-body:last-child, .detail-container .panel > .panel-body:last-child { border-radius: 0 0 13px 13px; }
 .record .panel-heading { border-bottom: 1px solid var(--ch-line); background: var(--ch-soft); padding: 10px 16px; }
 .record .panel-heading .panel-title { position: relative; padding-left: 12px; }
 .record .panel-heading .panel-title::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 4px; border-radius: 4px; background: var(--ch-primary); }
