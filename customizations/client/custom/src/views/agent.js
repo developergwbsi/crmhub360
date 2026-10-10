@@ -31,8 +31,8 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
         }
 
         agentBar() {
-            const d = this.d, opts = d.agents.map(a => `<option value="${esc(a.id)}" ${a.id === d.selectedId ? 'selected' : ''}>${esc(a.name)} · ${esc(a.persona)}${a.enabled ? '' : ' (apagado)'}</option>`).join('');
-            return `<div class="ch-ag-bar"><span class="fas fa-robot"></span> Estás configurando a <select data-agsel>${opts}</select>${d.agents.length > 1 ? '' : '<small class="ch-muted">Puedes crear más en «Mis comerciales».</small>'}</div>`;
+            const d = this.d, opts = d.agents.map(a => `<option value="${esc(a.id)}" ${a.id === d.selectedId ? 'selected' : ''}>${esc(a.name)}${a.persona && a.persona !== a.name ? ' · ' + esc(a.persona) : ''}${a.enabled ? '' : ' (apagado)'}</option>`).join('');
+            return `<div class="ch-ag-bar"><button type="button" class="btn btn-default btn-sm" data-act="agback"><span class="fas fa-arrow-left"></span> Mis comerciales</button><span class="ch-ag-bar-l"><span class="fas fa-robot"></span> Estás configurando a</span><select data-agsel class="form-control">${opts}</select>${d.agents.length > 1 ? '' : '<small class="ch-muted">Puedes crear más en «Mis comerciales».</small>'}</div>`;
         }
 
         // ------------------------------------------------ mis comerciales y reparto
@@ -127,7 +127,7 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
                 <div class="ch-ag-row2"><div><label>Primer contacto, minutos después de que llega el lead</label><input type="number" min="0" data-f="cadence.first_contact_minutes" value="${esc(c.cadence.first_contact_minutes)}"></div><div><label>Máximo de mensajes por lead al día</label><input type="number" min="1" max="10" data-f="cadence.max_per_day" value="${esc(c.cadence.max_per_day)}"></div></div>
                 <label>Seguimientos si el cliente no responde (horas desde el mensaje anterior, separadas por coma)</label><input data-f="fu" value="${esc((c.cadence.follow_ups || []).map(m => +(m / 60).toFixed(2)).join(', '))}" placeholder="4, 24, 72, 168">
                 <label>Si una persona escribe al cliente, el agente se hace a un lado (minutos)</label><input type="number" min="0" data-f="cadence.human_hold_minutes" value="${esc(c.cadence.human_hold_minutes)}">
-                <div class="ch-chat-err" data-role="err" hidden></div><div class="ch-mail-actions"><button class="btn btn-primary" data-act="save"><span class="fas fa-floppy-disk"></span> Guardar entrenamiento</button></div></div>`;
+                <div class="ch-chat-err" data-role="err" hidden></div><div class="ch-mail-actions"><button class="btn btn-primary" data-act="save"><span class="fas fa-floppy-disk"></span> Guardar entrenamiento</button><button class="btn btn-default" data-act="agcancel">Cancelar</button></div></div>`;
         }
 
         collect() {
@@ -168,7 +168,7 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
                 <label class="ch-dz-chk"><input type="checkbox" data-mf="native" ${c.menus_native_evolution ? 'checked' : ''}> Intentar lista/botones nativos también con Evolution API <small class="ch-muted">(experimental: WhatsApp suele ocultarlos en líneas no oficiales; si no los ves, déjalo apagado)</small></label>
                 ${menus.map(card).join('') || ChUi.empty({kind: 'chat', title: 'Aún no tienes mensajes con opciones', text: 'Crea uno desde cero o parte del ejemplo «Situación del cliente».', compact: true})}
                 <div class="ch-chat-err" data-role="err" hidden></div>
-                <div class="ch-mail-actions"><button class="btn btn-default btn-sm" data-act="mnadd"><span class="fas fa-plus"></span> Nuevo mensaje con opciones</button><button class="btn btn-default btn-sm" data-act="mnadd" data-tpl="situacion"><span class="fas fa-wand-magic-sparkles"></span> Usar el ejemplo «Situación del cliente»</button><button class="btn btn-primary" data-act="mnsave"><span class="fas fa-floppy-disk"></span> Guardar</button></div></div>`;
+                <div class="ch-mail-actions"><button class="btn btn-default btn-sm" data-act="mnadd"><span class="fas fa-plus"></span> Nuevo mensaje con opciones</button><button class="btn btn-default btn-sm" data-act="mnadd" data-tpl="situacion"><span class="fas fa-wand-magic-sparkles"></span> Usar el ejemplo «Situación del cliente»</button><button class="btn btn-primary" data-act="mnsave"><span class="fas fa-floppy-disk"></span> Guardar</button><button class="btn btn-default" data-act="agcancel">Cancelar</button></div></div>`;
         }
 
         menusCollect() {
@@ -282,6 +282,8 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             const act = a.dataset.act;
             if (act === 'tab') { this.tab = a.dataset.t; if (this.tab === 'stats') { this.stats = null; } this.draw(); }
             else if (act === 'mode') { if (a.classList.contains('off')) { Espo.Ui.warning('La versión automática no está activada para tu empresa.'); return; } this.d.config = this.collect(); this.d.config.mode = a.dataset.m; this.draw(); }
+            else if (act === 'agback') { this.tab = 'agents'; this.draw(); }
+            else if (act === 'agcancel') { this.load(this.sel, () => { this.tab = 'agents'; this.draw(); }); }
             else if (act === 'agadd') { ChUi.prompt({title: 'Nuevo comercial virtual', text: 'Parte de cero (queda en manual y en modo de prueba hasta que lo entrenes y lo actives).', label: 'Nombre interno', rows: 1, max: 60, ok: 'Crear', placeholder: 'Ej.: Cobranza, Ventas, Atención al cliente'}).then(n => { if (n !== null) { this.agentCall(Espo.Ajax.postRequest('CrmHub/agentCreate', {name: n}), 'Comercial virtual creado: entrénalo en la pestaña «Entrenamiento»').then(() => { this.tab = 'train'; this.draw(); }); } }); }
             else if (act === 'agclone') { this.agentCall(Espo.Ajax.postRequest('CrmHub/agentCreate', {cloneFrom: a.dataset.id}), 'Copia creada: ajústala en «Entrenamiento»').then(() => { this.tab = 'train'; this.draw(); }); }
             else if (act === 'agdel') { ChUi.confirm({title: 'Quitar comercial virtual', danger: true, ok: 'Quitar', text: 'Se quita este comercial virtual. Los leads que atiende pasan al primero de la lista y su historial se conserva.'}).then(y => { if (y) { this.agentCall(Espo.Ajax.postRequest('CrmHub/agentDelete', {id: a.dataset.id}), 'Comercial virtual quitado'); } }); }
