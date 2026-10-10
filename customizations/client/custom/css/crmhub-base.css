@@ -946,3 +946,6 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-ln-st { font-size: 13px; padding: 7px 10px; border-radius: 10px; background: var(--ch-soft); } .ch-ln-st.ok { color: var(--ch-success-fg); background: color-mix(in srgb, #2da44e 12%, var(--ch-surface)); } .ch-ln-st.err { color: #b42323; background: color-mix(in srgb, #ef5b5b 12%, var(--ch-surface)); }
 .ch-ln-acts { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; border-top: 1px solid var(--ch-line); margin-top: 2px; padding-top: 10px; }
 .ch-ln-form .ch-cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; } @media (max-width: 700px) { .ch-ln-form .ch-cols2 { grid-template-columns: 1fr; } .ch-ln-grid { grid-template-columns: 1fr; } }
+
+/* Las fichas ocupan todo el ancho disponible (Espo las limita a 1300 px y en pantallas grandes sobraba un bloque vacío a la derecha) */
+#main .record-grid { max-width: none; }

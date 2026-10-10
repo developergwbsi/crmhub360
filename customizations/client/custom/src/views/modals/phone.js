@@ -1,5 +1,5 @@
 // Teléfono del registro: el propio panel es el celular. Marcar, registrar la llamada y ver el historial, todo dentro del panel.
-define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split'], function (Dep, ChUi, Split) {
+define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split', 'custom:live-panel'], function (Dep, ChUi, Split, Live) {
     const STATUS = {Held: ['Realizada', 'ok'], 'Not Held': ['No contestada', 'bad'], Planned: ['En curso / pendiente', 'warn']};
     return class extends Dep {
         className = 'dialog ch-ch-panel ch-phone-modal'
@@ -87,7 +87,7 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split']
             this.formError(''); this.el.querySelector('[data-role="hint"]').textContent = 'Llamando…';
             Espo.Ajax.postRequest('CrmHub/voice/call', {leadId: this.options.leadId, agentPhone: agent, lineId: (this.el.querySelector('[name="line"]') || {}).value || undefined}).then(() => {
                 this.el.querySelector('[data-role="hint"]').textContent = 'Te estamos llamando: contesta para conectar';
-                this.setMode(null); this.load(); this.trigger('done');
+                this.setMode(null); this.load(); this.trigger('done'); Live.notify(this.options.leadId);
             }).catch(xhr => {
                 this.el.querySelector('[data-role="hint"]').textContent = 'Listo para llamar';
                 this.formError((xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || 'No se pudo iniciar la llamada.');
@@ -98,7 +98,7 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split']
         saveLog() {
             const v = n => (this.el.querySelector(`[name="${n}"]`) || {}).value;
             Espo.Ajax.postRequest('CrmHub/call', {leadId: this.options.leadId, entityType: this.scope, result: v('result'), minutes: parseInt(v('minutes') || '0', 10), note: v('note')})
-                .then(() => { Espo.Ui.success('Llamada registrada'); this.setMode(null); this.load(); this.trigger('done'); })
+                .then(() => { Espo.Ui.success('Llamada registrada'); this.setMode(null); this.load(); this.trigger('done'); Live.notify(this.options.leadId); })
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } this.formError('No se pudo registrar la llamada.'); });
         }
 

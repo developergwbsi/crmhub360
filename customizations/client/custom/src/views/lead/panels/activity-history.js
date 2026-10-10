@@ -1,5 +1,5 @@
 // Historial de actividades completo: correos, llamadas, reuniones, tareas, WhatsApp, SMS, Telegram y cambios de estado, en una sola línea de tiempo.
-define('custom:views/lead/panels/activity-history', ['views/record/panels/bottom', 'custom:ui', 'custom:handlers/lead-contact'], function (Dep, ChUi, ContactHandler) {
+define('custom:views/lead/panels/activity-history', ['views/record/panels/bottom', 'custom:ui', 'custom:handlers/lead-contact', 'custom:live-panel'], function (Dep, ChUi, ContactHandler, Live) {
     const T = {
         email: ['fas fa-envelope', '#f59e0b', 'Correo'], call: ['fas fa-phone', '#2fa36b', 'Llamada'], meeting: ['fas fa-calendar-check', '#8b5cf6', 'Reunión'], task: ['fas fa-list-check', '#64748b', 'Tarea'],
         whatsapp: ['fab fa-whatsapp', '#25d366', 'WhatsApp'], sms: ['fas fa-comment-sms', '#0ea5e9', 'SMS'], telegram: ['fab fa-telegram', '#229ed9', 'Telegram'], status: ['fas fa-right-left', '#4f63e8', 'Estado'], process: ['fas fa-gears', '#0d9488', 'Proceso'], agent: ['fas fa-robot', '#7c3aed', 'Comercial virtual'],
@@ -12,6 +12,7 @@ define('custom:views/lead/panels/activity-history', ['views/record/panels/bottom
         afterRender() {
             super.afterRender();
             this.load();
+            Live.attach(this, () => this.load());
             if (!this._chSync) { this._chSync = true; this.listenTo(this.model, 'sync', () => setTimeout(() => this.load(), 700)); }
             this.el.onclick = e => {
                 const f = e.target.closest('[data-f]'); if (f) { this.filter = f.dataset.f; this.paint(); return; }
@@ -25,7 +26,7 @@ define('custom:views/lead/panels/activity-history', ['views/record/panels/bottom
         }
 
         load() {
-            Espo.Ajax.getRequest('CrmHub/leadTimeline', {leadId: this.model.id, scope: this.model.entityType, kind: 'all'}).then(r => { this.items = r.items || []; this.paint(); })
+            Espo.Ajax.getRequest('CrmHub/leadTimeline', {leadId: this.model.id, scope: this.model.entityType, kind: 'all'}).then(r => { const items = r.items || [], sig = items.length + '|' + (items[0] ? items[0].at + items[0].type + (items[0].text || '').length : ''); if (sig === this._sig) { return; } this._sig = sig; this.items = items; this.paint(); })
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
         }
 

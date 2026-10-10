@@ -1,5 +1,5 @@
 // Correos del registro: historial tipo bandeja y redacción dentro del mismo panel (sin ventanas aparte).
-define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:split', 'custom:mail-send', 'custom:tpl'], function (Dep, ChUi, Split, MailSend, Tpl) {
+define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:split', 'custom:mail-send', 'custom:tpl', 'custom:live-panel'], function (Dep, ChUi, Split, MailSend, Tpl, Live) {
     // HTML de una plantilla → texto editable (el correo se envía con saltos de línea convertidos a HTML)
     const toText = h => String(h || '').replace(/<\s*br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h\d)>/gi, '\n').replace(/<li[^>]*>/gi, '• ').replace(/<[^>]+>/g, '')
         .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/\n{3,}/g, '\n\n').trim();
@@ -98,7 +98,7 @@ define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:
             err.hidden = true;
             const btn = box.querySelector('[data-action="sendMail"]'); btn.disabled = true;
             MailSend.send({to: this.options.email, subject, body, parentType: this.scope, parentId: this.options.leadId, inReplyTo: this.replyTo && this.replyTo.messageId, references: this.replyTo && this.replyTo.refs})
-                .then(() => { Espo.Ui.success('Correo enviado'); this.replyTo = null; this.toggleCompose(false); this.trigger('done'); setTimeout(() => this.load(), 900); })
+                .then(() => { Espo.Ui.success('Correo enviado'); this.replyTo = null; this.toggleCompose(false); this.trigger('done'); Live.notify(this.options.leadId); setTimeout(() => this.load(), 900); })
                 .catch(xhr => { err.hidden = false; err.textContent = MailSend.reason(xhr); if (xhr) { xhr.errorIsHandled = true; } })
                 .then(() => { btn.disabled = false; });
         }

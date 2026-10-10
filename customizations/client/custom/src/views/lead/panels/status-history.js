@@ -1,5 +1,5 @@
 // Historial de cambios de estado del lead: quién, cuándo y por qué.
-define('custom:views/lead/panels/status-history', ['views/record/panels/bottom', 'custom:ui'], function (Dep, ChUi) {
+define('custom:views/lead/panels/status-history', ['views/record/panels/bottom', 'custom:ui', 'custom:live-panel'], function (Dep, ChUi, Live) {
     const KIND = {comment: ['fa-comment-dots', 'Comentario'], action: ['fa-bolt', 'Acción previa'], auto: ['fa-robot', 'Automático']};
     return class extends Dep {
         templateContent = '<div class="ch-timeline" data-role="tl"><div class="ch-chat-empty">Cargando…</div></div>'
@@ -7,6 +7,7 @@ define('custom:views/lead/panels/status-history', ['views/record/panels/bottom',
         afterRender() {
             super.afterRender();
             this.load();
+            Live.attach(this, () => this.load(), 15000);
             if (!this._chSync) { this._chSync = true; this.listenTo(this.model, 'sync', () => setTimeout(() => this.load(), 600)); }
         }
 

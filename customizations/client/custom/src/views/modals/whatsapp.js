@@ -1,5 +1,5 @@
 // Conversación con el lead por WhatsApp, Telegram o SMS, con aspecto de app de mensajería.
-define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:split', 'custom:tpl'], function (Dep, ChUi, Split, Tpl) {
+define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:split', 'custom:tpl', 'custom:live-panel'], function (Dep, ChUi, Split, Tpl, Live) {
     const META = {
         whatsapp: {title: 'WhatsApp', icon: 'fab fa-whatsapp', color: '#25d366'},
         telegram: {title: 'Telegram', icon: 'fab fa-telegram', color: '#229ed9'},
@@ -180,7 +180,7 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
             if (!text || btn.disabled) { return; }
             this.error(''); btn.disabled = true;
             Espo.Ajax.postRequest('CrmHub/' + this.channel + '/send', {leadId: this.options.leadId, text, phone: this.channel === 'telegram' ? undefined : this.phone, lineId: this.channel === 'telegram' ? undefined : (this.lineId || undefined)}).then(() => {
-                t.value = ''; this.autosize(); this.counter(); this.justSent = true; this.trigger('done');
+                t.value = ''; this.autosize(); this.counter(); this.justSent = true; this.trigger('done'); Live.notify(this.options.leadId);
                 return this.load(true);
             }).catch(xhr => {
                 const reason = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason');
