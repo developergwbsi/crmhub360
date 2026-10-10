@@ -756,5 +756,37 @@
             "controller": "CrmHub",
             "action": "agentMenuTest"
         }
+    },
+    {
+        "route": "/CrmHub/agentCreate",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentCreate"
+        }
+    },
+    {
+        "route": "/CrmHub/agentEnable",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentEnable"
+        }
+    },
+    {
+        "route": "/CrmHub/agentDelete",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentDelete"
+        }
+    },
+    {
+        "route": "/CrmHub/agentDispatchSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentDispatchSave"
+        }
     }
 ]

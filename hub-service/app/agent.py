@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS agent_leads (
     tenant TEXT NOT NULL, lead_id TEXT NOT NULL, mode TEXT, state TEXT NOT NULL DEFAULT 'active', attempts INT NOT NULL DEFAULT 0, next_at TIMESTAMPTZ, next_kind TEXT NOT NULL DEFAULT 'first',
     last_out_at TIMESTAMPTZ, last_in_at TIMESTAMPTZ, hold_until TIMESTAMPTZ, reason TEXT NOT NULL DEFAULT '', errors INT NOT NULL DEFAULT 0, updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant, lead_id));
 ALTER TABLE agent_leads ADD COLUMN IF NOT EXISTS pending JSONB;
+ALTER TABLE agent_leads ADD COLUMN IF NOT EXISTS agent_id TEXT;
+CREATE TABLE IF NOT EXISTS agent_dispatch (tenant TEXT NOT NULL, key TEXT NOT NULL, credit DOUBLE PRECISION NOT NULL DEFAULT 0, PRIMARY KEY (tenant, key));
 CREATE INDEX IF NOT EXISTS agent_leads_due ON agent_leads (next_at) WHERE state IN ('active', 'waiting_reply');
 CREATE TABLE IF NOT EXISTS agent_events (
     id SERIAL PRIMARY KEY, tenant TEXT NOT NULL, lead_id TEXT NOT NULL, lead_name TEXT NOT NULL DEFAULT '', at TIMESTAMPTZ NOT NULL DEFAULT now(), kind TEXT NOT NULL, channel TEXT NOT NULL DEFAULT '',
@@ -54,6 +56,89 @@ def _merge(base: dict, new: dict) -> dict:
 
 def config(tenant: dict) -> dict:
     return _merge(DEFAULTS, (tenant.get("settings") or {}).get("agent") or {})
+
+
+# ---------------- varios comerciales virtuales
+# settings.agents = [{id, name, enabled, config}] (cada uno con su entrenamiento). Sin esa lista, el entrenamiento de siempre (settings.agent) es el comercial «main».
+# for_agent() devuelve una copia del tenant cuyo settings.agent es el de ese comercial: todo el código existente (config(tenant)…) funciona sin cambios.
+def _raw_agents(tenant: dict) -> list[dict]:
+    st = tenant.get("settings") or {}
+    lst = st.get("agents")
+    if isinstance(lst, list) and lst:
+        return [dict(a) for a in lst]
+    leg = st.get("agent") or {}
+    return [{"id": "main", "name": _merge(DEFAULTS, leg)["persona"]["name"] or "Comercial virtual", "enabled": True, "config": leg}]
+
+
+def agents(tenant: dict) -> list[dict]:
+    return [{**a, "config": _merge(DEFAULTS, a.get("config") or {})} for a in _raw_agents(tenant)]
+
+
+def get_agent(tenant: dict, agent_id: str | None = None) -> dict | None:
+    ags = agents(tenant)
+    return next((a for a in ags if a["id"] == agent_id), None) or (ags[0] if ags else None)
+
+
+def for_agent(tenant: dict, agent_id: str | None = None) -> dict:
+    cur = tenant.get("_agent")
+    if cur and (not agent_id or cur["id"] == agent_id):
+        return tenant
+    a = get_agent(tenant, agent_id)
+    if not a:
+        return tenant
+    return {**tenant, "settings": {**(tenant.get("settings") or {}), "agent": a["config"]}, "_agent": {"id": a["id"], "name": a["name"], "enabled": bool(a.get("enabled", True))}}
+
+
+def slots(tenant: dict) -> int:
+    return max(1, int((((tenant.get("settings") or {}).get("limits") or {}).get("agents")) or 1))
+
+
+def save_agents(slug: str, lst: list[dict]) -> None:
+    with db.pool.connection() as c:
+        c.execute("UPDATE tenants SET settings = settings || %s::jsonb WHERE slug = %s", (json.dumps({"agents": lst, "agent": lst[0]["config"] if lst else {}}), slug))
+
+
+def dispatch_cfg(tenant: dict) -> dict:
+    d = (tenant.get("settings") or {}).get("dispatch") or {}
+    return {"mode": "split" if d.get("mode") == "split" else "shared", "weights": {str(k): max(0, min(100, int(v))) for k, v in (d.get("weights") or {}).items() if str(v).lstrip("-").isdigit()}}
+
+
+def _wrr(slug: str, key_prefix: str, parts: list[tuple[str, int]]) -> str:
+    """Reparto ponderado y parejo («smooth weighted round-robin»): con pesos 2 y 1 sale A, A, B, A, A, B… El estado queda en la base, así que sobrevive a reinicios."""
+    total = sum(w for _, w in parts)
+    with db.pool.connection() as c:
+        have = {r["key"]: r["credit"] for r in c.execute("SELECT key, credit FROM agent_dispatch WHERE tenant=%s AND key LIKE %s", (slug, key_prefix + "%")).fetchall()}
+        credits = {k: have.get(key_prefix + k, 0.0) + w for k, w in parts}
+        pick = max(credits, key=lambda k: credits[k])
+        credits[pick] -= total
+        for k, v in credits.items():
+            c.execute("INSERT INTO agent_dispatch (tenant, key, credit) VALUES (%s,%s,%s) ON CONFLICT (tenant, key) DO UPDATE SET credit = EXCLUDED.credit", (slug, key_prefix + k, v))
+    return pick
+
+
+def pick_attendant(tenant: dict) -> dict:
+    """¿Quién atiende un lead nuevo? {human: bool, agent: id|None}.
+    «shared»: los humanos reciben la asignación de siempre y un comercial virtual atiende el lead (si hay varios, rotan según su peso).
+    «split»: cada lead va a UNO —al grupo de asesores humanos o a un comercial virtual— según los pesos."""
+    slug, d = tenant["slug"], dispatch_cfg(tenant)
+    live = [a for a in agents(tenant) if a.get("enabled", True) and a["config"]["mode"] == "auto"] if licensed(tenant) else []
+    w = lambda k: d["weights"].get(k, 1)
+    if d["mode"] == "split":
+        parts = [("humans", w("humans"))] + [(a["id"], w(a["id"])) for a in live]
+        parts = [(k, x) for k, x in parts if x > 0]
+        if not parts:
+            return {"human": True, "agent": None, "mode": "split"}
+        k = _wrr(slug, "split:", parts) if len(parts) > 1 else parts[0][0]
+        return {"human": k == "humans", "agent": None if k == "humans" else k, "mode": "split"}
+    if not live:
+        return {"human": True, "agent": None, "mode": "shared"}
+    parts = [(a["id"], w(a["id"])) for a in live if w(a["id"]) > 0] or [(live[0]["id"], 1)]
+    return {"human": True, "agent": _wrr(slug, "shared:", parts) if len(parts) > 1 else parts[0][0], "mode": "shared"}
+
+
+def hold_minutes(tenant: dict, lead_id: str) -> int:
+    row = _row(tenant["slug"], lead_id)
+    return config(for_agent(tenant, (row or {}).get("agent_id")))["cadence"]["human_hold_minutes"]
 
 
 def licensed(tenant: dict) -> bool:
@@ -188,6 +273,8 @@ def effective_mode(tenant: dict, row: dict | None) -> str:
     """'auto' solo si la empresa tiene la licencia y (el lead lo pidió, o la empresa lo tiene por defecto y el lead no pidió manual)."""
     if not licensed(tenant):
         return "manual"
+    if (tenant.get("_agent") or {}).get("enabled") is False:   # comercial virtual apagado: sus leads quedan en pausa hasta encenderlo
+        return "manual"
     m = (row or {}).get("mode")
     return m if m in ("auto", "manual") else config(tenant)["mode"]
 
@@ -202,8 +289,16 @@ async def _api_user(tenant: dict) -> str:
     return _api_ids[tenant["slug"]]
 
 
-async def on_lead(tenant: dict, lead_id: str) -> None:
-    """Lead nuevo: si la empresa lo atiende con el comercial virtual, programa el primer contacto."""
+async def on_lead(tenant: dict, lead_id: str, agent_id: str | None = None, decided: bool = False) -> None:
+    """Lead nuevo: si lo atiende un comercial virtual (el que decidió el reparto), programa el primer contacto."""
+    if decided and not agent_id:
+        return   # el reparto lo mandó a una persona
+    if not agent_id:   # el CRM no pudo consultar el reparto: se decide aquí
+        p = pick_attendant(tenant)
+        if not p["agent"]:
+            return
+        agent_id = p["agent"]
+    tenant = for_agent(tenant, agent_id)
     cfg = config(tenant)
     if effective_mode(tenant, _row(tenant["slug"], lead_id)) != "auto":
         return
@@ -214,13 +309,14 @@ async def on_lead(tenant: dict, lead_id: str) -> None:
     except Exception as e:
         log.warning("alta del lead: %s", str(e)[:100]); return
     when = datetime.now(timezone.utc) + timedelta(minutes=cfg["cadence"]["first_contact_minutes"])
-    _set(tenant["slug"], lead_id, state="active", next_kind="first", next_at=when, attempts=0, errors=0)
-    log_event(tenant["slug"], lead_id, "queued", title="Lead recibido: el comercial virtual lo atenderá", detail=f"Primer contacto en {cfg['cadence']['first_contact_minutes']} min (dentro del horario).", dry=cfg["dry_run"])
+    _set(tenant["slug"], lead_id, state="active", next_kind="first", next_at=when, attempts=0, errors=0, agent_id=tenant["_agent"]["id"])
+    log_event(tenant["slug"], lead_id, "queued", title=f"Lead recibido: lo atenderá {cfg['persona']['name']} (comercial virtual)", detail=f"Primer contacto en {cfg['cadence']['first_contact_minutes']} min (dentro del horario).", dry=cfg["dry_run"])
 
 
 async def on_inbound(tenant: dict, lead_id: str, channel: str, text: str) -> None:
     """El cliente escribió: se espera unos segundos por si manda varios mensajes seguidos y se responde."""
     row = _row(tenant["slug"], lead_id)
+    tenant = for_agent(tenant, (row or {}).get("agent_id"))
     # solo atiende a leads que ya están a su cargo (llegaron con el agente activo o se le pasaron); no adopta chats que una persona ya llevaba
     if not row or effective_mode(tenant, row) != "auto" or row["state"] in ("escalated", "stopped"):
         return
@@ -453,6 +549,7 @@ async def _escalate(tenant: dict, cfg: dict, lead: dict, reason: str, *, dry: bo
 
 # ---------------- un paso del agente sobre un lead
 async def step(tenant: dict, row: dict) -> None:
+    tenant = for_agent(tenant, row.get("agent_id"))
     slug, lead_id, cfg = tenant["slug"], row["lead_id"], config(tenant)
     now, espo = datetime.now(timezone.utc), Espo(tenant)
     dry = cfg["dry_run"]
@@ -621,6 +718,7 @@ def _resolve(event_id: int, how: str, by: str) -> None:
 
 
 async def approve(tenant: dict, lead_id: str, event_id: int, message: str | None, by: str) -> None:
+    tenant = for_agent(tenant, (_row(tenant["slug"], lead_id) or {}).get("agent_id"))
     slug, cfg = tenant["slug"], config(tenant)
     prop = next((p for p in pending_proposals(slug, lead_id) if p["id"] == event_id), None)
     if not prop:
@@ -671,6 +769,7 @@ async def worker() -> None:
                 t = db.get_tenant(r["tenant"])
                 if not t or t["status"] != "active":
                     continue
+                t = for_agent(t, r["agent_id"])
                 if effective_mode(t, dict(r)) != "auto":
                     continue
                 try:
@@ -686,8 +785,11 @@ async def worker() -> None:
 # ---------------- consulta e intervención humana
 def lead_state(tenant: dict, lead_id: str) -> dict:
     row = _row(tenant["slug"], lead_id)
+    tenant = for_agent(tenant, (row or {}).get("agent_id"))
     cfg = config(tenant)
-    return {"licensed": licensed(tenant), "companyMode": cfg["mode"], "effective": effective_mode(tenant, row), "dry_run": cfg["dry_run"], "persona": cfg["persona"]["name"],
+    return {"agent": {"id": tenant["_agent"]["id"], "name": tenant["_agent"]["name"], "enabled": tenant["_agent"]["enabled"]},
+            "agents": [{"id": a["id"], "name": a["name"], "persona": a["config"]["persona"]["name"], "enabled": a.get("enabled", True)} for a in agents(tenant)],
+            "licensed": licensed(tenant), "companyMode": cfg["mode"], "effective": effective_mode(tenant, row), "dry_run": cfg["dry_run"], "persona": cfg["persona"]["name"],
             "state": (row or {}).get("state"), "attempts": (row or {}).get("attempts", 0), "nextAt": (row or {}).get("next_at"), "nextKind": (row or {}).get("next_kind"), "reason": (row or {}).get("reason", ""),
             "holdUntil": (row or {}).get("hold_until"), "mode": (row or {}).get("mode"), "events": events(tenant["slug"], lead_id, 40),
             "approval": cfg["approval"], "proposal": next(iter(pending_proposals(tenant["slug"], lead_id)), None)}
@@ -701,10 +803,20 @@ async def lead_action(tenant: dict, lead_id: str, action: str, by: str) -> None:
     elif action == "manual":
         _set(slug, lead_id, mode="manual", state="stopped", next_at=None, reason=f"{by} tomó el control")
         log_event(slug, lead_id, "control", title=f"{by} tomó el control: este lead pasa a gestión manual")
+    elif action.startswith("switch:"):   # pasar el lead a otro comercial virtual
+        if not licensed(tenant):
+            raise PermissionError("La versión automática del comercial virtual no está activada para tu empresa.")
+        target = get_agent(tenant, action.split(":", 1)[1])
+        if not target or target["id"] != action.split(":", 1)[1] or not target.get("enabled", True):
+            raise ValueError("Ese comercial virtual no existe o está apagado.")
+        _set(slug, lead_id, agent_id=target["id"], mode="auto", state="active", next_kind="reply", next_at=now + timedelta(seconds=30), hold_until=None, errors=0, pending=None)
+        log_event(slug, lead_id, "control", title=f"{by} pasó este lead a {target['config']['persona']['name']} ({target['name']})")
     elif action in ("auto", "resume"):
         if not licensed(tenant):
             raise PermissionError("La versión automática del comercial virtual no está activada para tu empresa.")
         row = _row(slug, lead_id)
+        if not (row or {}).get("agent_id"):
+            _set(slug, lead_id, agent_id=(get_agent(tenant) or {}).get("id"))
         sent_before = bool(events(slug, lead_id, 1) and any(e["kind"] == "send" for e in events(slug, lead_id, 30)))
         _set(slug, lead_id, mode="auto", state="active", next_kind=("followup" if sent_before else "first"), next_at=now + timedelta(seconds=30), hold_until=None, errors=0, **({"attempts": 0} if action == "auto" else {}))
         log_event(slug, lead_id, "control", title=f"{by} pasó este lead al comercial virtual" if action == "auto" else f"{by} reanudó el comercial virtual")
@@ -714,6 +826,7 @@ async def lead_action(tenant: dict, lead_id: str, action: str, by: str) -> None:
 
 async def test_reply(tenant: dict, sample: dict) -> dict:
     """Prueba de entrenamiento: simula un cliente y devuelve lo que respondería el agente (sin enviar nada)."""
+    tenant = for_agent(tenant, sample.get("agentId"))
     cfg = config(tenant)
     ch = sample.get("channel") if sample.get("channel") in ("whatsapp", "email", "sms") else "whatsapp"
     lead = {"name": sample.get("name") or "Cliente de prueba", "source": sample.get("source") or "Formulario Web", "status": "Nuevo Lead", "description": sample.get("description") or "", "preferredChannel": "WhatsApp"}
@@ -741,7 +854,19 @@ def stats(tenant: str, days: int = 30) -> dict:
     g = lambda key, f="n": int(k[key][f]) if key in k else 0
     return {"days": days, "leads": int(sum(r["l"] for r in agg if r["kind"] in ("send", "queued", "inbound"))) if agg else 0, "sent": g("send") - g("send", "d"), "simulated": g("send", "d"), "replies": g("inbound"), "escalations": g("escalate"),
             "closed": g("close"), "statusChanges": g("status"), "errors": g("error"), "avgFirstResponseSeconds": int(resp) if resp is not None else None,
-            "series": [dict(r) for r in series], "states": {r["state"]: r["n"] for r in states}, "usage": usage(tenant)}
+            "series": [dict(r) for r in series], "states": {r["state"]: r["n"] for r in states}, "usage": usage(tenant), "byAgent": by_agent(tenant, days)}
+
+
+def by_agent(tenant: str, days: int = 30) -> dict:
+    """Por comercial virtual: leads a su cargo, activos y mensajes enviados de verdad en el periodo."""
+    out: dict[str, dict] = {}
+    with db.pool.connection() as c:
+        for r in c.execute("SELECT coalesce(agent_id, 'main') a, count(*) leads, count(*) FILTER (WHERE state IN ('active','waiting_reply','awaiting_approval')) active FROM agent_leads WHERE tenant=%s GROUP BY 1", (tenant,)).fetchall():
+            out[r["a"]] = {"leads": r["leads"], "active": r["active"], "sent": 0}
+        for r in c.execute("SELECT coalesce(l.agent_id, 'main') a, count(*) n FROM agent_events e JOIN agent_leads l ON l.tenant = e.tenant AND l.lead_id = e.lead_id "
+                           "WHERE e.tenant=%s AND e.kind='send' AND NOT e.dry AND e.sent AND e.at > now() - make_interval(days => %s) GROUP BY 1", (tenant, days)).fetchall():
+            out.setdefault(r["a"], {"leads": 0, "active": 0, "sent": 0})["sent"] = r["n"]
+    return out
 
 
 # ---------------- elección del cliente en un menú
@@ -779,9 +904,10 @@ async def map_menu_reply(tenant: dict, lead_id: str, text: str) -> str:
     return opt["title"]
 
 
-async def test_menu(tenant: dict, menu_id: str, to: str) -> dict:
+async def test_menu(tenant: dict, menu_id: str, to: str, agent_id: str | None = None) -> dict:
     """Envía un menú de la configuración a un número de prueba (sin lead) para ver cómo lo recibe el cliente."""
     from .ingest import normalize_phone
+    tenant = for_agent(tenant, agent_id)
     cfg = config(tenant)
     menu = next((m for m in cfg.get("menus") or [] if m["id"] == menu_id), None)
     if not menu:

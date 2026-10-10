@@ -2,6 +2,7 @@ import asyncio
 import hmac
 import json
 import logging
+import secrets
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -866,6 +867,8 @@ class ProcTriggerReq(BaseModel):
     changed: bool = False
     processId: str | None = None
     manual: bool = False
+    agentId: str | None = None    # comercial virtual que decidió el reparto de leads (lo manda el CRM al crear el lead)
+    decided: bool = False         # el CRM sí consultó el reparto (si agentId viene vacío, lo atiende una persona)
 
 
 @app.get("/v1/processes")
@@ -913,7 +916,7 @@ async def proc_trigger(req: ProcTriggerReq, tenant: dict = Depends(tenant_auth))
             logging.getLogger("hub.proc").exception("disparo de procesos")
         if not req.changed:   # lead nuevo: el comercial virtual programa su primer contacto
             try:
-                await agent.on_lead(tenant, req.leadId)
+                await agent.on_lead(tenant, req.leadId, req.agentId, req.decided)
             except Exception:
                 logging.getLogger("hub.agent").exception("alta del lead en el comercial virtual")
     asyncio.create_task(later())
@@ -1023,6 +1026,8 @@ async def docs_history(leadId: str, tenant: dict = Depends(tenant_auth)):
 # ---------------- comercial virtual (versión automática del seguimiento de leads)
 class AgentCfgReq(BaseModel):
     config: dict
+    agentId: str | None = None
+    name: str | None = None
 
 
 class AgentTestReq(BaseModel):
@@ -1043,9 +1048,29 @@ class AgentActionReq(BaseModel):
     by: str = "Un usuario"
 
 
+def _agent_cards(tenant: dict) -> list[dict]:
+    by = agent.by_agent(tenant["slug"])
+    out = []
+    for a in agent.agents(tenant):
+        cfg = a["config"]
+        out.append({"id": a["id"], "name": a["name"], "enabled": a.get("enabled", True), "mode": cfg["mode"], "dry_run": cfg["dry_run"], "persona": cfg["persona"]["name"], "role": cfg["persona"]["role"],
+                    "channels": [k for k, v in cfg["channels"].items() if v], "menus": len([m for m in cfg.get("menus") or [] if m.get("enabled")]), "stats": by.get(a["id"], {"leads": 0, "active": 0, "sent": 0})})
+    return out
+
+
+def _agent_overview(tenant: dict, agent_id: str | None = None) -> dict:
+    sel = agent.get_agent(tenant, agent_id)
+    return {"config": sel["config"], "selectedId": sel["id"], "name": sel["name"], "agents": _agent_cards(tenant), "dispatch": agent.dispatch_cfg(tenant), "slots": agent.slots(tenant),
+            "licensed": agent.licensed(tenant), "usage": agent.usage(tenant["slug"]), "company": tenant.get("name") or ""}
+
+
 @app.get("/v1/agent/config")
-async def agent_config(tenant: dict = Depends(tenant_auth)):
-    return {"config": agent.config(tenant), "licensed": agent.licensed(tenant), "usage": agent.usage(tenant["slug"]), "company": tenant.get("name") or ""}
+async def agent_config(agentId: str = "", tenant: dict = Depends(tenant_auth)):
+    return _agent_overview(tenant, agentId or None)
+
+
+def _store_agents(tenant: dict, lst: list[dict]) -> None:
+    agent.save_agents(tenant["slug"], lst)
 
 
 @app.put("/v1/agent/config")
@@ -1056,9 +1081,100 @@ async def agent_config_save(req: AgentCfgReq, tenant: dict = Depends(tenant_auth
         raise HTTPException(422, str(e))
     if new["mode"] == "auto" and not agent.licensed(tenant):
         raise HTTPException(403, "La versión automática del comercial virtual no está activada para tu empresa. Pídela a tu proveedor; mientras tanto puedes dejar el modo manual y entrenar al agente.")
+    lst = agent._raw_agents(tenant)
+    cur = next((a for a in lst if a["id"] == (req.agentId or lst[0]["id"])), None)
+    if not cur:
+        raise HTTPException(404, "Ese comercial virtual no existe")
+    cur["config"] = new
+    if req.name is not None and req.name.strip():
+        cur["name"] = req.name.strip()[:60]
+    _store_agents(tenant, lst)
+    return {"config": new, "agentId": cur["id"]}
+
+
+class AgentNewReq(BaseModel):
+    name: str = ""
+    cloneFrom: str | None = None
+
+
+class AgentIdReq(BaseModel):
+    id: str
+
+
+class AgentEnableReq(BaseModel):
+    id: str
+    enabled: bool
+
+
+class DispatchReq(BaseModel):
+    mode: str = "shared"
+    weights: dict = {}
+
+
+@app.post("/v1/agents")
+async def agents_create(req: AgentNewReq, tenant: dict = Depends(tenant_auth)):
+    lst = agent._raw_agents(tenant)
+    if len(lst) >= agent.slots(tenant):
+        raise HTTPException(403, f"Tu licencia incluye {agent.slots(tenant)} comercial(es) virtual(es). Para tener más, contacta con soporte de Crm Hub 360.")
+    src = next((a for a in agent.agents(tenant) if a["id"] == req.cloneFrom), None)
+    cfg = json.loads(json.dumps(src["config"])) if src else agent.clean_config({})
+    cfg["mode"], cfg["dry_run"] = "manual", True   # un comercial nuevo arranca en prueba y en manual hasta que lo entrenes y lo actives
+    nid = "a_" + secrets.token_hex(4)
+    name = req.name.strip()[:60] or (f"{src['name']} (copia)" if src else f"Comercial virtual {len(lst) + 1}")
+    lst.append({"id": nid, "name": name, "enabled": True, "config": agent.clean_config(cfg)})
+    _store_agents(tenant, lst)
+    return _agent_overview(db.get_tenant(tenant["slug"]), nid)
+
+
+@app.post("/v1/agents/enabled")
+async def agents_enabled(req: AgentEnableReq, tenant: dict = Depends(tenant_auth)):
+    lst = agent._raw_agents(tenant)
+    cur = next((a for a in lst if a["id"] == req.id), None)
+    if not cur:
+        raise HTTPException(404, "Ese comercial virtual no existe")
+    cur["enabled"] = bool(req.enabled)
+    _store_agents(tenant, lst)
+    return _agent_overview(db.get_tenant(tenant["slug"]), req.id)
+
+
+@app.post("/v1/agents/delete")
+async def agents_delete(req: AgentIdReq, tenant: dict = Depends(tenant_auth)):
+    lst = agent._raw_agents(tenant)
+    if len(lst) <= 1:
+        raise HTTPException(422, "Debe quedar al menos un comercial virtual. Si no lo quieres usar, apágalo.")
+    if not any(a["id"] == req.id for a in lst):
+        raise HTTPException(404, "Ese comercial virtual no existe")
+    lst = [a for a in lst if a["id"] != req.id]
+    _store_agents(tenant, lst)
+    with db.pool.connection() as c:   # sus leads pasan al primero de la lista
+        c.execute("UPDATE agent_leads SET agent_id = %s WHERE tenant = %s AND agent_id = %s", (lst[0]["id"], tenant["slug"], req.id))
+    d = agent.dispatch_cfg(tenant)
+    d["weights"].pop(req.id, None)
     with db.pool.connection() as c:
-        c.execute("UPDATE tenants SET settings = jsonb_set(settings, '{agent}', %s::jsonb, true) WHERE slug = %s", (json.dumps(new), tenant["slug"]))
-    return {"config": new}
+        c.execute("UPDATE tenants SET settings = jsonb_set(settings, '{dispatch}', %s::jsonb, true) WHERE slug = %s", (json.dumps(d), tenant["slug"]))
+    return _agent_overview(db.get_tenant(tenant["slug"]), lst[0]["id"])
+
+
+@app.put("/v1/agent/dispatch")
+async def agent_dispatch_save(req: DispatchReq, tenant: dict = Depends(tenant_auth)):
+    known = {"humans"} | {a["id"] for a in agent.agents(tenant)}
+    w = {}
+    for k, v in (req.weights or {}).items():
+        if k in known:
+            try:
+                w[k] = max(0, min(100, int(v)))
+            except (TypeError, ValueError):
+                raise HTTPException(422, "Los pesos deben ser números de 0 a 100")
+    d = {"mode": "split" if req.mode == "split" else "shared", "weights": w}
+    with db.pool.connection() as c:
+        c.execute("UPDATE tenants SET settings = jsonb_set(settings, '{dispatch}', %s::jsonb, true) WHERE slug = %s", (json.dumps(d), tenant["slug"]))
+    return {"dispatch": d}
+
+
+@app.post("/v1/agent/dispatch/pick")
+async def agent_dispatch_pick(tenant: dict = Depends(tenant_auth)):
+    """Lo consulta el CRM al llegar un lead nuevo: ¿lo atiende una persona, un comercial virtual o ambos?"""
+    return agent.pick_attendant(tenant)
 
 
 @app.post("/v1/agent/test")
@@ -1265,12 +1381,13 @@ def lines_active(tenant: dict = Depends(tenant_auth)):
 class AgentMenuTestReq(BaseModel):
     menuId: str
     to: str
+    agentId: str | None = None
 
 
 @app.post("/v1/agent/menu-test")
 async def agent_menu_test(req: AgentMenuTestReq, tenant: dict = Depends(tenant_auth)):
     try:
-        return await agent.test_menu(tenant, req.menuId, req.to)
+        return await agent.test_menu(tenant, req.menuId, req.to, req.agentId)
     except ValueError as e:
         raise HTTPException(422, str(e))
     except Exception as e:

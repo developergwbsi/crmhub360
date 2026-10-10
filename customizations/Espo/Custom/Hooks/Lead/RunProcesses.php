@@ -24,7 +24,9 @@ class RunProcesses
             return;
         }
         try {
-            (new HubClient($this->config))->request('POST', '/v1/process/trigger', ['leadId' => $entity->getId(), 'changed' => !$new], 3);
+            $dec = $new ? (AutoAssign::$decisions[spl_object_id($entity)] ?? null) : null;
+            unset(AutoAssign::$decisions[spl_object_id($entity)]);
+            (new HubClient($this->config))->request('POST', '/v1/process/trigger', ['leadId' => $entity->getId(), 'changed' => !$new] + ($dec ? $dec : []), 3);
         } catch (\Throwable $e) {
             $this->log->warning('CrmHub: no se pudo avisar de los procesos del lead: ' . $e->getMessage());
         }

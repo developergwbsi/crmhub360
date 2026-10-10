@@ -10,27 +10,86 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
     return class extends Dep {
         templateContent = '<div class="ch-ag"></div>'
         d = null
-        tab = 'train'
+        tab = 'agents'
         users = []
         test = {history: [], busy: false, last: null}
         stats = null
 
         setup() {
             this.getHelper().pageTitle.setTitle('Comercial virtual');
-            Promise.all([Espo.Ajax.getRequest('CrmHub/agentConfig'), Espo.Ajax.getRequest('User', {maxSize: 200, select: 'name,userName,isActive,type'}).catch(() => ({list: []}))])
+            Promise.all([Espo.Ajax.getRequest('CrmHub/agentConfig', {agentId: this.sel || ''}), Espo.Ajax.getRequest('User', {maxSize: 200, select: 'name,userName,isActive,type'}).catch(() => ({list: []}))])
                 .then(([c, u]) => { this.d = c; this.users = (u.list || []).filter(x => x.isActive && !['api', 'system', 'portal'].includes(x.type)); this.draw(); })
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } this.d = {error: true}; this.draw(); });
         }
         afterRender() { this.draw(); }
 
+        // carga el entrenamiento del comercial virtual elegido (y la lista de todos con el reparto)
+        load(agentId, then) {
+            this.sel = agentId || this.sel || '';
+            return Espo.Ajax.getRequest('CrmHub/agentConfig', {agentId: this.sel}).then(c => { this.d = c; this.sel = c.selectedId; this.test = {history: [], busy: false, last: null}; this.draw(); if (then) { then(); } })
+                .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo cargar el comercial virtual'); });
+        }
+
+        agentBar() {
+            const d = this.d, opts = d.agents.map(a => `<option value="${esc(a.id)}" ${a.id === d.selectedId ? 'selected' : ''}>${esc(a.name)} · ${esc(a.persona)}${a.enabled ? '' : ' (apagado)'}</option>`).join('');
+            return `<div class="ch-ag-bar"><span class="fas fa-robot"></span> Estás configurando a <select data-agsel>${opts}</select>${d.agents.length > 1 ? '' : '<small class="ch-muted">Puedes crear más en «Mis comerciales».</small>'}</div>`;
+        }
+
+        // ------------------------------------------------ mis comerciales y reparto
+        agentsHtml() {
+            const d = this.d, dp = d.dispatch, split = dp.mode === 'split', w = k => (dp.weights[k] != null ? dp.weights[k] : 1);
+            const canAdd = d.agents.length < d.slots;
+            const card = a => `<div class="ch-ln-card ${a.enabled ? '' : 'off'} ch-ag-card" data-ag="${esc(a.id)}">
+                <div class="ch-ln-head"><div class="ch-ln-ic"><span class="fas fa-robot"></span></div><div class="ch-ln-title"><b>${esc(a.name)}</b><span class="ch-muted">${esc(a.persona)} · ${esc(a.role)}</span></div>
+                    <label class="ch-ln-sw" title="${a.enabled ? 'Encendido: recibe leads' : 'Apagado: no recibe leads nuevos y pausa los que lleva'}"><input type="checkbox" data-agsw="${esc(a.id)}" ${a.enabled ? 'checked' : ''}><i></i></label></div>
+                <div class="ch-ln-meta"><span class="ch-ln-badge ${a.mode === 'auto' ? 'on' : ''}">${a.mode === 'auto' ? 'Automático' : 'Manual'}</span>${a.mode === 'auto' && a.dry_run ? '<span class="ch-ln-badge">Modo de prueba</span>' : ''}<span class="ch-ln-sum">${a.channels.map(c => ({whatsapp: 'WhatsApp', email: 'Correo', sms: 'SMS'}[c] || c)).join(' · ') || 'Sin canales'}${a.menus ? ' · ' + a.menus + ' menú(s)' : ''}</span></div>
+                <div class="ch-ag-nums"><div><b>${a.stats.active}</b><small>leads activos</small></div><div><b>${a.stats.leads}</b><small>leads en total</small></div><div><b>${a.stats.sent}</b><small>mensajes (30 d)</small></div></div>
+                <div class="ch-ln-acts"><button class="btn btn-default btn-sm" data-act="agtrain" data-id="${esc(a.id)}"><span class="fas fa-graduation-cap"></span> Entrenar</button><button class="btn btn-default btn-sm" data-act="agtest" data-id="${esc(a.id)}"><span class="fas fa-comments"></span> Probar</button>
+                    <button class="btn btn-default btn-sm" data-act="agclone" data-id="${esc(a.id)}" ${canAdd ? '' : 'disabled'}><span class="far fa-clone"></span> Duplicar</button>${d.agents.length > 1 ? `<button class="btn btn-link btn-sm text-danger" data-act="agdel" data-id="${esc(a.id)}"><span class="far fa-trash-can"></span> Quitar</button>` : ''}</div></div>`;
+            const pct = (k, list) => { const t = list.reduce((s, x) => s + x.w, 0); return t ? Math.round(100 * (list.find(x => x.k === k) || {w: 0}).w / t) : 0; };
+            const liveAg = d.agents.filter(a => a.enabled && a.mode === 'auto');
+            const rows = [{k: 'humans', n: 'Asesores humanos (grupo, se balancean entre sí por carga)', w: w('humans')}].concat(d.agents.map(a => ({k: a.id, n: `${a.name} (comercial virtual)${a.enabled && a.mode === 'auto' ? '' : a.enabled ? ' · en manual: no participa' : ' · apagado: no participa'}`, w: w(a.id)})));
+            const active = split ? rows.filter(r => r.k === 'humans' || liveAg.some(a => a.id === r.k)) : rows.filter(r => r.k !== 'humans' && liveAg.some(a => a.id === r.k));
+            return `${d.licensed ? '' : '<div class="ch-warn">La versión automática del comercial virtual no está activada para tu empresa: puedes crear y entrenar comerciales, pero no recibirán leads. Pídela a tu proveedor.</div>'}
+                <div class="ch-ln-bar"><button class="btn btn-primary btn-sm" data-act="agadd" ${canAdd ? '' : 'disabled'}><span class="fas fa-plus"></span> Nuevo comercial virtual</button><span class="ch-muted">${d.agents.length} de ${d.slots} incluido(s) en tu licencia${canAdd ? '' : ' · Para tener más, contacta con soporte de Crm Hub 360.'}</span></div>
+                <div class="ch-ln-grid">${d.agents.map(card).join('')}</div>
+                <div class="ch-sim-card"><h4><span class="fas fa-shuffle"></span> Reparto de leads nuevos</h4><p class="ch-muted">Decide quién atiende cada lead que llega por formularios, WhatsApp, redes u otro canal automático.</p>
+                    <label class="ch-dz-chk"><input type="radio" name="dpmode" value="shared" ${split ? '' : 'checked'}> <b>Compartido</b> — los asesores humanos reciben la asignación de siempre y además un comercial virtual atiende el lead (si hay varios, rotan según su peso).</label>
+                    <label class="ch-dz-chk"><input type="radio" name="dpmode" value="split" ${split ? 'checked' : ''}> <b>Repartir entre humanos y virtuales</b> — cada lead nuevo va a <b>uno solo</b>: al grupo de asesores humanos o a un comercial virtual, según los pesos. Así los intercalas.</label>
+                    <div class="ch-ag-dp">${rows.map(r => `<div class="ch-ag-dpr ${(split || r.k !== 'humans') ? '' : 'dim'}"><span>${esc(r.n)}</span><input type="number" min="0" max="100" data-dw="${esc(r.k)}" value="${r.w}"><small>${active.some(x => x.k === r.k) ? pct(r.k, active.map(x => ({k: x.k, w: +(this.el.querySelector(`[data-dw="${x.k}"]`) ? this.el.querySelector(`[data-dw="${x.k}"]`).value : x.w)}))) + '%' : '—'}</small></div>`).join('')}</div>
+                    <p class="ch-muted">El peso es la proporción: con humanos 2 y un comercial virtual 1, de cada 3 leads salen 2 para personas y 1 para el comercial virtual, intercalados. Un peso 0 excluye a ese participante. Solo participan los comerciales <b>encendidos y en modo automático</b>.</p>
+                    <div class="ch-mail-actions"><button class="btn btn-primary btn-sm" data-act="dpsave"><span class="fas fa-floppy-disk"></span> Guardar reparto</button></div></div>`;
+        }
+
+        dpWeights() { const w = {}; this.el.querySelectorAll('[data-dw]').forEach(i => { w[i.dataset.dw] = Math.max(0, Math.min(100, parseInt(i.value, 10) || 0)); }); return w; }
+
+        dpPreview() {   // porcentajes del reparto mientras se editan los pesos
+            const split = (this.el.querySelector('[name="dpmode"]:checked') || {}).value === 'split', w = this.dpWeights();
+            const live = this.d.agents.filter(a => a.enabled && a.mode === 'auto').map(a => a.id), ks = (split ? ['humans'] : []).concat(live), tot = ks.reduce((s, k) => s + (w[k] || 0), 0);
+            this.el.querySelectorAll('.ch-ag-dpr').forEach(r => { const i = r.querySelector('[data-dw]'), k = i.dataset.dw, sm = r.querySelector('small'); sm.textContent = ks.includes(k) && tot ? Math.round(100 * (w[k] || 0) / tot) + '%' : '—'; });
+        }
+
+        dpSave() {
+            const mode = (this.el.querySelector('[name="dpmode"]:checked') || {}).value || 'shared';
+            Espo.Ajax.postRequest('CrmHub/agentDispatchSave', {mode, weights: this.dpWeights()}).then(() => { Espo.Ui.success('Reparto guardado'); return this.load(this.sel); })
+                .catch(xhr => { const rs = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error(rs || 'No se pudo guardar el reparto'); });
+        }
+
+        agentCall(promise, ok) {
+            return promise.then(r => { this.d = r; this.sel = r.selectedId; if (ok) { Espo.Ui.success(ok); } this.draw(); })
+                .catch(xhr => { const rs = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error(rs || 'No se pudo completar la acción'); this.load(this.sel); });
+        }
+
         draw() {
             const root = this.el && this.el.querySelector('.ch-ag'); if (!root) { return; }
             if (!this.d) { root.innerHTML = '<div class="ch-muted" style="padding:24px">Cargando…</div>'; return; }
             if (this.d.error) { root.innerHTML = '<div class="ch-chat-err">No se pudo cargar. Solo los administradores pueden ver esta pantalla.</div>'; return; }
-            const tabs = [['train', 'fas fa-graduation-cap', 'Entrenamiento'], ['menus', 'fas fa-list-ul', 'Mensajes con opciones'], ['test', 'fas fa-comments', 'Probar'], ['stats', 'fas fa-chart-column', 'Resultados y trazabilidad'], ['ai', 'fas fa-microchip', 'Motor de IA']].map(([k, i, l]) => `<a class="ch-tpl-tab ${this.tab === k ? 'on' : ''}" data-act="tab" data-t="${k}"><span class="${i}"></span> ${l}</a>`).join('');
+            const tabs = [['agents', 'fas fa-users-gear', 'Mis comerciales'], ['train', 'fas fa-graduation-cap', 'Entrenamiento'], ['menus', 'fas fa-list-ul', 'Mensajes con opciones'], ['test', 'fas fa-comments', 'Probar'], ['stats', 'fas fa-chart-column', 'Resultados y trazabilidad'], ['ai', 'fas fa-microchip', 'Motor de IA']].map(([k, i, l]) => `<a class="ch-tpl-tab ${this.tab === k ? 'on' : ''}" data-act="tab" data-t="${k}"><span class="${i}"></span> ${l}</a>`).join('');
             root.innerHTML = `<div class="ch-sim-head"><h3><span class="fas fa-robot"></span> Comercial virtual</h3><p class="ch-muted">Atiende a cada lead de principio a fin —primer contacto, respuestas, seguimientos, cambios de estado— y pasa el caso a una persona cuando hace falta. Cada decisión queda registrada con su porqué.</p></div><div class="ch-tpl-tabs">${tabs}</div>` +
-                (this.tab === 'train' ? this.trainHtml() : this.tab === 'menus' ? this.menusHtml() : this.tab === 'test' ? this.testHtml() : this.tab === 'ai' ? this.aiHtml() : this.statsHtml());
+                (this.tab === 'agents' ? this.agentsHtml() : ['train', 'menus', 'test'].includes(this.tab) ? this.agentBar() + (this.tab === 'train' ? this.trainHtml() : this.tab === 'menus' ? this.menusHtml() : this.testHtml()) : this.tab === 'ai' ? this.aiHtml() : this.statsHtml());
             root.onclick = e => this.click(e);
+            root.onchange = e => { const s = e.target.closest('[data-agsel]'); if (s) { this.load(s.value); return; } const sw = e.target.closest('[data-agsw]'); if (sw) { this.agentCall(Espo.Ajax.postRequest('CrmHub/agentEnable', {id: sw.dataset.agsw, enabled: sw.checked}), sw.checked ? 'Comercial virtual encendido' : 'Comercial virtual apagado'); } };
+            root.oninput = e => { if (e.target.closest('[data-dw]') && this.tab === 'agents') { clearTimeout(this._dwt); this._dwt = setTimeout(() => this.dpPreview(), 250); } };
             if (this.tab === 'stats' && !this.stats) { this.loadStats(); }
             if (this.tab === 'ai' && !this.ai) { Espo.Ajax.getRequest('CrmHub/aiConfig').then(r => { this.ai = r; this.draw(); }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } }); }
         }
@@ -40,7 +99,7 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             const c = this.d.config, lic = this.d.licensed, u = this.d.usage || {};
             const opt = (v, t, s, off) => `<div class="ch-ag-opt ${c.mode === v ? 'on' : ''} ${off ? 'off' : ''}" data-act="mode" data-m="${v}"><b>${t}</b><small>${s}</small></div>`;
             const day = DAYS.map(([n, l]) => `<label><input type="checkbox" data-day="${n}" ${c.schedule.days.includes(n) ? 'checked' : ''}> ${l}</label>`).join('');
-            return `<div class="ch-sim-card"><h5>1. Versión</h5><div class="ch-ag-mode">${opt('manual', 'Manual', 'Siempre una persona atiende a los leads. El comercial virtual no escribe a nadie.')}${opt('auto', 'Automática', lic ? 'El comercial virtual atiende a todos los leads solo, según este entrenamiento.' : 'No activada para tu empresa: pídela a tu proveedor (tiene un costo distinto).', !lic)}</div>
+            return `<div class="ch-sim-card"><h5>Nombre de este comercial virtual</h5><input data-an value="${esc(this.d.name)}" maxlength="60" placeholder="Ej.: Cobranza, Ventas, Atención al cliente"><div class="ch-muted">Es el nombre interno para distinguirlo de los demás; el nombre con el que se presenta al cliente es «Nombre con el que se presenta».</div><h5>1. Versión</h5><div class="ch-ag-mode">${opt('manual', 'Manual', 'Siempre una persona atiende a los leads. El comercial virtual no escribe a nadie.')}${opt('auto', 'Automática', lic ? 'El comercial virtual atiende a todos los leads solo, según este entrenamiento.' : 'No activada para tu empresa: pídela a tu proveedor (tiene un costo distinto).', !lic)}</div>
                 ${lic ? `<div class="ch-muted">Este mes: ${u.messages || 0} mensajes enviados por el agente · ${u.llm_calls || 0} consultas de IA · ${u.escalations || 0} casos pasados a una persona.</div>` : ''}
                 <label class="ch-dz-chk"><input type="checkbox" data-f="dry_run" ${c.dry_run ? 'checked' : ''}> <b>Modo de prueba</b> — el agente decide y lo registra, pero <b>no envía nada</b> al cliente. Úsalo mientras lo entrenas.</label>
                 <label class="ch-dz-chk"><input type="checkbox" data-f="approval" ${c.approval ? 'checked' : ''}> <b>Aprobación previa</b> — el agente redacta cada mensaje y una persona lo aprueba (o lo edita) antes de enviarlo.</label>
@@ -127,7 +186,7 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             const err = this.el.querySelector('[data-role="err"]'); err.hidden = true;
             const c = JSON.parse(JSON.stringify(this.d.config));
             c.menus = c.menus.map(m => ({...m, options: m.options.filter(o => o.title.trim())}));
-            Espo.Ajax.postRequest('CrmHub/agentConfigSave', {config: c}).then(r => { this.d.config = r.config; Espo.Ui.success('Mensajes con opciones guardados'); this.draw(); })
+            Espo.Ajax.postRequest('CrmHub/agentConfigSave', {config: c, agentId: this.d.selectedId}).then(r => { this.d.config = r.config; Espo.Ui.success('Mensajes con opciones guardados'); this.draw(); })
                 .catch(xhr => { err.hidden = false; err.textContent = Tpl.reason(xhr, 'No se pudo guardar.'); if (xhr) { xhr.errorIsHandled = true; } });
         }
 
@@ -138,7 +197,7 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             ChUi.prompt({title: 'Probar en tu WhatsApp', text: `Se envía «${m.name}» al número que escribas para que veas cómo lo recibe el cliente.`, label: 'Tu número de WhatsApp (con indicativo)', rows: 1, max: 20, ok: 'Enviar prueba', required: true, min: 7, requiredText: 'Escribe un número con indicativo, p. ej. +57 300 123 4567.'}).then(to => {
                 if (!to) { return; }
                 Espo.Ui.notify('Enviando…');
-                Espo.Ajax.postRequest('CrmHub/agentMenuTest', {menuId: m.id, to}).then(r => { Espo.Ui.notify(false); Espo.Ui.success(r.native ? 'Enviado como ' + (m.type === 'buttons' ? 'botones' : 'lista') + ' nativa(o)' : 'Enviado como texto numerado'); })
+                Espo.Ajax.postRequest('CrmHub/agentMenuTest', {menuId: m.id, to, agentId: this.d.selectedId}).then(r => { Espo.Ui.notify(false); Espo.Ui.success(r.native ? 'Enviado como ' + (m.type === 'buttons' ? 'botones' : 'lista') + ' nativa(o)' : 'Enviado como texto numerado'); })
                     .catch(xhr => { Espo.Ui.notify(false); const rs = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error(rs || 'No se pudo enviar la prueba'); });
             });
         }
@@ -160,7 +219,7 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
         runTest(first) {
             const q = s => this.el.querySelector(s), t = this.test, msg = first ? '' : q('[data-t="message"]').value.trim();
             if (!first && !msg) { return; }
-            const sample = {name: q('[data-t="name"]').value, channel: q('[data-t="channel"]').value, description: q('[data-t="description"]').value, history: t.history.map(h => ({who: h.who, text: h.text})), message: msg, kind: first ? 'first' : undefined};
+            const sample = {agentId: this.d.selectedId, name: q('[data-t="name"]').value, channel: q('[data-t="channel"]').value, description: q('[data-t="description"]').value, history: t.history.map(h => ({who: h.who, text: h.text})), message: msg, kind: first ? 'first' : undefined};
             if (msg) { t.history.push({who: 'cliente', text: msg}); }
             t.busy = true; this.draw();
             Espo.Ajax.postRequest('CrmHub/agentTest', {sample: {...sample, history: sample.history}}, {timeout: 295000}).then(r => { t.last = r; if (r.message) { t.history.push({who: 'agente', text: r.message, menu: r.menu || null}); } })
@@ -211,7 +270,8 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             const kpi = (l, v, sub) => `<div class="ch-kb-kpi"><span>${l}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
             const max = Math.max(1, ...s.series.map(x => x.n));
             const rt = s.avgFirstResponseSeconds == null ? '—' : (s.avgFirstResponseSeconds < 120 ? s.avgFirstResponseSeconds + ' s' : Math.round(s.avgFirstResponseSeconds / 60) + ' min');
-            return pend + `<div class="ch-kb-kpis">${kpi('Leads atendidos (30 días)', s.leads)}${kpi('Mensajes enviados', s.sent, s.simulated ? s.simulated + ' en modo de prueba' : '')}${kpi('Respuestas de clientes', s.replies)}${kpi('Pasados a una persona', s.escalations)}${kpi('Tiempo al primer contacto', rt, 'promedio')}${kpi('Cambios de estado', s.statusChanges)}</div>
+            const ba = this.d.agents.length > 1 ? `<div class="ch-sim-card"><h4><span class="fas fa-users-gear"></span> Por comercial virtual</h4><div class="ch-ag-nums" style="flex-wrap:wrap">${this.d.agents.map(a => { const x = (s.byAgent || {})[a.id] || {leads: 0, active: 0, sent: 0}; return `<div><b>${esc(a.name)}</b><small>${x.active} activos · ${x.leads} leads · ${x.sent} mensajes (30 d)${a.enabled ? '' : ' · apagado'}</small></div>`; }).join('')}</div></div>` : '';
+            return pend + ba + `<div class="ch-kb-kpis">${kpi('Leads atendidos (30 días)', s.leads)}${kpi('Mensajes enviados', s.sent, s.simulated ? s.simulated + ' en modo de prueba' : '')}${kpi('Respuestas de clientes', s.replies)}${kpi('Pasados a una persona', s.escalations)}${kpi('Tiempo al primer contacto', rt, 'promedio')}${kpi('Cambios de estado', s.statusChanges)}</div>
                 <div class="ch-sim-card"><h4>Mensajes por día</h4>${s.series.length ? `<div class="ch-ag-bars">${s.series.map(x => `<i style="height:${Math.max(3, 100 * x.n / max)}%" title="${esc(x.d)}: ${x.n}"></i>`).join('')}</div>` : ChUi.empty({kind: 'chat', title: 'Aún no hay mensajes', text: 'Pronto entrarán datos.', compact: true})}</div>
                 <div class="ch-sim-card"><h4>Trazabilidad: lo último que hizo el comercial virtual</h4>${(s.events || []).map(e => `<div class="ch-agp-e"><span class="fas fa-circle" style="color:${e.kind === 'send' ? '#4f63e8' : e.kind === 'escalate' ? '#f59e0b' : e.kind === 'error' || e.kind === 'stop' ? '#d64545' : '#94a3b8'};font-size:9px"></span><div><b>${esc(KIND[e.kind] || e.kind)} · ${esc(e.lead_name || e.lead_id)}</b> ${e.dry ? '<em>(prueba)</em>' : ''} <a href="#Lead/view/${esc(e.lead_id)}">Abrir lead</a><div>${esc(e.title)}</div>${e.detail ? `<div class="ch-agp-d">${esc(String(e.detail).slice(0, 260))}</div>` : ''}${e.reason ? `<div class="ch-muted">Por qué: ${esc(e.reason)}</div>` : ''}<small>${esc(when(e.at))}${e.channel ? ' · ' + esc(e.channel) : ''}</small></div></div>`).join('') || ChUi.empty({kind: 'robot', title: 'Todavía no hay actividad', text: 'Tu comercial virtual aún no ha trabajado. Verás aquí cada paso.', compact: true})}</div>`;
         }
@@ -222,6 +282,12 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             const act = a.dataset.act;
             if (act === 'tab') { this.tab = a.dataset.t; if (this.tab === 'stats') { this.stats = null; } this.draw(); }
             else if (act === 'mode') { if (a.classList.contains('off')) { Espo.Ui.warning('La versión automática no está activada para tu empresa.'); return; } this.d.config = this.collect(); this.d.config.mode = a.dataset.m; this.draw(); }
+            else if (act === 'agadd') { ChUi.prompt({title: 'Nuevo comercial virtual', text: 'Parte de cero (queda en manual y en modo de prueba hasta que lo entrenes y lo actives).', label: 'Nombre interno', rows: 1, max: 60, ok: 'Crear', placeholder: 'Ej.: Cobranza, Ventas, Atención al cliente'}).then(n => { if (n !== null) { this.agentCall(Espo.Ajax.postRequest('CrmHub/agentCreate', {name: n}), 'Comercial virtual creado: entrénalo en la pestaña «Entrenamiento»').then(() => { this.tab = 'train'; this.draw(); }); } }); }
+            else if (act === 'agclone') { this.agentCall(Espo.Ajax.postRequest('CrmHub/agentCreate', {cloneFrom: a.dataset.id}), 'Copia creada: ajústala en «Entrenamiento»').then(() => { this.tab = 'train'; this.draw(); }); }
+            else if (act === 'agdel') { ChUi.confirm({title: 'Quitar comercial virtual', danger: true, ok: 'Quitar', text: 'Se quita este comercial virtual. Los leads que atiende pasan al primero de la lista y su historial se conserva.'}).then(y => { if (y) { this.agentCall(Espo.Ajax.postRequest('CrmHub/agentDelete', {id: a.dataset.id}), 'Comercial virtual quitado'); } }); }
+            else if (act === 'agtrain') { this.load(a.dataset.id, () => { this.tab = 'train'; this.draw(); }); }
+            else if (act === 'agtest') { this.load(a.dataset.id, () => { this.tab = 'test'; this.draw(); }); }
+            else if (act === 'dpsave') { this.dpSave(); }
             else if (act === 'addfaq') { this.d.config = this.collect(); this.d.config.faq.push({q: '', a: ''}); this.draw(); }
             else if (act === 'delfaq') { this.d.config = this.collect(); this.d.config.faq.splice(+a.dataset.i, 1); this.draw(); }
             else if (act === 'save') { this.save(); }
@@ -242,7 +308,7 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
         save() {
             const c = this.collect(), err = this.el.querySelector('[data-role="err"]'); err.hidden = true;
             if (c.mode === 'auto' && !c.company.about.trim() && !c.company.services.trim()) { err.hidden = false; err.textContent = 'Antes de activar la versión automática cuéntale al agente qué hace tu empresa y qué servicios ofrece.'; return; }
-            const go = () => Espo.Ajax.postRequest('CrmHub/agentConfigSave', {config: c}).then(r => { this.d.config = r.config; Espo.Ui.success('Entrenamiento guardado'); this.draw(); })
+            const go = () => Espo.Ajax.postRequest('CrmHub/agentConfigSave', {config: c, agentId: this.d.selectedId, name: (this.el.querySelector('[data-an]') || {}).value || undefined}).then(r => { Espo.Ui.success('Entrenamiento guardado'); return this.load(r.agentId); })
                 .catch(xhr => { err.hidden = false; err.textContent = Tpl.reason(xhr, 'No se pudo guardar.'); if (xhr) { xhr.errorIsHandled = true; } });
             if (c.mode === 'auto' && !c.dry_run && this.d.config.mode !== 'auto' || (c.mode === 'auto' && !c.dry_run && this.d.config.dry_run)) {
                 ChUi.confirm({title: 'Activar la versión automática', html: 'El comercial virtual <b>escribirá a los clientes de verdad</b> (WhatsApp, correo) sin que una persona lo revise. ¿Ya probaste sus respuestas?', ok: 'Activar', danger: true}).then(y => { if (y) { go(); } });

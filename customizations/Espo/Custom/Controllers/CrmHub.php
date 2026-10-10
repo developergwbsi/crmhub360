@@ -1443,14 +1443,41 @@ class CrmHub
     public function getActionAgentConfig(Request $request): \stdClass
     {
         $this->admin();
-        return (object) $this->hubCall('GET', '/v1/agent/config', null, 10);
+        return (object) $this->hubCall('GET', '/v1/agent/config?agentId=' . rawurlencode((string) $request->getQueryParam('agentId')), null, 10);
     }
 
     public function postActionAgentConfigSave(Request $request): \stdClass
     {
         $this->admin();
         $d = $request->getParsedBody();
-        return (object) $this->hubCall('PUT', '/v1/agent/config', ['config' => json_decode(json_encode($d->config ?? new \stdClass()), true)], 20);
+        return (object) $this->hubCall('PUT', '/v1/agent/config', ['config' => json_decode(json_encode($d->config ?? new \stdClass()), true), 'agentId' => !empty($d->agentId) ? (string) $d->agentId : null, 'name' => isset($d->name) ? (string) $d->name : null], 20);
+    }
+
+    public function postActionAgentCreate(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/agents', ['name' => (string) ($d->name ?? ''), 'cloneFrom' => !empty($d->cloneFrom) ? (string) $d->cloneFrom : null], 20);
+    }
+
+    public function postActionAgentEnable(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/agents/enabled', ['id' => (string) ($d->id ?? ''), 'enabled' => !empty($d->enabled)], 20);
+    }
+
+    public function postActionAgentDelete(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('POST', '/v1/agents/delete', ['id' => (string) ($request->getParsedBody()->id ?? '')], 20);
+    }
+
+    public function postActionAgentDispatchSave(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('PUT', '/v1/agent/dispatch', ['mode' => (string) ($d->mode ?? 'shared'), 'weights' => json_decode(json_encode($d->weights ?? new \stdClass()), true) ?: new \stdClass()], 20);
     }
 
     public function postActionAgentTest(Request $request): \stdClass
@@ -1464,7 +1491,7 @@ class CrmHub
     {
         $this->admin();
         $d = $request->getParsedBody();
-        return (object) $this->hubCall('POST', '/v1/agent/menu-test', ['menuId' => (string) ($d->menuId ?? ''), 'to' => (string) ($d->to ?? '')], 40);
+        return (object) $this->hubCall('POST', '/v1/agent/menu-test', ['menuId' => (string) ($d->menuId ?? ''), 'to' => (string) ($d->to ?? ''), 'agentId' => !empty($d->agentId) ? (string) $d->agentId : null], 40);
     }
 
     public function getActionAgentStats(Request $request): \stdClass
@@ -1498,7 +1525,7 @@ class CrmHub
         $d = $request->getParsedBody();
         $lead = $this->docLead((string) ($d->leadId ?? ''), true);
         $action = (string) ($d->action ?? '');
-        if (!in_array($action, ['pause', 'resume', 'manual', 'auto'], true)) {
+        if (!in_array($action, ['pause', 'resume', 'manual', 'auto'], true) && !preg_match('/^switch:[a-z0-9_]{1,30}$/', $action)) {
             throw new BadRequest();
         }
         return (object) $this->hubCall('POST', '/v1/agent/lead/action', ['leadId' => $lead->getId(), 'action' => $action, 'by' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 20);

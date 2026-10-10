@@ -1142,6 +1142,7 @@ class ServicesReq(BaseModel):
     mail: Optional[str] = None            # 'shared' | 'own'
     cartera: Optional[bool] = None        # módulo «Cartera y cobranza» (tarjetas de deuda y mora)
     ai: Optional[str] = None              # motor de IA de la empresa: 'global' | 'provider:<id>' | 'own' (lo configura la propia empresa)
+    agents: Optional[int] = None          # cuántos comerciales virtuales puede crear la empresa (1 incluido; más es un servicio adicional)
     agent: Optional[str] = None           # comercial virtual: 'off' (solo manual) | 'auto' (versión automática, con costo propio)
     lookups: Optional[list] = None        # servicios de consulta del sistema habilitados para la empresa
     wa_bulk: Optional[dict] = None        # envío masivo por WhatsApp no oficial (Evolution): {max: destinatarios por campaña, every_s: segundos entre mensajes}
@@ -1251,7 +1252,7 @@ async def get_services(slug: str, actor: str = Depends(me)):
         au = []
     return {"ai": ((t["settings"] or {}).get("ai") or {}).get("mode") or "global", "aiProviders": [{"id": p["id"], "name": p["name"], "engine": p["fields"].get("engine"), "model": p["fields"].get("model")} for p in providers_list() if p["kind"] == "ai"],
             "aiDefault": get_setting("ai_default"), "aiUsage": au,
-            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
+            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "agents": int(((t["settings"] or {}).get("limits") or {}).get("agents") or 1), "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
             "lookups": list(((t["settings"] or {}).get("lookups")) or []), "lookupCatalog": [{"id": l["id"], "name": l["name"], "category": l.get("category", "otro")} for l in lookups_list()], "cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10),
             "waBulk": {"max": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("max") or 100), "every_s": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("every_s") or 120)}, "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
             "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
@@ -1305,6 +1306,11 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
             raise HTTPException(400, "Motor de IA no válido")
         with db() as c7:
             c7.execute("UPDATE tenants SET settings = jsonb_set(settings, '{ai}', COALESCE(settings->'ai', '{}'::jsonb) || jsonb_build_object('mode', %s::text), true) WHERE slug=%s", (req.ai, slug))
+    if req.agents is not None:
+        if not 1 <= req.agents <= 50:
+            raise HTTPException(400, "La cantidad de comerciales virtuales va de 1 (incluido) a 50")
+        with db() as c9:
+            c9.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps({"agents": req.agents}), slug))
     if req.agent is not None:
         if req.agent not in ("off", "auto"):
             raise HTTPException(400, "Valor no válido para el comercial virtual")

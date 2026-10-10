@@ -44,7 +44,7 @@ async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str |
     await espo.note(lead_id, f"[SMS] → {agent}: {text}")
     if user_id:
         from . import agent as _ag
-        _ag.note_human(tenant["slug"], lead_id, _ag.config(tenant)["cadence"]["human_hold_minutes"])
+        _ag.note_human(tenant["slug"], lead_id, _ag.hold_minutes(tenant, lead_id))
     return {"ok": True, **i}
 
 

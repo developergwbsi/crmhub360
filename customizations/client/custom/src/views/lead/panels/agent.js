@@ -11,6 +11,7 @@ define('custom:views/lead/panels/agent', ['views/record/panels/bottom', 'custom:
         afterRender() {
             super.afterRender();
             this.el.onclick = e => { const a = e.target.closest('[data-act]'); if (a) { this.act(a.dataset.act); } };
+            this.el.onchange = e => { const s = e.target.closest('[data-agswitch]'); if (s && s.value !== ((this.s || {}).agent || {}).id) { this.act('switch:' + s.value); } };
             this.load();
             Live.attach(this, () => this.load(), 15000);
             if (!this._chS) { this._chS = true; this.listenTo(this.model, 'sync', () => setTimeout(() => this.load(), 800)); }
@@ -41,7 +42,8 @@ define('custom:views/lead/panels/agent', ['views/record/panels/bottom', 'custom:
             else { ctl = '<div class="ch-muted">La versión automática del comercial virtual no está activada en tu empresa.</div>'; }
             const pr = s.proposal;
             const prop = pr ? `<div class="ch-agp-prop"><b><span class="fas fa-hourglass-half"></span> ${esc(pr.title)}</b><div class="ch-muted">Por ${esc(pr.channel)}. Puedes editarlo antes de enviarlo.</div><textarea rows="5" data-role="pmsg">${esc(pr.detail)}</textarea>${pr.reason ? `<div class="ch-muted">Por qué: ${esc(pr.reason)}</div>` : ''}<div class="ch-agp-ctl"><button class="btn btn-primary btn-xs" data-act="approve"><span class="fas fa-paper-plane"></span> Aprobar y enviar</button><button class="btn btn-default btn-xs" data-act="reject">Descartar</button></div></div>` : '';
-            box.innerHTML = `<div>${chip}</div>${prop}${st ? `<div class="ch-agp-st"><b>${esc(st)}</b>${s.state === 'waiting_reply' || s.state === 'active' ? (s.nextAt ? ` · próximo paso: ${esc(when(s.nextAt))}` : '') : ''}${s.reason && ['escalated', 'stopped'].includes(s.state) ? `<div class="ch-muted">${esc(s.reason)}</div>` : ''}</div>` : ''}` +
+            const sw = (auto && s.licensed && (s.agents || []).filter(a => a.enabled).length > 1) ? `<div class="ch-agp-sw"><small class="ch-muted">Lo atiende</small> <select data-agswitch>${s.agents.filter(a => a.enabled || a.id === (s.agent || {}).id).map(a => `<option value="${esc(a.id)}" ${a.id === (s.agent || {}).id ? 'selected' : ''}>${esc(a.persona)} · ${esc(a.name)}</option>`).join('')}</select></div>` : '';
+            box.innerHTML = `<div>${chip}</div>${sw}${prop}${st ? `<div class="ch-agp-st"><b>${esc(st)}</b>${s.state === 'waiting_reply' || s.state === 'active' ? (s.nextAt ? ` · próximo paso: ${esc(when(s.nextAt))}` : '') : ''}${s.reason && ['escalated', 'stopped'].includes(s.state) ? `<div class="ch-muted">${esc(s.reason)}</div>` : ''}</div>` : ''}` +
                 `<div class="ch-agp-ctl">${ctl}</div>` +
                 ((s.events || []).length ? '<div class="ch-agp-ev">' + s.events.slice(0, 12).map(e => { const k = K[e.kind] || K.wait;
                     return `<div class="ch-agp-e"><span class="${k[0]}" style="color:${k[1]}"></span><div><b>${esc(e.title)}${e.dry ? ' <em>(prueba)</em>' : ''}</b>${e.detail ? `<div class="ch-agp-d">${esc(String(e.detail).slice(0, 220))}</div>` : ''}${e.reason ? `<div class="ch-muted">Por qué: ${esc(e.reason)}</div>` : ''}<small>${esc(when(e.at))}${e.channel ? ' · ' + esc(e.channel) : ''}</small></div></div>`; }).join('') + '</div>' : '');

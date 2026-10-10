@@ -251,5 +251,5 @@ async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str |
     routing.note_out(tenant["slug"], lead_id, user_id, number, (tenant.get("_line") or {}).get("id"))   # la respuesta del cliente le llega a quien le escribió
     if user_id:   # una persona escribió: el comercial virtual se hace a un lado un rato
         from . import agent
-        agent.note_human(tenant["slug"], lead_id, agent.config(tenant)["cadence"]["human_hold_minutes"])
+        agent.note_human(tenant["slug"], lead_id, agent.hold_minutes(tenant, lead_id))
     return {"ok": True, "phone": number}
