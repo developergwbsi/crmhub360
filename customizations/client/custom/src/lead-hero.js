@@ -44,6 +44,7 @@ define('custom:lead-hero', [], function () {
         if (a.emailAddress) { meta.push(`<span><span class="fas fa-envelope"></span>${esc(a.emailAddress)}</span>`); }
         if (a.accountName && scope !== 'Account') { meta.push(`<span><span class="fas fa-building"></span>${esc(a.accountName)}</span>`); }
         if (a.assignedUserName) { meta.push(`<span><span class="fas fa-user-tie"></span>${esc(a.assignedUserName)}</span>`); }
+        else if (view.model._chAgent) { meta.push(`<span title="Sin asesor humano: lo atiende el comercial virtual"><span class="fas fa-robot"></span>Comercial virtual · ${esc(view.model._chAgent.persona || '')}</span>`); }
         if (a.suggestedService) { meta.push(`<span><span class="fas fa-tag"></span>${esc(a.suggestedService)}</span>`); }
         const kpi = (label, value) => `<div class="ch-lh-kpi"><span>${label}</span><b>${value}</b></div>`;
         let kpis = '';
@@ -79,7 +80,7 @@ define('custom:lead-hero', [], function () {
         paint();
         if (!view._chHero) {
             view._chHero = true;
-            view.listenTo(view.model, 'sync change:status change:stage change:qualificationStatus change:assignedUserName change:phoneNumber', paint);
+            view.listenTo(view.model, 'sync change:status change:stage change:qualificationStatus change:assignedUserName change:phoneNumber ch:agent', paint);
         }
     }
 

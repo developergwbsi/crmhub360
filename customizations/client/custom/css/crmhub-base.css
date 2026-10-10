@@ -949,3 +949,5 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 
 /* Las fichas ocupan todo el ancho disponible (Espo las limita a 1300 px y en pantallas grandes sobraba un bloque vacío a la derecha) */
 #main .record-grid { max-width: none; }
+
+#ch-update .ch-upd-note { display: block; font-size: 11.5px; color: var(--ch-muted); font-weight: 400; }

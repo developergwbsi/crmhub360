@@ -1,4 +1,4 @@
-define('custom:views/dashlets/crmhub-panel', ['views/dashlets/abstract/base'], function (Dep) {
+define('custom:views/dashlets/crmhub-panel', ['views/dashlets/abstract/base', 'custom:live-list'], function (Dep, Live) {
     const STATUS_COLORS = {
         'Nuevo Lead': '#94a3b8', 'En Calificación': '#4f63e8', 'Calificado': '#8b5cf6',
         'En Enfriamiento/Contactado': '#f59e0b', 'Cierre Exitoso': '#2fa36b',
@@ -29,13 +29,16 @@ define('custom:views/dashlets/crmhub-panel', ['views/dashlets/abstract/base'], f
         setup() {
             this.days = parseInt(this.getOption('days') || '30', 10);
             this.load();
+            Live.feed(this, () => this.load(true));   // lead nuevo → las cifras se actualizan solas
         }
 
-        load() {
-            this.state = null;
+        onRemove() { Live.unfeed(this); super.onRemove && super.onRemove(); }
+
+        load(silent) {
+            if (!silent) { this.state = null; }
             Espo.Ajax.getRequest('CrmHub/metrics', {days: this.days})
                 .then(m => { this.state = m; this.reRender(); })
-                .catch(xhr => { this.state = {error: true}; this.reRender(); if (xhr) { xhr.errorIsHandled = true; } });
+                .catch(xhr => { if (!silent) { this.state = {error: true}; this.reRender(); } if (xhr) { xhr.errorIsHandled = true; } });
         }
 
         actionRefresh() { this.load(); }

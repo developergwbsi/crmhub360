@@ -239,11 +239,36 @@
     function announceUpdate(v) {
         var canAsk = 'Notification' in window && Notification.permission === 'default';
         banner('ch-update', 'ch-banner-info',
-            '<span class="fas fa-cloud-arrow-down"></span><b>Nueva versión disponible</b>' +
+            '<span class="fas fa-cloud-arrow-down"></span><b>Nueva versión disponible</b><small class="ch-upd-note">Se aplica sola cuando dejes de usar la pantalla unos segundos.</small>' +
             '<button class="btn btn-primary btn-sm" data-ch-apply>Actualizar ahora</button>' +
             (canAsk ? '<button class="btn btn-default btn-sm" data-ch-notify>Activar avisos aunque la app esté cerrada</button>' : '') +
             '<a role="button" data-ch-dismiss title="Cerrar">×</a>');
         if ('Notification' in window && Notification.permission === 'granted') { tellWorker({type: 'notify-update', version: v.version}); }
+        autoApplyWhenIdle();
+    }
+
+    /* Las mejoras se aplican solas: si no hay nada a medias (ventanas abiertas, campos en edición, texto escrito) y llevas unos segundos sin tocar la pantalla, se recarga. */
+    var lastInput = Date.now(), autoTimer = null;
+    ['keydown', 'mousedown', 'touchstart', 'wheel'].forEach(function (ev) { document.addEventListener(ev, function () { lastInput = Date.now(); }, {passive: true, capture: true}); });
+    function safeToReload() {
+        if (Date.now() - lastInput < 25000 || document.hidden) { return false; }
+        if (document.querySelector('.modal.in, .modal.show, .ch-dlg-back, .record.edit-mode, .detail.edit-mode, .ch-phone-form:not([hidden]) input:focus')) { return false; }
+        var a = document.activeElement;
+        if (a && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable)) { return false; }
+        var typed = document.querySelectorAll('textarea, .ch-ed-area');
+        for (var i = 0; i < typed.length; i++) { if ((typed[i].value || typed[i].textContent || '').trim() && typed[i].offsetParent !== null) { return false; } }
+        return true;
+    }
+    function autoApplyWhenIdle() {
+        if (autoTimer) { return; }
+        autoTimer = setInterval(function () {
+            if (!document.getElementById('ch-update')) { clearInterval(autoTimer); autoTimer = null; return; }
+            if (safeToReload()) {
+                clearInterval(autoTimer); autoTimer = null;
+                var bar = document.getElementById('ch-update'); if (bar) { bar.innerHTML = '<span class="fas fa-rotate fa-spin"></span><b>Actualizando para aplicar las mejoras…</b>'; }
+                setTimeout(applyUpdate, 1200);
+            }
+        }, 5000);
     }
 
     document.addEventListener('click', function (e) {
@@ -275,7 +300,7 @@
     function startWorker() {
         if (!('serviceWorker' in navigator) || !window.isSecureContext) { return; }
         navigator.serviceWorker.register('/client/custom/sw.js', {scope: '/'}).then(function () { checkVersion(); }).catch(function (err) { console.warn('[crmhub] service worker no disponible:', err && err.message); });
-        setInterval(checkVersion, 5 * 60 * 1000);
+        setInterval(checkVersion, 60 * 1000);
         document.addEventListener('visibilitychange', function () { if (!document.hidden) { checkVersion(); } });
     }
 

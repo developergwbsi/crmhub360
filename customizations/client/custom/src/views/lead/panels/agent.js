@@ -19,8 +19,16 @@ define('custom:views/lead/panels/agent', ['views/record/panels/bottom', 'custom:
 
         load() {
             clearTimeout(this._t);
-            Espo.Ajax.getRequest('CrmHub/agentLead', {leadId: this.model.id}).then(s => { this.s = s; this.paint(); if (s.effective === 'auto' && ['active', 'waiting_reply'].includes(s.state)) { this._t = setTimeout(() => this.load(), 20000); } })
+            Espo.Ajax.getRequest('CrmHub/agentLead', {leadId: this.model.id}).then(s => { this.s = s; this.markAgent(s); this.paint(); if (s.effective === 'auto' && ['active', 'waiting_reply'].includes(s.state)) { this._t = setTimeout(() => this.load(), 20000); } })
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
+        }
+
+        // Sin asesor humano, el encabezado del lead muestra que lo atiende el comercial virtual
+        markAgent(s) {
+            const on = s && s.effective === 'auto' && ['active', 'waiting_reply', 'paused'].includes(s.state);
+            const was = !!this.model._chAgent;
+            this.model._chAgent = on ? {persona: s.persona, state: s.state} : null;
+            if (on !== was) { this.model.trigger('ch:agent'); }
         }
 
         paint() {
