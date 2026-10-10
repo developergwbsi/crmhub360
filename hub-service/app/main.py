@@ -1262,5 +1262,20 @@ def lines_active(tenant: dict = Depends(tenant_auth)):
     return {ch: {"lines": lines.active_lines(tenant, ch), "default": lines._default_id(lines._st(tenant), ch, lines.raw_cards(tenant, ch))} for ch in ("whatsapp", "sms", "voice")}
 
 
+class AgentMenuTestReq(BaseModel):
+    menuId: str
+    to: str
+
+
+@app.post("/v1/agent/menu-test")
+async def agent_menu_test(req: AgentMenuTestReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return await agent.test_menu(tenant, req.menuId, req.to)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo enviar el menú de prueba: {str(e)[:200]}")
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host=config.HUB_BIND_HOST, port=config.HUB_PORT)

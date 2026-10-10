@@ -951,3 +951,10 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 #main .record-grid { max-width: none; }
 
 #ch-update .ch-upd-note { display: block; font-size: 11.5px; color: var(--ch-muted); font-weight: 400; }
+
+/* Comercial virtual: mensajes con opciones */
+.ch-ag-mn { border: 1px solid var(--ch-line); border-radius: 14px; padding: 12px 14px; margin: 12px 0; background: var(--ch-surface); } .ch-ag-mn.off { opacity: .7; background: var(--ch-soft); }
+.ch-ag-mnh { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; } .ch-ag-mnh input[data-m="name"] { flex: 1; font-weight: 700; } .ch-ag-mnh select { width: auto; } .ch-ag-mnh > a { cursor: pointer; color: var(--ch-muted); }
+.ch-ag-op { display: grid; grid-template-columns: 1fr 1.4fr 1fr auto; gap: 8px; margin: 6px 0; align-items: center; } .ch-ag-op:has(input[data-o="description"]) { } .ch-ag-op > a { cursor: pointer; color: var(--ch-muted); padding: 0 6px; }
+.ch-ag-b .ch-ag-opts { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; } .ch-ag-opts a { display: block; padding: 7px 10px; border-radius: 10px; background: var(--ch-surface); color: var(--ch-primary); border: 1px solid var(--ch-tint-line); cursor: pointer; text-decoration: none; }
+.ch-ag-opts a:hover { background: var(--ch-tint2); } .ch-ag-opts a small { display: block; color: var(--ch-muted); } @media (max-width: 800px) { .ch-ag-op { grid-template-columns: 1fr auto; } }

@@ -1460,6 +1460,13 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/agent/test', ['sample' => json_decode(json_encode($d->sample ?? new \stdClass()), true)], 290);
     }
 
+    public function postActionAgentMenuTest(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/agent/menu-test', ['menuId' => (string) ($d->menuId ?? ''), 'to' => (string) ($d->to ?? '')], 40);
+    }
+
     public function getActionAgentStats(Request $request): \stdClass
     {
         $this->admin();

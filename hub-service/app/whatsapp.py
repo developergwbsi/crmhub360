@@ -151,6 +151,66 @@ async def send_text(tenant: dict, phone: str, text: str) -> None:
         raise ValueError(f"{PROVIDERS[p]} rechazó el mensaje ({r.status_code}): {_err(r)}")
 
 
+# ---------------- mensajes con opciones (lista / botones) ----------------
+def menu_text(menu: dict, intro: str = "") -> str:
+    """Versión en texto del menú (numerada): se usa donde WhatsApp no muestra listas nativas (Evolution/Baileys, Twilio, Gupshup, HTTP) y en el historial del CRM."""
+    body = (intro or menu["body"]).strip()
+    rows = [f"{i + 1}. {o['title']}" + (f" — {o['description']}" if o.get("description") else "") for i, o in enumerate(menu["options"])]
+    return f"{body}\n\n" + "\n".join(rows) + "\n\nResponde con el número de tu opción."
+
+
+async def send_menu_phone(tenant: dict, phone: str, menu: dict, intro: str = "", native_evolution: bool = False) -> dict:
+    """Envía un mensaje con opciones. Nativo (lista/botones) con Meta Cloud API —y con Evolution si se pidió, aunque WhatsApp puede no mostrarlo—;
+    en cualquier otro caso, o si el nativo falla, como texto numerado. Devuelve {text, native}."""
+    tenant = lines.effective(tenant, "whatsapp")
+    p, number = provider(tenant), phone.lstrip("+")
+    body = (intro or menu["body"]).strip()[:1024]
+    opts = menu["options"]
+    async with httpx.AsyncClient(timeout=25) as c:
+        if p == "meta":
+            pid, tok = _need(tenant, "meta_phone_number_id", "meta_access_token")
+            if menu["type"] == "buttons":
+                inter = {"type": "button", "body": {"text": body}, "action": {"buttons": [{"type": "reply", "reply": {"id": o["id"], "title": o["title"][:20]}} for o in opts[:3]]}}
+            else:
+                inter = {"type": "list", "body": {"text": body}, "action": {"button": (menu.get("button") or "Ver opciones")[:20],
+                         "sections": [{"title": "Opciones", "rows": [{"id": o["id"], "title": o["title"][:24], **({"description": o["description"][:72]} if o.get("description") else {})} for o in opts[:10]]}]}}
+            r = await c.post(f"{config.META_GRAPH_BASE}/{pid}/messages", headers={"Authorization": f"Bearer {tok}"},
+                             json={"messaging_product": "whatsapp", "to": number, "type": "interactive", "interactive": inter})
+            if r.status_code < 400:
+                return {"text": body + "\n\n" + "\n".join(f"• {o['title']}" for o in opts), "native": True}
+        elif p == "evolution" and native_evolution:
+            url, key, inst = _need(tenant, "evolution_url", "evolution_apikey", "evolution_instance")
+            base, h = url.rstrip("/"), {"apikey": key}
+            if menu["type"] == "buttons":
+                r = await c.post(f"{base}/message/sendButtons/{inst}", headers=h, json={"number": number, "title": menu["name"][:60], "description": body, "footer": "",
+                                                                                          "buttons": [{"type": "reply", "displayText": o["title"], "id": o["id"]} for o in opts[:3]]})
+            else:
+                r = await c.post(f"{base}/message/sendList/{inst}", headers=h, json={"number": number, "title": menu["name"][:60], "description": body, "buttonText": menu.get("button") or "Ver opciones",
+                                                                                       "footerText": "", "values": [{"title": "Opciones", "rows": [{"title": o["title"], "description": o.get("description") or "", "rowId": o["id"]} for o in opts]}]})
+            if r.status_code < 400:
+                return {"text": body + "\n\n" + "\n".join(f"• {o['title']}" for o in opts), "native": True}
+    text = menu_text(menu, intro)
+    await send_text(tenant, phone, text)
+    return {"text": text, "native": False}
+
+
+async def send_menu(tenant: dict, lead_id: str, menu: dict, intro: str, agent: str, user_id: str | None = None, phone: str | None = None, native_evolution: bool = False) -> dict:
+    """Mensaje con opciones a un lead: igual que send() (nota en el flujo, enrutamiento), pero con lista/botones."""
+    line_id = None
+    last = (routing.route_of(tenant["slug"], lead_id) or {}).get("last_line")
+    if last and any(c["id"] == last for c in lines.active_lines(tenant, "whatsapp")):
+        line_id = last
+    tenant = lines.effective(tenant, "whatsapp", line_id)
+    espo = Espo(tenant)
+    lead = await espo.get(f"Lead/{lead_id}")
+    number = pick_number(lead, phone)
+    res = await send_menu_phone(tenant, number, menu, intro, native_evolution)
+    _sent[(lead_id, res["text"])] = time.time()
+    await espo.note(lead_id, f"[WhatsApp] → {agent}: {res['text']}")
+    routing.note_out(tenant["slug"], lead_id, user_id, number, (tenant.get("_line") or {}).get("id"))
+    return {"ok": True, "phone": number, **res}
+
+
 def lead_numbers(lead: dict) -> list[str]:
     """Todos los números del lead (principal primero), normalizados."""
     out = []

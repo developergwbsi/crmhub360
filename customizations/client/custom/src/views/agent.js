@@ -27,9 +27,9 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             const root = this.el && this.el.querySelector('.ch-ag'); if (!root) { return; }
             if (!this.d) { root.innerHTML = '<div class="ch-muted" style="padding:24px">Cargando…</div>'; return; }
             if (this.d.error) { root.innerHTML = '<div class="ch-chat-err">No se pudo cargar. Solo los administradores pueden ver esta pantalla.</div>'; return; }
-            const tabs = [['train', 'fas fa-graduation-cap', 'Entrenamiento'], ['test', 'fas fa-comments', 'Probar'], ['stats', 'fas fa-chart-column', 'Resultados y trazabilidad'], ['ai', 'fas fa-microchip', 'Motor de IA']].map(([k, i, l]) => `<a class="ch-tpl-tab ${this.tab === k ? 'on' : ''}" data-act="tab" data-t="${k}"><span class="${i}"></span> ${l}</a>`).join('');
+            const tabs = [['train', 'fas fa-graduation-cap', 'Entrenamiento'], ['menus', 'fas fa-list-ul', 'Mensajes con opciones'], ['test', 'fas fa-comments', 'Probar'], ['stats', 'fas fa-chart-column', 'Resultados y trazabilidad'], ['ai', 'fas fa-microchip', 'Motor de IA']].map(([k, i, l]) => `<a class="ch-tpl-tab ${this.tab === k ? 'on' : ''}" data-act="tab" data-t="${k}"><span class="${i}"></span> ${l}</a>`).join('');
             root.innerHTML = `<div class="ch-sim-head"><h3><span class="fas fa-robot"></span> Comercial virtual</h3><p class="ch-muted">Atiende a cada lead de principio a fin —primer contacto, respuestas, seguimientos, cambios de estado— y pasa el caso a una persona cuando hace falta. Cada decisión queda registrada con su porqué.</p></div><div class="ch-tpl-tabs">${tabs}</div>` +
-                (this.tab === 'train' ? this.trainHtml() : this.tab === 'test' ? this.testHtml() : this.tab === 'ai' ? this.aiHtml() : this.statsHtml());
+                (this.tab === 'train' ? this.trainHtml() : this.tab === 'menus' ? this.menusHtml() : this.tab === 'test' ? this.testHtml() : this.tab === 'ai' ? this.aiHtml() : this.statsHtml());
             root.onclick = e => this.click(e);
             if (this.tab === 'stats' && !this.stats) { this.loadStats(); }
             if (this.tab === 'ai' && !this.ai) { Espo.Ajax.getRequest('CrmHub/aiConfig').then(r => { this.ai = r; this.draw(); }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } }); }
@@ -84,10 +84,69 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             return c;
         }
 
+        // ------------------------------------------------ mensajes con opciones (lista / botones de WhatsApp)
+        blankMenu(tpl) {
+            if (tpl === 'situacion') {
+                return {id: '', name: 'Situación del cliente', enabled: true, type: 'list', when: 'Cuando el cliente ya respondió y necesitas saber cuál es su situación para orientarlo.', body: 'Para ayudarte mejor, cuéntame: ¿cuál de estas opciones describe mejor tu situación?', button: 'Ver opciones',
+                    options: [{id: '', title: 'Estoy en mora', description: 'Tengo cuotas atrasadas', status: ''}, {id: '', title: 'Quiero consolidar deudas', description: 'Pagar una sola cuota', status: ''}, {id: '', title: 'Estoy reportado', description: 'Aparezco en centrales de riesgo', status: ''}, {id: '', title: 'Otra consulta', description: '', status: ''}]};
+            }
+            return {id: '', name: 'Nuevo mensaje con opciones', enabled: true, type: 'list', when: '', body: '', button: 'Ver opciones', options: [{id: '', title: '', description: '', status: ''}, {id: '', title: '', description: '', status: ''}]};
+        }
+
+        menusHtml() {
+            const c = this.d.config, menus = c.menus || [];
+            const stOpt = s => ['', 'En Calificación', 'Calificado', 'En Enfriamiento/Contactado', 'Dead'].map(v => `<option value="${esc(v)}" ${v === (s || '') ? 'selected' : ''}>${v ? esc(v) : 'No cambia el estado'}</option>`).join('');
+            const card = (m, i) => `<div class="ch-ag-mn ${m.enabled ? '' : 'off'}" data-mn="${i}">
+                <div class="ch-ag-mnh"><input data-m="name" value="${esc(m.name)}" maxlength="60" placeholder="Nombre del mensaje"><select data-m="type"><option value="list" ${m.type === 'list' ? 'selected' : ''}>Lista (hasta 10 opciones)</option><option value="buttons" ${m.type === 'buttons' ? 'selected' : ''}>Botones (hasta 3)</option></select>
+                    <label class="ch-ln-sw" title="Encendido: el comercial virtual puede usarlo"><input type="checkbox" data-m="enabled" ${m.enabled ? 'checked' : ''}><i></i></label><a data-act="mndel" data-i="${i}" title="Eliminar"><span class="far fa-trash-can"></span></a></div>
+                <label>Cuándo usarlo (se lo indicas a la IA)</label><textarea data-m="when" rows="2" maxlength="400" placeholder="Ej.: Cuando el cliente no ha dicho cuál es su situación de deuda.">${esc(m.when)}</textarea>
+                <label>Texto del mensaje</label><textarea data-m="body" rows="3" maxlength="1000" placeholder="Ej.: Para ayudarte mejor, ¿cuál de estas opciones describe mejor tu situación?">${esc(m.body)}</textarea>
+                ${m.type === 'list' ? `<label>Texto del botón que abre la lista (máx. 20)</label><input data-m="button" maxlength="20" value="${esc(m.button)}">` : ''}
+                <label>Opciones</label>${m.options.map((o, j) => `<div class="ch-ag-op" data-op="${j}"><input data-o="title" maxlength="${m.type === 'buttons' ? 20 : 24}" value="${esc(o.title)}" placeholder="Opción ${j + 1} (máx. ${m.type === 'buttons' ? 20 : 24} letras)">${m.type === 'list' ? `<input data-o="description" maxlength="72" value="${esc(o.description || '')}" placeholder="Descripción (opcional, máx. 72)">` : ''}<select data-o="status" title="Estado del lead cuando el cliente elige esta opción">${stOpt(o.status)}</select><a data-act="opdel" data-i="${i}" data-o="${j}" title="Quitar opción"><span class="fas fa-xmark"></span></a></div>`).join('')}
+                <div class="ch-mail-actions"><button class="btn btn-default btn-sm" data-act="opadd" data-i="${i}" ${m.options.length >= (m.type === 'buttons' ? 3 : 10) ? 'disabled' : ''}><span class="fas fa-plus"></span> Agregar opción</button><button class="btn btn-default btn-sm" data-act="mntest" data-i="${i}"><span class="fab fa-whatsapp"></span> Probar en mi WhatsApp</button></div></div>`;
+            return `<div class="ch-sim-card"><p class="ch-muted">En vez de pedirle al cliente que escriba, el comercial virtual puede enviar <b>una lista o botones</b> de WhatsApp: «¿cuál de estas opciones describe mejor tu situación?». Tú defines los menús y <b>cuándo usarlos</b>; la IA decide el momento. Cuando el cliente elige una opción queda registrada en su historial y puede cambiar el estado del lead.</p>
+                <div class="ch-help"><b>Cómo lo recibe el cliente:</b> con <b>WhatsApp oficial (Meta)</b> aparece como lista o botones nativos. Con una línea no oficial (<b>Evolution / QR</b>), Twilio, Gupshup u otro proveedor, WhatsApp no muestra listas: se envía como <b>texto numerado</b> («1. … 2. …, responde con el número») y el sistema entiende la respuesta igual.</div>
+                <label class="ch-dz-chk"><input type="checkbox" data-mf="native" ${c.menus_native_evolution ? 'checked' : ''}> Intentar lista/botones nativos también con Evolution API <small class="ch-muted">(experimental: WhatsApp suele ocultarlos en líneas no oficiales; si no los ves, déjalo apagado)</small></label>
+                ${menus.map(card).join('') || ChUi.empty({kind: 'chat', title: 'Aún no tienes mensajes con opciones', text: 'Crea uno desde cero o parte del ejemplo «Situación del cliente».', compact: true})}
+                <div class="ch-chat-err" data-role="err" hidden></div>
+                <div class="ch-mail-actions"><button class="btn btn-default btn-sm" data-act="mnadd"><span class="fas fa-plus"></span> Nuevo mensaje con opciones</button><button class="btn btn-default btn-sm" data-act="mnadd" data-tpl="situacion"><span class="fas fa-wand-magic-sparkles"></span> Usar el ejemplo «Situación del cliente»</button><button class="btn btn-primary" data-act="mnsave"><span class="fas fa-floppy-disk"></span> Guardar</button></div></div>`;
+        }
+
+        menusCollect() {
+            const c = this.d.config;
+            c.menus = [...this.el.querySelectorAll('[data-mn]')].map((card, i) => {
+                const g = k => (card.querySelector(`[data-m="${k}"]`) || {}), old = (c.menus || [])[i] || {};
+                return {id: old.id || '', name: g('name').value || '', enabled: !!g('enabled').checked, type: g('type').value || 'list', when: g('when').value || '', body: g('body').value || '', button: g('button').value || old.button || 'Ver opciones',
+                    options: [...card.querySelectorAll('[data-op]')].map((op, j) => { const f = k => (op.querySelector(`[data-o="${k}"]`) || {}).value || ''; return {id: ((old.options || [])[j] || {}).id || '', title: f('title'), description: f('description'), status: f('status')}; })};
+            });
+            const n = this.el.querySelector('[data-mf="native"]'); if (n) { c.menus_native_evolution = n.checked; }
+        }
+
+        menusSave() {
+            this.menusCollect();
+            const err = this.el.querySelector('[data-role="err"]'); err.hidden = true;
+            const c = JSON.parse(JSON.stringify(this.d.config));
+            c.menus = c.menus.map(m => ({...m, options: m.options.filter(o => o.title.trim())}));
+            Espo.Ajax.postRequest('CrmHub/agentConfigSave', {config: c}).then(r => { this.d.config = r.config; Espo.Ui.success('Mensajes con opciones guardados'); this.draw(); })
+                .catch(xhr => { err.hidden = false; err.textContent = Tpl.reason(xhr, 'No se pudo guardar.'); if (xhr) { xhr.errorIsHandled = true; } });
+        }
+
+        menuTest(i) {
+            this.menusCollect();
+            const m = (this.d.config.menus || [])[i];
+            if (!m || !m.id) { Espo.Ui.warning('Guarda el mensaje antes de probarlo.'); return; }
+            ChUi.prompt({title: 'Probar en tu WhatsApp', text: `Se envía «${m.name}» al número que escribas para que veas cómo lo recibe el cliente.`, label: 'Tu número de WhatsApp (con indicativo)', rows: 1, max: 20, ok: 'Enviar prueba', required: true, min: 7, requiredText: 'Escribe un número con indicativo, p. ej. +57 300 123 4567.'}).then(to => {
+                if (!to) { return; }
+                Espo.Ui.notify('Enviando…');
+                Espo.Ajax.postRequest('CrmHub/agentMenuTest', {menuId: m.id, to}).then(r => { Espo.Ui.notify(false); Espo.Ui.success(r.native ? 'Enviado como ' + (m.type === 'buttons' ? 'botones' : 'lista') + ' nativa(o)' : 'Enviado como texto numerado'); })
+                    .catch(xhr => { Espo.Ui.notify(false); const rs = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error(rs || 'No se pudo enviar la prueba'); });
+            });
+        }
+
         // ------------------------------------------------ probar
         testHtml() {
             const t = this.test;
-            const chat = t.history.map(h => `<div class="ch-ag-b ${h.who === 'cliente' ? 'c' : 'a'}">${esc(h.text)}</div>`).join('') || ChUi.empty({kind: 'chat', title: 'Aún no hay mensajes', text: 'Pulsa «Simular primer contacto» o escribe como si fueras el cliente.', compact: true});
+            const chat = t.history.map(h => `<div class="ch-ag-b ${h.who === 'cliente' ? 'c' : 'a'}">${esc(h.text)}${h.menu ? `<div class="ch-ag-opts">${h.menu.options.map(o => `<a data-act="topt" data-v="${esc(o.title)}"><b>${esc(o.title)}</b>${o.description ? `<small>${esc(o.description)}</small>` : ''}</a>`).join('')}<small class="ch-muted">${h.menu.type === 'buttons' ? 'Botones' : 'Lista «' + esc(h.menu.button) + '»'} · toca una opción para responder como el cliente</small></div>` : ''}</div>`).join('') || ChUi.empty({kind: 'chat', title: 'Aún no hay mensajes', text: 'Pulsa «Simular primer contacto» o escribe como si fueras el cliente.', compact: true});
             const l = t.last, dec = l ? `<div class="ch-ag-dec"><b>${esc(ACT[l.action] || l.action)}</b> por ${esc(l.channel)}${l.new_status ? ` · pondría el lead en «${esc(l.new_status)}»` : ''}<div class="ch-muted">Por qué: ${esc(l.reason || '—')}</div>${l.summary ? `<div class="ch-muted">Resumen: ${esc(l.summary)}</div>` : ''}</div>` : '';
             return `<div class="ch-sim-card"><p class="ch-muted">Aquí pruebas el entrenamiento sin enviar nada a nadie: simula a un cliente y mira cómo respondería el comercial virtual (usa lo que tienes <b>guardado</b> en «Entrenamiento»). Puede tardar uno o dos minutos por respuesta.</p>
                 <div class="ch-ag-row2"><div><label>Nombre del cliente</label><input data-t="name" value="Carlos Ruiz"></div><div><label>Canal</label><select data-t="channel"><option value="whatsapp">WhatsApp</option><option value="email">Correo</option><option value="sms">SMS</option></select></div></div>
@@ -104,7 +163,7 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             const sample = {name: q('[data-t="name"]').value, channel: q('[data-t="channel"]').value, description: q('[data-t="description"]').value, history: t.history.map(h => ({who: h.who, text: h.text})), message: msg, kind: first ? 'first' : undefined};
             if (msg) { t.history.push({who: 'cliente', text: msg}); }
             t.busy = true; this.draw();
-            Espo.Ajax.postRequest('CrmHub/agentTest', {sample: {...sample, history: sample.history}}, {timeout: 295000}).then(r => { t.last = r; if (r.message) { t.history.push({who: 'agente', text: r.message}); } })
+            Espo.Ajax.postRequest('CrmHub/agentTest', {sample: {...sample, history: sample.history}}, {timeout: 295000}).then(r => { t.last = r; if (r.message) { t.history.push({who: 'agente', text: r.message, menu: r.menu || null}); } })
                 .catch(xhr => { const e = this.el.querySelector('[data-role="err"]'); if (e) { e.hidden = false; e.textContent = Tpl.reason(xhr, 'No se pudo generar la respuesta de prueba.'); } if (xhr) { xhr.errorIsHandled = true; } })
                 .then(() => { t.busy = false; this.draw(); });
         }
@@ -170,6 +229,13 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             else if (act === 'aisave') { this.aiSave(); }
             else if (act === 'tsend') { this.runTest(false); }
             else if (act === 'tfirst') { this.test.history = []; this.runTest(true); }
+            else if (act === 'topt') { const ta = this.el.querySelector('[data-t="message"]'); if (ta) { ta.value = a.dataset.v; this.runTest(false); } }
+            else if (act === 'mnadd') { this.menusCollect(); this.d.config.menus = (this.d.config.menus || []).concat([this.blankMenu(a.dataset.tpl)]); this.draw(); }
+            else if (act === 'mndel') { this.menusCollect(); this.d.config.menus.splice(+a.dataset.i, 1); this.draw(); }
+            else if (act === 'opadd') { this.menusCollect(); const m = this.d.config.menus[+a.dataset.i]; if (m.options.length < (m.type === 'buttons' ? 3 : 10)) { m.options.push({id: '', title: '', description: '', status: ''}); } this.draw(); }
+            else if (act === 'opdel') { this.menusCollect(); this.d.config.menus[+a.dataset.i].options.splice(+a.dataset.o, 1); this.draw(); }
+            else if (act === 'mnsave') { this.menusSave(); }
+            else if (act === 'mntest') { this.menuTest(+a.dataset.i); }
             else if (act === 'treset') { this.test = {history: [], busy: false, last: null}; this.draw(); }
         }
 

@@ -748,5 +748,13 @@
             "controller": "CrmHub",
             "action": "linesActive"
         }
+    },
+    {
+        "route": "/CrmHub/agentMenuTest",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agentMenuTest"
+        }
     }
 ]

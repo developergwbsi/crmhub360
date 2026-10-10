@@ -155,6 +155,12 @@ async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None,
         routing.note_in(tenant["slug"], lead_id, normalize_phone(phone))
     if from_me and whatsapp.recently_sent(lead_id, text):
         return lead_id  # eco del mensaje enviado desde el CRM; ya tiene su nota
+    if not from_me:   # respuesta a un menú del comercial virtual («2» o el título): se registra la opción elegida
+        try:
+            from . import agent
+            text = await agent.map_menu_reply(tenant, lead_id, text)
+        except Exception as e:
+            logging.getLogger("crmhub").warning("opción de menú: %s", str(e)[:100])
     await Espo(tenant).note(lead_id, f"[WhatsApp] {'→ Asesor' if from_me else '← ' + (name or 'Cliente')}: {text}")
     if not from_me:
         await notify_owner(tenant, lead_id, name, text)
@@ -184,6 +190,10 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
         return None  # ignorar grupos
     msg = d.get("message", {})
     text = msg.get("conversation") or (msg.get("extendedTextMessage") or {}).get("text")
+    if not text:   # respuestas a listas y botones
+        text = ((msg.get("listResponseMessage") or {}).get("title") or (msg.get("buttonsResponseMessage") or {}).get("selectedDisplayText")
+                or (msg.get("templateButtonReplyMessage") or {}).get("selectedDisplayText")
+                or (((msg.get("interactiveResponseMessage") or {}).get("nativeFlowResponseMessage") or {}).get("name")))
     if not text:
         return None
     from_me = bool(key.get("fromMe"))
