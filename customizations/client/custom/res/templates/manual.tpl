@@ -4,7 +4,7 @@
   <div class="ch-rolebar"><span>Manual para: <b>{{roleLabel}}</b></span>
     {{#if canToggle}}<button class="btn btn-default btn-sm" data-action="toggleAll">{{#if showAll}}Ver solo mi rol{{else}}Ver todo el manual{{/if}}</button>{{/if}}</div>
   <div class="ch-manual-layout">
-    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio" data-roles="comercial director gerente">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="app" data-roles="comercial director gerente">1b. Modo oscuro, instalar y sin internet</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads" data-roles="comercial director gerente">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline" data-roles="comercial director gerente">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito" data-roles="comercial director gerente">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente" data-roles="comercial director gerente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="contacto" data-roles="comercial director gerente">5b. Llamar, WhatsApp y SMS</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales" data-roles="gerente">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles" data-roles="director gerente">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asignacion" data-roles="director gerente">7b. Asignación y reasignación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="organizacion" data-roles="director gerente">7c. Equipos, campañas y organigrama</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="config" data-roles="">7d. Estados y balanceo (configuración)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="configcomm" data-roles="">7e. Canales: WhatsApp, Telegram y Meta</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="formularios" data-roles="">7f. Formularios web</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="telefonia" data-roles="">7g. SMS, llamadas y troncal</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="masivos" data-roles="director gerente">7h. Mensajes masivos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades" data-roles="comercial director gerente">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin" data-roles="">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq" data-roles="comercial director gerente">10. Preguntas frecuentes</a></div></div>
+    <div class="ch-manual-toc panel panel-default"><div class="panel-body"><a role="button" class="ch-toc-link" data-action="goTo" data-id="inicio" data-roles="comercial director gerente">1. Ingreso y navegación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="app" data-roles="comercial director gerente">1b. Modo oscuro, instalar y sin internet</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="leads" data-roles="comercial director gerente">2. Leads</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pipeline" data-roles="comercial director gerente">3. Tablero Kanban</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="credito" data-roles="comercial director gerente">4. Reporte de crédito con IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asistente" data-roles="comercial director gerente">5. Asistente IA</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="contacto" data-roles="comercial director gerente">5b. Llamar, WhatsApp y SMS</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canales" data-roles="gerente">6. Canales de captación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="roles" data-roles="director gerente">7. Roles y equipos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="asignacion" data-roles="director gerente">7b. Asignación y reasignación</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="organizacion" data-roles="director gerente">7c. Equipos, campañas y organigrama</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="config" data-roles="">7d. Estados y balanceo (configuración)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="configcomm" data-roles="">7e. Canales: WhatsApp, Telegram y Meta</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="formularios" data-roles="">7f. Formularios web</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="telefonia" data-roles="">7g. SMS, llamadas y troncal</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="masivos" data-roles="director gerente">7h. Mensajes masivos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="actividades" data-roles="comercial director gerente">8. Tareas y calendario</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="admin" data-roles="">9. Administración (solo administradores)</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="vivo" data-roles="comercial director gerente">5c. Lo que se actualiza solo</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="plantillas" data-roles="comercial director gerente">5d. Mis plantillas</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="simulador" data-roles="comercial director gerente">5e. Simulador y Banco de conocimiento</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="pdf" data-roles="comercial director gerente">5f. Leer documentos (PDF) en el lead</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="masivosvscamp" data-roles="director gerente">7i. Mensajes masivos y campañas: en qué se diferencian</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="canalesprov" data-roles="">9b. Canales de mensajería: varios proveedores por canal</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="comercialvirtual" data-roles="">9c. Comercial virtual: comerciales, entrenamiento y mensajes con opciones</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="reparto" data-roles="">9d. Reparto de leads entre personas y comerciales virtuales</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="procesos" data-roles="">9e. Procesos de leads, copias de leads y lectura de documentos</a><a role="button" class="ch-toc-link" data-action="goTo" data-id="faq" data-roles="comercial director gerente">10. Preguntas frecuentes</a></div></div>
     <div class="ch-manual-body">
 <div class="panel panel-default" id="ch-m-inicio" data-roles="comercial director gerente">
   <div class="panel-heading"><h4 class="panel-title">1. Ingreso y navegación</h4></div>
@@ -256,14 +256,14 @@
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-masivos" data-roles="director gerente">
-  <div class="panel-heading"><h4 class="panel-title">7h. Mensajes masivos (campañas de envío)</h4></div>
+  <div class="panel-heading"><h4 class="panel-title">7h. Mensajes masivos (envíos a un grupo de leads)</h4></div>
   <div class="panel-body">
-<p>Menú <b>Mensajes masivos</b>: envía un mensaje a un grupo de leads por WhatsApp, SMS o Telegram, con ritmo controlado.</p>
+<p>Menú <b>Mensajes masivos</b>: envía un mensaje a un grupo de leads por WhatsApp, SMS o Telegram, con ritmo controlado. No es lo mismo que una <b>Campaña</b> de Organización (el origen de los leads): ver 7i.</p>
 <ol>
 <li><b>Canal:</b> elige WhatsApp, SMS o Telegram (debe estar configurado en Integraciones).</li>
 <li><b>Audiencia:</b> filtra por estado, resultado del filtro, origen, canal preferido, antigüedad, servicio sugerido o asesor, y pulsa <b>Calcular audiencia</b> para ver cuántos y quiénes. Solo entran quienes tienen el dato de contacto y no pidieron «no contactar»; verás los leads que tus permisos permiten.</li>
 <li><b>Mensaje:</b> escribe el texto con variables (<code>{nombre}</code>, <code>{primer_nombre}</code>, <code>{servicio}</code>, <code>{asesor}</code>, <code>{empresa}</code>). Se agrega «Responde BAJA para no recibir más» (recomendado).</li>
-<li><b>Ritmo y horario:</b> mensajes por minuto, y empezar <b>ahora</b> o <b>programado</b>.</li>
+<li><b>Ritmo y horario:</b> mensajes por minuto, y empezar <b>ahora</b> o <b>programado</b>. Con <b>WhatsApp por Evolution</b> el ritmo es fijo: <b>1 mensaje cada 2 minutos</b> y hasta <b>100 destinatarios por envío</b> (para no bloquear la línea); si necesitas más, contacta con soporte de Crm Hub 360.</li>
 <li>Pulsa <b>Crear y enviar campaña</b>. En la lista puedes ver el avance, <b>pausar, reanudar o cancelar</b>; el detalle muestra enviados, fallidos y omitidos.</li>
 </ol>
 <div class="ch-warn">Envía solo a clientes que <b>autorizaron</b> ser contactados (Ley 1581 / habeas data). Quien responda BAJA queda excluido automáticamente. Con WhatsApp oficial (Meta), fuera de las 24 h solo se permiten plantillas aprobadas; con Evolution (no oficial) un ritmo alto puede hacer que bloqueen tu número: usa pocos mensajes por minuto.</div>
@@ -299,6 +299,145 @@
 <p>Los datos de conexión de tu empresa (dirección y token) los entrega el equipo de plataforma. Rutas:</p>
 <ul><li><code>/hub/facebook?token=…</code> — Facebook e Instagram Leads</li><li><code>/hub/evolution</code> — WhatsApp (Evolution API, cabecera <code>apikey</code>)</li><li><code>/hub/web?token=…</code> — formularios web</li></ul>
 <p>No compartas el token fuera de la empresa.</p>
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-vivo" data-roles="comercial director gerente">
+  <div class="panel-heading"><h4 class="panel-title">5c. Lo que se actualiza solo</h4></div>
+  <div class="panel-body">
+
+<p>No necesitas recargar la página: el sistema te avisa y se actualiza en tiempo real.</p>
+<table class="table table-bordered ch-table"><tr><th>Qué</th><th>Cómo funciona</th></tr>
+<tr><td><b>Lead nuevo</b></td><td>Llega un aviso a la <b>campana</b> y a tu dispositivo (notificación push) cuando entra un lead. Lo reciben el asesor asignado y los administradores; si el lead quedó <b>sin asesor</b>, el aviso lo dice.</td></tr>
+<tr><td><b>Listas, tablero y Panel gerencial</b></td><td>Al llegar un lead nuevo, la lista de Leads, el tablero Kanban y las cifras del Panel gerencial se actualizan solos (en pocos segundos).</td></tr>
+<tr><td><b>Historial de actividades</b></td><td>En la ficha del lead (y de cuentas, contactos y oportunidades) reúne <b>todo lo que ya pasó</b>: correos, WhatsApp, SMS, Telegram, llamadas, reuniones, tareas y cambios de estado, con filtros por tipo. Se actualiza al enviar o recibir un mensaje. <b>Actividades</b> es distinto: muestra lo <b>pendiente</b> (tareas, reuniones y llamadas por hacer).</td></tr>
+<tr><td><b>Nueva versión de la aplicación</b></td><td>Cuando hay mejoras, aparece un aviso y se aplican solas cuando llevas unos segundos sin usar la pantalla y no tienes nada a medias (ventana abierta, campo en edición o texto escrito). También puedes pulsar <b>Actualizar ahora</b>.</td></tr>
+<tr><td><b>Sin asesor humano</b></td><td>Si un lead lo atiende el <b>comercial virtual</b>, el encabezado del lead muestra «Comercial virtual · nombre».</td></tr></table>
+
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-plantillas" data-roles="comercial director gerente">
+  <div class="panel-heading"><h4 class="panel-title">5d. Mis plantillas</h4></div>
+  <div class="panel-body">
+
+<p>Menú <b>Mis plantillas</b>: tus propios mensajes listos para usar. Son <b>privados</b>: solo tú los ves.</p>
+<ul>
+<li>Tienes un espacio por canal: <b>Correo, WhatsApp, Telegram y SMS</b> (RCS, próximamente). Incluye hasta <b>10 por canal</b>; tu empresa puede ampliar el cupo como servicio adicional.</li>
+<li>Cada canal tiene su propio lienzo: el de <b>correo</b> es un diseñador de bloques (título, texto, imagen, botón, columnas…); <b>WhatsApp y Telegram</b> muestran un teléfono de vista previa con formato, emoji y enlaces; <b>SMS</b> cuenta caracteres y segmentos.</li>
+<li>Puedes usar variables como el nombre del cliente, tu nombre y la empresa; se rellenan solas al usar la plantilla.</li>
+<li>Se usan desde el panel de cada canal (Correo, WhatsApp, SMS, Telegram) del lead: eliges la plantilla y la editas antes de enviar.</li>
+</ul>
+
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-simulador" data-roles="comercial director gerente">
+  <div class="panel-heading"><h4 class="panel-title">5e. Simulador y Banco de conocimiento</h4></div>
+  <div class="panel-body">
+
+<h3>Simulador</h3>
+<p>Menú <b>Simulador</b>: recorre con un lead de prueba todo lo que tu empresa tiene configurado (registro, correo de bienvenida, mensaje por WhatsApp o SMS, respuesta del cliente, llamada, reunión y tarea, cambios de estado y conversión a cliente) y te dice qué falta por configurar. Los datos quedan marcados como <b>[Simulación]</b>, no cuentan en los reportes y puedes borrarlos desde la misma pantalla.</p>
+<h3>Banco de conocimiento</h3>
+<p>Menú <b>Banco de conocimiento</b>: aprende del historial <b>real</b> de tus leads (las simulaciones no cuentan). Muestra qué <b>fuentes, servicios, campañas y asesores</b> convierten mejor, qué días y horas llegan los mejores clientes y cuánto tardan en cerrar. Con 10 leads o más la IA agrega recomendaciones. Pulsa <b>Actualizar análisis</b> para recalcular y escribe en <b>Aprendizajes del equipo</b> lo que vayas descubriendo.</p>
+
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-pdf" data-roles="comercial director gerente">
+  <div class="panel-heading"><h4 class="panel-title">5f. Leer documentos (PDF) en el lead</h4></div>
+  <div class="panel-body">
+
+<p>En la ficha del lead, el panel <b>Lectura de documentos</b> lee un PDF por ti (reporte de buró, cédula, soportes de ingresos…).</p>
+<ol>
+<li>Pulsa <b>Subir PDF y leer</b>. El sistema detecta el tipo de documento y lo lee con su <b>lector interno</b> (rápido, sin IA); si quieres, pulsa <b>Mejorar con IA</b>.</li>
+<li>Elige el <b>perfil</b> (qué datos buscar): crédito, cédula, ingresos, resumen u otros que tu empresa haya creado.</li>
+<li><b>Revisa y corrige</b> los datos que encontró, marca cuáles guardar y pulsa aplicar: se guardan en el lead.</li>
+</ol>
+<div class="ch-tip">La lectura sigue en segundo plano si cierras la ventana: verás un indicador y un aviso cuando termine, y podrás reabrir el resultado para revisarlo.</div>
+
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-masivosvscamp" data-roles="director gerente">
+  <div class="panel-heading"><h4 class="panel-title">7i. Mensajes masivos y campañas: en qué se diferencian</h4></div>
+  <div class="panel-body">
+
+<table class="table table-bordered ch-table"><tr><th></th><th>Campaña (Organización → Campañas)</th><th>Mensajes masivos</th></tr>
+<tr><td><b>Qué es</b></td><td>El <b>origen o iniciativa</b> de tus leads (un anuncio, un evento, una promoción).</td><td>Una <b>acción de envío</b>: un mismo mensaje a muchos leads.</td></tr>
+<tr><td><b>Para qué sirve</b></td><td>Saber de dónde vienen los leads, medir qué campaña rinde más y decidir <b>qué equipos la atienden</b> (los leads de la campaña se reparten entre esos equipos).</td><td>Contactar a un grupo de leads a la vez por WhatsApp, SMS o Telegram, con ritmo controlado y respetando «no contactar».</td></tr>
+<tr><td><b>Dónde está</b></td><td>Organización → <b>Campañas</b>. Un lead queda ligado a su campaña (por ejemplo, la que trae el anuncio de Facebook).</td><td>Menú <b>Mensajes masivos</b>.</td></tr>
+<tr><td><b>Cómo se relacionan</b></td><td colspan="2">Son <b>independientes</b>: un mensaje masivo no crea ni modifica una campaña. Cada envío masivo deja una nota en el lead («Difusión: …»). Las campañas aparecen en el Panel gerencial y en el Banco de conocimiento para medir resultados.</td></tr></table>
+<div class="ch-tip">En la pantalla de Mensajes masivos cada envío se llama «campaña» por costumbre: es un <b>envío masivo</b>, no la «Campaña» de Organización.</div>
+
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-canalesprov" data-roles="">
+  <div class="panel-heading"><h4 class="panel-title">9b. Canales de mensajería: varios proveedores por canal</h4></div>
+  <div class="panel-body">
+
+<p><b>Integraciones → Canales de mensajería</b>. Cada canal tiene su pestaña: <b>WhatsApp, SMS, Llamadas y Telegram</b>, y en cada una un <b>cuadro por proveedor</b>. Puedes tener varios en el mismo canal (por ejemplo, dos números de WhatsApp o dos cuentas de Twilio).</p>
+<ul>
+<li><b>Agregar proveedor</b>: elige el tipo (WhatsApp: Evolution API, Meta Cloud API, Gupshup, Twilio u otro por API HTTP; SMS: Twilio u otro; Llamadas: Twilio u otra central), ponle un nombre y pega sus datos.</li>
+<li><b>Interruptor</b>: encendido = se usa para enviar; apagado = no se usa. Si todos los de un canal están apagados, el canal queda «sin configurar».</li>
+<li><b>Probar conexión</b>, <b>Enviar prueba</b> (un mensaje real a un número, incluso con el proveedor apagado) y <b>Llamada de prueba</b> en Llamadas.</li>
+<li><b>Usar como principal</b>: los mensajes salen por el principal. Al escribir un WhatsApp, SMS o llamar, si hay más de un proveedor encendido aparece <b>Enviar desde</b> para elegir; en automático, la respuesta sale por la <b>misma línea por la que escribió el cliente</b>.</li>
+<li><b>Evolution (QR)</b>: <b>Vincular (QR)</b> escanea el número con el teléfono; <b>Cambiar de número</b> cierra la sesión del número actual y muestra el QR del nuevo (las conversaciones se conservan).</li>
+</ul>
+<div class="ch-warn">Con <b>Evolution</b> (línea no oficial) los <b>mensajes masivos</b> admiten hasta <b>100 destinatarios por campaña</b> y se envía <b>1 mensaje cada 2 minutos</b> para no bloquear la línea. Si necesitas más, contacta con soporte de Crm Hub 360.</div>
+
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-comercialvirtual" data-roles="">
+  <div class="panel-heading"><h4 class="panel-title">9c. Comercial virtual: comerciales, entrenamiento y mensajes con opciones</h4></div>
+  <div class="panel-body">
+
+<p>Menú <b>Comercial virtual</b> (administradores). Atiende a cada lead de principio a fin: primer contacto, respuestas, seguimientos, cambios de estado, y pasa el caso a una persona cuando hace falta. Cada decisión queda registrada con su porqué. La <b>versión automática</b> se activa por empresa (servicio adicional); la <b>manual</b> siempre está disponible.</p>
+<h3>Mis comerciales</h3>
+<ul>
+<li>Cada comercial virtual es una <b>tarjeta</b> con su propio entrenamiento: puedes tener varios que se comporten distinto (uno de ventas, otro de cobranza…). Tu licencia incluye 1; para más, contacta con soporte de Crm Hub 360.</li>
+<li><b>Interruptor</b>: apagado, no recibe leads nuevos y pausa los que lleva. <b>Entrenar, Probar, Duplicar</b> (copia para ajustar) y <b>Quitar</b> (sus leads pasan al primero).</li>
+<li>Un comercial nuevo arranca en <b>manual</b> y en <b>modo de prueba</b> hasta que lo entrenes y lo actives.</li>
+</ul>
+<h3>Entrenamiento</h3>
+<ol>
+<li><b>Versión</b>: manual (siempre una persona) o automática; <b>modo de prueba</b> (decide y registra, pero no envía nada); <b>aprobación previa</b> (una persona aprueba o edita cada mensaje); presentarse como asistente virtual.</li>
+<li><b>Quién es</b>: nombre, cargo y tono.</li>
+<li><b>Lo que sabe</b>: sobre la empresa, servicios, políticas y preguntas frecuentes. Lo que no esté ahí, dirá que un asesor lo confirmará.</li>
+<li><b>Objetivo y límites</b>: qué debe lograr, qué nunca debe hacer y cuándo pasa el caso a una persona.</li>
+<li><b>Cuándo y por dónde</b>: días y horario, zona horaria y canales (WhatsApp, correo, SMS).</li>
+<li><b>Ritmo</b>: primer contacto, seguimientos si no responde, máximo de mensajes por día y cuánto se hace a un lado cuando una persona escribe al cliente.</li>
+</ol>
+<h3>Mensajes con opciones (lista o botones de WhatsApp)</h3>
+<p>En vez de pedir texto libre, el comercial puede enviar un menú («¿cuál de estas opciones describe mejor tu situación?»). Tú defines el menú, <b>cuándo usarlo</b> (la IA decide el momento), las opciones (hasta 10 en lista, 3 en botones) y, opcionalmente, el estado al que pasa el lead según lo que elija el cliente. Con WhatsApp <b>oficial (Meta)</b> llega como lista o botones nativos; con Evolution u otros proveedores llega como <b>texto numerado</b> («responde con el número») y el sistema entiende la respuesta igual. Usa <b>Probar en mi WhatsApp</b> para verlo.</p>
+<h3>Probar, resultados y motor de IA</h3>
+<ul>
+<li><b>Probar</b>: simulas a un cliente y ves cómo respondería, sin enviar nada.</li>
+<li><b>Resultados y trazabilidad</b>: leads atendidos, mensajes, tiempo de primera respuesta, resultados por comercial y todo lo que hizo con su porqué.</li>
+<li><b>Motor de IA</b>: muestra qué IA usa tu empresa (global del sistema, una asignada o la tuya propia con su clave: Claude, OpenAI u otro compatible) y su consumo del mes.</li>
+</ul>
+<h3>En el lead</h3>
+<p>El panel <b>Comercial virtual</b> muestra quién lo atiende, en qué va y qué hizo. Puedes <b>Pausar</b>, <b>Tomar el control</b> (pasa a gestión manual), <b>Pasar al comercial virtual</b> o elegir en <b>Lo atiende</b> a otro comercial. Si hay aprobación previa, aquí apruebas o editas cada mensaje.</p>
+
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-reparto" data-roles="">
+  <div class="panel-heading"><h4 class="panel-title">9d. Reparto de leads entre personas y comerciales virtuales</h4></div>
+  <div class="panel-body">
+
+<p>En <b>Comercial virtual → Mis comerciales → Reparto de leads nuevos</b> decides quién atiende cada lead que llega por formularios, WhatsApp, redes u otro canal automático (los que creas a mano los llevas tú).</p>
+<table class="table table-bordered ch-table"><tr><th>Modo</th><th>Qué pasa</th></tr>
+<tr><td><b>Compartido</b></td><td>Los asesores humanos reciben la asignación automática de siempre y además un comercial virtual atiende el lead. Si hay varios comerciales, rotan según su peso.</td></tr>
+<tr><td><b>Repartir entre humanos y virtuales</b></td><td>Cada lead va a <b>uno solo</b>: al grupo de asesores humanos (balanceados entre sí por su carga) o a un comercial virtual, según los pesos, <b>intercalados</b>.</td></tr></table>
+<p><b>Pesos</b>: con humanos 2 y un comercial virtual 1, de cada 3 leads salen 2 para personas y 1 para el comercial, intercalados. Un peso 0 excluye a ese participante. Solo participan los comerciales <b>encendidos y en modo automático</b>. El porcentaje de cada uno se ve mientras editas.</p>
+<div class="ch-tip">Si el lead va a un comercial virtual, queda sin asesor humano y el encabezado lo indica; puedes reasignarlo a una persona cuando quieras. La asignación humana se habilita en <b>Asignación de leads</b> (casilla <i>Recibe leads</i>).</div>
+
+</div>
+</div>
+<div class="panel panel-default" id="ch-m-procesos" data-roles="">
+  <div class="panel-heading"><h4 class="panel-title">9e. Procesos de leads, copias de leads y lectura de documentos</h4></div>
+  <div class="panel-body">
+
+<h3>Procesos de leads</h3>
+<p>Menú <b>Procesos de leads</b>: cuando llega un lead (o cambia su identificación), el sistema envía su identificación y datos a una <b>API o webhook</b> —consulta a un buró de crédito, validación de identidad, web scraping, aviso a otro sistema— y guarda en el lead lo que responda. Puedes partir de plantillas, o elegir los <b>servicios del sistema</b> que tu proveedor te asignó (sin credenciales). Cada ejecución queda registrada, con reintentos. La pestaña <b>Lectura de documentos</b> define los perfiles que usa el panel de PDF.</p>
+<h3>Copias de leads</h3>
+<p>Menú <b>Copias de leads</b>: <b>Crear copia</b> guarda todos los leads con sus notas, tareas, llamadas y reuniones; puedes <b>descargarla</b> (archivo .json) o <b>restaurarla</b> (recupera lo que falte sin tocar los leads que ya existen). <b>Limpiar todos los leads</b> los quita para empezar de nuevo: antes crea una copia automática y exige escribir <b>LIMPIAR</b>. No toca correos, cuentas, contactos ni oportunidades.</p>
+
 </div>
 </div>
 <div class="panel panel-default" id="ch-m-faq" data-roles="comercial director gerente">
