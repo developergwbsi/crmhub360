@@ -54,6 +54,13 @@
 <p>Un <b>lead</b> es una persona interesada en un crédito. Verás solo los leads que tu rol permite (ver sección 7).</p>
 <h3>Crear un lead manualmente</h3>
 <ol><li><b>Leads</b> → botón <b>Crear lead</b> (arriba a la derecha).</li><li>Completa nombre, teléfono (con indicativo; si no lo pones se asume +57), correo y origen.</li><li>Guarda. El estado inicial es <span class="ch-pill">Nuevo Lead</span>.</li></ol>
+<h3>Quién lo atiende, de dónde llegó y su identificación</h3>
+<ul>
+<li><b>Usuario asignado:</b> si el lead lo atiende un <b>comercial virtual</b> (no hay una persona asignada), la tarjeta lo dice: «Comercial virtual · nombre». Si ves «Ninguno», nadie lo atiende todavía.</li>
+<li><b>Creado:</b> muestra de dónde llegó el lead (por ejemplo «Formulario Web: Expediciones a montañas», «WhatsApp»…), no el usuario técnico de la integración. «Modificado» dice «Sistema automático» o «Comercial virtual» cuando el cambio lo hizo el sistema.</li>
+<li><b>Identificación (cédula, NIT…):</b> los formularios y canales automáticos casi nunca la traen. Si falta, el lead guarda una <b>identificación temporal</b> (el celular o el correo, según lo configure el administrador) con la marca <i>Temporal</i> y el aviso «Identificación temporal» en el encabezado. Cuando abordes al cliente, edita el lead y escribe su documento real: la marca desaparece sola.</li>
+<li>Por regla, <b>no puedes pasar un lead a «Calificado» ni a «Cierre exitoso» mientras su identificación sea temporal</b>: primero registra la real. Los comerciales virtuales no se bloquean por esto.</li>
+</ul>
 <h3>Estados del lead</h3>
 <table class="table table-bordered ch-table"><tr><th>Estado</th><th>Significado</th></tr>
 <tr><td>Nuevo Lead</td><td>Recién captado, sin gestionar.</td></tr>
@@ -201,6 +208,7 @@
 <p>Solo los administradores. Están en el grupo <b>Organización</b> del menú lateral.</p>
 <table class="table table-bordered ch-table"><tr><th>Qué quiero hacer</th><th>Dónde</th></tr>
 <tr><td><b>Crear, renombrar, ordenar o dar color a los estados de los leads</b> (las columnas del Kanban)</td><td><b>Estados del pipeline</b> → botón <i>Crear, renombrar u ordenar estados</i>. Es la pantalla Administración → Entidades → Lead → Campos → Estado.</td></tr>
+<tr><td><b>Elegir la identificación temporal</b> (celular, correo o ninguna) y si la real es obligatoria para calificar o cerrar un lead</td><td><b>Estados del pipeline</b> → sección <i>Identificación del cliente</i>.</td></tr>
 <tr><td><b>Decir cuál estado usa el sistema</b> para leads nuevos, «en calificación», «calificado» y los que ya no cuentan como abiertos</td><td><b>Estados del pipeline</b> (panel derecho). Si renombras un estado, vuelve a elegirlo aquí.</td></tr>
 <tr><td><b>Elegir cómo se reparten los leads</b> (balanceado o rotación) y poner un tope de leads abiertos por asesor</td><td><b>Asignación de leads</b> → <i>Cómo se reparten los leads nuevos</i>.</td></tr>
 <tr><td><b>Ver y cambiar quién recibe leads</b>, y qué equipos atiende cada campaña</td><td><b>Asignación de leads</b> → <i>Quién recibe leads</i> y <i>Campañas activas</i>.</td></tr>

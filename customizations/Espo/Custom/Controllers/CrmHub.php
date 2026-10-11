@@ -177,6 +177,8 @@ class CrmHub
             'qualified' => $this->config->get('crmhubStatusQualified') ?: self::PIPELINE_DEFAULTS['qualified'],
             'closed' => is_array($closed) && $closed ? array_values($closed) : LeadAssigner::DEFAULT_CLOSED,
             'ignored' => $this->metadata->get(['scopes', 'Lead', 'kanbanStatusIgnoreList'], []),
+            'idTemp' => $this->config->get('crmhubIdTemp') ?: 'phone',
+            'idRequired' => $this->config->get('crmhubIdRequired') !== false,
         ];
     }
 
@@ -193,8 +195,10 @@ class CrmHub
                 throw new BadRequest("El estado «{$st}» no existe en la lista de estados de Lead.");
             }
         }
+        $idTemp = in_array((string) ($d->idTemp ?? 'phone'), ['phone', 'email', 'off'], true) ? (string) $d->idTemp : 'phone';
         $this->configWriter->setMultiple(['crmhubStatusNew' => $new, 'crmhubStatusReview' => $review,
-                                          'crmhubStatusQualified' => $qualified, 'crmhubClosedStatuses' => $closed]);
+                                          'crmhubStatusQualified' => $qualified, 'crmhubClosedStatuses' => $closed,
+                                          'crmhubIdTemp' => $idTemp, 'crmhubIdRequired' => !isset($d->idRequired) || (bool) $d->idRequired]);
         $this->configWriter->save();
         return (object) ['ok' => true];
     }

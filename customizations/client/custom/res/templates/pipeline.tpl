@@ -31,6 +31,12 @@
       <div class="form-group"><label>Estados que ya no cuentan como «lead abierto»</label>
         <div class="ch-checks">{{#each closedList}}<label class="ch-switch"><input type="checkbox" name="closed" value="{{value}}" {{#if checked}}checked{{/if}}> {{label}}</label>{{/each}}</div>
         <div class="ch-muted ch-small">Se usa para el balanceo de asignación y el panel gerencial. El primero de la lista se cuenta como «cierre exitoso».</div></div>
+      <h5 class="ch-subtitle" style="margin-top:18px">Identificación del cliente</h5>
+      <p class="ch-muted ch-small">Los formularios y canales automáticos casi nunca traen cédula o NIT. Si falta, el lead queda con una identificación <b>temporal</b> (marcada como tal) que tú reemplazas cuando abordes al cliente.</p>
+      <div class="form-group"><label>Identificación temporal cuando no hay documento</label>
+        <select name="idTemp" class="form-control">{{#each idTempOpts}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+      <label class="ch-switch"><input type="checkbox" name="idRequired" {{#if idRequired}}checked{{/if}}> La identificación real es obligatoria para pasar el lead a «calificado» o «cierre exitoso»</label>
+      <div class="ch-muted ch-small" style="margin:4px 0 12px">Aplica a las personas; los comerciales virtuales y las integraciones no se bloquean.</div>
       <button class="btn btn-primary" data-action="save">Guardar</button>
     </div>
   </div>

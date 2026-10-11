@@ -48,6 +48,7 @@ define('custom:lead-hero', [], function () {
         if (a.accountName && scope !== 'Account') { meta.push(`<span><span class="fas fa-building"></span>${esc(a.accountName)}</span>`); }
         if (a.assignedUserName) { meta.push(`<span><span class="fas fa-user-tie"></span>${esc(a.assignedUserName)}</span>`); }
         else if (view.model._chAgent) { meta.push(`<span title="Sin asesor humano: lo atiende el comercial virtual"><span class="fas fa-robot"></span>Comercial virtual · ${esc(view.model._chAgent.persona || '')}</span>`); }
+        if (scope === 'Lead' && a.identificationIsTemp) { meta.push(`<span class="ch-meta-warn" title="La identificación guardada es temporal (celular o correo). Edítala con el documento real cuando abordes al cliente."><span class="fas fa-id-card"></span>Identificación temporal</span>`); }
         if (a.suggestedService) { meta.push(`<span><span class="fas fa-tag"></span>${esc(a.suggestedService)}</span>`); }
         const kpi = (label, value) => `<div class="ch-lh-kpi"><span>${label}</span><b>${value}</b></div>`;
         let kpis = '';

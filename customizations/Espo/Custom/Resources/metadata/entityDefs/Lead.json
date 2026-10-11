@@ -188,7 +188,7 @@
         },
         "identification": {
             "type": "varchar",
-            "maxLength": 40,
+            "maxLength": 120,
             "trim": true
         },
         "identificationType": {
@@ -204,6 +204,15 @@
         "processResult": {
             "type": "text",
             "rows": 4
+        },
+        "identificationIsTemp": {
+            "type": "bool",
+            "default": false
+        },
+        "originDetail": {
+            "type": "varchar",
+            "maxLength": 160,
+            "readOnly": false
         }
     }
 }

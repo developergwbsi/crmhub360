@@ -367,6 +367,7 @@ async def submit(tenant: dict, form: dict, data: dict[str, str], ip: str) -> dic
         if lead.get(k):
             extra[k] = lead[k]
     extra["originForm"] = form["slug"][:80]
+    extra["originDetail"] = f"{form['source']}: {form['name']}"[:160]   # se muestra en el detalle del lead (quién lo creó es siempre el usuario API del Hub)
     if desc:
         extra["description"] = "\n".join(desc)
     if channel:

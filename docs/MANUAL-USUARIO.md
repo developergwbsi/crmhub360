@@ -91,6 +91,13 @@ Crear un lead manualmente
 2. Completa nombre, teléfono (con indicativo; si no lo pones se asume +57), correo y origen.
 3. Guarda. El estado inicial es Nuevo Lead.
 
+Quién lo atiende, de dónde llegó y su identificación
+
+- **Usuario asignado:** si el lead lo atiende un **comercial virtual** (no hay una persona asignada), la tarjeta lo dice: «Comercial virtual · nombre». Si ves «Ninguno», nadie lo atiende todavía.
+- **Creado:** muestra de dónde llegó el lead (por ejemplo «Formulario Web: Expediciones a montañas», «WhatsApp»…), no el usuario técnico de la integración. «Modificado» dice «Sistema automático» o «Comercial virtual» cuando el cambio lo hizo el sistema.
+- **Identificación (cédula, NIT…):** los formularios y canales automáticos casi nunca la traen. Si falta, el lead guarda una **identificación temporal** (el celular o el correo, según lo configure el administrador) con la marca *Temporal* y el aviso «Identificación temporal» en el encabezado. Cuando abordes al cliente, edita el lead y escribe su documento real: la marca desaparece sola.
+- Por regla, **no puedes pasar un lead a «Calificado» ni a «Cierre exitoso» mientras su identificación sea temporal**: primero registra la real. Los comerciales virtuales no se bloquean por esto.
+
 Estados del lead
 
 | Estado | Significado |
@@ -305,6 +312,7 @@ Solo los administradores. Están en el grupo **Organización** del menú lateral
 | Qué quiero hacer | Dónde |
 |---|---|
 | **Crear, renombrar, ordenar o dar color a los estados de los leads** (las columnas del Kanban) | **Estados del pipeline** → botón *Crear, renombrar u ordenar estados*. Es la pantalla Administración → Entidades → Lead → Campos → Estado. |
+| **Elegir la identificación temporal** (celular, correo o ninguna) y si la real es obligatoria para calificar o cerrar un lead | **Estados del pipeline** → sección *Identificación del cliente*. |
 | **Decir cuál estado usa el sistema** para leads nuevos, «en calificación», «calificado» y los que ya no cuentan como abiertos | **Estados del pipeline** (panel derecho). Si renombras un estado, vuelve a elegirlo aquí. |
 | **Elegir cómo se reparten los leads** (balanceado o rotación) y poner un tope de leads abiertos por asesor | **Asignación de leads** → *Cómo se reparten los leads nuevos*. |
 | **Ver y cambiar quién recibe leads**, y qué equipos atiende cada campaña | **Asignación de leads** → *Quién recibe leads* y *Campañas activas*. |

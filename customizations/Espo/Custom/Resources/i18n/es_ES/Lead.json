@@ -22,7 +22,9 @@
         "identification": "Identificación",
         "identificationType": "Tipo de documento",
         "originForm": "Formulario de origen",
-        "processResult": "Resultado de procesos"
+        "processResult": "Resultado de procesos",
+        "identificationIsTemp": "Identificación temporal",
+        "originDetail": "Detalle del origen"
     },
     "options": {
         "status": {

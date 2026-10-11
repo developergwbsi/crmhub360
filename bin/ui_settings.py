@@ -95,6 +95,22 @@ if __name__ == "__main__":  # python3 ui_settings.py <base_url> <admin_user> <ad
         sess["crmhubIdleMinutes"] = 30                      # minutos sin actividad de la persona (el navegador avisa y cierra); 0 = desactivado
     if sess:
         call("PUT", "Settings", sess)
+    # leads anteriores sin identificación: una sola vez se guardan sin cambios para que el hook IdentificationTemp les ponga la temporal (celular o correo)
+    if not cur.get("crmhubIdBackfill"):
+        import urllib.parse
+        q = urllib.parse.urlencode({"where[0][type]": "isNull", "where[0][attribute]": "identification", "select": "id", "maxSize": 200})
+        seen: set = set()
+        while len(seen) < 5000:
+            ids = [l["id"] for l in call("GET", "Lead?" + q).get("list", []) if l["id"] not in seen]   # los que siguen vacíos (sin teléfono ni correo) vuelven a salir: no se repiten
+            if not ids:
+                break
+            for i in ids:
+                seen.add(i)
+                try:
+                    call("PUT", f"Lead/{i}", {"identification": ""})   # el hook rellena la temporal
+                except Exception:
+                    pass
+        call("PUT", "Settings", {"crmhubIdBackfill": True})
     me = call("GET", "App/user")["user"]["id"]
     # el administrador ya tiene Preferencias propias: se reinician el dashboard y el tema para que hereden lo nuevo
     call("PUT", f"Preferences/{me}", {"dashboardLayout": DASH_LAYOUT, "dashletsOptions": DASH_OPTIONS, "useCustomTabList": False, "theme": ""})

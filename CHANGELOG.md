@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Detalle del lead
+- **Usuario asignado:** cuando lo atiende un comercial virtual, la tarjeta lateral dice «Comercial virtual · nombre» en vez de «Ninguno».
+- **Creado / Modificado:** muestran el origen del lead (p. ej. «Formulario Web: Expediciones a montañas», «WhatsApp») o «Sistema automático» / «Comercial virtual» en vez del usuario técnico `hub-api`. Campo nuevo `originDetail` (lo llenan los formularios).
+- **Identificación temporal:** si un lead llega sin cédula/NIT se guarda el celular o el correo (ajuste `crmhubIdTemp`) marcado como temporal (`identificationIsTemp`), con aviso en el encabezado y en el campo; al escribir la real la marca se quita sola. Con `crmhubIdRequired` (por defecto sí) una persona no puede pasar el lead a «Calificado» ni a «Cierre exitoso» con identificación temporal; los comerciales virtuales y las integraciones no se bloquean. Se configura en *Estados del pipeline → Identificación del cliente*. `tenant:ui` rellena una vez los leads antiguos sin identificación.
+
 ### Seguridad
 - **Las sesiones ahora se cierran.** Antes EspoCRM dejaba la sesión abierta hasta 48 h sin uso (y sin límite de duración), y como las pestañas abiertas consultan el servidor solas, nunca vencían. Ahora: cierre automático tras 30 minutos sin actividad real de la persona (con aviso «¿Sigues ahí?» 60 s antes, compartido entre pestañas), vida máxima de la sesión de 12 h y caducidad en el servidor tras 1 h sin ninguna consulta (pestaña cerrada). Los valores se aplican con `tenant:ui` solo si siguen en el de fábrica, y el tiempo del navegador es el ajuste `crmhubIdleMinutes` (0 = desactivado).
 
