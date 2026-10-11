@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.3.0] - 2026-10-11
+
 ### Monitor de WhatsApp (Evolution) en el Centro de control
 - Nueva pestaña **Monitor WhatsApp**: una **prueba de extremo a extremo** de cada línea de Evolution de las empresas. Cada línea escribe periódicamente a una **línea de pruebas** nuestra, que responde sola; si la respuesta no llega se detecta «no recibe mensajes» (sesión abierta pero sorda), «no entrega», envío rechazado, desconexión, instancia inexistente o línea sin vincular, y se abre una **alerta** (insignia en la pestaña, correo y WhatsApp), se reinicia la instancia una vez (opcional) y se avisa al recuperarse. Estado por línea con historial de pruebas y tiempo de respuesta.
 - **Vinculación por QR desde el Centro** (botón *QR* en el monitor y *WhatsApp (QR)* en la ficha de cada empresa): se puede escanear el QR de la empresa para que el cliente no tenga que hacerlo solo; incluye reiniciar la línea y cambiar de número. Auditado.
