@@ -9,7 +9,7 @@
   docs/referencia/HISTORIAL.md      historial de cambios a partir de git (agrupado por versión/etiqueta)
 
 Uso: bin/gen-docs            (escribe todo)
-     bin/gen-docs --check    (falla si algo cambiaría: útil antes de etiquetar)"""
+     bin/gen-docs --check    (falla si algo cambiaría, salvo el historial: útil antes de etiquetar)"""
 import ast
 import json
 import re
@@ -177,6 +177,8 @@ def main():
     changed = []
     for p, txt in OUT.items():
         p.parent.mkdir(parents=True, exist_ok=True)
+        if check and p.name == "HISTORIAL.md":
+            continue   # depende de los propios commits: --check no puede exigirlo al día
         if not p.exists() or p.read_text() != txt:
             changed.append(p.relative_to(ROOT))
             if not check:
