@@ -2,6 +2,11 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
+## Sin publicar (después de v1.3.0)
+
+- `f48426e` 2026-10-11 — Changelog 1.4.0
+- `e57779a` 2026-10-11 — Centro de control: inventario de líneas de WhatsApp (crear, QR, asignar como principal o adicional, mover y quitar); error claro de línea desconectada en el CRM; el monitor detecta que la línea comparte teléfono con la de pruebas
+
 ## v1.3.0
 
 - `93f6aaf` 2026-10-11 — Versión 1.3.0
