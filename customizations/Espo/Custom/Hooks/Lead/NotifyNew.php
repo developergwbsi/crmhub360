@@ -19,6 +19,7 @@ class NotifyNew
 
     public function __construct(private EntityManager $em, private Config $config, private Log $log) {}
 
+    /** Evento afterSave de Lead (orden 96): envía la campana y el push de lead nuevo. */
     public function afterSave(Entity $entity, array $options): void
     {
         if (!$entity->isNew() || $entity->get('isSimulation') || $entity->get('isThread') || !empty($options['skipNotifyNew'])) {

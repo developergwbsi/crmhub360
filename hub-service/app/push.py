@@ -39,6 +39,7 @@ def keys() -> dict:
 
 
 def save(tenant: str, user_id: str, sub: dict, ua: str | None) -> None:
+    """Guarda (o actualiza por endpoint) la suscripción push de un navegador en push_subscriptions; ValueError si está incompleta."""
     k = sub.get("keys") or {}
     if not (sub.get("endpoint") and k.get("p256dh") and k.get("auth")):
         raise ValueError("Suscripción incompleta")
@@ -52,11 +53,13 @@ def save(tenant: str, user_id: str, sub: dict, ua: str | None) -> None:
 
 
 def remove(endpoint: str) -> None:
+    """Borra una suscripción por su endpoint."""
     with db.pool.connection() as c:
         c.execute("DELETE FROM push_subscriptions WHERE endpoint = %s", (endpoint,))
 
 
 def count(tenant: str) -> int:
+    """Cantidad de dispositivos suscritos de la empresa."""
     with db.pool.connection() as c:
         return c.execute("SELECT count(*) n FROM push_subscriptions WHERE tenant = %s", (tenant,)).fetchone()["n"]
 
@@ -76,6 +79,7 @@ def _send_one(sub: dict, payload: str) -> int:
 
 async def send(tenant: str, *, title: str, body: str, url: str = "/", tag: str = "crmhub", kind: str = "info",
                user_id: str | None = None, user_ids: list[str] | None = None) -> dict:
+    """Envía una notificación push a todos los dispositivos de la empresa, a los de un usuario (user_id) o a los de varios (user_ids). Elimina las suscripciones que el navegador canceló (404/410). Devuelve {devices, sent, removed}."""
     with db.pool.connection() as c:
         if user_ids is not None:
             subs = c.execute("SELECT * FROM push_subscriptions WHERE tenant = %s AND user_id = ANY(%s)", (tenant, list(user_ids))).fetchall() if user_ids else []

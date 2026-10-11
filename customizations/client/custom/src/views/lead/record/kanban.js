@@ -1,3 +1,8 @@
+/**
+ * Tablero Kanban de Lead: usa la tarjeta custom:views/lead/kanban-item y añade un buscador por columna de estado.
+ * Hereda de custom:views/record/kanban-drawer (panel lateral + recarga en vivo).
+ * El filtro es local: solo actúa sobre las tarjetas ya cargadas; muestra «n de total» según el total de la colección del grupo. Sin endpoints propios.
+ */
 define('custom:views/lead/record/kanban', ['custom:views/record/kanban-drawer'], function (Dep) {
     const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 

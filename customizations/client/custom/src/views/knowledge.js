@@ -1,3 +1,8 @@
+/**
+ * Banco de conocimiento: qué aprendió el sistema del proceso comercial (etapas, respuestas, cifras) y notas manuales que se suman a ese conocimiento.
+ * Endpoints: GET CrmHub/kb, POST CrmHub/kbRefresh (recalcula, tarda: timeout 300 s), kbNote y kbNoteDelete.
+ * Permiso: usuario interno (no API ni portal). Dibuja con innerHTML en draw().
+ */
 define('custom:views/knowledge', ['view', 'custom:ui'], function (Dep, ChUi) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const STEP = {register: 'Registro del lead', welcome: 'Correo de bienvenida', message: 'Mensaje por WhatsApp/SMS', reply: 'Respuesta del cliente', call: 'Llamada', tasks: 'Reunión y tarea', pipeline: 'Estados', convert: 'Conversión', config: 'Configuración'};

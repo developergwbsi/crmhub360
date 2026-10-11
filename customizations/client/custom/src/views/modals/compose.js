@@ -1,4 +1,8 @@
-// Redactar correo (botón «Nuevo», «Responder», «Reenviar»): panel lateral que envía como el usuario, con su nombre y su firma.
+/**
+ * Panel lateral para redactar correo (Nuevo, Responder, Reenviar). Envía como el usuario mediante custom:mail-send (nombre, firma y Reply-To personal).
+ * Endpoints de Espo: GET Email/{id} (messageId para responder), GET EmailTemplate, POST EmailTemplate/{id}/prepare. Las plantillas personales vienen de custom:tpl.
+ * Abre pantalla dividida con custom:split ('ch') y dispara 'after:send' y 'after:save' al enviar.
+ */
 define('custom:views/modals/compose', ['views/modal', 'custom:ui', 'custom:split', 'custom:mail-send', 'custom:tpl'], function (Dep, ChUi, Split, MailSend, Tpl) {
     return class extends Dep {
         className = 'dialog ch-ch-panel ch-mail-modal'

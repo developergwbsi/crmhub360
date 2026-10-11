@@ -1,3 +1,9 @@
+/**
+ * Pantalla «Integraciones» (solo admin): correo del Centro de control, notificaciones push, Twilio, formularios web (galería de plantillas, editor, URL pública /f/{slug}) y servicios externos.
+ * Endpoints: GET/PUT CrmHub/integrations (configuración del tenant en el Hub), POST CrmHub/integrations/reset-services, POST CrmHub/twilio/test,
+ * POST CrmHub/push/test, GET CrmHub/formTemplate (plantillas de formulario). Embebe custom:views/channel-lines para los canales.
+ * Plantilla: custom:integrations; las secciones de formularios y servicios se dibujan con innerHTML (renderForms, renderServices).
+ */
 define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) {
     return class extends Dep {
         template = 'custom:integrations'

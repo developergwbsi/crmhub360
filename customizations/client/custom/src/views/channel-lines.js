@@ -1,5 +1,10 @@
-// Canales de mensajería: cada canal (WhatsApp, SMS, llamadas, Telegram) tiene su espacio con un cuadro por proveedor.
-// Se pueden agregar varios, encender/apagar cada uno, probarlos (conexión, mensaje o llamada de prueba) y elegir el principal.
+/**
+ * Canales de mensajería: cada canal (WhatsApp, SMS, llamadas, Telegram) tiene su espacio con un cuadro por proveedor.
+ * Se pueden agregar varios, encender/apagar cada uno, probarlos (conexión, mensaje o llamada de prueba) y elegir el principal.
+ * Solo admin. Endpoints: GET CrmHub/lines, POST CrmHub/lineSave, lineEnable, lineDefault, lineDelete, lineTest, lineSendTest,
+ * POST CrmHub/whatsapp/qr y whatsapp/unlink (vincular WhatsApp por QR), CrmHub/telegram/setup y PUT CrmHub/integrations (token del bot).
+ * Peculiaridad: es una vista incrustada que recibe options.httpVars desde integrations.js; dibuja con innerHTML en draw().
+ */
 define('custom:views/channel-lines', ['view', 'custom:ui'], function (Dep, ChUi) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const CH = {whatsapp: ['WhatsApp', 'fab fa-whatsapp'], sms: ['SMS', 'fas fa-comment-sms'], voice: ['Llamadas', 'fas fa-phone'], telegram: ['Telegram', 'fab fa-telegram']};

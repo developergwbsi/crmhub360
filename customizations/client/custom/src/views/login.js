@@ -1,3 +1,8 @@
+/**
+ * Pantalla de acceso propia: extiende views/login con la plantilla custom:login.
+ * Añade «¿Olvidaste tu contraseña?» siempre visible, recordar usuario (localStorage, claves ch-last-user y ch-last-name) y el acceso de soporte en modo lectura
+ * ?support=<código> que se canjea con POST CrmHubSupport/exchange (ver Controllers/CrmHubSupport.php).
+ */
 define('custom:views/login', ['views/login', 'custom:ui'], function (Dep, ChUi) {
     return class extends Dep {
         template = 'custom:login'

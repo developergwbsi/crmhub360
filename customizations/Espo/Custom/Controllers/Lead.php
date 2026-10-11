@@ -8,6 +8,7 @@ use Espo\Core\Utils\Config;
 use Espo\Custom\Services\HubClient;
 use Espo\Modules\Crm\Controllers\Lead as BaseLead;
 
+/** Extiende el controlador Lead del módulo Crm: añade el asistente de IA del lead. */
 class Lead extends BaseLead
 {
     /** POST /Lead/:id/ai/:action  (summarize | draft | sentiment) */

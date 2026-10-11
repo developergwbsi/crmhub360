@@ -1,4 +1,8 @@
-// Diálogos propios de Crm Hub 360 (confirmar, preguntar, cambio de estado) y formato de fechas. Nunca se usan los del navegador.
+/**
+ * Diálogos propios de Crm Hub 360 (confirmar, preguntar, panel, aviso, cambio de estado) y formato de fechas. Nunca se usan los del navegador.
+ * Módulo de utilidades sin endpoints: lo usan casi todas las vistas (esc para escapar HTML, fmt para fechas en es-CO).
+ * Cada diálogo devuelve una promesa; Esc o clic fuera cierran con null.
+ */
 define('custom:ui', [], function () {
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const tz = {timeZone: undefined};
@@ -15,6 +19,7 @@ define('custom:ui', [], function () {
         dur: sec => { sec = Math.max(0, parseInt(sec || 0, 10)); const m = Math.floor(sec / 60), r = sec % 60; return m + ':' + String(r).padStart(2, '0'); },
     };
 
+    // Base de todos los diálogos: crea el fondo y la caja, atrapa el foco y resuelve la promesa al cerrar
     function open(build) {
         return new Promise(resolve => {
             const back = document.createElement('div');
@@ -81,6 +86,7 @@ define('custom:ui', [], function () {
             });
         },
         // Cambio de estado: pide comentario (obligatorio si no hubo una acción previa con el lead). → {comment} o null
+        // Diálogo de cambio de estado: pide el comentario obligatorio y, si hay, muestra la acción previa
         statusChange(o) {
             const act = o.action ? `<div class="ch-dlg-note ok"><span class="fas fa-circle-check"></span> Ya hay una acción registrada: <b>${esc(o.action.label)}</b> (${esc(fmt.dt(o.action.at))}). El comentario es opcional.</div>`
                 : '<div class="ch-dlg-note warn"><span class="fas fa-circle-info"></span> Aún no hay una acción con este lead desde el último cambio de estado. Cuenta qué pasó (o llama / escribe antes).</div>';

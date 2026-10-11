@@ -8,11 +8,13 @@ PROVIDERS = {"twilio": "Twilio Voice", "generic": "Otra central / proveedor (API
 
 
 def provider(tenant: dict) -> str:
+    """Proveedor de llamadas activo («twilio» o «generic»), o cadena vacía si no hay."""
     p = (lines.effective(tenant, "voice").get("settings") or {}).get("voice_provider")
     return p if p in PROVIDERS else ""
 
 
 def bridge_twiml(tenant: dict, customer: str) -> str:
+    """TwiML que conecta al asesor con el cliente (Dial al número del cliente, con grabación si settings.voice_record). Lo sirve el endpoint /hub/voice-bridge."""
     st = tenant.get("settings") or {}
     caller = (st.get("twilio_voice_from") or "").strip()
     rec = ' record="record-from-answer-dual"' if st.get("voice_record") else ""
@@ -36,6 +38,7 @@ async def test_call(tenant: dict, to: str) -> None:
 
 
 async def call(tenant: dict, lead_id: str, agent_phone: str, agent: str, agent_id: str = "", line_id: str | None = None) -> dict:
+    """Click-to-call: registra la llamada (Call) en EspoCRM y hace que el proveedor llame primero al asesor y, al contestar, lo conecte con el cliente. Devuelve {ok, callId, provider}."""
     tenant = lines.effective(tenant, "voice", line_id)
     p = provider(tenant)
     if not p:

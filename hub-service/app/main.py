@@ -1,3 +1,13 @@
+"""Hub Service de Crm Hub 360: API FastAPI que consume EspoCRM (interfaz PHP), que recibe los webhooks de los canales y mantiene los workers.
+
+Los endpoints se agrupan por secciones, en este orden: ingesta de leads (webhooks), integraciones del tenant, envío por canal (SMS, WhatsApp,
+Telegram, voz, correo), campañas masivas, formularios web públicos, push, simulador y banco de conocimiento, plantillas, procesos, lectura de
+documentos, comercial virtual, motor de IA y líneas de mensajería.
+
+Autenticación: casi todo usa `tenant_auth` (cabeceras X-Tenant y X-Hub-Token, tenant con licencia activa); los webhooks usan ?token= o apikey (o el secreto
+propio de Telegram); las rutas /v1/admin/* exigen X-Admin-Token; las /v1/public/* no piden credenciales.
+
+Regla: toda ruta nueva debe registrarse ANTES del bloque `if __name__ == "__main__"` del final, o no existirá al arrancar con uvicorn."""
 import asyncio
 import hmac
 import json
@@ -21,6 +31,7 @@ logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    """Arranque y cierre del Hub: abre el pool de BD, crea los esquemas y lanza los workers de campañas, buzón y comercial virtual."""
     db.pool.open()
     push.keys()  # crea las claves VAPID la primera vez
     simulate.ensure_schema()
@@ -43,6 +54,7 @@ app = FastAPI(title="Crm Hub 360 - Hub Service", lifespan=lifespan)
 
 
 def _check(tenant: dict | None, token: str) -> dict:
+    """Valida tenant y token (comparación en tiempo constante); 401 si no coinciden y 403 si la licencia no está activa."""
     if not tenant or not hmac.compare_digest(tenant["hub_token"], token or ""):
         raise HTTPException(401, "Tenant o token inválido")
     if tenant["status"] != "active":
@@ -51,19 +63,23 @@ def _check(tenant: dict | None, token: str) -> dict:
 
 
 def tenant_auth(x_tenant: str = Header(...), x_hub_token: str = Header(...)) -> dict:
+    """Dependencia de FastAPI: autentica con las cabeceras X-Tenant y X-Hub-Token y devuelve el tenant."""
     return _check(db.get_tenant(x_tenant), x_hub_token)
 
 
 class CreditReq(BaseModel):
+    """Cuerpo para leer un informe de crédito adjunto a un lead."""
     leadId: str
     attachmentId: str
 
 
 class AssistReq(BaseModel):
+    """Cuerpo de las acciones del asistente IA sobre un lead."""
     leadId: str
 
 
 async def _job(tenant: dict, kind: str, entity_id: str, coro_fn):
+    """Ejecuta una tarea en segundo plano registrándola en ai_jobs (con el error si falla)."""
     job = db.log_job(tenant["slug"], kind, entity_id)
     try:
         await coro_fn()
@@ -75,11 +91,13 @@ async def _job(tenant: dict, kind: str, entity_id: str, coro_fn):
 
 @app.get("/health")
 def health():
+    """Comprobación de vida del Hub; devuelve el modelo de Ollama configurado."""
     return {"ok": True, "model": config.OLLAMA_MODEL}
 
 
 @app.post("/v1/credit/parse", status_code=202)
 async def credit_parse(req: CreditReq, bg: BackgroundTasks, tenant: dict = Depends(tenant_auth)):
+    """Encola la lectura del informe de crédito de un adjunto del lead; lo llama la interfaz de Espo (responde 202)."""
     bg.add_task(_job, tenant, "credit_parse", req.leadId,
                 lambda: credit.process(tenant, req.leadId, req.attachmentId))
     return {"status": "queued"}
@@ -87,6 +105,7 @@ async def credit_parse(req: CreditReq, bg: BackgroundTasks, tenant: dict = Depen
 
 @app.post("/v1/assistant/{action}")
 async def assist(action: str, req: AssistReq, tenant: dict = Depends(tenant_auth)):
+    """Ejecuta una acción del asistente IA (resumen, respuesta, etc.) sobre un lead y devuelve el texto; lo llama la interfaz de Espo."""
     if action not in assistant.PROMPTS:
         raise HTTPException(404, "Acción desconocida")
     job = db.log_job(tenant["slug"], f"assistant_{action}", req.leadId)
@@ -101,12 +120,14 @@ async def assist(action: str, req: AssistReq, tenant: dict = Depends(tenant_auth
 
 # --- Ingesta de leads (webhooks). Autenticación: ?token=<hub_token> o cabecera apikey ---
 def _ingest_tenant(slug: str, request: Request) -> dict:
+    """Autentica un webhook de ingesta: token en ?token= o en la cabecera apikey."""
     token = request.query_params.get("token") or request.headers.get("apikey") or ""
     return _check(db.get_tenant(slug), token)
 
 
 @app.get("/v1/ingest/{slug}/facebook")
 def fb_verify(slug: str, request: Request):
+    """Verificación del webhook de Facebook Lead Ads (hub.challenge) con el token del tenant."""
     q = request.query_params
     t = db.get_tenant(slug)
     if t and q.get("hub.mode") == "subscribe" and hmac.compare_digest(q.get("hub.verify_token", ""), t["hub_token"]):
@@ -116,6 +137,7 @@ def fb_verify(slug: str, request: Request):
 
 @app.post("/v1/ingest/{slug}/facebook")
 async def fb_ingest(slug: str, request: Request):
+    """Webhook de Facebook Lead Ads: valida la firma de Meta y crea o actualiza los leads."""
     tenant = _ingest_tenant(slug, request)
     raw = await request.body()
     _verify_signature(tenant, raw, request.headers.get("x-hub-signature-256"))
@@ -135,6 +157,7 @@ def _verify_signature(tenant: dict, raw: bytes, header: str | None) -> None:
 
 @app.get("/v1/ingest/{slug}/whatsapp-cloud")
 def meta_wa_verify(slug: str, request: Request):
+    """Verificación del webhook de WhatsApp Cloud API (hub.challenge) con el token del tenant."""
     q = request.query_params
     t = db.get_tenant(slug)
     if t and q.get("hub.mode") == "subscribe" and hmac.compare_digest(q.get("hub.verify_token", ""), t["hub_token"]):
@@ -144,6 +167,7 @@ def meta_wa_verify(slug: str, request: Request):
 
 @app.post("/v1/ingest/{slug}/whatsapp-cloud")
 async def meta_wa_ingest(slug: str, request: Request):
+    """Webhook de WhatsApp Cloud API: valida la firma de Meta y registra los mensajes entrantes."""
     tenant = _ingest_tenant(slug, request)
     raw = await request.body()
     _verify_signature(tenant, raw, request.headers.get("x-hub-signature-256"))
@@ -152,12 +176,14 @@ async def meta_wa_ingest(slug: str, request: Request):
 
 @app.post("/v1/ingest/{slug}/gupshup")
 async def gupshup_ingest(slug: str, request: Request):
+    """Webhook de Gupshup: registra el mensaje entrante de WhatsApp."""
     tenant = _ingest_tenant(slug, request)
     return {"lead": await ingest.from_gupshup(tenant, await request.json())}
 
 
 @app.post("/v1/ingest/{slug}/telegram")
 async def telegram_ingest(slug: str, request: Request):
+    """Webhook de Telegram autenticado con el secreto del bot; siempre responde 200 para que Telegram no reintente."""
     tenant = db.get_tenant(slug)
     secret = ((tenant or {}).get("settings") or {}).get("telegram_secret") or ""
     if not tenant or not secret or not hmac.compare_digest(request.headers.get("x-telegram-bot-api-secret-token", ""), secret):
@@ -173,6 +199,7 @@ async def telegram_ingest(slug: str, request: Request):
 
 @app.post("/v1/ingest/{slug}/twilio")
 async def twilio_ingest(slug: str, request: Request):
+    """Webhook de Twilio (SMS/WhatsApp, formulario urlencoded); responde TwiML vacío."""
     from urllib.parse import parse_qs
     tenant = _ingest_tenant(slug, request)
     form = {k: v[0] for k, v in parse_qs((await request.body()).decode("utf-8", "replace"), keep_blank_values=True).items()}
@@ -185,6 +212,7 @@ async def twilio_ingest(slug: str, request: Request):
 
 @app.api_route("/v1/ingest/{slug}/voice-bridge", methods=["GET", "POST"])
 async def voice_bridge(slug: str, request: Request):
+    """Devuelve el TwiML que conecta la llamada del asesor con el cliente (`to`); lo consume Twilio."""
     tenant = _ingest_tenant(slug, request)
     to = "+" + "".join(ch for ch in request.query_params.get("to", "") if ch.isdigit())
     return Response(voice.bridge_twiml(tenant, to), media_type="text/xml")
@@ -192,6 +220,7 @@ async def voice_bridge(slug: str, request: Request):
 
 @app.post("/v1/ingest/{slug}/voice-status")
 async def voice_status(slug: str, request: Request):
+    """Callback de estado de llamada de Twilio: actualiza la llamada en Espo (Held o Not Held, fin) y deja una nota en el lead."""
     from urllib.parse import parse_qs
     tenant = _ingest_tenant(slug, request)
     form = {k: v[0] for k, v in parse_qs((await request.body()).decode("utf-8", "replace"), keep_blank_values=True).items()}
@@ -218,6 +247,7 @@ async def voice_status(slug: str, request: Request):
 
 @app.post("/v1/ingest/{slug}/generic")
 async def generic_ingest(slug: str, request: Request):
+    """Webhook genérico para proveedores HTTP de SMS o WhatsApp (?channel=sms|whatsapp)."""
     tenant = _ingest_tenant(slug, request)
     ch = request.query_params.get("channel", "sms")
     if ch not in ("sms", "whatsapp"):
@@ -227,12 +257,14 @@ async def generic_ingest(slug: str, request: Request):
 
 @app.post("/v1/ingest/{slug}/evolution")
 async def evo_ingest(slug: str, request: Request):
+    """Webhook de Evolution API: registra los mensajes de WhatsApp entrantes."""
     tenant = _ingest_tenant(slug, request)
     return {"lead": await ingest.from_evolution(tenant, await request.json())}
 
 
 @app.post("/v1/ingest/{slug}/web")
 async def web_ingest(slug: str, request: Request):
+    """Alta de un lead desde un formulario web externo (nombre, teléfono, correo, fuente y campaña)."""
     tenant = _ingest_tenant(slug, request)
     b = await request.json()
     lead = await ingest.upsert_lead(tenant, name=b.get("name", ""), phone=b.get("phone"), email=b.get("email"),
@@ -242,6 +274,7 @@ async def web_ingest(slug: str, request: Request):
 
 # --- Integraciones del tenant (las consume el panel de administración de EspoCRM) ---
 class SettingsReq(BaseModel):
+    """Campos aceptados al guardar integraciones del tenant."""
     fb_page_token: str | None = None
     services: list[dict] | None = None
     evolution_url: str | None = None
@@ -250,6 +283,7 @@ class SettingsReq(BaseModel):
 
 
 class SendReq(BaseModel):
+    """Cuerpo para enviar un mensaje de texto a un lead (WhatsApp, SMS o Telegram)."""
     leadId: str
     text: str
     agent: str = 'Asesor'
@@ -259,16 +293,19 @@ class SendReq(BaseModel):
 
 
 class PushSubReq(BaseModel):
+    """Cuerpo para registrar la suscripción push de un dispositivo."""
     userId: str
     subscription: dict
     userAgent: str | None = None
 
 
 class PushUnsubReq(BaseModel):
+    """Cuerpo para dar de baja una suscripción push por su endpoint."""
     endpoint: str
 
 
 class PushSendReq(BaseModel):
+    """Cuerpo para enviar una notificación push a uno o varios usuarios."""
     userId: str | None = None
     userIds: list[str] | None = None
     tag: str = "crmhub-test"
@@ -279,6 +316,7 @@ class PushSendReq(BaseModel):
 
 
 class BroadcastReq(BaseModel):
+    """Cuerpo del aviso push masivo de nueva versión (uso administrativo)."""
     tenant: str
     title: str = "Crm Hub 360 — nueva versión"
     body: str = "Hay una versión nueva disponible. Ábrela para actualizar."
@@ -286,11 +324,13 @@ class BroadcastReq(BaseModel):
 
 
 class QualifyReq(BaseModel):
+    """Cuerpo con el id de un lead (calificar, invitar por Telegram)."""
     leadId: str
 
 
 @app.get("/v1/tenant/settings")
 async def tenant_settings(tenant: dict = Depends(tenant_auth)):
+    """Estado completo de integraciones del tenant para el panel de administración de Espo; los secretos solo salen como pista de los últimos 4 caracteres."""
     st = tenant.get("settings") or {}
     ai_ok = False
     try:
@@ -341,6 +381,7 @@ PLAIN_KEYS = {"evolution_instance", "meta_phone_number_id", "gupshup_source", "g
 
 @app.put("/v1/tenant/settings")
 def tenant_settings_update(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    """Guarda integraciones del tenant (secretos solo si vienen no vacíos, proveedores, servicios y formularios validados) mezclándolas en settings."""
     patch = {}
     for k in SECRET_KEYS:  # un valor vacío conserva el secreto actual
         if isinstance(body.get(k), str) and body[k].strip():
@@ -390,6 +431,7 @@ def tenant_settings_update(body: dict = Body(...), tenant: dict = Depends(tenant
 
 @app.get("/v1/forms/template/{key}")
 def form_template(key: str, slugs: str = "", tenant: dict = Depends(tenant_auth)):
+    """Construye una plantilla de formulario de la galería; la usa el editor de formularios de Espo."""
     try:
         return form_templates.build(key, {x for x in slugs.split(",") if x})
     except ValueError as e:
@@ -398,16 +440,19 @@ def form_template(key: str, slugs: str = "", tenant: dict = Depends(tenant_auth)
 
 @app.post("/v1/tenant/settings/reset-services")
 def reset_services(tenant: dict = Depends(tenant_auth)):
+    """Quita los servicios personalizados del tenant para volver a los predeterminados."""
     with db.pool.connection() as c:
         c.execute("UPDATE tenants SET settings = settings - 'services' WHERE slug = %s", (tenant["slug"],))
     return {"ok": True}
 
 
 class SmsTestReq(BaseModel):
+    """Cuerpo de la prueba de SMS (número de destino)."""
     to: str
 
 
 class CallReq(BaseModel):
+    """Cuerpo para iniciar una llamada puente entre el asesor y el lead."""
     leadId: str
     agentPhone: str
     agent: str = "Asesor"
@@ -416,6 +461,7 @@ class CallReq(BaseModel):
 
 
 class BroadcastCreate(BaseModel):
+    """Cuerpo para crear una campaña de mensajes masivos."""
     name: str
     channel: str
     text: str
@@ -428,6 +474,7 @@ class BroadcastCreate(BaseModel):
 
 @app.post("/v1/sms/send")
 async def sms_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
+    """Envía un SMS a un lead (1 a 1000 caracteres) y registra el trabajo; lo llama la interfaz de Espo."""
     text = req.text.strip()
     if not text or len(text) > 1000:
         raise HTTPException(422, "El SMS debe tener entre 1 y 1000 caracteres")
@@ -442,6 +489,7 @@ async def sms_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/sms/test")
 async def sms_test(req: SmsTestReq, tenant: dict = Depends(tenant_auth)):
+    """Envía un SMS de prueba para verificar el proveedor configurado."""
     try:
         return await sms.test(tenant, req.to)
     except ValueError as e:
@@ -450,6 +498,7 @@ async def sms_test(req: SmsTestReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/twilio/test")
 async def twilio_test(tenant: dict = Depends(tenant_auth)):
+    """Verifica las credenciales de Twilio y devuelve nombre y estado de la cuenta."""
     from . import twilio
     try:
         a = await twilio.account(tenant)
@@ -460,6 +509,7 @@ async def twilio_test(tenant: dict = Depends(tenant_auth)):
 
 
 class SupportExchangeReq(BaseModel):
+    """Cuerpo para canjear un código de acceso de soporte."""
     code: str
 
 
@@ -476,6 +526,7 @@ def support_exchange(req: SupportExchangeReq, tenant: dict = Depends(tenant_auth
 
 @app.post("/v1/voice/call")
 async def voice_call(req: CallReq, tenant: dict = Depends(tenant_auth)):
+    """Inicia una llamada saliente que conecta primero al asesor y luego al lead; registra el trabajo."""
     job = db.log_job(tenant["slug"], "voice_call", req.leadId)
     try:
         res = await voice.call(tenant, req.leadId, req.agentPhone, req.agent, req.agentId, req.lineId); db.finish_job(job); return res
@@ -487,12 +538,14 @@ async def voice_call(req: CallReq, tenant: dict = Depends(tenant_auth)):
 
 @app.get("/v1/broadcasts")
 def bc_list(tenant: dict = Depends(tenant_auth)):
+    """Lista las campañas de mensajes masivos del tenant y el estado, límites y política de cada canal."""
     return {"items": [{**b, "created_at": str(b["created_at"]), "scheduled_at": str(b["scheduled_at"]) if b["scheduled_at"] else None}
                       for b in broadcast.listing(tenant["slug"])], "channels": {k: {"label": v, "ready": broadcast.configured(tenant, k), "max": broadcast.LIMITS[k], "policy": broadcast.policy(tenant, k), "support": broadcast.SUPPORT_HINT} for k, v in broadcast.CHANNELS.items()}}
 
 
 @app.post("/v1/broadcasts")
 def bc_create(req: BroadcastCreate, tenant: dict = Depends(tenant_auth)):
+    """Crea una campaña masiva (con inicio programado de hasta 14 días); la procesa el worker de broadcast."""
     try:
         bid = broadcast.create(tenant, name=req.name, channel=req.channel, text=req.text, lead_ids=req.leadIds, per_minute=req.perMinute,
                                footer=req.footer, by=req.by, start_in_min=max(0, min(req.startInMinutes, 60 * 24 * 14)))
@@ -503,6 +556,7 @@ def bc_create(req: BroadcastCreate, tenant: dict = Depends(tenant_auth)):
 
 @app.get("/v1/broadcasts/{bid}")
 def bc_detail(bid: int, tenant: dict = Depends(tenant_auth)):
+    """Detalle de una campaña, con sus fechas como texto; 404 si no existe."""
     d = broadcast.detail(tenant["slug"], bid)
     if not d:
         raise HTTPException(404)
@@ -512,6 +566,7 @@ def bc_detail(bid: int, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/broadcasts/{bid}/{action}")
 def bc_action(bid: int, action: str, tenant: dict = Depends(tenant_auth)):
+    """Pausa, reanuda o cancela una campaña; 409 si su estado no lo permite."""
     if action not in ("pause", "resume", "cancel"):
         raise HTTPException(404)
     if not broadcast.set_status(tenant["slug"], bid, action):
@@ -521,6 +576,7 @@ def bc_action(bid: int, action: str, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/telegram/setup")
 async def tg_setup(tenant: dict = Depends(tenant_auth)):
+    """Configura el bot de Telegram del tenant (webhook y datos del bot)."""
     try:
         return await telegram.setup(tenant)
     except ValueError as e:
@@ -531,6 +587,7 @@ async def tg_setup(tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/telegram/test")
 async def tg_test(tenant: dict = Depends(tenant_auth)):
+    """Prueba la conexión con el bot de Telegram del tenant."""
     try:
         return await telegram.test(tenant)
     except ValueError as e:
@@ -541,6 +598,7 @@ async def tg_test(tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/telegram/send")
 async def tg_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
+    """Envía un mensaje de Telegram a un lead (1 a 4000 caracteres) y registra el trabajo."""
     text = req.text.strip()
     if not text or len(text) > 4000:
         raise HTTPException(422, "El mensaje debe tener entre 1 y 4000 caracteres")
@@ -555,6 +613,7 @@ async def tg_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/telegram/invite")
 async def tg_invite(req: QualifyReq, tenant: dict = Depends(tenant_auth)):
+    """Genera la invitación para que un lead hable con el bot de Telegram."""
     try:
         return await telegram.invite(tenant, req.leadId)
     except ValueError as e:
@@ -563,6 +622,7 @@ async def tg_invite(req: QualifyReq, tenant: dict = Depends(tenant_auth)):
 
 # --- Formularios web públicos (los publica el vhost como https://<dominio>/f/<slug>) ---
 def _public_tenant(slug: str) -> dict:
+    """Tenant activo para las rutas públicas; 404 si no existe o no está activo."""
     t = db.get_tenant(slug)
     if not t or t["status"] != "active":
         raise HTTPException(404, "No encontrado")
@@ -574,6 +634,7 @@ _FORM_HEADERS = {"Cache-Control": "no-store", "Content-Security-Policy": "frame-
 
 @app.get("/v1/public/{slug}/forms/{form_slug}", response_class=HTMLResponse)
 def form_page(slug: str, form_slug: str):
+    """Página pública HTML de un formulario web (se publica en /f/<slug>); 404 si no existe."""
     t = _public_tenant(slug)
     f = forms.find(t, form_slug)
     if not f:
@@ -583,6 +644,7 @@ def form_page(slug: str, form_slug: str):
 
 @app.get("/v1/public/{slug}/forms/{form_slug}/img/{action_id}/{n}")
 def form_image(slug: str, form_slug: str, action_id: str, n: int):
+    """Imagen pública de una acción del formulario (la usan los correos); con caché de un día."""
     t = _public_tenant(slug)
     f = forms.find(t, form_slug)
     img = forms.image_bytes(f, action_id, n) if f else None
@@ -593,6 +655,7 @@ def form_image(slug: str, form_slug: str, action_id: str, n: int):
 
 @app.post("/v1/public/{slug}/forms/{form_slug}", response_class=HTMLResponse)
 async def form_submit(slug: str, form_slug: str, request: Request):
+    """Recibe el envío de un formulario público: valida, registra el lead y ejecuta las acciones; redirige o muestra la confirmación."""
     from urllib.parse import parse_qs
     t = _public_tenant(slug)
     f = forms.find(t, form_slug)
@@ -619,11 +682,13 @@ async def form_submit(slug: str, form_slug: str, request: Request):
 
 @app.get("/v1/push/key")
 def push_key(tenant: dict = Depends(tenant_auth)):
+    """Clave pública VAPID para suscribir dispositivos a notificaciones push."""
     return {"publicKey": push.keys()["public"]}
 
 
 @app.post("/v1/push/subscribe")
 def push_subscribe(req: PushSubReq, tenant: dict = Depends(tenant_auth)):
+    """Registra la suscripción push de un usuario."""
     try:
         push.save(tenant["slug"], req.userId, req.subscription, req.userAgent)
     except ValueError as e:
@@ -633,12 +698,14 @@ def push_subscribe(req: PushSubReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/push/unsubscribe")
 def push_unsubscribe(req: PushUnsubReq, tenant: dict = Depends(tenant_auth)):
+    """Elimina una suscripción push."""
     push.remove(req.endpoint)
     return {"ok": True}
 
 
 @app.post("/v1/push/send")
 async def push_send(req: PushSendReq, tenant: dict = Depends(tenant_auth)):
+    """Envía una notificación push a usuarios del tenant."""
     return await push.send(tenant["slug"], title=req.title, body=req.body, url=req.url, kind=req.kind[:20], tag=req.tag[:80], user_id=req.userId, user_ids=req.userIds)
 
 
@@ -659,6 +726,7 @@ def _lid(body) -> str | None:
 
 @app.post("/v1/whatsapp/test")
 async def wa_test(body: dict | list | None = Body(None), tenant: dict = Depends(tenant_auth)):
+    """Prueba la conexión del proveedor de WhatsApp de la línea indicada."""
     try:
         return await whatsapp.test(lines.effective(tenant, "whatsapp", _lid(body), allow_off=True))
     except ValueError as e:
@@ -669,6 +737,7 @@ async def wa_test(body: dict | list | None = Body(None), tenant: dict = Depends(
 
 @app.post("/v1/whatsapp/qr")
 async def wa_qr(body: dict | list | None = Body(None), tenant: dict = Depends(tenant_auth)):
+    """Obtiene el código QR para vincular un número de WhatsApp (Evolution)."""
     try:
         return await whatsapp.qr(lines.effective(tenant, "whatsapp", _lid(body), allow_off=True))
     except ValueError as e:
@@ -689,6 +758,7 @@ async def wa_unlink(body: dict | list | None = Body(None), tenant: dict = Depend
 
 
 class EmailSendReq(BaseModel):
+    """Cuerpo para enviar un correo como un usuario del CRM."""
     userId: str
     userName: str = ""
     to: list[str] | str
@@ -717,6 +787,7 @@ async def email_send(req: EmailSendReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/whatsapp/send")
 async def wa_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
+    """Envía un mensaje de WhatsApp a un lead (1 a 4000 caracteres) y registra el trabajo; lo llama la interfaz de Espo."""
     text = req.text.strip()
     if not text or len(text) > 4000:
         raise HTTPException(422, "El mensaje debe tener entre 1 y 4000 caracteres")
@@ -735,6 +806,7 @@ async def wa_send(req: SendReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/leads/qualify")
 async def leads_qualify(req: QualifyReq, tenant: dict = Depends(tenant_auth)):
+    """Califica un lead con IA (servicio sugerido y puntaje) y registra el trabajo."""
     job = db.log_job(tenant["slug"], "qualify", req.leadId)
     try:
         res = await qualify.run(tenant, req.leadId)
@@ -748,6 +820,7 @@ async def leads_qualify(req: QualifyReq, tenant: dict = Depends(tenant_auth)):
 # --- Métricas de licenciamiento (Gerente General / operador de plataforma) ---
 @app.get("/v1/admin/metrics")
 def metrics(x_admin_token: str = Header(...)):
+    """Métricas de licenciamiento por tenant y de trabajos de IA; solo con el token de administración del Hub."""
     if not hmac.compare_digest(x_admin_token, config.HUB_ADMIN_TOKEN):
         raise HTTPException(401)
     with db.pool.connection() as c:
@@ -758,6 +831,7 @@ def metrics(x_admin_token: str = Header(...)):
 
 # ---------------- simulador del proceso comercial y banco de conocimiento ----------------
 class SimReq(BaseModel):
+    """Cuerpo para iniciar una simulación del proceso comercial."""
     userId: str
     userName: str = ""
     name: str = ""
@@ -769,21 +843,25 @@ class SimReq(BaseModel):
 
 @app.get("/v1/sim/config")
 async def sim_config(tenant: dict = Depends(tenant_auth)):
+    """Verificación de configuración y pasos disponibles del simulador."""
     return {"config": simulate.config_probe(tenant), "steps": [{"key": k, "label": l} for k, l in simulate.STEPS]}
 
 
 @app.post("/v1/sim/runs")
 async def sim_start(req: SimReq, tenant: dict = Depends(tenant_auth)):
+    """Inicia una simulación del proceso comercial y devuelve su id."""
     return {"id": await simulate.start(tenant, req.model_dump())}
 
 
 @app.get("/v1/sim/runs")
 async def sim_list(userId: str = "", tenant: dict = Depends(tenant_auth)):
+    """Lista las simulaciones del tenant (opcionalmente de un usuario)."""
     return {"items": simulate.list_runs(tenant["slug"], userId or None)}
 
 
 @app.get("/v1/sim/runs/{run_id}")
 async def sim_get(run_id: int, userId: str = "", tenant: dict = Depends(tenant_auth)):
+    """Detalle de una simulación; 404 si no existe."""
     r = simulate.get_run(tenant["slug"], run_id, userId or None)
     if not r:
         raise HTTPException(404, "Simulación no encontrada")
@@ -792,12 +870,14 @@ async def sim_get(run_id: int, userId: str = "", tenant: dict = Depends(tenant_a
 
 @app.delete("/v1/sim/runs/{run_id}")
 async def sim_delete(run_id: int, userId: str = "", tenant: dict = Depends(tenant_auth)):
+    """Elimina una simulación; 404 si no existe."""
     if not await simulate.delete_run(tenant, run_id, userId or None):
         raise HTTPException(404, "Simulación no encontrada")
     return {"ok": True}
 
 
 class NoteReq(BaseModel):
+    """Cuerpo para añadir una nota al banco de conocimiento."""
     userId: str
     userName: str = ""
     text: str
@@ -805,11 +885,13 @@ class NoteReq(BaseModel):
 
 @app.get("/v1/kb")
 async def kb_get(tenant: dict = Depends(tenant_auth)):
+    """Banco de conocimiento del tenant."""
     return knowledge.get(tenant["slug"])
 
 
 @app.post("/v1/kb/refresh")
 async def kb_refresh(tenant: dict = Depends(tenant_auth)):
+    """Regenera el banco de conocimiento con el modelo de IA del tenant."""
     async def ask(system: str, user: str) -> str:
         return await llm.chat_text(tenant, system, user)
     return await knowledge.refresh(tenant, ask)
@@ -817,6 +899,7 @@ async def kb_refresh(tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/kb/notes")
 async def kb_note(req: NoteReq, tenant: dict = Depends(tenant_auth)):
+    """Añade una nota manual al banco de conocimiento (mínimo 3 caracteres)."""
     if len(req.text.strip()) < 3:
         raise HTTPException(422, "Escribe la nota.")
     knowledge.add_note(tenant["slug"], req.userId, req.userName, req.text.strip())
@@ -825,6 +908,7 @@ async def kb_note(req: NoteReq, tenant: dict = Depends(tenant_auth)):
 
 @app.delete("/v1/kb/notes/{note_id}")
 async def kb_note_delete(note_id: int, userId: str = "", tenant: dict = Depends(tenant_auth)):
+    """Borra una nota del banco de conocimiento; 404 si no existe."""
     if not knowledge.delete_note(tenant["slug"], note_id, userId or None):
         raise HTTPException(404, "Nota no encontrada")
     return {"ok": True}
@@ -832,6 +916,7 @@ async def kb_note_delete(note_id: int, userId: str = "", tenant: dict = Depends(
 
 # ---------------- plantillas personales (correo, WhatsApp, Telegram, SMS) ----------------
 class TplReq(BaseModel):
+    """Cuerpo para guardar una plantilla personal de mensaje."""
     userId: str
     channel: str
     name: str
@@ -843,11 +928,13 @@ class TplReq(BaseModel):
 
 @app.get("/v1/tpl")
 async def tpl_list(userId: str, tenant: dict = Depends(tenant_auth)):
+    """Plantillas personales del usuario y el límite de la licencia."""
     return templates.list_for(tenant["slug"], userId, templates.limit_of(tenant))
 
 
 @app.post("/v1/tpl")
 async def tpl_save(req: TplReq, tenant: dict = Depends(tenant_auth)):
+    """Crea o edita una plantilla personal (422 inválida, 409 sin permiso, 404 si no existe)."""
     try:
         return templates.save(tenant["slug"], req.userId, req.model_dump(), templates.limit_of(tenant))
     except ValueError as e:
@@ -860,6 +947,7 @@ async def tpl_save(req: TplReq, tenant: dict = Depends(tenant_auth)):
 
 @app.delete("/v1/tpl/{tid}")
 async def tpl_delete(tid: int, userId: str, tenant: dict = Depends(tenant_auth)):
+    """Borra una plantilla personal del usuario; 404 si no existe."""
     if not templates.delete(tenant["slug"], userId, tid):
         raise HTTPException(404, "Plantilla no encontrada.")
     return {"ok": True}
@@ -874,15 +962,18 @@ async def wa_route(leadId: str, tenant: dict = Depends(tenant_auth)):
 
 # ---------------- procesos al llegar un lead (API/webhook con la identificación y datos del lead) ----------------
 class ProcSaveReq(BaseModel):
+    """Cuerpo para guardar los procesos que se ejecutan al llegar un lead."""
     processes: list[dict]
 
 
 class ProcTestReq(BaseModel):
+    """Cuerpo para probar una definición de proceso, con un lead real opcional."""
     process: dict
     leadId: str | None = None
 
 
 class ProcTriggerReq(BaseModel):
+    """Cuerpo con que el CRM avisa de un lead nuevo o modificado para disparar procesos y el comercial virtual."""
     leadId: str
     changed: bool = False
     processId: str | None = None
@@ -893,11 +984,13 @@ class ProcTriggerReq(BaseModel):
 
 @app.get("/v1/processes")
 async def proc_list(tenant: dict = Depends(tenant_auth)):
+    """Procesos configurados, campos disponibles, máximo y catálogo."""
     return {"processes": processes.public(processes.load(tenant)), "fields": list(processes.FIELDS), "max": processes.MAX_PROCESSES, "catalog": processes.catalog(tenant)}
 
 
 @app.put("/v1/processes")
 async def proc_save(req: ProcSaveReq, tenant: dict = Depends(tenant_auth)):
+    """Valida y guarda los procesos del tenant (settings.processes)."""
     try:
         new = processes.clean(req.processes, processes.load(tenant), processes.assigned(tenant))
     except ValueError as e:
@@ -925,6 +1018,7 @@ async def proc_test(req: ProcTestReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/process/trigger")
 async def proc_trigger(req: ProcTriggerReq, tenant: dict = Depends(tenant_auth)):
+    """Lo llama el CRM al guardar un lead: ejecuta los procesos (manual en el acto; si no, tras 1,5 s en segundo plano) y, si el lead es nuevo, da de alta al comercial virtual."""
     if req.manual:
         return {"runs": await processes.run_for_lead(tenant, req.leadId, process_id=req.processId, manual=True)}
 
@@ -945,15 +1039,18 @@ async def proc_trigger(req: ProcTriggerReq, tenant: dict = Depends(tenant_auth))
 
 @app.get("/v1/process/runs")
 async def proc_runs(leadId: str = "", tenant: dict = Depends(tenant_auth)):
+    """Historial de ejecuciones de procesos (de un lead o del tenant)."""
     return {"items": processes.runs(tenant["slug"], leadId or None)}
 
 
 # ---------------- lectura de documentos (PDF) con perfiles configurables ----------------
 class DocProfilesReq(BaseModel):
+    """Cuerpo para guardar los perfiles de lectura de documentos."""
     profiles: list[dict]
 
 
 class DocExtractReq(BaseModel):
+    """Cuerpo para iniciar la lectura de un PDF adjunto a un lead."""
     leadId: str
     attachmentId: str
     profileId: str
@@ -963,6 +1060,7 @@ class DocExtractReq(BaseModel):
 
 
 class DocApplyReq(BaseModel):
+    """Cuerpo para aplicar al lead los datos leídos de un documento."""
     leadId: str
     runId: int
     values: dict | list | None = None   # PHP envía [] cuando está vacío
@@ -971,17 +1069,20 @@ class DocApplyReq(BaseModel):
 
 
 class DocRememberReq(BaseModel):
+    """Cuerpo para crear un perfil de lectura a partir de campos ya revisados."""
     name: str
     items: list[dict]
 
 
 @app.get("/v1/docs/profiles")
 async def docs_profiles(tenant: dict = Depends(tenant_auth)):
+    """Perfiles de lectura de documentos (incluidos los integrados), tipos y campos destino."""
     return {"profiles": documents.profiles(tenant), "types": documents.TYPES, "targets": list(processes.FIELDS), "max": documents.MAX_PROFILES}
 
 
 @app.put("/v1/docs/profiles")
 async def docs_profiles_save(req: DocProfilesReq, tenant: dict = Depends(tenant_auth)):
+    """Guarda los perfiles personalizados (los integrados no se guardan)."""
     try:
         new = documents.clean([p for p in req.profiles if not p.get("builtin")])
     except ValueError as e:
@@ -993,6 +1094,7 @@ async def docs_profiles_save(req: DocProfilesReq, tenant: dict = Depends(tenant_
 
 @app.post("/v1/docs/extract")
 async def docs_extract(req: DocExtractReq, tenant: dict = Depends(tenant_auth)):
+    """Inicia la lectura de un documento con el perfil elegido y responde de inmediato con el id de lectura (estado «reading»)."""
     async def ask(system: str, user: str, schema: dict, max_tokens: int | None = None) -> dict:
         return await llm.chat_json(tenant, system, user, schema, max_tokens)
     try:
@@ -1003,6 +1105,7 @@ async def docs_extract(req: DocExtractReq, tenant: dict = Depends(tenant_auth)):
 
 @app.get("/v1/docs/run")
 async def docs_run(leadId: str, runId: int, tenant: dict = Depends(tenant_auth)):
+    """Estado y resultado de una lectura de documento; 404 si no existe."""
     r = documents.get_run(tenant["slug"], leadId, runId)
     if not r:
         raise HTTPException(404, "Lectura inexistente.")
@@ -1011,6 +1114,7 @@ async def docs_run(leadId: str, runId: int, tenant: dict = Depends(tenant_auth))
 
 @app.post("/v1/docs/apply")
 async def docs_apply(req: DocApplyReq, tenant: dict = Depends(tenant_auth)):
+    """Aplica al lead los valores o ítems leídos de un documento."""
     try:
         if req.items is not None:
             return await documents.apply_items(tenant, req.leadId, req.runId, req.items, req.agent)
@@ -1021,6 +1125,7 @@ async def docs_apply(req: DocApplyReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/docs/remember")
 async def docs_remember(req: DocRememberReq, tenant: dict = Depends(tenant_auth)):
+    """Crea un perfil de lectura reutilizable a partir de los ítems indicados."""
     try:
         return {"profile": documents.profile_from_items(tenant, req.name.strip()[:80] or "Documento", req.items)}
     except ValueError as e:
@@ -1029,32 +1134,38 @@ async def docs_remember(req: DocRememberReq, tenant: dict = Depends(tenant_auth)
 
 @app.get("/v1/docs/pending")
 async def docs_pending(userId: str, tenant: dict = Depends(tenant_auth)):
+    """Lecturas de documentos pendientes de revisar por el usuario."""
     return {"items": documents.pending(tenant["slug"], userId)}
 
 
 @app.post("/v1/docs/dismiss")
 async def docs_dismiss(req: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    """Descarta una lectura pendiente del usuario."""
     documents.dismiss(tenant["slug"], str(req.get("userId", "")), int(req.get("runId", 0)))
     return {"ok": True}
 
 
 @app.get("/v1/docs/history")
 async def docs_history(leadId: str, tenant: dict = Depends(tenant_auth)):
+    """Historial de lecturas de documentos de un lead."""
     return {"items": documents.history(tenant["slug"], leadId)}
 
 
 # ---------------- comercial virtual (versión automática del seguimiento de leads)
 class AgentCfgReq(BaseModel):
+    """Cuerpo para guardar el entrenamiento de un comercial virtual."""
     config: dict
     agentId: str | None = None
     name: str | None = None
 
 
 class AgentTestReq(BaseModel):
+    """Cuerpo de la prueba de respuesta del comercial virtual."""
     sample: dict
 
 
 class AgentApprovalReq(BaseModel):
+    """Cuerpo para aprobar o descartar un mensaje propuesto por el comercial virtual."""
     leadId: str
     eventId: int
     message: str | None = None
@@ -1063,12 +1174,14 @@ class AgentApprovalReq(BaseModel):
 
 
 class AgentActionReq(BaseModel):
+    """Cuerpo de una intervención humana sobre un lead del comercial virtual."""
     leadId: str
     action: str
     by: str = "Un usuario"
 
 
 def _agent_cards(tenant: dict) -> list[dict]:
+    """Resumen de cada comercial virtual (modo, persona, canales, menús y estadísticas) para el panel."""
     by = agent.by_agent(tenant["slug"])
     out = []
     for a in agent.agents(tenant):
@@ -1079,6 +1192,7 @@ def _agent_cards(tenant: dict) -> list[dict]:
 
 
 def _agent_overview(tenant: dict, agent_id: str | None = None) -> dict:
+    """Vista completa que consume el panel del comercial virtual: configuración elegida, tarjetas, reparto, cupos, licencia y consumo."""
     sel = agent.get_agent(tenant, agent_id)
     return {"config": sel["config"], "selectedId": sel["id"], "name": sel["name"], "agents": _agent_cards(tenant), "dispatch": agent.dispatch_cfg(tenant), "slots": agent.slots(tenant),
             "licensed": agent.licensed(tenant), "usage": agent.usage(tenant["slug"]), "company": tenant.get("name") or ""}
@@ -1086,15 +1200,18 @@ def _agent_overview(tenant: dict, agent_id: str | None = None) -> dict:
 
 @app.get("/v1/agent/config")
 async def agent_config(agentId: str = "", tenant: dict = Depends(tenant_auth)):
+    """Configuración y panorama del comercial virtual seleccionado."""
     return _agent_overview(tenant, agentId or None)
 
 
 def _store_agents(tenant: dict, lst: list[dict]) -> None:
+    """Persiste la lista de comerciales virtuales del tenant."""
     agent.save_agents(tenant["slug"], lst)
 
 
 @app.put("/v1/agent/config")
 async def agent_config_save(req: AgentCfgReq, tenant: dict = Depends(tenant_auth)):
+    """Guarda el entrenamiento de un comercial virtual; el modo automático exige licencia (403)."""
     try:
         new = agent.clean_config(req.config)
     except (ValueError, TypeError) as e:
@@ -1113,26 +1230,31 @@ async def agent_config_save(req: AgentCfgReq, tenant: dict = Depends(tenant_auth
 
 
 class AgentNewReq(BaseModel):
+    """Cuerpo para crear un comercial virtual (opcionalmente clonando otro)."""
     name: str = ""
     cloneFrom: str | None = None
 
 
 class AgentIdReq(BaseModel):
+    """Cuerpo con el id de un comercial virtual."""
     id: str
 
 
 class AgentEnableReq(BaseModel):
+    """Cuerpo para encender o apagar un comercial virtual."""
     id: str
     enabled: bool
 
 
 class DispatchReq(BaseModel):
+    """Cuerpo del reparto de leads entre personas y comerciales virtuales."""
     mode: str = "shared"
     weights: dict = {}
 
 
 @app.post("/v1/agents")
 async def agents_create(req: AgentNewReq, tenant: dict = Depends(tenant_auth)):
+    """Crea un comercial virtual dentro del cupo de la licencia; arranca en manual y en prueba."""
     lst = agent._raw_agents(tenant)
     if len(lst) >= agent.slots(tenant):
         raise HTTPException(403, f"Tu licencia incluye {agent.slots(tenant)} comercial(es) virtual(es). Para tener más, contacta con soporte de Crm Hub 360.")
@@ -1148,6 +1270,7 @@ async def agents_create(req: AgentNewReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/agents/enabled")
 async def agents_enabled(req: AgentEnableReq, tenant: dict = Depends(tenant_auth)):
+    """Enciende o apaga un comercial virtual."""
     lst = agent._raw_agents(tenant)
     cur = next((a for a in lst if a["id"] == req.id), None)
     if not cur:
@@ -1159,6 +1282,7 @@ async def agents_enabled(req: AgentEnableReq, tenant: dict = Depends(tenant_auth
 
 @app.post("/v1/agents/delete")
 async def agents_delete(req: AgentIdReq, tenant: dict = Depends(tenant_auth)):
+    """Elimina un comercial virtual (queda al menos uno): sus leads pasan al primero y se quita su peso del reparto."""
     lst = agent._raw_agents(tenant)
     if len(lst) <= 1:
         raise HTTPException(422, "Debe quedar al menos un comercial virtual. Si no lo quieres usar, apágalo.")
@@ -1177,6 +1301,7 @@ async def agents_delete(req: AgentIdReq, tenant: dict = Depends(tenant_auth)):
 
 @app.put("/v1/agent/dispatch")
 async def agent_dispatch_save(req: DispatchReq, tenant: dict = Depends(tenant_auth)):
+    """Guarda el modo de reparto de leads y los pesos (0 a 100) por atendedor."""
     known = {"humans"} | {a["id"] for a in agent.agents(tenant)}
     w = {}
     for k, v in (req.weights or {}).items():
@@ -1199,6 +1324,7 @@ async def agent_dispatch_pick(tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/agent/test")
 async def agent_test(req: AgentTestReq, tenant: dict = Depends(tenant_auth)):
+    """Genera la respuesta de prueba del comercial virtual para un cliente simulado, sin enviar nada."""
     try:
         return await agent.test_reply(tenant, req.sample)
     except Exception as e:
@@ -1207,11 +1333,13 @@ async def agent_test(req: AgentTestReq, tenant: dict = Depends(tenant_auth)):
 
 @app.get("/v1/agent/lead")
 async def agent_lead(leadId: str, tenant: dict = Depends(tenant_auth)):
+    """Estado del comercial virtual sobre un lead, para la ficha del CRM."""
     return agent.lead_state(tenant, leadId)
 
 
 @app.post("/v1/agent/lead/action")
 async def agent_lead_action(req: AgentActionReq, tenant: dict = Depends(tenant_auth)):
+    """Intervención humana sobre un lead (pausar, tomar control, cambiar de comercial, reanudar); devuelve el estado nuevo."""
     try:
         await agent.lead_action(tenant, req.leadId, req.action, req.by)
     except PermissionError as e:
@@ -1223,11 +1351,13 @@ async def agent_lead_action(req: AgentActionReq, tenant: dict = Depends(tenant_a
 
 @app.get("/v1/agent/pending")
 async def agent_pending(tenant: dict = Depends(tenant_auth)):
+    """Mensajes del comercial virtual pendientes de aprobación."""
     return {"items": agent.pending_proposals(tenant["slug"])}
 
 
 @app.post("/v1/agent/approval")
 async def agent_approval(req: AgentApprovalReq, tenant: dict = Depends(tenant_auth)):
+    """Aprueba (y envía) o descarta un mensaje propuesto; devuelve el estado del lead."""
     try:
         if req.approve:
             await agent.approve(tenant, req.leadId, req.eventId, req.message, req.by)
@@ -1242,16 +1372,19 @@ async def agent_approval(req: AgentApprovalReq, tenant: dict = Depends(tenant_au
 
 @app.get("/v1/agent/attended")
 def agent_attended(tenant: dict = Depends(tenant_auth)):
+    """Leads que hoy gestiona un comercial virtual (el panel gerencial no los cuenta como «Sin asesor»)."""
     return {"leads": agent.attended(tenant)}
 
 
 @app.get("/v1/agent/stats")
 async def agent_stats(days: int = 30, tenant: dict = Depends(tenant_auth)):
+    """Estadísticas del comercial virtual del periodo (1 a 365 días) y sus últimos 40 eventos."""
     return {**agent.stats(tenant["slug"], max(1, min(365, days))), "events": agent.events(tenant["slug"], None, 40)}
 
 
 # ---------------- motor de IA (por empresa)
 class AiOwnReq(BaseModel):
+    """Cuerpo para configurar el motor de IA propio de la empresa."""
     kind: str
     model: str = ""
     base_url: str = ""
@@ -1260,6 +1393,7 @@ class AiOwnReq(BaseModel):
 
 
 def _ai_public(tenant: dict) -> dict:
+    """Configuración del motor de IA para el panel: modo, motor efectivo, consumo y datos del propio (la clave solo como pista)."""
     ai = (tenant.get("settings") or {}).get("ai") or {}
     eff = llm.resolve(tenant)
     own = ai.get("own") or {}
@@ -1271,11 +1405,13 @@ def _ai_public(tenant: dict) -> dict:
 
 @app.get("/v1/ai/config")
 async def ai_config(tenant: dict = Depends(tenant_auth)):
+    """Configuración del motor de IA de la empresa."""
     return _ai_public(tenant)
 
 
 @app.put("/v1/ai/own")
 async def ai_own_save(req: AiOwnReq, tenant: dict = Depends(tenant_auth)):
+    """Guarda el motor de IA propio (solo si el tenant está en modo «own»); una clave vacía conserva la actual."""
     ai = (tenant.get("settings") or {}).get("ai") or {}
     if (ai.get("mode") or "global") != "own":
         raise HTTPException(403, "Tu empresa usa el motor de IA del sistema. Si quieres usar el tuyo, pídelo a tu proveedor.")
@@ -1311,6 +1447,7 @@ async def ai_test(req: AiOwnReq | None = None, tenant: dict = Depends(tenant_aut
 
 # --- Proveedores (líneas) de mensajería: varios por canal, cada uno con su interruptor ---
 class LineSaveReq(BaseModel):
+    """Cuerpo para crear o editar un proveedor (línea) de mensajería."""
     id: str | None = None
     channel: str
     type: str
@@ -1321,21 +1458,25 @@ class LineSaveReq(BaseModel):
 
 
 class LineIdReq(BaseModel):
+    """Cuerpo con el id de una línea."""
     id: str
 
 
 class LineEnableReq(BaseModel):
+    """Cuerpo para encender o apagar una línea."""
     id: str
     enabled: bool
 
 
 class LineSendReq(BaseModel):
+    """Cuerpo para enviar un mensaje de prueba desde una línea."""
     id: str
     to: str
     text: str = ""
 
 
 def _line_err(e: Exception):
+    """Convierte un error de prueba de línea en HTTP: 422 si es de validación, 502 en otro caso."""
     if isinstance(e, ValueError):
         raise HTTPException(422, str(e))
     raise HTTPException(502, f"No se pudo completar la prueba: {str(e)[:240]}")
@@ -1343,11 +1484,13 @@ def _line_err(e: Exception):
 
 @app.get("/v1/lines")
 def lines_overview(tenant: dict = Depends(tenant_auth)):
+    """Líneas de mensajería del tenant por canal."""
     return lines.overview(tenant)
 
 
 @app.post("/v1/lines")
 def lines_save(req: LineSaveReq, tenant: dict = Depends(tenant_auth)):
+    """Crea o edita una línea de mensajería."""
     try:
         return lines.save(tenant, req.model_dump())
     except ValueError as e:
@@ -1356,6 +1499,7 @@ def lines_save(req: LineSaveReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/lines/enabled")
 def lines_enabled(req: LineEnableReq, tenant: dict = Depends(tenant_auth)):
+    """Enciende o apaga una línea."""
     try:
         lines.set_enabled(tenant, req.id, req.enabled)
     except ValueError as e:
@@ -1365,6 +1509,7 @@ def lines_enabled(req: LineEnableReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/lines/default")
 def lines_default(req: LineIdReq, tenant: dict = Depends(tenant_auth)):
+    """Marca una línea como predeterminada de su canal."""
     try:
         lines.set_default(tenant, req.id)
     except ValueError as e:
@@ -1374,6 +1519,7 @@ def lines_default(req: LineIdReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/lines/delete")
 def lines_delete(req: LineIdReq, tenant: dict = Depends(tenant_auth)):
+    """Elimina una línea."""
     try:
         lines.delete(tenant, req.id)
     except ValueError as e:
@@ -1383,6 +1529,7 @@ def lines_delete(req: LineIdReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/lines/test")
 async def lines_test(req: LineIdReq, tenant: dict = Depends(tenant_auth)):
+    """Prueba la conexión de una línea."""
     try:
         return await lines.connection_test(tenant, req.id)
     except Exception as e:
@@ -1391,6 +1538,7 @@ async def lines_test(req: LineIdReq, tenant: dict = Depends(tenant_auth)):
 
 @app.post("/v1/lines/send-test")
 async def lines_send_test(req: LineSendReq, tenant: dict = Depends(tenant_auth)):
+    """Envía un mensaje de prueba por una línea."""
     try:
         return await lines.send_test(tenant, req.id, req.to, req.text)
     except Exception as e:
@@ -1404,6 +1552,7 @@ def lines_active(tenant: dict = Depends(tenant_auth)):
 
 
 class AgentMenuTestReq(BaseModel):
+    """Cuerpo para probar un menú de WhatsApp del comercial virtual."""
     menuId: str
     to: str
     agentId: str | None = None
@@ -1411,6 +1560,7 @@ class AgentMenuTestReq(BaseModel):
 
 @app.post("/v1/agent/menu-test")
 async def agent_menu_test(req: AgentMenuTestReq, tenant: dict = Depends(tenant_auth)):
+    """Envía un menú del entrenamiento a un número de prueba para ver cómo lo recibe el cliente."""
     try:
         return await agent.test_menu(tenant, req.menuId, req.to, req.agentId)
     except ValueError as e:

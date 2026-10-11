@@ -1,3 +1,8 @@
+/**
+ * Acciones de contacto del registro (llamar, correo, SMS, WhatsApp, Telegram): abren el panel de canal correspondiente al lado de la ficha.
+ * Sirve a leads y también a cuentas, contactos y oportunidades: para estos resuelve el lead de origen con POST CrmHub/thread.
+ * Paneles que abre: custom:views/modals/phone, email-thread y whatsapp (este último para WhatsApp, SMS y Telegram). Al cerrar el panel (evento done) se recarga el modelo.
+ */
 define('custom:handlers/lead-contact', ['action-handler'], function (Dep) {
     return class extends Dep {
         // Solo hay un panel de canal abierto; la ficha del registro queda al lado.

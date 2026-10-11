@@ -1,4 +1,8 @@
-// Pantalla dividida: el contenido se achica para dejar a la vista el tablero mientras hay paneles abiertos (ficha del lead y/o canal).
+/**
+ * Pantalla dividida: el contenido se achica para dejar a la vista el tablero mientras hay paneles abiertos (ficha del lead y/o canal).
+ * Cuenta paneles abiertos por tipo (lead, ch), publica sus anchos en variables CSS (--ch-lead-w, --ch-ch-w, --ch-split-w) y la clase ch-split en body.
+ * Si hay pantalla mediana recoge el menú lateral y lo restaura al cerrar. También se expone como window.ChSplit. Sin endpoints.
+ */
 define('custom:split', [], function () {
     const open = {lead: 0, ch: 0};
     let minimizedByUs = false;
@@ -6,6 +10,7 @@ define('custom:split', [], function () {
 
     function sidebarToggle() { const a = document.querySelector('#navbar a.minimizer'); if (a) { a.click(); } }
 
+    // Recalcula anchos y clases según los paneles abiertos
     function apply() {
         const both = open.lead > 0 && open.ch > 0;
         const lead = open.lead > 0 ? (both ? 340 : 460) : 0, ch = open.ch > 0 ? 380 : 0, total = lead + ch;

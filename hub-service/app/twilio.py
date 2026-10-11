@@ -5,6 +5,7 @@ from . import config
 
 
 def creds(tenant: dict) -> tuple[str, str]:
+    """Account SID y Auth Token de Twilio del tenant; ValueError si faltan."""
     st = tenant.get("settings") or {}
     sid, tok = (st.get("twilio_account_sid") or "").strip(), (st.get("twilio_auth_token") or "").strip()
     if not (sid and tok):
@@ -13,6 +14,7 @@ def creds(tenant: dict) -> tuple[str, str]:
 
 
 async def post(tenant: dict, path: str, data: dict) -> dict:
+    """POST autenticado a la API de Twilio de la cuenta (Messages.json, Calls.json…); ValueError con el motivo si lo rechaza."""
     sid, tok = creds(tenant)
     async with httpx.AsyncClient(timeout=25) as c:
         r = await c.post(f"{config.TWILIO_BASE}/2010-04-01/Accounts/{sid}/{path}", data=data, auth=(sid, tok))
@@ -26,6 +28,7 @@ async def post(tenant: dict, path: str, data: dict) -> dict:
 
 
 async def account(tenant: dict) -> dict:
+    """Datos de la cuenta de Twilio (sirve para probar las credenciales)."""
     sid, tok = creds(tenant)
     async with httpx.AsyncClient(timeout=15) as c:
         r = await c.get(f"{config.TWILIO_BASE}/2010-04-01/Accounts/{sid}.json", auth=(sid, tok))

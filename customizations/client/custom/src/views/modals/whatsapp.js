@@ -1,4 +1,8 @@
-// Conversación con el lead por WhatsApp, Telegram o SMS, con aspecto de app de mensajería.
+/**
+ * Conversación con el lead por WhatsApp, Telegram o SMS con aspecto de app de mensajería.
+ * Endpoints: GET CrmHub/channels, GET CrmHub/linesActive, GET CrmHub/leadTimeline (kind=chat), POST CrmHub/{canal}/send, POST CrmHub/telegram/invite y POST Lead/{id}/ai/draft (borrador con IA, timeout 300 s).
+ * Usa plantillas personales (custom:tpl), pantalla dividida ('ch') y avisa con Live.notify tras enviar.
+ */
 define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:split', 'custom:tpl', 'custom:live-panel'], function (Dep, ChUi, Split, Tpl, Live) {
     const META = {
         whatsapp: {title: 'WhatsApp', icon: 'fab fa-whatsapp', color: '#25d366'},
@@ -46,6 +50,7 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
 
         onRemove() { clearInterval(this.timer); if (this._chSplit) { this._chSplit = false; Split.close('ch'); } }
 
+        // Carga la conversación del canal (CrmHub/leadTimeline kind=chat).
         load(first) {
             return Espo.Ajax.getRequest('CrmHub/leadTimeline', {leadId: this.options.leadId, kind: 'chat', channel: this.channel}).then(r => {
                 const norm = x => String(x || '').replace(/\D/g, '');
@@ -166,6 +171,7 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
 
         error(msg) { const e = this.el.querySelector('.ch-chat-err'); if (!e) { return; } e.hidden = !msg; e.textContent = msg || ''; }
 
+        // Pide a la IA un borrador de respuesta (Lead/{id}/ai/draft).
         aiDraft() {
             this.error('');
             const b = this.el.querySelector('[data-action="aiDraft"]'); b.disabled = true;

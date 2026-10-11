@@ -1,4 +1,7 @@
-// Paneles del lead en vivo: se recargan cuando se envía/recibe algo (aviso interno entre ventanas y paneles), al volver a la pestaña y cada pocos segundos mientras se ven.
+/**
+ * Paneles del lead en vivo: se recargan cuando se envía/recibe algo (aviso interno entre ventanas y paneles), al volver a la pestaña y cada pocos segundos mientras se ven.
+ * Evento de documento: crmhub:lead-activity (detail.leadId), que se emite con notify(leadId). attach(view, load, ms) vuelve a llamar load() cada ms (10 s por defecto) y se limpia al evento 'remove' de la vista. Sin endpoints.
+ */
 define('custom:live-panel', [], function () {
     const EVT = 'crmhub:lead-activity';
     return {

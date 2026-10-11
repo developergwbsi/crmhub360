@@ -14,11 +14,13 @@ CREATE TABLE IF NOT EXISTS wa_lids (tenant TEXT NOT NULL, lid TEXT NOT NULL, lea
 
 
 def ensure_schema() -> None:
+    """Crea las tablas wa_routes y wa_lids si no existen."""
     with db.pool.connection() as c:
         c.execute(SCHEMA)
 
 
 def note_out(tenant: str, lead_id: str, user_id: str | None, phone: str | None, line: str | None = None) -> None:
+    """Registra que un usuario escribió al lead (teléfono y línea usados) para que la respuesta le llegue a esa persona."""
     with db.pool.connection() as c:
         c.execute("INSERT INTO wa_routes (tenant, lead_id, user_id, last_out_phone, out_at, last_line) VALUES (%s,%s,%s,%s,now(),%s) ON CONFLICT (tenant, lead_id) DO UPDATE SET "
                   "user_id = COALESCE(EXCLUDED.user_id, wa_routes.user_id), last_out_phone = COALESCE(EXCLUDED.last_out_phone, wa_routes.last_out_phone), out_at = now(), updated_at = now(), "
@@ -32,29 +34,34 @@ def note_line(tenant: str, lead_id: str, line: str) -> None:
 
 
 def note_in(tenant: str, lead_id: str, phone: str | None) -> None:
+    """Registra el último teléfono desde el que escribió el cliente."""
     with db.pool.connection() as c:
         c.execute("INSERT INTO wa_routes (tenant, lead_id, last_in_phone) VALUES (%s,%s,%s) ON CONFLICT (tenant, lead_id) DO UPDATE SET "
                   "last_in_phone = COALESCE(EXCLUDED.last_in_phone, wa_routes.last_in_phone), updated_at = now()", (tenant, lead_id, phone))
 
 
 def route_of(tenant: str, lead_id: str) -> dict | None:
+    """Ruta guardada del lead (usuario, teléfonos, hora de salida y línea), o None."""
     with db.pool.connection() as c:
         r = c.execute("SELECT user_id, last_out_phone, last_in_phone, out_at, last_line FROM wa_routes WHERE tenant=%s AND lead_id=%s", (tenant, lead_id)).fetchone()
     return dict(r) if r else None
 
 
 def recent_out(tenant: str, minutes: int = 45) -> list[str]:
+    """Leads a los que se escribió en los últimos `minutes` minutos, del más reciente al más antiguo."""
     with db.pool.connection() as c:
         rows = c.execute("SELECT lead_id FROM wa_routes WHERE tenant=%s AND out_at > now() - make_interval(mins => %s) ORDER BY out_at DESC", (tenant, minutes)).fetchall()
     return [r["lead_id"] for r in rows]
 
 
 def lid_get(tenant: str, lid: str) -> str | None:
+    """Lead ligado a un identificador LID de WhatsApp, o None."""
     with db.pool.connection() as c:
         r = c.execute("SELECT lead_id FROM wa_lids WHERE tenant=%s AND lid=%s", (tenant, lid)).fetchone()
     return r["lead_id"] if r else None
 
 
 def lid_set(tenant: str, lid: str, lead_id: str) -> None:
+    """Liga un LID de WhatsApp a un lead (reemplaza si ya existía)."""
     with db.pool.connection() as c:
         c.execute("INSERT INTO wa_lids (tenant, lid, lead_id) VALUES (%s,%s,%s) ON CONFLICT (tenant, lid) DO UPDATE SET lead_id=EXCLUDED.lead_id", (tenant, lid, lead_id))

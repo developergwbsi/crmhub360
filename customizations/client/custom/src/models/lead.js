@@ -1,4 +1,8 @@
-// Pide el comentario antes de guardar un cambio de estado (arrastrar en el tablero, editar o edición rápida).
+/**
+ * Pide el comentario antes de guardar un cambio de estado (arrastrar en el tablero, editar o edición rápida).
+ * Sustituye al modelo Lead: en save() consulta GET CrmHub/statusGuard (¿exige comentario o acción previa?) y muestra ChUi.statusChange; el comentario viaja como statusComment.
+ * Si el usuario cancela, rechaza con chCancelled. Se omite en altas, sin cambio de estado o con la opción chSkipGuard.
+ */
 define('custom:models/lead', ['model', 'custom:ui'], function (Dep, ChUi) {
     return class extends Dep {
         constructor(attributes, options) {

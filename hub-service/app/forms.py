@@ -32,6 +32,7 @@ _hits: dict[str, deque] = defaultdict(deque)
 
 
 def default_form(n: int = 1) -> dict:
+    """Formulario nuevo con valores por defecto (nombre, teléfono, correo, deuda y canal preferido, con consentimiento)."""
     return {
         "id": secrets.token_hex(4), "slug": f"formulario-{n}", "name": f"Formulario {n}", "enabled": True,
         "title": "Cuéntanos tu caso", "intro": "Déjanos tus datos y un asesor se comunicará contigo.", "button": "Enviar", "color": "#4f63e8",
@@ -50,6 +51,7 @@ def default_form(n: int = 1) -> dict:
 
 
 def default_action() -> dict:
+    """Acción al recibir por defecto: un correo de agradecimiento al cliente, sin condición."""
     return {"id": secrets.token_hex(3), "enabled": True, "type": "email", "when": None, "to": "lead", "to_custom": "",
             "images": [], "attachments": [], "button_label": "", "button_kind": "whatsapp", "button_value": "", "button_text": "Hola, me registré en el formulario y quiero más información.", "notify_text": "",
             "subject": "Recibimos tu solicitud, {{nombre}}", "message": "Hola {{nombre}},\n\nGracias por escribirnos. Recibimos tus datos y un asesor te contactará muy pronto.\n\n{{empresa}}"}
@@ -77,6 +79,7 @@ def _img(v, label: str) -> str:
 
 
 def validate(forms) -> list[dict]:
+    """Valida y normaliza la lista de formularios que guarda la empresa (URL, campos, condiciones, acciones, imágenes y PDF); lanza ValueError con el motivo."""
     if not isinstance(forms, list) or len(forms) > MAX_FORMS:
         raise ValueError(f"Máximo {MAX_FORMS} formularios")
     out, slugs = [], set()
@@ -172,6 +175,7 @@ def validate(forms) -> list[dict]:
 
 
 def find(tenant: dict, slug: str) -> dict | None:
+    """Formulario habilitado de la empresa con ese slug, o None."""
     for f in (tenant.get("settings") or {}).get("forms") or []:
         if f["slug"] == slug and f.get("enabled", True):
             return f
@@ -218,6 +222,7 @@ def _input(fd: dict, val: str) -> str:
 
 
 def page(form: dict, *, error: str | None = None, values: dict | None = None, done: dict | None = None) -> str:
+    """HTML de la página pública /f/<slug>: el formulario, o el mensaje de éxito o de «ya registrado» si se pasa `done`; `error` muestra un aviso arriba."""
     values = values or {}
     bg = ""
     if form.get("bg_color"):
@@ -271,6 +276,7 @@ def _limited(key: str, limit: int = 8, window: int = 600) -> bool:
 
 
 class FormError(ValueError):
+    """Error de validación al enviar el formulario; su mensaje se muestra al cliente."""
     pass
 
 
@@ -291,6 +297,7 @@ def _visible(fd: dict, data: dict) -> bool:
 
 
 async def submit(tenant: dict, form: dict, data: dict[str, str], ip: str) -> dict:
+    """Procesa el envío público: antibots, validación, límite por IP, crea o actualiza el lead (por teléfono o correo), deja el consentimiento en una nota, califica y lanza las acciones. Devuelve lead_id y el enlace de Telegram si aplica."""
     if data.get("website"):
         raise FormError("Solicitud no válida.")  # honeypot
     try:

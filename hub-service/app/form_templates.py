@@ -18,22 +18,27 @@ def _banner(key: str) -> str:
 
 
 def F(key, label, typ="text", req=False, maps="", opts=None, w=100, show=None, ph=""):
+    """Definición de un campo de formulario (clave, etiqueta, tipo, obligatorio, destino en el lead, opciones, ancho y condición de visibilidad)."""
     return {"key": key, "label": label, "type": typ, "required": req, "maps_to": maps, "placeholder": ph, "options": opts or [], "width": w, "show_if": show}
 
 
 def when(field, value, op="eq"):
+    """Condición {field, op, value} para mostrar un campo o ejecutar una acción."""
     return {"field": field, "op": op, "value": value}
 
 
 def mail(subject, message, cond=None, **kw):
+    """Acción «correo» basada en default_action, con asunto, mensaje y condición."""
     return {**forms.default_action(), "id": secrets.token_hex(3), "type": "email", "when": cond, "subject": subject, "message": message, **kw}
 
 
 def wapp(message, cond=None):
+    """Acción «WhatsApp» basada en default_action, con mensaje y condición."""
     return {**forms.default_action(), "id": secrets.token_hex(3), "type": "whatsapp", "when": cond, "message": message}
 
 
 def notify(text="{{nombre}} · {{formulario}}", cond=None):
+    """Acción «avisar al equipo» (campana y push) con el texto indicado."""
     return {**forms.default_action(), "id": secrets.token_hex(3), "type": "notify", "when": cond, "message": "", "notify_text": text}
 
 
@@ -180,6 +185,7 @@ _BY = {t["key"]: t for t in TEMPLATES}
 
 
 def catalog() -> list[dict]:
+    """Resumen de las plantillas para la galería (clave, nombre, categoría, icono, descripción, nº de campos y acciones, color)."""
     out = []
     for t in TEMPLATES:
         f = t["build"](1)
@@ -189,6 +195,7 @@ def catalog() -> list[dict]:
 
 
 def build(key: str, existing_slugs: set[str]) -> dict:
+    """Formulario completo a partir de una plantilla: slug único respecto a los existentes, id nuevo y validado con forms.validate; ValueError si la plantilla no existe."""
     t = _BY.get(key)
     if not t:
         raise ValueError("Plantilla desconocida")

@@ -18,6 +18,7 @@ MAX_PROFILES, MAX_FIELDS = 15, 25
 
 
 def ensure_schema() -> None:
+    """Crea la tabla doc_runs si no existe y marca como fallidas las lecturas que quedaron «reading» tras un reinicio."""
     with db.pool.connection() as c:
         c.execute(SCHEMA_SQL)
         # una lectura que estaba en curso cuando el servicio se reinició ya no va a terminar: se marca para que el usuario pueda reintentar
@@ -25,6 +26,7 @@ def ensure_schema() -> None:
 
 
 def F(key, label, typ, to, hint=""):
+    """Construye la definición de un campo de perfil: clave, etiqueta, tipo, destino («note» o «field:<campo>») y pista para el lector."""
     return {"key": key, "label": label, "type": typ, "to": to, "hint": hint}
 
 
@@ -65,6 +67,7 @@ RULES = [(r"puntaje|score|calificaci[oó]n crediticia", "creditScore", "num"), (
 
 
 def guess_target(label: str, value: str) -> str:
+    """Destino sugerido para un dato leído según su nombre (campo del lead de crédito) o «note» si no encaja; valida también la forma del valor."""
     low = label.lower()
     for rx, field, kind in RULES:
         if re.search(rx, low):
@@ -81,6 +84,7 @@ def guess_target(label: str, value: str) -> str:
 
 
 def guess_type(value: str) -> str:
+    """Tipo sugerido para un valor: «number», «date» o «text»."""
     v = str(value).strip()
     if re.fullmatch(r"[\$\s]*[\d.,]+", v) and len(re.sub(r"\D", "", v)) >= 1:
         return "number"
@@ -95,11 +99,13 @@ def _fields_hint() -> str:
 
 
 def profiles(tenant: dict) -> list[dict]:
+    """Perfiles de lectura de la empresa: los entregados (BUILTIN) más los propios de settings.doc_profiles."""
     custom = list((tenant.get("settings") or {}).get("doc_profiles") or [])
     return BUILTIN + custom
 
 
 def clean(new: list) -> list[dict]:
+    """Valida y normaliza los perfiles propios que guarda la empresa (nombres, claves, tipos y destinos); lanza ValueError si algo no es válido."""
     out = []
     for p in (new or [])[:MAX_PROFILES]:
         name = str(p.get("name", "")).strip()[:80]
@@ -126,6 +132,7 @@ def clean(new: list) -> list[dict]:
 
 
 def schema_of(profile: dict) -> dict:
+    """JSON schema de salida para el LLM a partir de los campos de un perfil."""
     props = {}
     for f in profile["fields"]:
         t = {"text": ["string", "null"], "number": ["number", "null"], "integer": ["integer", "null"], "date": ["string", "null"], "bool": ["boolean", "null"]}[f["type"]]
@@ -134,6 +141,7 @@ def schema_of(profile: dict) -> dict:
 
 
 async def extract(tenant: dict, lead_id: str, attachment_id: str, profile_id: str, user_id: str | None, llm_json) -> dict:
+    """Lectura con IA de un PDF adjunto según un perfil (o la lectura libre si es «auto»); devuelve nombre y payload con los valores, sin tocar el lead."""
     if profile_id == AUTO_ID:
         return await extract_auto(tenant, lead_id, attachment_id, user_id, llm_json)
     prof = next((p for p in profiles(tenant) if p["id"] == profile_id), None)
@@ -152,6 +160,7 @@ async def extract(tenant: dict, lead_id: str, attachment_id: str, profile_id: st
 
 
 async def apply(tenant: dict, lead_id: str, run_id: int, values: dict, agent: str) -> dict:
+    """Guarda en el lead los valores confirmados de una lectura por perfil (campos o notas), deja nota en el flujo, recalifica si el perfil lo pide y marca la lectura como aplicada."""
     with db.pool.connection() as c:
         r = c.execute("SELECT profile_id FROM doc_runs WHERE id=%s AND tenant=%s AND lead_id=%s", (run_id, tenant["slug"], lead_id)).fetchone()
     prof = next((p for p in profiles(tenant) if r and p["id"] == r["profile_id"]), None)
@@ -189,6 +198,7 @@ async def apply(tenant: dict, lead_id: str, run_id: int, values: dict, agent: st
 
 
 def history(tenant: str, lead_id: str) -> list[dict]:
+    """Últimas 20 lecturas del lead (tabla doc_runs)."""
     with db.pool.connection() as c:
         rows = c.execute("SELECT id, profile_name, status, created_at, applied_at FROM doc_runs WHERE tenant=%s AND lead_id=%s ORDER BY id DESC LIMIT 20", (tenant, lead_id)).fetchall()
     return [dict(r) for r in rows]
@@ -270,6 +280,7 @@ def profile_from_items(tenant: dict, name: str, items: list[dict]) -> dict:
 
 # ---------------- lectura interna (sin IA)
 async def extract_internal(tenant: dict, lead_id: str, attachment_id: str, profile_id: str) -> dict:
+    """Lectura sin IA con docparse: tipo y datos por reglas (modo libre) o valores del perfil; devuelve nombre y payload."""
     import asyncio
     data = await Espo(tenant).file(attachment_id)
     if not data[:5] == b"%PDF-":
@@ -313,6 +324,7 @@ async def _work(tenant: dict, run_id: int, lead_id: str, attachment_id: str, pro
 
 
 async def start(tenant: dict, lead_id: str, attachment_id: str, profile_id: str, user_id: str | None, llm_json, engine: str = "internal", lead_name: str = "") -> int:
+    """Registra la lectura en doc_runs (estado «reading») y la lanza en segundo plano; devuelve el id para consultarla con get_run."""
     import asyncio
     if profile_id != AUTO_ID and not any(p["id"] == profile_id for p in profiles(tenant)):
         raise ValueError("Perfil de lectura inexistente.")
@@ -325,6 +337,7 @@ async def start(tenant: dict, lead_id: str, attachment_id: str, profile_id: str,
 
 
 def get_run(tenant: str, lead_id: str, run_id: int) -> dict | None:
+    """Estado de una lectura y, si ya terminó, su resultado; None si no existe."""
     with db.pool.connection() as c:
         r = c.execute("SELECT id, status, error, profile_name, attachment_id, result FROM doc_runs WHERE id=%s AND tenant=%s AND lead_id=%s", (run_id, tenant, lead_id)).fetchone()
     if not r:
@@ -345,5 +358,6 @@ def pending(tenant: str, user_id: str) -> list[dict]:
 
 
 def dismiss(tenant: str, user_id: str, run_id: int) -> None:
+    """El usuario descarta una lectura leída o fallida: pasa a «dismissed»."""
     with db.pool.connection() as c:
         c.execute("UPDATE doc_runs SET status='dismissed' WHERE id=%s AND tenant=%s AND user_id=%s AND status IN ('read','failed')", (run_id, tenant, user_id))

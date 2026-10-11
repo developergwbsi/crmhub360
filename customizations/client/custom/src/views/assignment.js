@@ -1,3 +1,8 @@
+/**
+ * Pantalla «Asignación de leads» (solo admin): método de reparto automático (equilibrado o por turnos), tope de leads abiertos y qué usuarios reciben leads.
+ * Endpoints: GET/PUT CrmHub/assignment; el interruptor «recibe leads» hace PUT User/{id} (campo receivesLeads).
+ * Plantilla: custom:assignment.
+ */
 define('custom:views/assignment', ['view'], function (Dep) {
     return class extends Dep {
         template = 'custom:assignment'

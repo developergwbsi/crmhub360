@@ -19,6 +19,7 @@ class BrandOnSend
 
     public function __construct(private EntityManager $em, private Config $config, private Log $log) {}
 
+    /** Evento beforeSave de Email (orden 4): aplica el diseño de marca al correo que se envía. */
     public function beforeSave(Entity $entity, array $options): void
     {
         if ($entity->get('status') !== 'Sending' || (!$entity->isNew() && !$entity->isAttributeChanged('status'))) {

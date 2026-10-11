@@ -13,6 +13,7 @@ class LeadTimeline
 
     public function __construct(private EntityManager $em) {}
 
+    /** Nombre del usuario con caché local. */
     private function userName(?string $id): string
     {
         if (!$id) {
@@ -25,6 +26,7 @@ class LeadTimeline
         return $this->names[$id];
     }
 
+    /** Notas de Stream del lead, filtradas y ordenadas. */
     private function notes(string $leadId, array $extra = [], string $order = 'ASC', int $limit = 400): array
     {
         return iterator_to_array($this->em->getRDBRepository('Note')
@@ -54,6 +56,7 @@ class LeadTimeline
         return $out;
     }
 
+    /** Llamadas del registro. */
     public function calls(string $leadId, string $scope = 'Lead'): array
     {
         $out = [];
@@ -66,6 +69,7 @@ class LeadTimeline
         return $out;
     }
 
+    /** Correos del registro. */
     public function emails(string $leadId, string $scope = 'Lead'): array
     {
         $out = [];
@@ -94,6 +98,7 @@ class LeadTimeline
         return $out;
     }
 
+    /** Fecha del último cambio de estado del lead. */
     public function lastStatusChangeAt(Entity $lead): string
     {
         $n = $this->notes($lead->getId(), ['post*' => '[Estado]%'], 'DESC', 1);

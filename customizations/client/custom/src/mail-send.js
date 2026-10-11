@@ -1,5 +1,9 @@
-// Envío de correo «como el usuario»: lo manda el Hub con tu nombre, tu firma y un Reply-To personal (las respuestas vuelven solo a ti).
-// Si la empresa no tiene el correo del Centro de control, se usa el envío normal de Espo.
+/**
+ * Envío de correo «como el usuario»: lo manda el Hub con tu nombre, tu firma y un Reply-To personal (las respuestas vuelven solo a ti).
+ * Si la empresa no tiene el correo del Centro de control, se usa el envío normal de Espo (POST Email con estado Sending).
+ * Endpoints: POST CrmHub/email/send, GET CrmHub/emailSignature y GET CrmHub/channels (remitente de respaldo).
+ * También ofrece un editor de texto con formato (editorMarkup/mountEditor), conversión HTML a texto (toText) y lectura del motivo de error (cabecera X-Status-Reason).
+ */
 define('custom:mail-send', ['custom:ui'], function (ChUi) {
     const toText = h => String(h || '').replace(/<\s*br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h\d|blockquote)>/gi, '\n').replace(/<li[^>]*>/gi, '• ').replace(/<[^>]+>/g, '')
         .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\n{3,}/g, '\n\n').trim();
@@ -46,6 +50,7 @@ define('custom:mail-send', ['custom:ui'], function (ChUi) {
 
     function signature() { return Espo.Ajax.getRequest('CrmHub/emailSignature').catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } return {html: ''}; }); }
 
+    // Envía por el Hub; si responde fallback, guarda el correo en Espo para el envío normal
     async function send(o) {
         const r = await Espo.Ajax.postRequest('CrmHub/email/send', {to: o.to, cc: o.cc || '', subject: o.subject, body: o.body, isHtml: true, parentType: o.parentType || null, parentId: o.parentId || null, inReplyTo: o.inReplyTo || null, references: o.references || []});
         if (!r.fallback) { return r; }

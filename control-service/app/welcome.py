@@ -93,6 +93,7 @@ def render(template: str, data: dict) -> str:
 
 
 def plain(html: str) -> str:
+    """Versión en texto plano de un HTML (parte alternativa del correo)."""
     t = re.sub(r"(?is)<(style|script|head).*?</\1>", "", html)
     t = re.sub(r"(?i)<br\s*/?>|</(p|div|tr|h\d)>", "\n", t)
     t = re.sub(r"<[^>]+>", "", t)

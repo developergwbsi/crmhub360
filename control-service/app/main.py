@@ -31,22 +31,26 @@ app = FastAPI(title="Crm Hub 360 · Centro de control", docs_url=None, redoc_url
 
 
 def db():
+    """Conexión nueva a la base de datos del Centro (Postgres, filas como dict, autocommit)."""
     return psycopg.connect(DATABASE_URL, row_factory=dict_row, autocommit=True)
 
 
 def audit(actor, action, target=None, detail=None):
+    """Registra una acción en control_audit (quién, qué, sobre qué y detalle JSON)."""
     with db() as c:
         c.execute("INSERT INTO control_audit (actor, action, target, detail) VALUES (%s,%s,%s,%s)", (actor, action, target, json.dumps(detail or {})))
 
 
 # ---------------------------------------------------------------- ajustes (BD)
 def get_setting(key: str, default=None):
+    """Valor guardado en control_settings por clave, o `default` si no existe."""
     with db() as c:
         r = c.execute("SELECT value FROM control_settings WHERE key=%s", (key,)).fetchone()
     return r["value"] if r else default
 
 
 def put_setting(key: str, value) -> None:
+    """Guarda (o reemplaza) un valor JSON en control_settings."""
     with db() as c:
         c.execute("INSERT INTO control_settings (key, value) VALUES (%s,%s) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now()", (key, json.dumps(value)))
 
@@ -58,6 +62,7 @@ def account() -> dict:
 
 
 def hash_password(pw: str) -> str:
+    """Hash scrypt con sal aleatoria, en el formato «scrypt:<sal_b64>:<hash_b64>»."""
     salt = os.urandom(16)
     h = hashlib.scrypt(pw.encode(), salt=salt, n=2 ** 14, r=8, p=1, dklen=32)
     return "scrypt:" + base64.b64encode(salt).decode() + ":" + base64.b64encode(h).decode()
@@ -65,6 +70,7 @@ def hash_password(pw: str) -> str:
 
 # ---------------------------------------------------------------- sesión
 def verify_password(pw: str) -> bool:
+    """Compara la contraseña con la del superadmin (comparación en tiempo constante); False si el hash es inválido."""
     try:
         _, salt, h = account()["hash"].split(":")
         calc = hashlib.scrypt(pw.encode(), salt=base64.b64decode(salt), n=2 ** 14, r=8, p=1, dklen=32)
@@ -74,11 +80,13 @@ def verify_password(pw: str) -> bool:
 
 
 def sign(payload: dict) -> str:
+    """Firma un diccionario con HMAC-SHA256 y lo devuelve como valor de la cookie de sesión."""
     raw = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode()
     return raw + "." + hmac.new(SECRET, raw.encode(), hashlib.sha256).hexdigest()
 
 
 def read_session(request: Request) -> Optional[dict]:
+    """Datos de la sesión de la cookie cc_session si la firma es válida y no venció; si no, None."""
     tok = request.cookies.get("cc_session", "")
     if "." not in tok:
         return None
@@ -93,6 +101,7 @@ def read_session(request: Request) -> Optional[dict]:
 
 
 def me(request: Request) -> str:
+    """Dependencia de FastAPI: exige sesión válida (401) y, en métodos que no son GET/HEAD, la cabecera x-cc: 1 (403). Devuelve el usuario."""
     s = read_session(request)
     if not s:
         raise HTTPException(401, "Sesión vencida")
@@ -105,17 +114,20 @@ _fails: dict = {}
 
 
 def client_ip(request: Request) -> str:
+    """IP del cliente; solo confía en X-Forwarded-For si la conexión llega desde localhost (el proxy)."""
     fwd = request.headers.get("x-forwarded-for", "")
     return (fwd.split(",")[0].strip() if fwd and request.client and request.client.host in ("127.0.0.1", "::1") else (request.client.host if request.client else "?"))
 
 
 class LoginReq(BaseModel):
+    """Cuerpo de /api/login: usuario y contraseña."""
     user: str
     password: str
 
 
 @app.post("/api/login")
 def login(req: LoginReq, request: Request, response: Response):
+    """Inicia sesión: limita a 5 intentos fallidos por IP en 10 minutos, valida usuario y contraseña, pone la cookie de sesión (12 h) y audita. Lo llama la interfaz web del Centro."""
     ip, now = client_ip(request), time.time()
     recent = [t for t in _fails.get(ip, []) if now - t < 600]
     if len(recent) >= 5:
@@ -136,12 +148,14 @@ def login(req: LoginReq, request: Request, response: Response):
 
 @app.post("/api/logout")
 def logout(response: Response):
+    """Cierra la sesión borrando la cookie. Lo llama la interfaz web del Centro."""
     response.delete_cookie("cc_session", path="/")
     return {"ok": True}
 
 
 @app.get("/api/me")
 def whoami(actor: str = Depends(me)):
+    """Usuario de la sesión, nombre, correo y dominio base. Lo llama la interfaz web del Centro."""
     a = account()
     return {"user": actor, "name": a["name"], "email": a["email"], "baseDomain": BASE_DOMAIN}
 
@@ -155,6 +169,7 @@ def hello():
 
 # ---------------------------------------------------------------- empresas
 def tenant_env(slug: str) -> dict:
+    """Variables del archivo .env de la empresa en /tenants/<slug>; vacío si no existe."""
     out = {}
     try:
         for line in open(f"{TENANTS_DIR}/{slug}/.env", encoding="utf8"):
@@ -167,6 +182,7 @@ def tenant_env(slug: str) -> dict:
 
 
 def get_tenant(slug: str) -> dict:
+    """Fila de la empresa por slug; 404 si el slug no es válido o no existe."""
     if not re.match(r"^[a-z][a-z0-9-]{1,30}$", slug):
         raise HTTPException(404, "Empresa no encontrada")
     with db() as c:
@@ -177,6 +193,7 @@ def get_tenant(slug: str) -> dict:
 
 
 def espo(t: dict):
+    """Cliente httpx hacia la API de EspoCRM de la empresa, autenticado como «admin» con la clave de su .env."""
     pw = tenant_env(t["slug"]).get("ADMIN_PASSWORD")
     if not pw:
         raise HTTPException(500, "No hay credenciales de administrador para esta empresa")
@@ -184,6 +201,7 @@ def espo(t: dict):
 
 
 async def probe(t: dict) -> dict:
+    """Salud de la empresa: si responde EspoCRM, latencia en ms y versión instalada."""
     started = time.time()
     try:
         async with espo(t) as c:
@@ -200,6 +218,7 @@ async def probe(t: dict) -> dict:
 
 
 def stats(t: dict) -> dict:
+    """Cifras de la base de datos de la empresa: usuarios activos, leads y último ingreso (None si no se puede consultar)."""
     try:
         url = DATABASE_URL.rsplit("/", 1)[0] + "/" + t["db_name"]
         with psycopg.connect(url, autocommit=True, connect_timeout=3) as c:
@@ -213,6 +232,7 @@ def stats(t: dict) -> dict:
 
 @app.get("/api/companies")
 async def companies(actor: str = Depends(me)):
+    """Lista de empresas con salud, estadísticas, plan, licencia y versión, y la versión base vigente. Lo llama la interfaz web del Centro."""
     with db() as c:
         rows = c.execute("SELECT * FROM tenants ORDER BY CASE kind WHEN 'dev' THEN 0 WHEN 'prod' THEN 1 ELSE 2 END, created_at").fetchall()
         cur = c.execute("SELECT id FROM control_releases WHERE is_current").fetchone()
@@ -230,6 +250,7 @@ SLUG_RE = r"^[a-z][a-z0-9-]{1,30}$"
 
 
 class CreateReq(BaseModel):
+    """Cuerpo para crear una empresa (slug, nombre, correo y datos del administrador, plan, usuarios y licencia)."""
     slug: str = Field(pattern=SLUG_RE)
     name: str = Field(min_length=2, max_length=80)
     email: str = Field(max_length=190)
@@ -246,12 +267,14 @@ class CreateReq(BaseModel):
 
 
 def enqueue(kind: str, params: dict, actor: str) -> int:
+    """Encola un trabajo en control_jobs para que lo ejecute bin/control-worker; devuelve su id."""
     with db() as c:
         return c.execute("INSERT INTO control_jobs (kind, params, created_by) VALUES (%s,%s,%s) RETURNING id", (kind, json.dumps(params), actor)).fetchone()["id"]
 
 
 @app.post("/api/companies")
 def create_company(req: CreateReq, actor: str = Depends(me)):
+    """Encola el trabajo «create» (alta de una empresa, con correo de bienvenida opcional) y audita. Lo llama la interfaz web del Centro."""
     host = (req.host or f"{req.slug}.{BASE_DOMAIN}").strip().lower()
     jid = enqueue("create", {"slug": req.slug, "name": req.name.strip(), "email": req.email.strip(), "host": host, "plan": req.plan,
                              "max_users": req.max_users, "license_until": req.license_until or "",
@@ -263,6 +286,7 @@ def create_company(req: CreateReq, actor: str = Depends(me)):
 
 @app.post("/api/companies/{slug}/upgrade")
 def upgrade_company(slug: str, actor: str = Depends(me)):
+    """Encola el trabajo «upgrade» que actualiza la empresa a la versión base vigente. Lo llama la interfaz web del Centro."""
     t = get_tenant(slug)
     jid = enqueue("upgrade", {"slug": t["slug"]}, actor)
     audit(actor, "actualizar_empresa", slug, {"job": jid})
@@ -271,6 +295,7 @@ def upgrade_company(slug: str, actor: str = Depends(me)):
 
 @app.post("/api/companies/{slug}/power/{action}")
 def power_company(slug: str, action: str, actor: str = Depends(me)):
+    """Encola el trabajo «suspend» o «resume» de la empresa. Lo llama la interfaz web del Centro."""
     if action not in ("suspend", "resume"):
         raise HTTPException(404, "Acción desconocida")
     t = get_tenant(slug)
@@ -280,6 +305,7 @@ def power_company(slug: str, action: str, actor: str = Depends(me)):
 
 
 class NameReq(BaseModel):
+    """Cuerpo para renombrar una empresa."""
     name: str = Field(min_length=2, max_length=80)
 
 
@@ -301,11 +327,13 @@ async def rename_company(slug: str, req: NameReq, actor: str = Depends(me)):
 
 
 class ReleaseReq(BaseModel):
+    """Cuerpo para publicar una versión base (nota opcional)."""
     note: str = Field("", max_length=120)
 
 
 @app.post("/api/releases")
 def publish_release(req: ReleaseReq, actor: str = Depends(me)):
+    """Encola el trabajo «release» que publica la versión base actual. Lo llama la interfaz web del Centro."""
     jid = enqueue("release", {"note": req.note.replace("'", "").replace("\n", " ")}, actor)
     audit(actor, "publicar_base", None, {"job": jid})
     return {"job": jid}
@@ -313,6 +341,7 @@ def publish_release(req: ReleaseReq, actor: str = Depends(me)):
 
 @app.get("/api/releases")
 def releases(actor: str = Depends(me)):
+    """Últimas 30 versiones base con cuántas empresas cliente usan cada una. Lo llama la interfaz web del Centro."""
     with db() as c:
         rows = c.execute("SELECT id, note, commit_ref, is_current, created_at FROM control_releases ORDER BY created_at DESC LIMIT 30").fetchall()
         use = c.execute("SELECT release_id, count(*) n FROM tenants WHERE kind='client' GROUP BY 1").fetchall()
@@ -325,6 +354,7 @@ MASK = re.compile(r"(Admin:\s+admin / )\S+")
 
 @app.get("/api/jobs")
 def jobs(limit: int = 15, actor: str = Depends(me)):
+    """Últimos trabajos de la cola (máx. 50) con estado y quién los pidió. Lo llama la interfaz web del Centro."""
     with db() as c:
         rows = c.execute("SELECT id, kind, params, status, created_by, created_at, finished_at FROM control_jobs ORDER BY id DESC LIMIT %s", (min(limit, 50),)).fetchall()
     return {"items": [{"id": r["id"], "kind": r["kind"], "target": (r["params"] or {}).get("slug") or (r["params"] or {}).get("note"), "status": r["status"], "by": r["created_by"],
@@ -333,6 +363,7 @@ def jobs(limit: int = 15, actor: str = Depends(me)):
 
 @app.get("/api/jobs/{jid}")
 def job(jid: int, actor: str = Depends(me)):
+    """Estado, registro (con la contraseña del administrador enmascarada, últimos 20000 caracteres) y resultado de un trabajo. Lo llama la interfaz web del Centro."""
     with db() as c:
         r = c.execute("SELECT id, kind, status, log, result FROM control_jobs WHERE id=%s", (jid,)).fetchone()
     if not r:
@@ -342,6 +373,7 @@ def job(jid: int, actor: str = Depends(me)):
 
 @app.get("/api/audit")
 def audit_log(limit: int = 40, actor: str = Depends(me)):
+    """Últimos registros de auditoría (máx. 200) con el nombre legible de la empresa, proveedor o servicio afectado. Lo llama la interfaz web del Centro."""
     with db() as c:
         rows = c.execute("SELECT at, actor, action, target, detail FROM control_audit ORDER BY id DESC LIMIT %s", (min(limit, 200),)).fetchall()
         companies = {t["slug"]: t["name"] for t in c.execute("SELECT slug, name FROM tenants").fetchall()}
@@ -381,12 +413,14 @@ def audit_log(limit: int = 40, actor: str = Depends(me)):
 
 # ---------------------------------------------------------------- usuarios, claves y modo lectura
 def new_password(n: int = 14) -> str:
+    """Contraseña aleatoria de n caracteres (sin símbolos ambiguos), con al menos un símbolo y un dígito."""
     alphabet = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
     return "".join(secrets.choice(alphabet) for _ in range(n - 2)) + secrets.choice("!#$%*+-=?") + secrets.choice("23456789")
 
 
 @app.get("/api/companies/{slug}/users")
 async def company_users(slug: str, actor: str = Depends(me)):
+    """Usuarios de la empresa (sin el de soporte ni «system»), consultados en su EspoCRM. Lo llama la interfaz web del Centro."""
     t = get_tenant(slug)
     async with espo(t) as c:
         r = await c.get("/User", params={"maxSize": 200, "select": "userName,name,type,isActive,emailAddress", "orderBy": "userName"})
@@ -397,11 +431,13 @@ async def company_users(slug: str, actor: str = Depends(me)):
 
 
 class PwReq(BaseModel):
+    """Cuerpo para cambiar una contraseña; si va vacía se genera una."""
     password: Optional[str] = Field(None, min_length=10, max_length=60)
 
 
 @app.post("/api/companies/{slug}/users/{uid}/password")
 async def reset_password(slug: str, uid: str, req: PwReq, actor: str = Depends(me)):
+    """Cambia la contraseña de un usuario de la empresa en su EspoCRM (genera una si no se indica) y, si es «admin», actualiza ADMIN_PASSWORD en su .env. Devuelve la clave. Lo llama la interfaz web del Centro."""
     t = get_tenant(slug)
     if not re.match(r"^[0-9a-f]{10,24}$", uid):
         raise HTTPException(400, "Usuario inválido")
@@ -425,6 +461,7 @@ async def reset_password(slug: str, uid: str, req: PwReq, actor: str = Depends(m
 
 @app.get("/api/companies/{slug}/admin-credentials")
 def admin_credentials(slug: str, actor: str = Depends(me)):
+    """Muestra usuario, clave y URL del administrador de la empresa (leídos del .env) y lo audita. Lo llama la interfaz web del Centro."""
     t = get_tenant(slug)
     pw = tenant_env(slug).get("ADMIN_PASSWORD")
     audit(actor, "ver_credencial_admin", slug)
@@ -436,6 +473,7 @@ SCOPES = ["Lead", "Account", "Contact", "Opportunity", "Task", "Call", "Meeting"
 
 @app.post("/api/companies/{slug}/support-link")
 async def support_link(slug: str, actor: str = Depends(me)):
+    """Prepara el rol «Soporte (solo lectura)» y su usuario con clave nueva, guarda un código de 90 segundos en support_codes y devuelve la URL de acceso en modo lectura. Lo llama la interfaz web del Centro."""
     t = get_tenant(slug)
     if t["status"] != "active":
         raise HTTPException(409, "La empresa está suspendida")
@@ -474,6 +512,7 @@ MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto
 
 
 def fecha_es(iso: str) -> str:
+    """Fecha ISO (AAAA-MM-DD) escrita en español, p. ej. «5 de marzo de 2026»."""
     try:
         y, mo, d = (int(x) for x in str(iso)[:10].split("-"))
         return f"{d} de {MESES[mo - 1]} de {y}"
@@ -482,6 +521,7 @@ def fecha_es(iso: str) -> str:
 
 
 def tpl_overrides() -> dict:
+    """Plantillas de correo personalizadas guardadas (incluye la bienvenida antigua en la clave «welcome»)."""
     o = dict(get_setting("email_templates", {}) or {})
     legacy = get_setting("welcome", {}) or {}
     if legacy and "welcome" not in o:
@@ -490,6 +530,7 @@ def tpl_overrides() -> dict:
 
 
 def tpl_view(key: str) -> dict:
+    """Plantilla de correo lista para la interfaz: la base de welcome.py con asunto y HTML personalizados si los hay, y sus marcadores."""
     base, o = welcome_tpl.TEMPLATES[key], tpl_overrides().get(key) or {}
     return {"key": key, "name": base["name"], "icon": base["icon"], "desc": base["desc"], "fields": base["fields"], "credentials": base["credentials"],
             "subject": o.get("subject") or base["subject"], "html": o.get("html") or base["html"], "custom": bool(o), "markers": welcome_tpl.MARKERS_BASE + [f["key"] for f in base["fields"]]}
@@ -497,16 +538,19 @@ def tpl_view(key: str) -> dict:
 
 @app.get("/api/mail-templates")
 def list_mail_templates(actor: str = Depends(me)):
+    """Catálogo de plantillas de correo y datos de ejemplo. Lo llama la interfaz web del Centro."""
     return {"items": [tpl_view(k) for k in welcome_tpl.TEMPLATES], "sample": welcome_tpl.SAMPLE}
 
 
 class TplReq(BaseModel):
+    """Cuerpo para guardar una plantilla de correo (asunto y HTML)."""
     subject: str = Field(min_length=3, max_length=200)
     html: str = Field(min_length=50, max_length=60000)
 
 
 @app.put("/api/mail-templates/{key}")
 def save_mail_template(key: str, req: TplReq, actor: str = Depends(me)):
+    """Guarda la personalización de una plantilla (rechaza scripts y eventos); la bienvenida también se copia en 'welcome', que lee el ejecutor de altas. Lo llama la interfaz web del Centro."""
     if key not in welcome_tpl.TEMPLATES:
         raise HTTPException(404, "Plantilla desconocida")
     low = req.html.lower()
@@ -523,6 +567,7 @@ def save_mail_template(key: str, req: TplReq, actor: str = Depends(me)):
 
 @app.delete("/api/mail-templates/{key}")
 def reset_mail_template(key: str, actor: str = Depends(me)):
+    """Quita la personalización de una plantilla y vuelve a la original. Lo llama la interfaz web del Centro."""
     if key not in welcome_tpl.TEMPLATES:
         raise HTTPException(404, "Plantilla desconocida")
     o = dict(get_setting("email_templates", {}) or {})
@@ -536,6 +581,7 @@ def reset_mail_template(key: str, actor: str = Depends(me)):
 
 
 class TplTestReq(BaseModel):
+    """Cuerpo para enviar una prueba de plantilla (destinatario y, opcional, asunto y HTML en edición)."""
     to: str
     subject: str = ""
     html: str = ""
@@ -543,6 +589,7 @@ class TplTestReq(BaseModel):
 
 @app.post("/api/mail-templates/{key}/test")
 async def test_mail_template(key: str, req: TplTestReq, actor: str = Depends(me)):
+    """Envía la plantilla con datos de ejemplo al correo indicado usando el correo general. Lo llama la interfaz web del Centro."""
     if key not in welcome_tpl.TEMPLATES:
         raise HTTPException(404, "Plantilla desconocida")
     m = get_setting("mail") or {}
@@ -559,6 +606,7 @@ async def test_mail_template(key: str, req: TplTestReq, actor: str = Depends(me)
 
 
 async def company_context(t: dict) -> dict:
+    """Datos de la empresa para rellenar plantillas: correo y nombre del administrador, días sin ingresar, leads, usuarios, licencia y país."""
     prof = (t["settings"] or {}).get("profile") or {}
     st = await asyncio.to_thread(stats, t)
     email = prof.get("email")
@@ -591,6 +639,7 @@ async def company_context(t: dict) -> dict:
 
 
 class SendMailReq(BaseModel):
+    """Cuerpo para previsualizar o enviar un correo a una empresa (plantilla, destinatarios y valores)."""
     template: str
     to_mode: str = "admin"          # admin | all | custom
     to_custom: str = ""
@@ -615,6 +664,7 @@ def _values(key: str, ctx: dict, given: dict) -> dict:
 
 @app.post("/api/companies/{slug}/mail-preview")
 async def preview_mail(slug: str, req: SendMailReq, actor: str = Depends(me)):
+    """Vista previa de una plantilla con los datos de la empresa (la clave sale enmascarada). Lo llama la interfaz web del Centro."""
     if req.template not in welcome_tpl.TEMPLATES:
         raise HTTPException(404, "Plantilla desconocida")
     t = get_tenant(slug)
@@ -625,6 +675,7 @@ async def preview_mail(slug: str, req: SendMailReq, actor: str = Depends(me)):
 
 @app.post("/api/companies/{slug}/send-mail")
 async def send_company_mail(slug: str, req: SendMailReq, actor: str = Depends(me)):
+    """Envía una plantilla por el correo general al administrador, a todos los usuarios activos o a un correo concreto (la bienvenida con credenciales no va a todos); audita. Lo llama la interfaz web del Centro."""
     if req.template not in welcome_tpl.TEMPLATES:
         raise HTTPException(404, "Plantilla desconocida")
     t = get_tenant(slug)
@@ -669,6 +720,7 @@ async def send_company_mail(slug: str, req: SendMailReq, actor: str = Depends(me
 
 @app.get("/api/companies/{slug}/mail-history")
 def mail_history(slug: str, actor: str = Depends(me)):
+    """Últimos 8 correos enviados a la empresa, tomados de la auditoría. Lo llama la interfaz web del Centro."""
     get_tenant(slug)
     with db() as c:
         rows = c.execute("SELECT at, actor, detail FROM control_audit WHERE action='enviar_correo' AND target=%s ORDER BY id DESC LIMIT 8", (slug,)).fetchall()
@@ -677,6 +729,7 @@ def mail_history(slug: str, actor: str = Depends(me)):
 
 @app.post("/api/companies/{slug}/welcome")
 def resend_welcome(slug: str, actor: str = Depends(me)):
+    """Encola el trabajo «welcome» que reenvía el correo de bienvenida. Lo llama la interfaz web del Centro."""
     t = get_tenant(slug)
     jid = enqueue("welcome", {"slug": t["slug"]}, actor)
     audit(actor, "reenviar_bienvenida", slug, {"job": jid})
@@ -685,12 +738,14 @@ def resend_welcome(slug: str, actor: str = Depends(me)):
 
 # ---------------------------------------------------------------- mi cuenta, recuperación de clave
 class AccountPwReq(BaseModel):
+    """Cuerpo para cambiar la contraseña propia (actual y nueva)."""
     current: str
     new: str = Field(min_length=10, max_length=80)
 
 
 @app.post("/api/account/password")
 def change_my_password(req: AccountPwReq, actor: str = Depends(me)):
+    """Cambia la contraseña del superadmin si la actual es correcta; se guarda en control_settings. Lo llama la interfaz web del Centro."""
     if not verify_password(req.current):
         raise HTTPException(400, "La contraseña actual no es correcta")
     a = get_setting("admin", {}) or {}
@@ -701,12 +756,14 @@ def change_my_password(req: AccountPwReq, actor: str = Depends(me)):
 
 
 class AccountReq(BaseModel):
+    """Cuerpo para actualizar el correo y nombre del superadmin."""
     email: str = Field(max_length=190)
     name: str = Field("Superadministrador", max_length=80)
 
 
 @app.put("/api/account")
 def update_account(req: AccountReq, actor: str = Depends(me)):
+    """Actualiza correo y nombre del superadmin (control_settings 'admin'). Lo llama la interfaz web del Centro."""
     if not re.match(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$", req.email):
         raise HTTPException(400, "Correo inválido")
     a = get_setting("admin", {}) or {}
@@ -717,6 +774,7 @@ def update_account(req: AccountReq, actor: str = Depends(me)):
 
 
 def smtp_send(cfg: dict, to: str, subject: str, text: str, html: Optional[str] = None, from_name: Optional[str] = None) -> None:
+    """Envía un correo por SMTP (SSL, STARTTLS o sin cifrado) con la configuración dada, en texto y opcionalmente HTML. Bloqueante: se llama con asyncio.to_thread."""
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = f"{from_name or cfg.get('from_name') or 'Crm Hub 360'} <{cfg['from_address']}>"
@@ -745,12 +803,14 @@ def smtp_send(cfg: dict, to: str, subject: str, text: str, html: Optional[str] =
 
 
 class ForgotReq(BaseModel):
+    """Cuerpo de recuperación de acceso: usuario y correo."""
     user: str
     email: str
 
 
 @app.post("/api/forgot")
 async def forgot(req: ForgotReq, request: Request):
+    """Recuperación de acceso: si usuario y correo coinciden y hay correo general, guarda un token (30 min) y envía el enlace; responde siempre igual para no revelar datos. Máx. 5 intentos por IP. Lo llama la pantalla de ingreso."""
     if request.headers.get("x-cc") != "1":
         raise HTTPException(403, "Solicitud no permitida")
     ip, now = client_ip(request), time.time()
@@ -778,12 +838,14 @@ async def forgot(req: ForgotReq, request: Request):
 
 
 class ResetReq(BaseModel):
+    """Cuerpo para fijar una contraseña nueva con el token recibido por correo."""
     token: str
     password: str = Field(min_length=10, max_length=80)
 
 
 @app.post("/api/reset")
 def reset_password_with_token(req: ResetReq, request: Request):
+    """Consume el token de recuperación (un solo uso) y fija la nueva contraseña. Lo llama la pantalla de ingreso."""
     if request.headers.get("x-cc") != "1":
         raise HTTPException(403, "Solicitud no permitida")
     h = hashlib.sha256(req.token.encode()).hexdigest()
@@ -803,6 +865,7 @@ MAIL_SECRET = "password"
 
 
 def mask_mail(m: dict) -> dict:
+    """Configuración del correo general sin la contraseña (solo si existe y sus últimos 3 caracteres)."""
     out = {k: v for k, v in m.items() if k != MAIL_SECRET}
     pw = m.get(MAIL_SECRET) or ""
     out["passwordSet"] = bool(pw)
@@ -811,6 +874,7 @@ def mask_mail(m: dict) -> dict:
 
 
 class MailReq(BaseModel):
+    """Cuerpo para guardar el correo general (SMTP)."""
     host: str = Field(max_length=190)
     port: int = Field(587, ge=1, le=65535)
     security: str = "TLS"
@@ -821,6 +885,7 @@ class MailReq(BaseModel):
 
 
 def companies_using_mail() -> list:
+    """Empresas que usan el correo general compartido."""
     with db() as c:
         rows = c.execute("SELECT slug, name FROM tenants").fetchall()
     return [{"slug": r["slug"], "name": r["name"]} for r in rows if services_of(r["slug"]).get("mail") == "shared"]
@@ -828,12 +893,14 @@ def companies_using_mail() -> list:
 
 @app.get("/api/settings/mail")
 def get_mail(actor: str = Depends(me)):
+    """Correo general enmascarado, si está activo y configurado, y qué empresas lo usan. Lo llama la interfaz web del Centro."""
     m = get_setting("mail", {}) or {}
     return dict(mask_mail(m), enabled=bool(m) and m.get("enabled", True), configured=bool(m.get("host")), companies=companies_using_mail())
 
 
 @app.put("/api/settings/mail")
 def put_mail(req: MailReq, actor: str = Depends(me)):
+    """Guarda el correo general (si la clave llega vacía conserva la anterior; en Gmail quita los espacios) y lo activa. Lo llama la interfaz web del Centro."""
     if req.security not in ("TLS", "SSL", ""):
         raise HTTPException(400, "Seguridad inválida")
     if not re.match(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$", req.from_address):
@@ -852,6 +919,7 @@ def put_mail(req: MailReq, actor: str = Depends(me)):
 
 
 class MailEnabledReq(BaseModel):
+    """Cuerpo para activar o desactivar el correo general."""
     enabled: bool
 
 
@@ -874,11 +942,13 @@ async def mail_enabled(req: MailEnabledReq, actor: str = Depends(me)):
 
 
 class MailTestReq(BaseModel):
+    """Cuerpo con el destinatario de un correo de prueba."""
     to: str
 
 
 @app.post("/api/settings/mail/test")
 async def test_mail(req: MailTestReq, actor: str = Depends(me)):
+    """Envía un correo de prueba con el correo general. Lo llama la interfaz web del Centro."""
     m = get_setting("mail") or {}
     if not m.get("host"):
         raise HTTPException(400, "Primero guarda la configuración de correo")
@@ -904,10 +974,12 @@ KINDS = {
 
 
 def providers_list() -> list:
+    """Proveedores aliados guardados en control_settings 'providers'."""
     return get_setting("providers", []) or []
 
 
 def mask_provider(p: dict) -> dict:
+    """Proveedor sin sus secretos (solo si están definidos y sus últimos 4 caracteres)."""
     sec = KINDS.get(p["kind"], {}).get("secrets", [])
     f = {k: v for k, v in p.get("fields", {}).items() if k not in sec}
     for k in sec:
@@ -917,11 +989,13 @@ def mask_provider(p: dict) -> dict:
 
 
 def services_of(slug: str) -> dict:
+    """Servicios asignados a la empresa (control_settings «services:<slug>»)."""
     return get_setting("services:" + slug, {}) or {}
 
 
 @app.get("/api/providers")
 def list_providers(actor: str = Depends(me)):
+    """Proveedores enmascarados con las empresas que los usan, los tipos disponibles y el motor de IA global. Lo llama la interfaz web del Centro."""
     uses: dict = {}
     with db() as c:
         slugs = [r["slug"] for r in c.execute("SELECT slug FROM tenants").fetchall()]
@@ -936,6 +1010,7 @@ def list_providers(actor: str = Depends(me)):
 
 
 class ProviderReq(BaseModel):
+    """Cuerpo para crear o editar un proveedor aliado."""
     kind: str
     name: str = Field(min_length=2, max_length=80)
     notes: str = Field("", max_length=300)
@@ -976,6 +1051,7 @@ def _clean_fields(kind: str, fields: dict, old: dict) -> dict:
 
 @app.put("/api/providers/{pid}")
 def save_provider(pid: str, req: ProviderReq, actor: str = Depends(me)):
+    """Crea (pid «new») o edita un proveedor; valida los campos según su tipo y conserva los secretos vacíos. Lo llama la interfaz web del Centro."""
     if req.kind not in KINDS:
         raise HTTPException(400, "Tipo de proveedor desconocido")
     items = providers_list()
@@ -997,6 +1073,7 @@ def save_provider(pid: str, req: ProviderReq, actor: str = Depends(me)):
 
 @app.delete("/api/providers/{pid}")
 def delete_provider(pid: str, actor: str = Depends(me)):
+    """Borra un proveedor si no es el motor de IA global ni está asignado a alguna empresa (409). Lo llama la interfaz web del Centro."""
     with db() as c:
         slugs = [r["slug"] for r in c.execute("SELECT slug FROM tenants").fetchall()]
     used = [sl for sl in slugs for v in services_of(sl).values() if (isinstance(v, dict) and v.get("provider") == pid) or v == pid]
@@ -1013,6 +1090,7 @@ def delete_provider(pid: str, actor: str = Depends(me)):
 
 
 class AiDefaultReq(BaseModel):
+    """Cuerpo para elegir el motor de IA global (id o null para el Ollama local)."""
     id: Optional[str] = None
 
 
@@ -1028,6 +1106,7 @@ def set_ai_default(req: AiDefaultReq, actor: str = Depends(me)):
 
 @app.post("/api/providers/{pid}/test-ai")
 async def test_provider_ai(pid: str, actor: str = Depends(me)):
+    """Prueba un motor de IA (Anthropic, OpenAI o Ollama) con una llamada mínima y devuelve los segundos que tardó. Lo llama la interfaz web del Centro."""
     p = next((x for x in providers_list() if x["id"] == pid and x["kind"] == "ai"), None)
     if not p:
         raise HTTPException(404, "Motor de IA no encontrado")
@@ -1053,6 +1132,7 @@ async def test_provider_ai(pid: str, actor: str = Depends(me)):
 
 @app.post("/api/providers/{pid}/test")
 async def test_provider_mail(pid: str, req: MailTestReq, actor: str = Depends(me)):
+    """Envía un correo de prueba por un proveedor de correo. Lo llama la interfaz web del Centro."""
     p = next((x for x in providers_list() if x["id"] == pid and x["kind"] == "email"), None)
     if not p:
         raise HTTPException(404, "Proveedor de correo no encontrado")
@@ -1082,6 +1162,7 @@ def _generic(f: dict) -> dict:
 
 
 def channel_settings(channel: str, prov: dict, svc: dict, t: dict) -> dict:
+    """Claves de settings del Hub que corresponden a un proveedor para un canal (WhatsApp, SMS o llamadas); 400 si el proveedor no sirve para ese canal."""
     f, kind = prov["fields"], prov["kind"]
     if channel == "whatsapp":
         if kind == "evolution":
@@ -1136,6 +1217,7 @@ async def evolution_instance(t: dict, prov: dict, instance: str) -> str:
 
 
 class ServicesReq(BaseModel):
+    """Cuerpo para asignar servicios a una empresa; cada campo opcional solo se aplica si viene."""
     whatsapp: Optional[dict] = None
     sms: Optional[dict] = None
     voice: Optional[dict] = None
@@ -1150,6 +1232,7 @@ class ServicesReq(BaseModel):
 
 
 async def tenant_mail_state(t: dict) -> dict:
+    """Si la empresa tiene correo propio configurado en EspoCRM y desde qué dirección."""
     try:
         async with espo(t) as c:
             r = await c.get("/Settings")
@@ -1233,6 +1316,7 @@ async def set_company_mail(t: dict, mode: str) -> None:
 
 @app.get("/api/companies/{slug}/services")
 async def get_services(slug: str, actor: str = Depends(me)):
+    """Servicios actuales de la empresa (canales, correo, IA, comercial virtual, límites, consumo del mes, cartera) y los proveedores disponibles. Lo llama la interfaz web del Centro."""
     t = get_tenant(slug)
     sv = services_of(slug)
     try:
@@ -1260,6 +1344,7 @@ async def get_services(slug: str, actor: str = Depends(me)):
 
 @app.put("/api/companies/{slug}/services")
 async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
+    """Aplica los servicios elegidos: canales con proveedor (en Evolution crea la instancia), correo, motor de IA, comercial virtual, servicios de consulta, límites de envío masivo y plantillas, y módulo de cartera. Escribe en tenants.settings y audita. Lo llama la interfaz web del Centro."""
     t = get_tenant(slug)
     provs = {p["id"]: p for p in providers_list()}
     sv = services_of(slug)
@@ -1352,10 +1437,12 @@ LOOKUP_TARGETS = {"note", "status", "field:creditScore", "field:totalDebt", "fie
 
 
 def lookups_list() -> list:
+    """Servicios de consulta guardados en control_settings 'lookups'."""
     return get_setting("lookups", []) or []
 
 
 def mask_lookup(l: dict) -> dict:
+    """Servicio de consulta sin el secreto de autenticación (solo si existe y sus últimos 4 caracteres)."""
     h = dict(l.get("http") or {})
     s = h.pop("auth_secret", "")
     h["secretSet"] = bool(s)
@@ -1365,6 +1452,7 @@ def mask_lookup(l: dict) -> dict:
 
 @app.get("/api/lookups")
 def list_lookups(actor: str = Depends(me)):
+    """Servicios de consulta con las empresas que los usan y el uso del mes (process_runs). Lo llama la interfaz web del Centro."""
     with db() as c:
         trows = c.execute("SELECT slug, settings FROM tenants").fetchall()
         try:
@@ -1384,6 +1472,7 @@ def list_lookups(actor: str = Depends(me)):
 
 
 class LookupReq(BaseModel):
+    """Cuerpo para crear o editar un servicio de consulta."""
     name: str = Field(min_length=2, max_length=80)
     category: str = "otro"
     description: str = Field("", max_length=400)
@@ -1395,6 +1484,7 @@ class LookupReq(BaseModel):
 
 @app.put("/api/lookups/{lid}")
 def put_lookup(lid: str, req: LookupReq, actor: str = Depends(me)):
+    """Crea (lid «new») o edita un servicio de consulta validando URL, cabeceras y destinos del mapeo. Lo llama la interfaz web del Centro."""
     items = lookups_list()
     old = next((l for l in items if l["id"] == lid), None)
     if lid != "new" and not old:
@@ -1428,6 +1518,7 @@ def put_lookup(lid: str, req: LookupReq, actor: str = Depends(me)):
 
 @app.delete("/api/lookups/{lid}")
 def delete_lookup(lid: str, actor: str = Depends(me)):
+    """Borra un servicio de consulta si ninguna empresa lo usa (409). Lo llama la interfaz web del Centro."""
     with db() as c:
         used = [r["slug"] for r in c.execute("SELECT slug, settings FROM tenants").fetchall() if lid in ((r["settings"] or {}).get("lookups") or [])]
     if used:
@@ -1459,11 +1550,13 @@ UI_VERSION = _ui_version()
 
 @app.get("/api/ui-version")
 def ui_version():
+    """Huella de la interfaz; la página la consulta para saber si hay una versión nueva."""
     return {"version": UI_VERSION}
 
 
 @app.get("/")
 def index():
+    """Sirve index.html con la huella de versión insertada, sin caché."""
     with open(os.path.join(STATIC, "index.html"), encoding="utf-8") as f:
         html = f.read().replace("__UI_VERSION__", UI_VERSION)
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
@@ -1474,6 +1567,7 @@ app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
+    """Middleware: añade cabeceras de seguridad (CSP, X-Frame-Options, nosniff, Referrer-Policy) y no-store a todas las respuestas."""
     resp = await call_next(request)
     resp.headers.update({"X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer",
                          "Content-Security-Policy": f"default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src https://*.{BASE_DOMAIN}; frame-ancestors 'none'",

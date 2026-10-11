@@ -64,6 +64,7 @@ def _usage(tenant: str, cfg: dict, calls: int, tin: int, tout: int) -> None:
 
 
 def usage(tenant: str) -> list[dict]:
+    """Uso de IA del mes en curso para el tenant (motor, llamadas y tokens, tabla ai_usage); lista vacía si falla."""
     mon = datetime.now(timezone.utc).strftime("%Y-%m")
     try:
         with db.pool.connection() as c:
@@ -175,10 +176,12 @@ async def _run(tenant: dict | None, system: str, user: str, schema: dict | None,
 
 
 async def chat_json(tenant: dict | None, system: str, user: str, schema: dict, max_tokens: int | None = None) -> dict:
+    """Respuesta estructurada (JSON según `schema`, temperatura 0) del motor que corresponde al tenant."""
     return await _run(tenant, system, user, schema, max_tokens, 0)
 
 
 async def chat_text(tenant: dict | None, system: str, user: str) -> str:
+    """Respuesta de texto libre (temperatura 0.3) del motor que corresponde al tenant."""
     return await _run(tenant, system, user, None, None, 0.3)
 
 

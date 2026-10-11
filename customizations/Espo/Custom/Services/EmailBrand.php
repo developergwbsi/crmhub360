@@ -13,6 +13,7 @@ class EmailBrand
 
     public function __construct(private EntityManager $em, private Config $config) {}
 
+    /** Firma HTML del usuario para el pie del correo. */
     public function signature(User $user): string
     {
         $prefs = $this->em->getEntityById('Preferences', $user->getId());
@@ -35,6 +36,7 @@ class EmailBrand
             . '<b style="font-size:14px">' . $e($name) . '</b>' . ($lines ? '<br>' . implode('<br>', $lines) : '') . '</div>';
     }
 
+    /** Envuelve el cuerpo en el diseño de marca (cabecera, tarjeta, firma y pie). */
     public function wrap(string $body, User $user): string
     {
         $e = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');

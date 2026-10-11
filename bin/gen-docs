@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+"""Genera la documentación derivada del código en docs/ (se vuelve a ejecutar tras cada cambio y antes de etiquetar una versión):
+
+  docs/MANUAL-USUARIO.md            manual de usuario, convertido desde manual.tpl (la fuente que ve la gente dentro del CRM)
+  docs/referencia/API-HUB.md        endpoints del Hub Service (desde main.py: ruta, función y docstring)
+  docs/referencia/API-CENTRO.md     endpoints del Centro de control
+  docs/referencia/RUTAS-ESPO.md     rutas /CrmHub/* de EspoCRM (routes.json + docblocks del controlador PHP)
+  docs/referencia/MODULOS.md        módulos del Hub, hooks/servicios PHP y vistas del cliente, con su descripción
+  docs/referencia/HISTORIAL.md      historial de cambios a partir de git (agrupado por versión/etiqueta)
+
+Uso: bin/gen-docs            (escribe todo)
+     bin/gen-docs --check    (falla si algo cambiaría: útil antes de etiquetar)"""
+import ast
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DOCS = ROOT / "docs"
+OUT: dict[Path, str] = {}
+
+
+def first(doc: str | None) -> str:
+    return " ".join((doc or "").strip().split("\n\n")[0].split()) if doc else ""
+
+
+# ---------------------------------------------------------------- manual (HTML -> Markdown)
+def manual() -> str:
+    from bs4 import BeautifulSoup, NavigableString
+    html = (ROOT / "customizations/client/custom/res/templates/manual.tpl").read_text()
+    soup = BeautifulSoup(html, "html.parser")
+
+    def inline(n) -> str:
+        if isinstance(n, NavigableString):
+            return re.sub(r"\s+", " ", str(n))
+        t = "".join(inline(c) for c in n.children)
+        return {"b": f"**{t.strip()}**", "strong": f"**{t.strip()}**", "i": f"*{t.strip()}*", "em": f"*{t.strip()}*", "code": f"`{t.strip()}`",
+                "br": "  \n", "a": t}.get(n.name, t)
+
+    def block(n, depth=0) -> str:
+        if isinstance(n, NavigableString):
+            s = re.sub(r"\s+", " ", str(n)).strip()
+            return s + "\n\n" if s else ""
+        nm = n.name
+        if nm == "p":
+            return inline(n).strip() + "\n\n"
+        if nm in ("h5", "h6"):
+            return f"#### {inline(n).strip()}\n\n"
+        if nm in ("ul", "ol"):
+            out, i = "", 1
+            for li in n.find_all("li", recursive=False):
+                inner = "".join(block(c, depth + 1) if getattr(c, "name", "") in ("ul", "ol") else inline(c) for c in li.children).strip()
+                out += f"{'    ' * depth}{i}. {inner}\n" if nm == "ol" else f"{'    ' * depth}- {inner}\n"
+                i += 1
+            return out + "\n"
+        if nm == "table":
+            rows = [[inline(c).strip().replace("|", "\\|") for c in tr.find_all(["th", "td"])] for tr in n.find_all("tr")]
+            if not rows:
+                return ""
+            w = max(len(r) for r in rows)
+            rows = [r + [""] * (w - len(r)) for r in rows]
+            return "| " + " | ".join(rows[0]) + " |\n|" + "---|" * w + "\n" + "".join("| " + " | ".join(r) + " |\n" for r in rows[1:]) + "\n"
+        if nm == "div" and "ch-tip" in (n.get("class") or []):
+            return "> " + inline(n).strip().replace("\n", "\n> ") + "\n\n"
+        if nm in ("div", "section", "span", "body"):
+            return "".join(block(c, depth) for c in n.children)
+        return inline(n) + "\n\n"
+
+    parts = ["# Manual de usuario — Crm Hub 360\n",
+             "> Generado desde `customizations/client/custom/res/templates/manual.tpl`, la misma fuente que se muestra dentro del CRM (menú *Manual de usuario*). "
+             "No lo edites aquí: cambia el `.tpl` y ejecuta `bin/gen-docs`. Cada sección indica los roles que la ven.\n"]
+    toc, body = [], []
+    for p in soup.select("div.panel[id^=ch-m-]"):
+        title = inline(p.select_one(".panel-title")).strip()
+        roles = (p.get("data-roles") or "").split()
+        anchor = re.sub(r"[^\w\- ]", "", title.lower()).strip().replace(" ", "-")
+        toc.append(f"- [{title}](#{anchor})")
+        who = "Admin" if not roles else ", ".join(r.capitalize() for r in roles)
+        body.append(f"## {title}\n\n*Visible para: {who}*\n\n" + "".join(block(c) for c in (p.select_one(".panel-body") or p).children))
+    return "\n".join(parts) + "\n## Contenido\n\n" + "\n".join(toc) + "\n\n" + "\n".join(body)
+
+
+# ---------------------------------------------------------------- endpoints FastAPI
+def endpoints(path: str, title: str, intro: str) -> str:
+    tree = ast.parse((ROOT / path).read_text())
+    rows = []
+    for n in tree.body:
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for d in n.decorator_list:
+                if isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute) and d.func.attr in ("get", "post", "put", "delete", "patch") and d.args and isinstance(d.args[0], ast.Constant):
+                    rows.append((d.args[0].value, d.func.attr.upper(), n.name, first(ast.get_docstring(n))))
+    rows.sort(key=lambda r: (r[0], r[1]))
+    out = [f"# {title}\n", intro + "\n", f"Total: **{len(rows)}** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `{path}`.*\n",
+           "| Método | Ruta | Función | Descripción |\n|---|---|---|---|"]
+    out += [f"| {m} | `{p}` | `{f}` | {d.replace('|', '/') or '—'} |" for p, m, f, d in rows]
+    return "\n".join(out) + "\n"
+
+
+# ---------------------------------------------------------------- rutas de Espo
+def espo_routes() -> str:
+    routes = json.loads((ROOT / "customizations/Espo/Custom/Resources/routes.json").read_text())
+    php = (ROOT / "customizations/Espo/Custom/Controllers/CrmHub.php").read_text()
+    docs = {}
+    for m in re.finditer(r"(/\*\*(?:(?!\*/).)*?\*/)\s*public function (get|post|put|delete)Action(\w+)\(", php, re.S):
+        docs[(m.group(2), m.group(3).lower())] = " ".join(re.sub(r"^\s*(/\*\*|\*/|\*)\s?", "", l).strip() for l in m.group(1).splitlines() if l.strip() not in ("/**", "*/")).strip()
+    rows = []
+    for r in routes:
+        a = r["params"]["action"]
+        rows.append((r["route"], r["method"].upper(), r["params"]["controller"], a, docs.get((r["method"].lower(), a.lower()), "")))
+    rows.sort()
+    out = ["# Rutas de EspoCRM (`/api/v1/...`)\n", f"Total: **{len(rows)}** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. "
+           "*Generado por `bin/gen-docs`.*\n", "| Método | Ruta | Controlador · acción | Descripción |\n|---|---|---|---|"]
+    out += [f"| {m} | `{p}` | {c}.{a} | {d.replace('|', '/') or '—'} |" for p, m, c, a, d in rows]
+    return "\n".join(out) + "\n"
+
+
+# ---------------------------------------------------------------- módulos
+def modules() -> str:
+    out = ["# Módulos del código\n", "*Generado por `bin/gen-docs` desde los docstrings y cabeceras de cada archivo.*\n", "## Hub Service (`hub-service/app/`)\n", "| Módulo | Qué hace |\n|---|---|"]
+    for f in sorted((ROOT / "hub-service/app").glob("*.py")):
+        if f.name != "__init__.py":
+            out.append(f"| `{f.name}` | {first(ast.get_docstring(ast.parse(f.read_text()))).replace('|', '/') or '—'} |")
+    out += ["", "## Centro de control (`control-service/app/`)\n", "| Módulo | Qué hace |\n|---|---|"]
+    for f in sorted((ROOT / "control-service/app").glob("*.py")):
+        if f.name != "__init__.py":
+            out.append(f"| `{f.name}` | {first(ast.get_docstring(ast.parse(f.read_text()))).replace('|', '/') or '—'} |")
+    out += ["", "## EspoCRM — PHP (`customizations/Espo/Custom/`)\n", "| Archivo | Qué hace |\n|---|---|"]
+    for f in sorted((ROOT / "customizations/Espo/Custom").glob("*/**/*.php")) + sorted((ROOT / "customizations/Espo/Custom").glob("*/*.php")):
+        m = re.search(r"/\*\*\s*\n?(.*?)\*/\s*(?:final\s+)?class", f.read_text(), re.S)
+        d = " ".join(re.sub(r"^\s*\*\s?", "", l).strip() for l in (m.group(1) if m else "").splitlines()).strip()
+        out.append(f"| `{f.relative_to(ROOT / 'customizations/Espo/Custom')}` | {d.replace('|', '/') or '—'} |")
+    out += ["", "## EspoCRM — cliente JavaScript (`customizations/client/custom/src/`)\n", "| Archivo | Qué hace |\n|---|---|"]
+    for f in sorted((ROOT / "customizations/client/custom/src").rglob("*.js")):
+        m = re.match(r"\s*(?:/\*\*?(.*?)\*/|((?://[^\n]*\n)+))", f.read_text(), re.S)
+        d = ""
+        if m:
+            raw = m.group(1) or m.group(2) or ""
+            d = " ".join(re.sub(r"^\s*(\*|//)\s?", "", l).strip() for l in raw.splitlines()).strip()
+        out.append(f"| `{f.relative_to(ROOT / 'customizations/client/custom/src')}` | {first(d).replace('|', '/') or '—'} |")
+    return "\n".join(out) + "\n"
+
+
+# ---------------------------------------------------------------- historial
+def history() -> str:
+    def git(*a):
+        return subprocess.check_output(["git", *a], cwd=ROOT, text=True).strip()
+    tags = [t for t in git("tag", "--sort=-creatordate").splitlines() if t.startswith("v")]
+    out = ["# Historial de cambios\n", "*Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*\n"]
+    rng = ["HEAD"] + tags
+    for i, ref in enumerate(rng):
+        nxt = rng[i + 1] if i + 1 < len(rng) else None
+        spec = f"{nxt}..{ref}" if nxt else ref
+        lines = git("log", spec, "--pretty=%h\t%as\t%s").splitlines()
+        if not lines:
+            continue
+        head = "Sin publicar (después de " + tags[0] + ")" if ref == "HEAD" and tags and git("rev-parse", "HEAD") != git("rev-parse", tags[0] + "^{}") else (ref if ref != "HEAD" else "Cambios")
+        if ref == "HEAD" and tags and git("rev-parse", "HEAD") == git("rev-parse", tags[0] + "^{}"):
+            continue
+        out.append(f"## {head}\n")
+        out += [f"- `{h}` {d} — {s}" for h, d, s in (l.split("\t", 2) for l in lines)]
+        out.append("")
+    return "\n".join(out) + "\n"
+
+
+def main():
+    check = "--check" in sys.argv
+    OUT[DOCS / "MANUAL-USUARIO.md"] = manual()
+    OUT[DOCS / "referencia/API-HUB.md"] = endpoints("hub-service/app/main.py", "API del Hub Service",
+                                                     "FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).")
+    OUT[DOCS / "referencia/API-CENTRO.md"] = endpoints("control-service/app/main.py", "API del Centro de control",
+                                                        "FastAPI detrás de Apache en `control.<dominio>`. Todo requiere sesión firmada del Centro y cabecera anti-CSRF, salvo el login. Las operaciones peligrosas se encolan (`control_jobs`) y las ejecuta `bin/control-worker`.")
+    OUT[DOCS / "referencia/RUTAS-ESPO.md"] = espo_routes()
+    OUT[DOCS / "referencia/MODULOS.md"] = modules()
+    OUT[DOCS / "referencia/HISTORIAL.md"] = history()
+    changed = []
+    for p, txt in OUT.items():
+        p.parent.mkdir(parents=True, exist_ok=True)
+        if not p.exists() or p.read_text() != txt:
+            changed.append(p.relative_to(ROOT))
+            if not check:
+                p.write_text(txt)
+    print(("Cambiarían: " if check else "Actualizados: ") + (", ".join(map(str, changed)) or "nada"))
+    if check and changed:
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

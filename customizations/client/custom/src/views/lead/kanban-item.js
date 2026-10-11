@@ -1,3 +1,8 @@
+/**
+ * Tarjeta del tablero de leads (plantilla custom:lead/kanban-item).
+ * Calcula iniciales y color de avatar (según el id) y oculta los campos vacíos; avatarUrl viene del atributo del lead.
+ * Sin endpoints.
+ */
 define('custom:views/lead/kanban-item', ['views/record/kanban-item'], function (Dep) {
     const COLORS = ['#4f63e8', '#8b5cf6', '#0ea5e9', '#2fa36b', '#f59e0b', '#ef5b5b', '#14b8a6', '#d4729b'];
 

@@ -41,6 +41,7 @@ async def setup(tenant: dict) -> dict:
 
 
 async def test(tenant: dict) -> dict:
+    """Consulta el bot y su webhook (usuario, URL, pendientes y último error)."""
     me = await _call(tenant, "getMe")
     info = await _call(tenant, "getWebhookInfo")
     return {"bot": me.get("username"), "webhook": info.get("url") or "", "pending": info.get("pending_update_count", 0),
@@ -59,6 +60,7 @@ def tg_html(text: str) -> str:
 
 
 async def send_text(tenant: dict, chat_id: str, text: str, markup: dict | None = None, html: bool = False) -> None:
+    """Envía un mensaje al chat de Telegram (con formato HTML si `html`); falla si Telegram está apagado en Integraciones."""
     if (tenant.get("settings") or {}).get("telegram_off") is True:
         raise ValueError("Telegram está apagado en Integraciones.")
     body = {"chat_id": chat_id, "text": tg_html(text) if html else text}
@@ -70,6 +72,7 @@ async def send_text(tenant: dict, chat_id: str, text: str, markup: dict | None =
 
 
 async def send(tenant: dict, lead_id: str, text: str, agent: str) -> dict:
+    """Envía un mensaje al chat de Telegram del lead (formato sencillo, o texto plano si Telegram lo rechaza) y deja nota; ValueError si el lead no abrió el chat con el bot."""
     espo = Espo(tenant)
     lead = await espo.get(f"Lead/{lead_id}")
     chat = lead.get("telegramChatId")

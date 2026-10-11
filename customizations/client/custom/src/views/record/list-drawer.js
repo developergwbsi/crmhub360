@@ -1,4 +1,7 @@
-// Listas (modo tabla): al pulsar el nombre se abre la ficha en un panel lateral; con Ctrl/Cmd se abre la pantalla completa como siempre.
+/**
+ * Lista (tabla) de cualquier entidad: al pulsar el nombre abre la ficha en custom:views/modals/lead-drawer; con Ctrl/Cmd/Shift se abre a pantalla completa.
+ * Se recarga sola con custom:live-list. El click se captura en fase de captura para interceptar el enlace del nombre. Sin endpoints.
+ */
 define('custom:views/record/list-drawer', ['views/record/list', 'custom:live-list'], function (Dep, Live) {
     return class extends Dep {
         setup() {

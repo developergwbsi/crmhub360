@@ -42,12 +42,14 @@ _task: asyncio.Task | None = None
 
 
 def ensure_schema() -> None:
+    """Crea las tablas e índices del comercial virtual si no existen (se llama al arrancar el Hub)."""
     with db.pool.connection() as c:
         c.execute(SCHEMA_SQL)
 
 
 # ---------------- configuración y licencia
 def _merge(base: dict, new: dict) -> dict:
+    """Mezcla recursiva de diccionarios: devuelve una copia de `base` con los valores de `new` encima."""
     out = json.loads(json.dumps(base))
     for k, v in (new or {}).items():
         out[k] = _merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
@@ -55,6 +57,7 @@ def _merge(base: dict, new: dict) -> dict:
 
 
 def config(tenant: dict) -> dict:
+    """Configuración efectiva del comercial virtual del tenant: los valores por defecto más su entrenamiento guardado."""
     return _merge(DEFAULTS, (tenant.get("settings") or {}).get("agent") or {})
 
 
@@ -62,6 +65,7 @@ def config(tenant: dict) -> dict:
 # settings.agents = [{id, name, enabled, config}] (cada uno con su entrenamiento). Sin esa lista, el entrenamiento de siempre (settings.agent) es el comercial «main».
 # for_agent() devuelve una copia del tenant cuyo settings.agent es el de ese comercial: todo el código existente (config(tenant)…) funciona sin cambios.
 def _raw_agents(tenant: dict) -> list[dict]:
+    """Lista de comercial(es) virtual(es) tal como se guardó; sin lista, el entrenamiento antiguo (settings.agent) es el comercial «main»."""
     st = tenant.get("settings") or {}
     lst = st.get("agents")
     if isinstance(lst, list) and lst:
@@ -71,15 +75,18 @@ def _raw_agents(tenant: dict) -> list[dict]:
 
 
 def agents(tenant: dict) -> list[dict]:
+    """Comerciales virtuales del tenant, cada uno con su configuración completada con los valores por defecto."""
     return [{**a, "config": _merge(DEFAULTS, a.get("config") or {})} for a in _raw_agents(tenant)]
 
 
 def get_agent(tenant: dict, agent_id: str | None = None) -> dict | None:
+    """Devuelve el comercial virtual con ese id o, si no existe, el primero de la lista."""
     ags = agents(tenant)
     return next((a for a in ags if a["id"] == agent_id), None) or (ags[0] if ags else None)
 
 
 def for_agent(tenant: dict, agent_id: str | None = None) -> dict:
+    """Copia del tenant cuyo settings.agent es el entrenamiento de ese comercial (y marca `_agent`); así el resto del código usa config(tenant) sin cambios."""
     cur = tenant.get("_agent")
     if cur and (not agent_id or cur["id"] == agent_id):
         return tenant
@@ -90,15 +97,18 @@ def for_agent(tenant: dict, agent_id: str | None = None) -> dict:
 
 
 def slots(tenant: dict) -> int:
+    """Cantidad de comerciales virtuales que permite la licencia (mínimo 1)."""
     return max(1, int((((tenant.get("settings") or {}).get("limits") or {}).get("agents")) or 1))
 
 
 def save_agents(slug: str, lst: list[dict]) -> None:
+    """Guarda la lista de comerciales en settings; el primero se replica en settings.agent por compatibilidad."""
     with db.pool.connection() as c:
         c.execute("UPDATE tenants SET settings = settings || %s::jsonb WHERE slug = %s", (json.dumps({"agents": lst, "agent": lst[0]["config"] if lst else {}}), slug))
 
 
 def dispatch_cfg(tenant: dict) -> dict:
+    """Configuración normalizada del reparto de leads: modo «shared» o «split» y pesos de 0 a 100 por atendedor."""
     d = (tenant.get("settings") or {}).get("dispatch") or {}
     return {"mode": "split" if d.get("mode") == "split" else "shared", "weights": {str(k): max(0, min(100, int(v))) for k, v in (d.get("weights") or {}).items() if str(v).lstrip("-").isdigit()}}
 
@@ -137,11 +147,13 @@ def pick_attendant(tenant: dict) -> dict:
 
 
 def hold_minutes(tenant: dict, lead_id: str) -> int:
+    """Minutos que el agente se aparta tras escribir una persona, según el entrenamiento del comercial que lleva el lead."""
     row = _row(tenant["slug"], lead_id)
     return config(for_agent(tenant, (row or {}).get("agent_id")))["cadence"]["human_hold_minutes"]
 
 
 def licensed(tenant: dict) -> bool:
+    """True si la empresa tiene activa la versión automática del comercial virtual (settings.limits.agent == 'auto')."""
     return (((tenant.get("settings") or {}).get("limits") or {}).get("agent")) == "auto"
 
 
@@ -208,24 +220,29 @@ def clean_menus(raw) -> list[dict]:
 
 
 def usable_menus(cfg: dict, channel: str) -> list[dict]:
+    """Menús habilitados que se pueden enviar por ese canal (por ahora solo WhatsApp)."""
     return [m for m in cfg.get("menus") or [] if m.get("enabled") and channel == "whatsapp"]
 
 
 # ---------------- horario
 def _tz(cfg) -> ZoneInfo:
+    """Zona horaria del horario de atención configurado."""
     return ZoneInfo(cfg["schedule"]["tz"])
 
 
 def _hm(s: str):
+    """Convierte un texto HH:MM en hora."""
     return datetime.strptime(s, "%H:%M").time()
 
 
 def in_window(cfg: dict, now: datetime) -> bool:
+    """True si `now` cae en un día y una hora dentro del horario de atención."""
     loc, s = now.astimezone(_tz(cfg)), cfg["schedule"]
     return loc.isoweekday() in s["days"] and _hm(s["start"]) <= loc.time() < _hm(s["end"])
 
 
 def next_window(cfg: dict, now: datetime) -> datetime:
+    """Próximo instante (UTC) en que abre el horario de atención; si ya está abierto devuelve `now`."""
     tz, s = _tz(cfg), cfg["schedule"]
     loc = now.astimezone(tz)
     for d in range(0, 9):
@@ -245,12 +262,14 @@ def next_window(cfg: dict, now: datetime) -> datetime:
 
 # ---------------- estado y bitácora
 def _row(tenant: str, lead_id: str) -> dict | None:
+    """Fila del estado del lead en agent_leads, o None si el agente no lo tiene."""
     with db.pool.connection() as c:
         r = c.execute("SELECT * FROM agent_leads WHERE tenant=%s AND lead_id=%s", (tenant, lead_id)).fetchone()
     return dict(r) if r else None
 
 
 def _set(tenant: str, lead_id: str, **kw) -> None:
+    """Crea la fila del lead si falta y actualiza las columnas indicadas (siempre refresca updated_at)."""
     cols = ", ".join(f"{k}=%s" for k in kw)
     with db.pool.connection() as c:
         c.execute(f"INSERT INTO agent_leads (tenant, lead_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (tenant, lead_id))
@@ -258,12 +277,14 @@ def _set(tenant: str, lead_id: str, **kw) -> None:
 
 
 def log_event(tenant: str, lead_id: str, kind: str, *, lead_name: str = "", channel: str = "", title: str = "", detail: str = "", reason: str = "", sent: bool = False, dry: bool = False, data: dict | None = None) -> int:
+    """Registra un evento en la bitácora del agente (recorta los textos) y devuelve su id."""
     with db.pool.connection() as c:
         return c.execute("INSERT INTO agent_events (tenant, lead_id, lead_name, kind, channel, title, detail, reason, sent, dry, data) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
                          (tenant, lead_id, lead_name[:120], kind, channel, title[:200], detail[:4000], reason[:600], sent, dry, json.dumps(data or {}))).fetchone()["id"]
 
 
 def events(tenant: str, lead_id: str | None = None, limit: int = 60) -> list[dict]:
+    """Últimos eventos de la bitácora del tenant (o de un lead), del más reciente al más antiguo."""
     with db.pool.connection() as c:
         q = "SELECT id, lead_id, lead_name, at, kind, channel, title, detail, reason, sent, dry, data FROM agent_events WHERE tenant=%s" + (" AND lead_id=%s" if lead_id else "") + " ORDER BY id DESC LIMIT %s"
         return [dict(r) for r in c.execute(q, (tenant, lead_id, limit) if lead_id else (tenant, limit)).fetchall()]
@@ -284,6 +305,7 @@ _api_ids: dict[str, str] = {}
 
 
 async def _api_user(tenant: dict) -> str:
+    """Id del usuario de API del tenant en Espo (con caché); sirve para reconocer los leads creados por canales automáticos."""
     if tenant["slug"] not in _api_ids:
         _api_ids[tenant["slug"]] = ((await Espo(tenant).get("App/user")).get("user") or {}).get("id", "")
     return _api_ids[tenant["slug"]]
@@ -336,6 +358,7 @@ def note_human(tenant_slug: str, lead_id: str, minutes: int | None = None) -> No
 
 # ---------------- contexto y generación
 def _clip(s: str, n: int) -> str:
+    """Compacta espacios y recorta el texto a `n` caracteres con «…»."""
     s = re.sub(r"\s+", " ", str(s or "")).strip()
     return s if len(s) <= n else s[: n - 1] + "…"
 
@@ -367,6 +390,7 @@ async def history(tenant: dict, lead_id: str, n: int = 14) -> list[dict]:
 
 
 def available_channels(tenant: dict, cfg: dict, lead: dict) -> list[str]:
+    """Canales por los que se puede escribir a este lead: habilitados en el entrenamiento y con proveedor, teléfono o correo disponible."""
     st, out = tenant.get("settings") or {}, []
     phones = bool(whatsapp.lead_numbers(lead))
     if cfg["channels"]["whatsapp"] and phones and whatsapp.provider(tenant):
@@ -379,6 +403,7 @@ def available_channels(tenant: dict, cfg: dict, lead: dict) -> list[str]:
 
 
 def pick_channel(avail: list[str], lead: dict, attempts: int, inbound: str | None) -> str | None:
+    """Elige el canal: el de la respuesta del cliente; si no, el preferido del lead, alternando correo en los intentos pares si hay WhatsApp y correo."""
     if not avail:
         return None
     if inbound and inbound in avail:
@@ -390,6 +415,7 @@ def pick_channel(avail: list[str], lead: dict, attempts: int, inbound: str | Non
 
 
 def system_prompt(cfg: dict, tenant: dict, channel: str) -> str:
+    """Arma el prompt de sistema del modelo con persona, datos de la empresa, preguntas frecuentes, objetivo, reglas y límites del canal."""
     p, c = cfg["persona"], cfg["company"]
     company = tenant.get("name") or "la empresa"
     faq = "\n".join(f"- P: {f['q']}\n  R: {f['a']}" for f in cfg["faq"])
@@ -408,6 +434,7 @@ def system_prompt(cfg: dict, tenant: dict, channel: str) -> str:
 
 
 def _menus_prompt(cfg: dict, channel: str) -> str:
+    """Fragmento del prompt que describe los menús de WhatsApp disponibles (vacío si no hay ninguno)."""
     ms = usable_menus(cfg, channel)
     if not ms:
         return ""
@@ -429,6 +456,7 @@ AGENT_SCHEMA = {"type": "object", "properties": {
 
 
 def situation_text(kind: str, attempts: int, n_followups: int, channel: str, disclose: bool, persona: str, company: str) -> str:
+    """Texto de la situación para el modelo según el tipo de turno: primer contacto, respuesta o seguimiento (con aviso de último intento)."""
     if kind == "first":
         intro = f" Preséntate como {persona}, asistente virtual de {company}." if disclose else f" Preséntate como {persona} de {company}."
         return "Es el PRIMER contacto: el lead acaba de registrarse. Salúdalo por su nombre, haz referencia a lo que pidió (según el formulario o la descripción) y haz UNA pregunta para avanzar." + intro
@@ -440,12 +468,14 @@ def situation_text(kind: str, attempts: int, n_followups: int, channel: str, dis
 
 
 def lead_brief(lead: dict) -> str:
+    """Resumen en texto de los datos del lead que se le pasan al modelo."""
     keys = [("Nombre", lead.get("name")), ("Fuente", lead.get("source")), ("Formulario", lead.get("originForm")), ("Campaña", lead.get("campaignName")), ("Estado actual", lead.get("status")),
             ("Canal preferido", lead.get("preferredChannel")), ("Servicio sugerido", lead.get("suggestedService")), ("Calificación", lead.get("qualificationStatus")), ("Descripción / datos del formulario", _clip(lead.get("description"), 600))]
     return "\n".join(f"{k}: {v}" for k, v in keys if v)
 
 
 async def decide(tenant: dict, cfg: dict, lead: dict, hist: list[dict], kind: str, attempts: int, channel: str) -> dict:
+    """Pide al modelo la decisión (enviar, esperar, escalar o cerrar) para este turno y cuenta la llamada en el consumo."""
     persona, company = cfg["persona"]["name"], tenant.get("name") or "la empresa"
     conv = "\n".join(f"[{h['channel']}] {h['who']}: {_clip(h['text'], 400)}" for h in hist) or "(todavía no hay mensajes)"
     user = (f"DATOS DEL LEAD:\n{lead_brief(lead)}\n\nCONVERSACIÓN HASTA AHORA (cronológica):\n{conv}\n\nSITUACIÓN: {situation_text(kind, attempts, len(cfg['cadence']['follow_ups']), channel, cfg['disclose'], persona, company)}\n"
@@ -456,6 +486,7 @@ async def decide(tenant: dict, cfg: dict, lead: dict, hist: list[dict], kind: st
 
 
 def _usage(tenant: str, *, msgs: int = 0, llm: int = 0, esc: int = 0) -> None:
+    """Suma al consumo mensual del tenant (mensajes, llamadas al modelo, escalamientos); crea la tabla si falta."""
     mon = datetime.now(timezone.utc).strftime("%Y-%m")
     with db.pool.connection() as c:
         c.execute("CREATE TABLE IF NOT EXISTS agent_usage (tenant TEXT NOT NULL, month TEXT NOT NULL, messages INT NOT NULL DEFAULT 0, llm_calls INT NOT NULL DEFAULT 0, escalations INT NOT NULL DEFAULT 0, PRIMARY KEY (tenant, month))")
@@ -464,6 +495,7 @@ def _usage(tenant: str, *, msgs: int = 0, llm: int = 0, esc: int = 0) -> None:
 
 
 def usage(tenant: str) -> dict:
+    """Consumo del mes actual del tenant (ceros si no hay datos)."""
     mon = datetime.now(timezone.utc).strftime("%Y-%m")
     try:
         with db.pool.connection() as c:
@@ -474,6 +506,7 @@ def usage(tenant: str) -> dict:
 
 
 def _clean_message(text: str, channel: str) -> str:
+    """Normaliza el mensaje del modelo (negritas a formato WhatsApp, sin prefijo «Mensaje:») y lo recorta al límite del canal."""
     t = re.sub(r"\*\*(.+?)\*\*", r"*\1*", str(text or "")).strip()
     t = re.sub(r"^(mensaje|respuesta)\s*:\s*", "", t, flags=re.I)
     limit = {"whatsapp": 700, "sms": 320, "email": 2500}[channel]
@@ -493,6 +526,7 @@ def _ensure_disclosure(message: str, cfg: dict, company: str, channel: str) -> s
 
 
 def _email_html(text: str, persona: str, role: str, company: str) -> str:
+    """Convierte el texto en el HTML del correo del agente, con la firma de persona, cargo y empresa."""
     e = _html.escape
     paras = "".join(f"<p style='margin:0 0 12px'>{e(p).replace(chr(10), '<br>')}</p>" for p in re.split(r"\n{2,}", text.strip()))
     return (f"<div style='font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#161b2e;max-width:560px'>{paras}"
@@ -501,6 +535,7 @@ def _email_html(text: str, persona: str, role: str, company: str) -> str:
 
 # ---------------- envío
 async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: str, subject: str, owner: str | None, menu: dict | None = None) -> None:
+    """Envía el mensaje por el canal elegido (WhatsApp con o sin menú, SMS o correo) respetando una pausa de 12 s entre envíos del mismo tenant."""
     persona, lead_id = cfg["persona"]["name"], lead["id"]
     gap = 12 - (time.time() - _last_send.get(tenant["slug"], 0))
     if gap > 0:
@@ -528,6 +563,7 @@ async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: s
 
 
 async def _escalate(tenant: dict, cfg: dict, lead: dict, reason: str, *, dry: bool, quote: str = "") -> None:
+    """Pasa el lead a una persona: detiene al agente, asigna y deja nota en Espo, avisa por push y registra el evento (en prueba solo registra)."""
     slug, lead_id = tenant["slug"], lead["id"]
     espo, to = Espo(tenant), (lead.get("assignedUserId") or cfg.get("handoff_user_id") or "")
     _set(slug, lead_id, state="escalated", mode="manual", reason=reason[:300], next_at=None)
@@ -549,6 +585,7 @@ async def _escalate(tenant: dict, cfg: dict, lead: dict, reason: str, *, dry: bo
 
 # ---------------- un paso del agente sobre un lead
 async def step(tenant: dict, row: dict) -> None:
+    """Un turno del agente sobre un lead vencido: valida estado y horario, decide con el modelo y envía, propone para aprobación, espera, cierra o escala."""
     tenant = for_agent(tenant, row.get("agent_id"))
     slug, lead_id, cfg = tenant["slug"], row["lead_id"], config(tenant)
     now, espo = datetime.now(timezone.utc), Espo(tenant)
@@ -706,6 +743,7 @@ async def _after_send(tenant: dict, cfg: dict, lead: dict, row: dict, kind: str,
 
 # ---------------- aprobación previa
 def pending_proposals(tenant: str, lead_id: str | None = None) -> list[dict]:
+    """Mensajes propuestos que esperan aprobación humana (de un lead o de todo el tenant)."""
     with db.pool.connection() as c:
         q = ("SELECT e.id, e.lead_id, e.lead_name, e.at, e.channel, e.title, e.detail, e.reason, e.data FROM agent_events e JOIN agent_leads l ON l.tenant=e.tenant AND l.lead_id=e.lead_id AND l.state='awaiting_approval' "
              "WHERE e.tenant=%s AND e.kind='proposal' AND NOT (e.data ? 'resolved')" + (" AND e.lead_id=%s" if lead_id else "") + " ORDER BY e.id DESC LIMIT 30")
@@ -713,11 +751,13 @@ def pending_proposals(tenant: str, lead_id: str | None = None) -> list[dict]:
 
 
 def _resolve(event_id: int, how: str, by: str) -> None:
+    """Marca una propuesta como resuelta (aprobada o rechazada) y quién lo hizo."""
     with db.pool.connection() as c:
         c.execute("UPDATE agent_events SET data = data || %s::jsonb WHERE id=%s", (json.dumps({"resolved": how, "by": by}), event_id))
 
 
 async def approve(tenant: dict, lead_id: str, event_id: int, message: str | None, by: str) -> None:
+    """Aprueba una propuesta (con el texto opcionalmente editado), la envía, aplica el cambio de estado sugerido y programa el siguiente seguimiento."""
     tenant = for_agent(tenant, (_row(tenant["slug"], lead_id) or {}).get("agent_id"))
     slug, cfg = tenant["slug"], config(tenant)
     prop = next((p for p in pending_proposals(slug, lead_id) if p["id"] == event_id), None)
@@ -750,6 +790,7 @@ async def approve(tenant: dict, lead_id: str, event_id: int, message: str | None
 
 
 async def reject(tenant: dict, lead_id: str, event_id: int, by: str) -> None:
+    """Descarta una propuesta y deja al lead en pausa."""
     prop = next((p for p in pending_proposals(tenant["slug"], lead_id) if p["id"] == event_id), None)
     if not prop:
         raise ValueError("Ese mensaje ya fue aprobado o descartado.")
@@ -760,6 +801,7 @@ async def reject(tenant: dict, lead_id: str, event_id: int, by: str) -> None:
 
 # ---------------- ciclo de trabajo
 async def worker() -> None:
+    """Bucle en segundo plano (cada 15 s): toma hasta 10 leads vencidos de tenants activos en modo automático y ejecuta step() en cada uno."""
     await asyncio.sleep(10)
     while True:
         try:
@@ -784,6 +826,7 @@ async def worker() -> None:
 
 # ---------------- consulta e intervención humana
 def lead_state(tenant: dict, lead_id: str) -> dict:
+    """Estado del lead ante el comercial virtual (modo, próxima acción, propuesta pendiente, bitácora) para mostrarlo en la ficha del CRM."""
     row = _row(tenant["slug"], lead_id)
     tenant = for_agent(tenant, (row or {}).get("agent_id"))
     cfg = config(tenant)
@@ -796,6 +839,7 @@ def lead_state(tenant: dict, lead_id: str) -> dict:
 
 
 async def lead_action(tenant: dict, lead_id: str, action: str, by: str) -> None:
+    """Intervención humana sobre un lead: pausar, tomar control, pasar a otro comercial (switch:<id>) o pasarlo/reanudar el agente; deja evento de control."""
     slug, now = tenant["slug"], datetime.now(timezone.utc)
     if action == "pause":
         _set(slug, lead_id, state="paused", next_at=None)
@@ -845,6 +889,7 @@ async def test_reply(tenant: dict, sample: dict) -> dict:
 
 
 def stats(tenant: str, days: int = 30) -> dict:
+    """Métricas del periodo (enviados, simulados, respuestas, escalamientos, cierres, errores, tiempo de primera respuesta, serie diaria y estados)."""
     with db.pool.connection() as c:
         agg = c.execute("SELECT kind, count(*) n, count(DISTINCT lead_id) l, count(*) FILTER (WHERE dry) d FROM agent_events WHERE tenant=%s AND at > now() - make_interval(days => %s) GROUP BY kind", (tenant, days)).fetchall()
         resp = c.execute("SELECT avg((data->>'response_seconds')::int) a FROM agent_events WHERE tenant=%s AND kind='send' AND data ? 'response_seconds' AND at > now() - make_interval(days => %s)", (tenant, days)).fetchone()["a"]

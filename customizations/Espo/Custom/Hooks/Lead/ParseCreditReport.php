@@ -21,6 +21,7 @@ class ParseCreditReport
 
     public function __construct(private Config $config, private Log $log, private User $user) {}
 
+    /** Evento afterSave de Lead (orden 20): encola la lectura del PDF de crédito en el Hub o recalcula el filtro. */
     public function afterSave(Entity $entity, array $options): void
     {
         if (!empty($options['silent']) || !empty($options['skipHubHook']) || $this->user->isApi()) {

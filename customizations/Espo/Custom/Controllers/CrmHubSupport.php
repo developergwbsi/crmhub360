@@ -12,6 +12,7 @@ class CrmHubSupport
 {
     public function __construct(private Config $config) {}
 
+    /** POST /CrmHubSupport/exchange. Público (sin sesión): valida el formato del código y llama a POST /v1/support/exchange del Hub; cualquier fallo responde Forbidden. */
     public function postActionExchange(Request $request): \stdClass
     {
         $code = (string) ($request->getParsedBody()->code ?? '');

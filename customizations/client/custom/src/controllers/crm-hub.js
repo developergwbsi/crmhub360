@@ -1,3 +1,8 @@
+/**
+ * Controlador del módulo Crm Hub 360 (rutas #CrmHub/...): cada acción abre la vista custom:views/* correspondiente.
+ * Acción por defecto: manual. Las acciones son: manual, organigrama, difusion, simulador, conocimiento, plantillas, procesos, copiasLeads, agente, asignacion, pipeline e integrations.
+ * Los endpoints los llaman las propias vistas, no el controlador.
+ */
 define('custom:controllers/crm-hub', ['controller'], function (Dep) {
     return class extends Dep {
         defaultAction = 'manual'

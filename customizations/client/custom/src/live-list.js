@@ -1,7 +1,12 @@
-// Listas y tableros de leads en vivo: cuando llega un lead nuevo (aviso por websocket o, como respaldo, una revisión cada 20 s) la lista se vuelve a cargar sola.
+/**
+ * Listas y tableros de leads en vivo: cuando llega un lead nuevo (aviso por websocket o, como respaldo, una revisión cada 20 s) la lista se vuelve a cargar sola.
+ * Detecta el lead nuevo consultando el más reciente (GET Lead, orden createdAt desc, maxSize 1); escucha el evento 'newNotification' del websocket y visibilitychange.
+ * attach/detach: para vistas de lista o tablero (recargan la colección; no recargan mientras se arrastra una tarjeta). feed/unfeed: para paneles sin colección, con callback reload().
+ */
 define('custom:live-list', [], function () {
     const dragging = () => !!document.querySelector('.ui-sortable-helper, .ui-draggable-dragging, .ch-dragging');
 
+    // Solo aplica a listas/tableros de Lead
     function attach(view) {
         if (view._chLive || view.entityType !== 'Lead') { return; }
         const st = view._chLive = {last: null, timer: null, deb: null, ws: null, cb: null};

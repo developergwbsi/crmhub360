@@ -109,10 +109,12 @@ def effective(tenant: dict, ch: str, line_id: str | None = None, *, allow_off: b
 
 
 def active_lines(tenant: dict, ch: str) -> list[dict]:
+    """Líneas encendidas del canal como {id, name, type} (nombre legible del proveedor), para elegir por cuál enviar."""
     return [{"id": c["id"], "name": c["name"], "type": SPEC[ch]["types"][c["type"]][0]} for c in raw_cards(tenant, ch) if c["enabled"]]
 
 
 def line_for_instance(tenant: dict, instance: str) -> str | None:
+    """Id de la línea de WhatsApp (Evolution) cuya instancia coincide con la indicada, o None."""
     for c in raw_cards(tenant, "whatsapp"):
         if c["type"] == "evolution" and (c["fields"].get("evolution_instance") or "") == (instance or ""):
             return c["id"]
@@ -136,6 +138,7 @@ def _public(card: dict, ch: str) -> dict:
 
 
 def overview(tenant: dict) -> dict:
+    """Vista para la interfaz (sin secretos) de las líneas de WhatsApp, SMS, llamadas y Telegram: predeterminada, tarjetas, tipos disponibles y si se pueden añadir más."""
     st = _st(tenant)
     out = {}
     for ch, spec in SPEC.items():
@@ -176,6 +179,7 @@ def _clean_fields(ch: str, typ: str, incoming: dict, old: dict) -> dict:
 
 
 def save(tenant: dict, body: dict) -> dict:
+    """Crea o actualiza una línea (la principal escribe en las claves planas de settings; las demás en settings.lines). Los secretos vacíos conservan el valor anterior. Devuelve {id}."""
     ch, typ = body.get("channel"), body.get("type")
     if ch not in SPEC or typ not in SPEC[ch]["types"]:
         raise ValueError("Canal o proveedor no válido")
@@ -221,6 +225,7 @@ def save(tenant: dict, body: dict) -> dict:
 
 
 def set_enabled(tenant: dict, lid: str, enabled: bool) -> None:
+    """Enciende o apaga una línea (la principal y Telegram se guardan en line_meta / telegram_off)."""
     st = _st(tenant)
     if lid == "main:telegram":
         _write(tenant["slug"], {"telegram_off": not enabled}); return
@@ -236,6 +241,7 @@ def set_enabled(tenant: dict, lid: str, enabled: bool) -> None:
 
 
 def set_default(tenant: dict, lid: str) -> None:
+    """Marca la línea predeterminada de su canal (settings.line_default)."""
     ch = lid.split(":")[1] if lid.startswith("main:") else next((l["channel"] for l in _st(tenant).get("lines") or [] if l["id"] == lid), None)
     if ch not in SPEC:
         raise ValueError("La línea no existe")
@@ -246,6 +252,7 @@ def set_default(tenant: dict, lid: str) -> None:
 
 
 def delete(tenant: dict, lid: str) -> None:
+    """Elimina una línea adicional; en la principal borra su proveedor (y la URL de Evolution o el token de Telegram)."""
     st = _st(tenant)
     if lid.startswith("main:"):
         ch = lid.split(":")[1]
@@ -261,6 +268,7 @@ def delete(tenant: dict, lid: str) -> None:
 
 
 def channel_of(tenant: dict, lid: str) -> str:
+    """Canal (whatsapp, sms, voice o telegram) al que pertenece la línea; ValueError si no existe."""
     if lid.startswith("main:"):
         return lid.split(":")[1]
     for l in _st(tenant).get("lines") or []:
@@ -271,6 +279,7 @@ def channel_of(tenant: dict, lid: str) -> str:
 
 # ---------------- pruebas ----------------
 async def connection_test(tenant: dict, lid: str) -> dict:
+    """Prueba de conexión de una línea (Telegram, WhatsApp o cuenta de Twilio); los proveedores HTTP solo validan que haya URL."""
     ch = channel_of(tenant, lid)
     if ch == "telegram":
         from . import telegram
@@ -292,6 +301,7 @@ async def connection_test(tenant: dict, lid: str) -> dict:
 
 
 async def send_test(tenant: dict, lid: str, to: str, text: str = "") -> dict:
+    """Envía un mensaje (o llamada) de prueba al número indicado por la línea elegida, aunque esté apagada; devuelve {ok, to}."""
     from . import sms, voice, whatsapp
     from .ingest import normalize_phone
     ch = channel_of(tenant, lid)

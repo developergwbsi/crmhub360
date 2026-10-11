@@ -1,5 +1,9 @@
-// «Mis plantillas»: cada canal tiene su propio lienzo. Correo = diseñador de bloques (HTML); WhatsApp y Telegram = chat con vista previa en teléfono y
-// formato propio de cada app; SMS = texto plano con contador de segmentos; RCS = próximamente (bloqueado).
+/**
+ * «Mis plantillas»: cada canal tiene su propio lienzo. Correo = diseñador de bloques (HTML); WhatsApp y Telegram = chat con vista previa en teléfono y
+ * formato propio de cada app; SMS = texto plano con contador de segmentos; RCS = próximamente (bloqueado).
+ * Endpoints: POST CrmHub/templateSave y templateDelete; la lectura pasa por custom:tpl (GET CrmHub/templates). Permiso: usuario interno, cada quien ve solo las suyas.
+ * Dibuja con innerHTML en draw() y usa custom:designer para el correo.
+ */
 define('custom:views/my-templates', ['view', 'custom:ui', 'custom:tpl', 'custom:mail-send', 'custom:designer'], function (Dep, ChUi, Tpl, MailSend, Dz) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const SAMPLE = 'María Pérez';

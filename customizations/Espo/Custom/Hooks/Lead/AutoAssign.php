@@ -19,6 +19,7 @@ class AutoAssign
 
     public function __construct(private EntityManager $em, private Log $log, private Config $config) {}
 
+    /** Evento beforeSave de Lead (orden 5): asigna asesor a un lead nuevo sin asesor (usa LeadAssigner). */
     public function beforeSave(Entity $entity, array $options): void
     {
         if (!$entity->isNew() || $entity->get('assignedUserId') || !empty($options['skipAutoAssign'])) {

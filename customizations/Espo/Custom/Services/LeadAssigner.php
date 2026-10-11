@@ -47,6 +47,7 @@ class LeadAssigner
         return iterator_to_array($users, false);
     }
 
+    /** Número de leads abiertos (no cerrados) de un usuario. */
     public function openLeads(string $userId): int
     {
         return $this->em->getRDBRepository('Lead')
@@ -54,6 +55,7 @@ class LeadAssigner
             ->count();
     }
 
+    /** Elige al asesor según el método de reparto y el tope; null si no hay candidatos. */
     public function pick(?string $campaignId = null): ?User
     {
         $pool = $this->eligibleUsers();
@@ -99,6 +101,7 @@ class LeadAssigner
         $this->touch($user->getId());
     }
 
+    /** Marca el momento de la última asignación del usuario (desempate por antigüedad). */
     private function touch(string $userId): void
     {
         $q = $this->em->getQueryBuilder()->update()->in('User')

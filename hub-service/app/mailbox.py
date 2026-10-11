@@ -133,6 +133,7 @@ async def _route(tenant: dict, espo: Espo, m: dict, account: str) -> tuple[str |
 
 
 async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str, import_all: bool = False) -> bool:
+    """Guarda un correo entrante en EspoCRM (Email archivado) asignado a su dueño y ligado al lead o contacto si se reconoce; avisa por push y al comercial virtual. False si ya estaba importado o no es de nadie (salvo import_all)."""
     if m["messageId"]:   # no repetir un correo ya importado (p. ej. si se reinicia el avance del buzón)
         try:
             dup = await espo.get("Email", **{"where[0][type]": "equals", "where[0][attribute]": "messageId", "where[0][value]": m["messageId"][:255], "maxSize": 1, "select": "id"})
@@ -173,6 +174,7 @@ async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str, im
 
 
 async def poll(tenant: dict) -> int:
+    """Revisa el buzón IMAP de un tenant, importa los correos nuevos (uno que falle no frena a los demás) y guarda el último UID en settings.mailbox.last_uid. Devuelve cuántos importó."""
     cfg = (tenant.get("settings") or {}).get("mailbox") or {}
     if not cfg.get("enabled") or not cfg.get("host") or not cfg.get("user"):
         return 0
@@ -191,6 +193,7 @@ async def poll(tenant: dict) -> int:
 
 
 async def worker():
+    """Bucle de fondo: cada INTERVAL segundos recorre los tenants activos con buzón configurado y llama a poll."""
     await asyncio.sleep(5)
     while True:
         try:

@@ -1,4 +1,7 @@
-// Historial de cambios de estado del lead: quién, cuándo y por qué.
+/**
+ * Panel «Historial de estados» del Lead: quién, cuándo y por qué cambió de estado (comentario, acción previa o automático).
+ * Endpoint: GET CrmHub/leadTimeline (kind=status). Se recarga con custom:live-panel y con 'sync' del modelo (600 ms).
+ */
 define('custom:views/lead/panels/status-history', ['views/record/panels/bottom', 'custom:ui', 'custom:live-panel'], function (Dep, ChUi, Live) {
     const KIND = {comment: ['fa-comment-dots', 'Comentario'], action: ['fa-bolt', 'Acción previa'], auto: ['fa-robot', 'Automático']};
     return class extends Dep {

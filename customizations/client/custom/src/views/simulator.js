@@ -1,3 +1,8 @@
+/**
+ * Simulador del proceso comercial: ejecuta un lead de prueba por todas las etapas (registro, bienvenida, mensaje, respuesta, llamada, tareas, pipeline) y muestra cada evento.
+ * Endpoints: GET CrmHub/simConfig, simRuns, simRun; POST CrmHub/simRun y simDelete. Permiso: usuario interno; el admin ve las simulaciones de todos, cada usuario las suyas.
+ * Peculiaridad: mientras una simulación está «en curso» consulta simRun cada 1,5 s (setInterval, se limpia en onRemove).
+ */
 define('custom:views/simulator', ['view', 'custom:ui'], function (Dep, ChUi) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const ICON = {ok: ['fa-circle-check', 'ok'], skip: ['fa-circle-minus', 'skip'], error: ['fa-circle-xmark', 'err'], info: ['fa-circle-info', 'info']};
@@ -18,6 +23,7 @@ define('custom:views/simulator', ['view', 'custom:ui'], function (Dep, ChUi) {
             this.timer = setInterval(() => { if (this.run && this.run.status === 'running') { this.openRun(this.run.id, true); } }, 1500);
         }
 
+        // Detiene la consulta periódica de la simulación en curso
         onRemove() { clearInterval(this.timer); }
         afterRender() { this.draw(); }
 

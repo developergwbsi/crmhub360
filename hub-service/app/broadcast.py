@@ -30,10 +30,12 @@ def policy(tenant: dict, channel: str) -> dict | None:
 
 
 def configured(tenant: dict, channel: str) -> bool:
+    """True si el canal tiene proveedor o token configurado en el tenant."""
     return bool({"whatsapp": whatsapp.provider, "sms": sms.provider, "telegram": lambda t: (t.get("settings") or {}).get("telegram_bot_token")}[channel](tenant))
 
 
 def render(tpl: str, lead: dict, tenant: dict, advisor: str = "") -> str:
+    """Reemplaza las variables {nombre}, {primer_nombre}, {servicio}, {asesor} y {empresa} del texto; las desconocidas quedan tal cual."""
     first = (lead.get("firstName") or (lead.get("name") or "").split(" ")[0] or "").strip()
     vals = {"nombre": lead.get("name") or first, "primer_nombre": first, "servicio": (lead.get("suggestedService") or "").split(" (")[0],
             "asesor": advisor or lead.get("assignedUserName") or "", "empresa": tenant.get("name") or ""}
@@ -42,6 +44,7 @@ def render(tpl: str, lead: dict, tenant: dict, advisor: str = "") -> str:
 
 def create(tenant: dict, *, name: str, channel: str, text: str, lead_ids: list[str], per_minute: int, footer: bool, by: str,
            start_in_min: int = 0) -> int:
+    """Crea una campaña (tabla broadcasts) y su audiencia (broadcast_items) validando canal, texto y tamaño; devuelve su id. Ajusta el ritmo y agrega el aviso de baja si se pide."""
     if channel not in CHANNELS:
         raise ValueError("Canal no válido")
     if not configured(tenant, channel):
@@ -74,6 +77,7 @@ def create(tenant: dict, *, name: str, channel: str, text: str, lead_ids: list[s
 
 
 def listing(slug: str) -> list[dict]:
+    """Campañas de la empresa (las 60 más recientes) con contadores de enviados, fallidos, omitidos y pendientes."""
     with db.pool.connection() as c:
         return c.execute(
             """SELECT b.id, b.name, b.channel, b.status, b.per_minute, b.created_by, b.created_at, b.scheduled_at,
@@ -83,6 +87,7 @@ def listing(slug: str) -> list[dict]:
 
 
 def detail(slug: str, bid: int) -> dict | None:
+    """Campaña con hasta 50 destinatarios fallidos u omitidos y su motivo; None si no existe."""
     with db.pool.connection() as c:
         b = c.execute("SELECT * FROM broadcasts WHERE id = %s AND tenant = %s", (bid, slug)).fetchone()
         if not b:
@@ -92,6 +97,7 @@ def detail(slug: str, bid: int) -> dict | None:
 
 
 def set_status(slug: str, bid: int, status: str) -> bool:
+    """Pausa, reanuda o cancela («pause», «resume», «cancel») según el estado actual; True si cambió algo."""
     allowed = {"pause": ("paused", ("running", "scheduled")), "resume": ("running", ("paused",)), "cancel": ("cancelled", ("running", "scheduled", "paused"))}
     new, frm = allowed[status]
     with db.pool.connection() as c:
@@ -124,6 +130,7 @@ async def _send_one(tenant: dict, b: dict, item: dict) -> tuple[str, str | None]
 
 
 async def tick() -> None:
+    """Una vuelta del envío: por cada campaña vencida respeta el intervalo de WhatsApp no oficial, toma el siguiente destinatario pendiente, lo envía y guarda el resultado."""
     with db.pool.connection() as c:
         due = c.execute("""SELECT * FROM broadcasts WHERE status IN ('running','scheduled') AND coalesce(next_send_at, now()) <= now() ORDER BY id LIMIT 20""").fetchall()
     for b in due:
@@ -162,6 +169,7 @@ async def tick() -> None:
 
 
 async def worker() -> None:
+    """Bucle de fondo que ejecuta tick cada segundo; registra los errores sin detenerse."""
     while True:
         try:
             await tick()

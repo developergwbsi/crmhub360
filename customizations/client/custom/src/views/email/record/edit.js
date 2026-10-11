@@ -1,3 +1,7 @@
+/**
+ * Edición de un correo: si el correo ya no es borrador (status distinto de Draft) avisa y redirige a su vista de detalle.
+ * Solo los borradores se pueden editar. Sin endpoints.
+ */
 define('custom:views/email/record/edit', ['views/email/record/edit'], function (Dep) {
     return class extends Dep {
         setup() {

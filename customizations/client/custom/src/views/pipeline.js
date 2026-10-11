@@ -1,3 +1,7 @@
+/**
+ * «Estados del pipeline»: qué estado de Lead es nuevo, en revisión y calificado, y cuáles cuentan como cerrados.
+ * Endpoints: GET/PUT CrmHub/pipeline (guardar es solo admin; el motivo del error viene en la cabecera X-Status-Reason). Plantilla: custom:pipeline.
+ */
 define('custom:views/pipeline', ['view'], function (Dep) {
     return class extends Dep {
         template = 'custom:pipeline'

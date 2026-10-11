@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Crea una versión etiquetada: valida, regenera la documentación derivada, actualiza VERSION, hace commit, etiqueta (anotada) y sube a git.
+# Uso: bin/tag-release X.Y.Z [--dry-run]       (antes: escribe la sección «## [X.Y.Z] - fecha» en CHANGELOG.md)
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; cd "$ROOT"
+die() { echo "✗ $*" >&2; exit 1; }
+VER="${1:-}"; DRY=0; [[ "${2:-}" == "--dry-run" ]] && DRY=1
+[[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "uso: bin/tag-release X.Y.Z [--dry-run]  (SemVer, p. ej. 1.1.0)"
+TAG="v$VER"
+[[ "$(git rev-parse --abbrev-ref HEAD)" == "main" ]] || die "ejecútalo desde la rama main"
+git diff --quiet && git diff --cached --quiet || die "hay cambios sin commit: haz commit antes de etiquetar"
+git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && die "la etiqueta $TAG ya existe (no se reescribe: saca la siguiente versión)"
+LAST="$(git tag --list 'v*' --sort=-v:refname | head -1)"
+if [[ -n "$LAST" ]]; then
+  python3 - "$LAST" "$VER" <<'PY' || die "la versión debe ser mayor que la última etiqueta ($LAST)"
+import sys
+a=tuple(map(int,sys.argv[1].lstrip('v').split('.'))); b=tuple(map(int,sys.argv[2].split('.')))
+sys.exit(0 if b>a else 1)
+PY
+fi
+grep -q "^## \[$VER\]" CHANGELOG.md || die "falta la sección «## [$VER] - AAAA-MM-DD» en CHANGELOG.md"
+NOTES="$(python3 - "$VER" <<'PY'
+import re,sys
+t=open("CHANGELOG.md").read(); v=re.escape(sys.argv[1])
+m=re.search(r"^## \[%s\][^\n]*\n(.*?)(?=^## \[|\Z)"%v,t,re.S|re.M)
+print((m.group(1) if m else "").strip())
+PY
+)"
+[[ -n "$NOTES" ]] || die "la sección $VER del CHANGELOG.md está vacía"
+echo "Versión $TAG (anterior: ${LAST:-ninguna})"; echo "----"; echo "$NOTES" | head -20; echo "----"
+python3 bin/gen-docs >/dev/null
+if [[ $DRY -eq 1 ]]; then echo "(simulacro) habría actualizado VERSION, hecho commit, etiquetado $TAG y subido a origin"; git checkout -- docs 2>/dev/null || true; exit 0; fi
+echo "$VER" > VERSION
+git add -A
+git diff --cached --quiet || git commit -q -m "Versión $VER
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+git tag -a "$TAG" -m "Crm Hub 360 $TAG
+
+$NOTES"
+git push -q origin main
+git push -q origin "$TAG"
+echo "✓ $TAG creada y subida. Despliega con: bin/backup && bin/crmhub release:publish --note \"$TAG\""

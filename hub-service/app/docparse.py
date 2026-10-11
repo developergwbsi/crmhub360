@@ -13,6 +13,7 @@ MONEY_RX = r"\$\s*\d[\d.,]*|\b\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?\b"
 
 # ---------------- texto
 def read_pdf(data: bytes) -> dict:
+    """Lee el PDF con pypdf: texto con la disposición original (layout), texto plano en una línea (flat) y número de páginas."""
     reader = PdfReader(io.BytesIO(data))
     layout = "\n".join((p.extract_text(extraction_mode="layout") or "") for p in reader.pages).strip()
     flat = re.sub(r"\s+", " ", "\n".join((p.extract_text() or "") for p in reader.pages)).strip()
@@ -49,6 +50,7 @@ TYPES = [("Reporte de crédito", r"historia de cr[eé]dito|reporte de cr[eé]dit
 
 
 def detect_type(flat: str) -> str:
+    """Adivina el tipo de documento (reporte de crédito, certificado laboral, cédula, extracto) contando palabras clave; «Documento» si ninguna coincide."""
     best, score = "Documento", 0
     for name, rx, w in TYPES:
         n = len(re.findall(rx, flat, re.I)) * w
@@ -62,6 +64,7 @@ LABEL_OK = re.compile(r"^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜ
 
 
 def pairs(layout: str) -> list[tuple[str, str]]:
+    """Pares (etiqueta, valor) del texto: líneas «Etiqueta: valor» o dos columnas separadas por varios espacios; sin duplicados."""
     out, seen = [], set()
     for raw in layout.splitlines():
         line = raw.strip()
@@ -88,6 +91,7 @@ def _find(rx: str, flat: str, group: int = 1, flags=re.I):
 
 # ---------------- datos que aparecen en frases (certificados, cédulas)
 def sentence_items(flat: str) -> list[tuple[str, str]]:
+    """Datos que aparecen en frases (nombre, identificación, empresa, NIT, cargo, fechas, tipo de contrato, ingreso mensual) mediante expresiones regulares."""
     f, out = flat, []
 
     def add(label, v):
@@ -113,6 +117,7 @@ ENTITY_RX = re.compile(r"\b(banco|bancolombia|davivienda|bbva|colpatria|scotiaba
 
 
 def credit_items(layout: str, flat: str) -> dict:
+    """Extrae de un reporte de crédito el puntaje, la tabla de obligaciones y los totales (deuda, mora, acreedores, máximo de días, castigadas)."""
     res: dict = {}
     s = _find(r"(?:puntaje|score)[^\d\n]{0,40}(\d{2,3})\b", layout) or _find(r"(?:puntaje|score)[^\d]{0,40}(\d{2,3})\b", flat)
     if s:
@@ -161,6 +166,7 @@ def credit_items(layout: str, flat: str) -> dict:
 
 
 def credit_summary(r: dict) -> str:
+    """Resumen en una frase por dato de un reporte de crédito ya leído (resultado de credit_items)."""
     parts = []
     if r.get("score"):
         parts.append(f"Puntaje de crédito: {r['score']}.")
@@ -175,11 +181,13 @@ def credit_summary(r: dict) -> str:
 
 
 def obligations_text(obl: list[dict]) -> str:
+    """Una línea por obligación («• entidad: saldo · mora · días») con puntos como separador de miles."""
     return "\n".join(f"• {o['entity']}: saldo {int(o['balance']):,} · mora {int(o['overdue']):,} · {o['days']} días{' · CASTIGADA' if o['written_off'] else ''}".replace(",", ".") for o in obl)
 
 
 # ---------------- lectura libre (detección automática)
 def auto_items(doc: dict) -> tuple[str, list[dict]]:
+    """Lectura libre sin perfil: devuelve el tipo de documento y hasta 30 datos {label, value, type} detectados por reglas."""
     layout, flat = doc["layout"], doc["flat"]
     dtype = detect_type(flat)
     items, seen = [], set()
@@ -237,6 +245,7 @@ def _words(s: str) -> list[str]:
 
 
 def profile_values(profile: dict, doc: dict) -> dict:
+    """Valores de los campos de un perfil de lectura: usa KEYMAP para las claves conocidas y busca por nombre/pista entre pares y frases para las demás; convierte según el tipo del campo."""
     ctx = {"flat": doc["flat"], "pairs": pairs(doc["layout"]), "credit": credit_items(doc["layout"], doc["flat"]), "sent": dict(sentence_items(doc["flat"]))}
     out = {}
     for f in profile["fields"]:

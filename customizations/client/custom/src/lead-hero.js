@@ -1,4 +1,7 @@
-// Encabezado visual del lead (avatar, estado, contacto y cifras clave). Lo usan la vista completa y el panel lateral.
+/**
+ * Encabezado visual del lead (avatar, estado, contacto y cifras clave). Lo usan la vista completa y el panel lateral.
+ * html(view) arma el bloque (también para correos: remitente, asunto y de/para/fecha); mount(view) lo inserta al inicio del registro y lo refresca cuando el modelo cambia. Sin endpoints.
+ */
 define('custom:lead-hero', [], function () {
     const COLORS = ['#4f63e8', '#8b5cf6', '#0ea5e9', '#2fa36b', '#f59e0b', '#ef5b5b', '#14b8a6', '#d4729b'];
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));

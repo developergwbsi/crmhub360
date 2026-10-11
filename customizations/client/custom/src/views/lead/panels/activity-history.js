@@ -1,4 +1,8 @@
-// Historial de actividades completo: correos, llamadas, reuniones, tareas, WhatsApp, SMS, Telegram y cambios de estado, en una sola línea de tiempo.
+/**
+ * Panel «Historial de actividades» del Lead: línea de tiempo con correos, llamadas, reuniones, tareas, WhatsApp, SMS, Telegram y cambios de estado.
+ * Endpoint: GET CrmHub/leadTimeline (kind=all).
+ * Se recarga con custom:live-panel y cuando el modelo emite «sync» (con 700 ms de retraso). Los elementos con href navegan por el router; los de contacto usan custom:handlers/lead-contact.
+ */
 define('custom:views/lead/panels/activity-history', ['views/record/panels/bottom', 'custom:ui', 'custom:handlers/lead-contact', 'custom:live-panel'], function (Dep, ChUi, ContactHandler, Live) {
     const T = {
         email: ['fas fa-envelope', '#f59e0b', 'Correo'], call: ['fas fa-phone', '#2fa36b', 'Llamada'], meeting: ['fas fa-calendar-check', '#8b5cf6', 'Reunión'], task: ['fas fa-list-check', '#64748b', 'Tarea'],

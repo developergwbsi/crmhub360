@@ -25,18 +25,21 @@ _sem = asyncio.Semaphore(5)
 
 
 def ensure_schema() -> None:
+    """Crea la tabla process_runs (registro de ejecuciones) si no existe."""
     with db.pool.connection() as c:
         c.execute(SCHEMA)
 
 
 # ---------------- servicios del sistema (los define y mantiene el Centro de control; sus credenciales nunca salen de ahí)
 def lookup(lid: str) -> dict | None:
+    """Servicio del sistema (definido en el Centro de control, tabla control_settings 'lookups') por su id, o None."""
     with db.pool.connection() as c:
         r = c.execute("SELECT value FROM control_settings WHERE key='lookups'").fetchone()
     return next((x for x in (r["value"] if r else []) if x.get("id") == lid), None)
 
 
 def assigned(tenant: dict) -> list[str]:
+    """Ids de servicios del sistema habilitados para la empresa (settings.lookups)."""
     return list((tenant.get("settings") or {}).get("lookups") or [])
 
 
@@ -90,15 +93,18 @@ def clean(new: list, old: list | None, tenant_assigned: list[str] | None = None)
 
 
 def public(procs: list | None) -> list[dict]:
+    """Procesos aptos para la interfaz: oculta el secreto de la configuración HTTP."""
     return [{**p, "http": httpgen.public(p.get("http"))} for p in (procs or [])]
 
 
 def load(tenant: dict) -> list[dict]:
+    """Procesos configurados de la empresa (settings.processes)."""
     return list((tenant.get("settings") or {}).get("processes") or [])
 
 
 # ---------------- ejecución
 def values_of(lead: dict, tenant: dict) -> dict:
+    """Variables que se pueden usar en la llamada (identificación, nombre, teléfono, correo, fuente, etc.) a partir de los datos del lead."""
     full = (lead.get("name") or "").strip()
     return {"identificacion": lead.get("identification") or "", "tipo_identificacion": lead.get("identificationType") or "", "nombre": lead.get("firstName") or full.split(" ")[0],
             "apellido": lead.get("lastName") or "", "nombre_completo": full, "telefono": lead.get("phoneNumber") or "", "correo": lead.get("emailAddress") or "",
@@ -107,6 +113,7 @@ def values_of(lead: dict, tenant: dict) -> dict:
 
 
 def matches(proc: dict, lead: dict, changed: bool) -> bool:
+    """True si el lead cumple el disparador del proceso (fuente, formulario y si corre también al cambiar)."""
     tr = proc.get("trigger") or {}
     if changed and not tr.get("runOnChange", True):
         return False
@@ -149,6 +156,7 @@ def preview(proc: dict, text: str) -> list[dict]:
 
 
 async def test(tenant: dict, proc: dict, values: dict) -> dict:
+    """Ejecuta el proceso una vez con valores de prueba, sin guardar nada; devuelve estado, respuesta y vista previa de lo que se guardaría."""
     try:
         status, text = await _request(proc, values, tenant)
     except Exception as e:
@@ -199,6 +207,7 @@ async def _apply(tenant: dict, proc: dict, lead_id: str, text: str) -> list[dict
 
 
 async def execute(tenant: dict, proc: dict, lead: dict, run_id: int) -> None:
+    """Ejecuta un proceso para un lead con hasta 3 intentos, aplica la respuesta al lead y registra el resultado en process_runs."""
     slug, lead_id = tenant["slug"], lead["id"]
     values = values_of(lead, tenant)
     last_err, status_code, text = "", None, ""
@@ -270,6 +279,7 @@ async def _safe(tenant, proc, lead, rid):
 
 
 def runs(tenant: str, lead_id: str | None = None, limit: int = 60) -> list[dict]:
+    """Últimas ejecuciones de procesos de la empresa (opcionalmente de un lead)."""
     with db.pool.connection() as c:
         q = "SELECT id, lead_id, process_id, process_name, managed_id, status, http_status, error, applied, attempts, started_at, finished_at FROM process_runs WHERE tenant=%s" + (" AND lead_id=%s" if lead_id else "") + " ORDER BY id DESC LIMIT %s"
         return [dict(r) for r in c.execute(q, (tenant, lead_id, limit) if lead_id else (tenant, limit)).fetchall()]

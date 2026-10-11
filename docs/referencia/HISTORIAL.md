@@ -1,0 +1,108 @@
+# Historial de cambios
+
+*Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
+
+## Cambios
+
+- `969de08` 2026-10-10 — Panel gerencial: los leads que gestiona un comercial virtual dejan de contarse como «Sin asesor» y aparecen en el rendimiento con su nombre
+- `b791835` 2026-10-10 — Formularios web: galería de 8 plantillas listas (turismo, deudas, inmobiliaria, citas, cursos, seguros, evento, contacto), botón Duplicar y manual actualizado
+- `511e0e1` 2026-10-10 — Formularios web: acción «Avisar al equipo» (campana y push «Nuevo registro»), correos con imágenes, PDF adjunto y botón de WhatsApp, y opción de no registrar dos veces al mismo cliente
+- `cec1270` 2026-10-10 — Formularios web: encabezado e imagen de fondo, colores del botón y la página, ancho por campo, campos condicionales y acciones al recibir (correo o WhatsApp, según la respuesta de una lista)
+- `1697666` 2026-10-09 — Manual de usuario: vivo y actualización automática, plantillas, simulador y banco, lectura de PDF, mensajes masivos vs campañas, proveedores de mensajería, comercial virtual (entrenamiento, menús, varios comerciales), reparto de leads, procesos y copias
+- `ce684f1` 2026-10-09 — Comercial virtual: botón Mis comerciales para volver, Cancelar en entrenamiento y mensajes con opciones, y selector de comercial con estilo
+- `1912c2f` 2026-10-09 — Varios comerciales virtuales por empresa: cada uno con su entrenamiento, interruptor de encendido, duplicar/quitar y resultados; reparto de leads entre personas y comerciales virtuales (compartido o repartido por pesos, intercalados); cantidad incluida en la licencia ampliable desde el Centro de control; cambio de comercial en el lead
+- `0629031` 2026-10-09 — Comercial virtual: mensajes con opciones de WhatsApp (lista o botones) configurables por la empresa; la IA decide cuándo usarlos, se envían nativos con Meta o como texto numerado en otros proveedores, y la elección del cliente se registra (y puede cambiar el estado)
+- `de0fae4` 2026-10-09 — Actualización automática de la app cuando hay versión nueva y la pantalla está en reposo; panel gerencial en vivo; el encabezado del lead muestra al comercial virtual cuando no hay asesor humano
+- `db72333` 2026-10-09 — Correos enviados por EspoCRM (redactor nativo, respuestas, envío de respaldo) salen en HTML con el diseño de marca de la empresa; los de texto plano se convierten; servicio EmailBrand compartido con el envío del Hub
+- `e6955b8` 2026-10-09 — Paneles del lead en vivo (historial de actividades, estados y comercial virtual se actualizan al enviar/recibir sin recargar) y fichas a todo el ancho
+- `ef20305` 2026-10-09 — Motor de IA Anthropic: no enviar «temperature» (los modelos Claude recientes lo rechazan)
+- `30f503c` 2026-10-09 — Avisos de lead nuevo en tiempo real (campana y push al asesor y a los administradores), listas de leads que se actualizan solas, y websocket por empresa: cada Espo enviaba los avisos a un servidor de websocket al azar entre todas las empresas
+- `7c4f9d1` 2026-10-09 — Canales de mensajería: varios proveedores por canal (WhatsApp, SMS, llamadas, Telegram) en cuadros con interruptor, prueba de conexión, mensaje/llamada de prueba, principal y elección de línea al enviar; respuestas por la misma línea por la que escribió el cliente
+- `4c7928a` 2026-10-09 — WhatsApp por Evolution: cambiar de número (cerrar sesión y escanear otro QR); mensajes masivos limitados a 100 destinatarios por campaña y 1 mensaje cada 2 minutos por empresa (ampliable desde el Centro de control)
+- `9ba11be` 2026-10-09 — Centro de control: la actividad muestra el nombre de la empresa/proveedor/servicio en vez del identificador; aviso de nueva versión a las sesiones abiertas
+- `9ab1aff` 2026-10-09 — Tablas: buscador, paginación (10/25/50/100), encabezado fijo y scroll dentro del contenido en el Centro de control, procesos, mensajes masivos y listas de EspoCRM; menús de fila en posición fija
+- `27eae4c` 2026-10-09 — Centro de control: estados vacíos con ilustración (empresas, proveedores, servicios, versiones, trabajos, actividad, usuarios)
+- `49a5239` 2026-10-09 — Estados vacíos con ilustración animada (caja, lupa, chat, correo, gráfica, documento, calendario, robot) en listas, paneles y pantallas propias, en lugar de texto suelto
+- `2a90299` 2026-10-09 — Copias de leads: al limpiar o restaurar, la lista de leads se actualiza sola sin recargar la página
+- `c8ff5db` 2026-10-09 — Copias y limpieza de leads (administrador): crear/descargar/restaurar copias de los leads con su actividad y limpiar todos los leads con copia automática previa y confirmación escrita
+- `1db069c` 2026-10-09 — Motor de IA Anthropic: ID de workspace opcional (claves sin workspace), con mensaje de ayuda cuando el proveedor lo pide
+- `bce6bb4` 2026-10-09 — Centro de control: botón «Agregar motor de IA» con presets (Claude, OpenAI, Groq, OpenRouter, Ollama, otro) y ayuda en cada campo
+- `3686aa5` 2026-10-09 — Motor de IA intercambiable (Anthropic, OpenAI y compatibles, Ollama): proveedor global definido en el Centro de control, asignable por empresa o propio de la empresa, con prueba y consumo; aprobación previa del comercial virtual (propone, una persona edita y aprueba)
+- `33faa92` 2026-10-09 — Comercial virtual: versión automática del seguimiento de leads (primer contacto, respuestas, seguimientos con cadencia, cambio de estado, paso a una persona), entrenable por la empresa, con modo de prueba, panel en el lead, resultados y trazabilidad; versión manual siempre disponible; licencia y consumo por empresa en el Centro de control
+- `6b836b3` 2026-10-09 — Lectura de documentos: lectura interna propia (sin IA, ~1 s) como opción por defecto con IA opcional (mejorar con IA); la lectura sigue en segundo plano al cerrar la ventana con indicador global, aviso al terminar y reapertura para revisar; limpieza de lecturas huérfanas
+- `472d509` 2026-10-08 — Lectura de documentos: detección automática (el sistema lista los datos que encuentra y el usuario marca cuáles conservar, los corrige y elige dónde guardarlos, y puede recordar la selección como perfil); lectura en segundo plano con consulta de avance; destino sugerido por reglas
+- `94f82af` 2026-10-08 — Lectura de documentos (PDF) en cualquier estado del lead con perfiles configurables (crédito, cédula, ingresos, resumen y los propios de la empresa), revisión de los datos antes de guardar; plantillas listas para configurar (buró, validación de identidad, scraping, webhook)
+- `39f67fc` 2026-10-08 — Servicios de consulta del sistema: el Centro de control define servicios (buró de crédito, validación de identidad, scraping…) con sus credenciales, los habilita por empresa y mide las consultas del mes; la empresa los usa desde Procesos de leads sin ver credenciales
+- `c39978d` 2026-10-08 — Procesos al llegar un lead: campo Identificación (mapeable en los formularios), procesos configurables por empresa que llaman a una API/webhook con los datos del lead y guardan la respuesta, ejecución en segundo plano con reintentos, registro de ejecuciones, prueba sin guardar y reejecución manual
+- `9f78be3` 2026-10-08 — Kanban: el menú de opciones de la tarjeta se abre junto a ella (el levantado al pasar el cursor ya no usa transform, que desplazaba el menú de posición fija)
+- `b218c1c` 2026-10-08 — Kanban de leads: cada buscador queda justo bajo su estado (misma rejilla que la fila de estados), también al fijarse con el scroll
+- `ff60a17` 2026-10-08 — Ficha del lead: ocultar la lista de objetivos desde la vista (corrige un error de carga al deshabilitarla por metadatos)
+- `be776d5` 2026-10-08 — Ficha del lead más compacta: pestañas Resumen y Calificación, historial de estados en la columna derecha, reporte de crédito solo con el módulo de cartera y sin lista de objetivos
+- `7ccbbc1` 2026-10-08 — El historial de actividades unificado vuelve a la columna derecha (donde estaba el estándar) junto a Actividades y Tareas, sin ocupar la columna principal
+- `de8e2e5` 2026-10-08 — Historial de actividades unificado en lead, cuenta, contacto y oportunidad: correos, llamadas, reuniones, tareas, WhatsApp, SMS, Telegram y cambios de estado, con filtros por canal
+- `d0136dc` 2026-10-08 — WhatsApp en línea compartida: la respuesta del cliente le llega a quien le escribió (aviso push, lead sin asesor queda a su cargo); resuelve contactos con LID; elegir a qué número se escribe cuando el cliente tiene varios (por defecto el último desde el que respondió)
+- `da900d9` 2026-10-08 — Mis plantillas: lienzo propio por canal (diseñador de bloques HTML para correo; WhatsApp y Telegram con teléfono de vista previa, formato, emoji y enlaces; SMS con contador); RCS bloqueado; enlaces con diálogo propio, sin alert nativo; Telegram convierte el formato al enviar
+- `7601f05` 2026-10-08 — Límite de plantillas personales por empresa: 10 por usuario y canal incluidas en la licencia, ampliable como servicio adicional desde el Centro de control
+- `c54c071` 2026-10-08 — Mis plantillas: cada usuario crea hasta 10 plantillas privadas por canal (correo, WhatsApp, Telegram, SMS) con variables, vista previa y selector en los paneles de mensajes
+- `61da58c` 2026-10-08 — Listas desplegables (acciones de fila, paneles, buscador) ya no se cortan: se quita overflow:hidden de contenedores y las esquinas redondeadas pasan a las celdas
+- `dfc7978` 2026-10-08 — WhatsApp, SMS, Telegram, llamadas y correo también para cuentas, contactos y oportunidades: la conversación sigue en el lead de origen (o se crea un hilo si el registro no tiene lead)
+- `b0d183d` 2026-10-08 — Simulador y Banco de conocimiento usan todo el ancho de la pantalla
+- `e9cfd00` 2026-10-08 — Service worker: revalidar el código propio ignorando el caché HTTP del navegador
+- `ea251a3` 2026-10-08 — Plantilla de vhost: revalidar el código propio en cada carga
+- `cc9a103` 2026-10-08 — Apache: el código propio (/client/custom/src|css|res) se revalida en cada carga para que las funciones nuevas no queden atrapadas en la caché del navegador
+- `1b34f69` 2026-10-08 — Simulador del proceso comercial (lead de prueba de registro a cliente con línea de tiempo) y Banco de conocimiento (estadísticas del historial real, recomendaciones con IA y aprendizajes del equipo)
+- `c966915` 2026-10-08 — Módulo opcional «Cartera y cobranza» por empresa: sin él el dashboard y la ficha del lead no muestran deuda ni mora; se activa desde el Centro de control
+- `7b5f9ef` 2026-10-08 — Correos: sin «Editar» en la lista ni acceso a la pantalla de edición para correos enviados o recibidos
+- `f84b958` 2026-10-08 — Correos: revisión del buzón cada 8 s + aviso push de correo nuevo; los correos enviados/recibidos ya no se pueden editar (servidor y pantalla)
+- `eb44a6d` 2026-10-08 — Correos: los enviados quedan en «Enviados» (autor = el usuario), no en la bandeja de entrada; columna Tipo (Enviado/Recibido) en la lista
+- `55a0705` 2026-10-08 — Correos: editor con formato que conserva el HTML de las plantillas y diseño de marca (logo/nombre de la empresa, tarjeta, firma y pie)
+- `2402723` 2026-10-08 — Correos por usuario: envío desde el Hub con nombre, firma y Reply-To personal (alias cuenta+id); la bandeja importa solo el correo enrutable a cada usuario
+- `221ed97` 2026-10-07 — Evolution API propio como proveedor aliado; vinculación de WhatsApp por QR dentro del CRM; cada empresa usa la clave de su instancia
+- `530f488` 2026-10-07 — Centro de control: enviar correos a empresas ya creadas (bienvenida, recordatorio de pago, reingreso, vencimiento de licencia, comunicado) con plantillas editables, vista previa e historial
+- `306a33c` 2026-10-07 — Nueva empresa: datos completos del administrador (nombre, apellido, correo, teléfono, país, ciudad), zona horaria y moneda por país, plantilla de bienvenida editable y envío automático con el acceso y las credenciales
+- `a42ddad` 2026-10-07 — Buzón de entrada: el Hub lee el IMAP de la cuenta de correo de la empresa e importa los correos a la bandeja; permiso Import para el usuario API; control aplica el buzón con el proveedor
+- `f562fd2` 2026-10-07 — Correos: carpetas, botones y lista con el estilo de la aplicación; detalle del correo con encabezado visual
+- `e1ea435` 2026-10-07 — Correo: galería de plantillas, envío con la cuenta del sistema (Espo 10), Gmail por 465/SSL y remitente automático
+- `628ace7` 2026-10-07 — Proveedores aliados: proveedores de correo (Gmail, Outlook, SendGrid…) con prueba de envío y asignación por empresa
+- `7751861` 2026-10-07 — Centro de control: correo general con resumen del correo configurado, editar, configurar otro y activar/desactivar
+- `b01340b` 2026-10-07 — Centro de control: el refresco automático ya no recarga formularios; selector de proveedor de correo con opción vacía
+- `12251cb` 2026-10-07 — Centro de control: correo general con selector de proveedor (Gmail, Outlook, etc.), guardado sin recargar y contraseñas de aplicación de Google
+- `cc35350` 2026-10-07 — Login: «¿Olvidaste tu contraseña?» siempre visible (con aviso útil si la empresa no tiene correo de salida)
+- `9399d82` 2026-10-07 — Favicons propios: Crm Hub 360 para empresas, CD para desarrollo y CP para producción
+- `39e8fec` 2026-10-07 — Centro de control: visor de modo lectura incrustado, cambio de clave propio y recuperación por correo, correo general, proveedores aliados y servicios por empresa; login con recordar usuario y bienvenida
+- `1389ce1` 2026-10-07 — Centro de control a todo el ancho, modo lectura corregido, validación de clave en el diálogo, renombrar empresa; marca: empresa + Crm Hub 360 siempre visible
+- `0f608ce` 2026-10-07 — Centro de control: ajuste de estilo de botones-enlace
+- `58033b9` 2026-10-07 — Centro de control: base de producción versionada, ejecutor de trabajos, API/landing de empresas y acceso de soporte en modo lectura
+- `270558e` 2026-10-07 — Ficha lateral: Editar se hace dentro del mismo panel (sin ventana encima)
+- `1b5d526` 2026-10-07 — Ficha lateral: se quita el botón Cerrar (queda la X)
+- `034d500` 2026-10-07 — Ficha lateral para cuentas, contactos y oportunidades; botones de solo icono; canales sin ventanas aparte (avisos, invitación Telegram, llamada y correo dentro del panel); ajuste al cerrar paneles
+- `6cb7274` 2026-10-07 — Pantalla dividida: el tablero se achica con la ficha del lead y el canal abiertos al lado
+- `abaf678` 2026-10-07 — Kanban: el buscador de cada estado queda fijo junto al encabezado de estados
+- `481f34a` 2026-10-07 — Kanban: la fila de estados queda fija bajo el encabezado al hacer scroll
+- `4a4f549` 2026-10-07 — Kanban: 25 por columna con contador total, Mostrar más visible y apertura fiable del panel lateral
+- `61416fb` 2026-10-07 — Llamadas: el panel completo es el teléfono (sin imagen incrustada)
+- `0054ac2` 2026-10-07 — Encabezados fijos en todas las páginas y resumen del lead fijo; chat, teléfono y correos siempre como panel lateral
+- `d748474` 2026-10-07 — Interfaces por canal (chat, teléfono, correos), diálogos propios y control de cambios de estado
+- `2d505d1` 2026-10-07 — Ficha del lead: panel lateral desde el Kanban, encabezado visual y botones de contacto alineados
+- `b156a39` 2026-10-07 — Integraciones: la pestaña activa ahora se marca al cambiar de pestaña
+- `5034571` 2026-10-07 — SMS, llamadas click-to-call, proveedor HTTP genérico, Twilio y mensajes masivos
+- `210e6c5` 2026-10-07 — Integraciones multicanal: WhatsApp (Evolution/Meta Cloud/Gupshup), Telegram, Meta y constructor de formularios web
+- `2e1d6f4` 2026-10-07 — Web Push real con la app cerrada (VAPID) y aviso de nueva versión al desplegar
+- `7d15c22` 2026-10-07 — El aviso de Sin conexión se mantiene aunque EspoCRM reconstruya la página
+- `6c402de` 2026-10-07 — PWA con modo sin conexión, modo claro/oscuro siempre visible, colores por sección del menú y aviso de nueva versión
+- `9653b6e` 2026-10-07 — Logos de WhatsApp y Facebook como SVG propio (la fuente de marcas de Espo está recortada)
+- `f8372df` 2026-10-07 — Envío de WhatsApp y registro de llamadas desde el lead, íconos unificados, manual por rol y Calendario en los roles
+- `9f61e18` 2026-10-07 — Menú que empuja el contenido, listas como tarjetas, buscadores rediseñados, buscador por columna del Kanban, pantallas de asignación y estados
+- `b9df861` 2026-10-07 — Respaldo diario verificado (BD, configuración y adjuntos) y guía de restauración
+- `be83307` 2026-10-07 — Panel gerencial, organigrama, grupo Organización y tooltip del menú colapsado
+- `c1c18bf` 2026-10-07 — Asignación automática balanceada por campaña/grupo y reasignación para superiores
+- `58152cd` 2026-10-07 — Motor de filtros configurable: servicios (resolución de deudas, consolidación, préstamo, limpieza...) con condiciones por empresa
+- `799baef` 2026-10-07 — Kanban de Lead: tarjetas con avatar y más datos, cursor de arrastre; avatar de WhatsApp (best-effort)
+- `cdce713` 2026-10-07 — Interfaz homogénea: diseño de Lead con evaluación de crédito, Kanban con tarjetas, lista, dashboard y admin limpio
+- `5d6e344` 2026-10-07 — Manual e Integraciones dentro de la plataforma, Leads abre en Kanban, ojo y buscador sin superposición
+- `49fe720` 2026-10-07 — Corrige barra superior: altura 52px, buscador contenido y header claro
+- `9457883` 2026-10-07 — Tema Crm Hub 360 para toda la app, ancho completo, Kanban de Leads, manual y menú
+- `36b6bb0` 2026-10-07 — Login dividido de Crm Hub 360 (panel de marca + formulario)
+- `e1f3777` 2026-10-07 — Modelo llama3.1:8b, benchmark, vhosts SSL dev/prod y fix de ruta de webhooks
+- `babfde2` 2026-10-07 — Crm Hub 360: base multi-tenant EspoCRM + Hub Service (Ollama) + Apache dev/prod
+

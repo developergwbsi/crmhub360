@@ -9,11 +9,13 @@ class HubClient
 {
     public function __construct(private Config $config) {}
 
+    /** POST JSON al Hub (atajo de request). */
     public function post(string $path, array $body, int $timeout = 120): array
     {
         return $this->request('POST', $path, $body, $timeout);
     }
 
+    /** Llamada HTTP al Hub con la URL, el slug y el token de la config del tenant; devuelve la respuesta decodificada. */
     public function request(string $method, string $path, ?array $body = null, int $timeout = 30): array
     {
         $ch = curl_init(rtrim((string) $this->config->get('crmhubServiceUrl'), '/') . $path);

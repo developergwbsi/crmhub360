@@ -60,7 +60,7 @@ cmd_release_publish() {
   load_env
   local note=""; while [[ $# -gt 0 ]]; do case "$1" in --note) note="$2"; shift 2;; *) die "opción desconocida: $1";; esac; done
   [[ "$note" != *"'"* ]] || die "no se permiten comillas simples en la nota"
-  local id ref; id="$(date +%Y%m%d-%H%M%S)"; ref="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo sin-git)"
+  local id ref; id="$(date +%Y%m%d-%H%M%S)"; ref="$(git -C "$ROOT" describe --tags --always 2>/dev/null || echo sin-git)"   # con etiqueta: v1.2.0 (o v1.2.0-3-gabc1234 si hay commits después)
   git -C "$ROOT" diff --quiet 2>/dev/null || ref="$ref+cambios-sin-commit"
   local d="$ROOT/releases/$id"; mkdir -p "$d/bin"
   cp -a "$ROOT/customizations" "$d/customizations"

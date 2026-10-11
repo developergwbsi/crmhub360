@@ -2,6 +2,17 @@
 
 CRM multi-empresa sobre EspoCRM 10 + PostgreSQL, con IA local (Ollama) para leer reportes de crédito y asistir a los comerciales. Idioma por defecto: español (`es_ES`), moneda COP, zona `America/Bogota`.
 
+**Versión actual:** ver [`VERSION`](VERSION) · cambios por versión en [`CHANGELOG.md`](CHANGELOG.md) · el código se versiona con [SemVer](docs/VERSIONES.md) y etiquetas `vX.Y.Z` en git.
+
+## Documentación
+
+Toda la documentación vive en [`docs/`](docs/README.md): [arquitectura](docs/ARQUITECTURA.md), [operación y despliegue](docs/OPERACION.md), [versionado](docs/VERSIONES.md), [guía de desarrollo](docs/DESARROLLO.md), [personalización de EspoCRM](docs/ESPOCRM-PERSONALIZACION.md), el [manual de usuario](docs/MANUAL-USUARIO.md), una página por módulo (formularios, comercial virtual, mensajería, tiempo real, Centro de control) y la **referencia generada** del código (API del Hub y del Centro, rutas de Espo, módulos, historial). El código está comentado: cada módulo Python y cada archivo JavaScript del cliente abre con una cabecera que explica qué hace.
+
+```bash
+bin/gen-docs                 # regenera manual en Markdown y referencias (tras cambiar código)
+bin/tag-release 1.1.0        # valida, regenera docs, etiqueta vX.Y.Z y sube a git
+```
+
 ## Arquitectura
 
 | Pieza | Detalle |
@@ -61,7 +72,7 @@ Teléfonos se normalizan a E.164 (sin prefijo se asume +57).
 
 - **Tema claro/oscuro**: `crmhub-theme.css` (claro, sobre `espo.css`) y `crmhub-theme-dark.css` (sobre `dark.css` de Espo); ambos importan `crmhub-base.css` (reglas) y un archivo de tokens `--ch-*`. `src/crmhub-boot.js` cambia el `<link id="main-stylesheet">` y guarda la elección en `localStorage`.
 - **PWA**: `manifest.webmanifest`, `sw.js` (alcance `/`, requiere las cabeceras `Service-Worker-Allowed` del vhost, ya en `templates/apache-vhost.conf.tpl`). Caché: `/client/*` primero caché; API GET red primero con copia **por usuario** (no se guardan `CrmHub/integrations`, adjuntos ni administración); escrituras sin red -> 503 claro.
-- **Nueva versión**: `bin/crmhub` escribe `client/custom/version.json` (hash del contenido) en cada despliegue; el navegador lo consulta cada 5 min y al volver a la pestaña, y muestra el aviso + notificación de escritorio si se concedió el permiso. **Web Push con la app cerrada**: `hub-service/app/push.py` (VAPID RFC 8292, `pywebpush`; claves en la tabla `kv`, suscripciones en `push_subscriptions`). El navegador se suscribe desde el botón del megáfono; `bin/crmhub tenant:upgrade` envía el aviso «nueva versión» a los dispositivos del tenant solo si cambió el contenido (`NO_PUSH=1` lo omite). iOS exige la app instalada.
+- **Nueva versión**: `bin/crmhub` escribe `client/custom/version.json` (hash del contenido) en cada despliegue; el navegador lo consulta cada 60 s y al volver a la pestaña; si la pantalla está en reposo se actualiza sola y, si no, muestra el aviso + notificación de escritorio si se concedió el permiso. **Web Push con la app cerrada**: `hub-service/app/push.py` (VAPID RFC 8292, `pywebpush`; claves en la tabla `kv`, suscripciones en `push_subscriptions`). El navegador se suscribe desde el botón del megáfono; `bin/crmhub tenant:upgrade` envía el aviso «nueva versión» a los dispositivos del tenant solo si cambió el contenido (`NO_PUSH=1` lo omite). iOS exige la app instalada.
 - Íconos de la app: `client/custom/img/pwa-*.png`.
 
 ## Canales, formularios y Telegram

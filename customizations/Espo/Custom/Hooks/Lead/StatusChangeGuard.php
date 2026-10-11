@@ -16,6 +16,7 @@ class StatusChangeGuard
 
     public function __construct(private EntityManager $em, private User $user) {}
 
+    /** Evento beforeSave de Lead (orden 20): detecta el cambio de estado y exige comentario o acción previa si lo hace una persona. */
     public function beforeSave(Entity $entity, array $options): void
     {
         if ($entity->isNew() || !$entity->isAttributeChanged('status') || !empty($options['skipStatusGuard'])) {
@@ -33,6 +34,7 @@ class StatusChangeGuard
         $this->pending[$entity->getId()] = mb_strlen($comment) >= 3 ? $comment : 'Acción previa: ' . $action['label'];
     }
 
+    /** Evento afterSave de Lead: registra en el historial el cambio de estado detectado en beforeSave. */
     public function afterSave(Entity $entity, array $options): void
     {
         $id = $entity->getId();

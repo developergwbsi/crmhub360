@@ -31,6 +31,7 @@ DEFAULT_SERVICES = [
 
 
 def validate_services(services) -> list[dict]:
+    """Valida y normaliza los servicios y condiciones que edita la empresa (claves únicas, operadores y campos válidos); ValueError con el motivo."""
     if not isinstance(services, list) or not 1 <= len(services) <= MAX_SERVICES:
         raise ValueError(f"Define entre 1 y {MAX_SERVICES} servicios")
     out, keys = [], set()
@@ -67,10 +68,12 @@ def validate_services(services) -> list[dict]:
 
 
 def services_for(tenant: dict) -> list[dict]:
+    """Servicios de calificación del tenant (settings.services) o DEFAULT_SERVICES."""
     return (tenant.get("settings") or {}).get("services") or DEFAULT_SERVICES
 
 
 def metrics_from_lead(lead: dict) -> dict:
+    """Métricas de calificación del lead, incluidas las derivadas (mora sobre deuda total y deuda sobre ingresos)."""
     m = {k: (lead.get(attr) if attr else None) for k, (_, attr, _) in METRICS.items()}
     if m["total_debt"]:
         m["overdue_pct"] = round(100 * (m["overdue_debt"] or 0) / m["total_debt"], 1)
@@ -98,6 +101,7 @@ def _fmt(v, unit="") -> str:
 
 
 def evaluate(lead: dict, services: list[dict]) -> dict:
+    """Aplica las reglas de cada servicio activo al lead y devuelve estado (Califica / Revisión Manual / No califica), servicio sugerido y el detalle por condición."""
     metrics = metrics_from_lead(lead)
     passing, unknown, lines = [], [], []
     for svc in services:
@@ -146,6 +150,7 @@ async def pipeline(espo: Espo) -> dict:
 
 
 async def run(tenant: dict, lead_id: str) -> dict:
+    """Califica el lead en EspoCRM: evalúa las reglas, guarda el resultado y, si califica y estaba en estado nuevo o en calificación, lo pasa a «calificado»."""
     espo = Espo(tenant)
     lead = await espo.get(f"Lead/{lead_id}")
     result = evaluate(lead, services_for(tenant))

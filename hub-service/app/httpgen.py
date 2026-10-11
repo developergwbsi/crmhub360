@@ -66,6 +66,7 @@ def merge(old: dict | None, new: dict) -> dict:
 
 
 def public(cfg: dict | None) -> dict:
+    """Configuración apta para la interfaz: quita el secreto e indica si hay uno (secretSet) con sus últimos 4 caracteres (secretHint)."""
     c = dict(cfg or {})
     s = c.pop(SECRET, "")
     c["secretSet"] = bool(s)

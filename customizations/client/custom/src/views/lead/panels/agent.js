@@ -1,4 +1,8 @@
-// Panel «Comercial virtual» del lead: quién lo atiende (persona o agente), en qué va, qué hizo y por qué (trazabilidad), y los controles para pausarlo o tomar el control.
+/**
+ * Panel «Comercial virtual» del Lead: quién atiende (persona o agente), estado, trazabilidad y controles para pausar o tomar el control.
+ * Endpoints: GET CrmHub/agentLead, POST CrmHub/agentApproval (aprobar/rechazar propuesta, timeout 70 s), POST CrmHub/agentAction (pausar/tomar control).
+ * Emite 'ch:agent' en el modelo cuando cambia si lo atiende el agente; se recarga con 'sync' del modelo (800 ms) y con custom:live-panel.
+ */
 define('custom:views/lead/panels/agent', ['views/record/panels/bottom', 'custom:ui', 'custom:tpl', 'custom:live-panel'], function (Dep, ChUi, Tpl, Live) {
     const esc = ChUi.esc;
     const K = {send: ['fas fa-paper-plane', '#4f63e8'], inbound: ['fas fa-reply', '#2fa36b'], status: ['fas fa-right-left', '#0d9488'], escalate: ['fas fa-user-tie', '#f59e0b'], close: ['fas fa-flag-checkered', '#64748b'],
@@ -25,6 +29,7 @@ define('custom:views/lead/panels/agent', ['views/record/panels/bottom', 'custom:
         }
 
         // Sin asesor humano, el encabezado del lead muestra que lo atiende el comercial virtual
+        // Marca el modelo con si el agente atiende el lead y avisa a otras vistas con 'ch:agent'.
         markAgent(s) {
             const on = s && s.effective === 'auto' && ['active', 'waiting_reply', 'paused'].includes(s.state);
             const was = !!this.model._chAgent;

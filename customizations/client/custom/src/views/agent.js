@@ -1,4 +1,11 @@
-// Comercial virtual: entrenamiento (qué sabe, cómo habla, cuándo escribe, cuándo pasa a una persona), prueba de conversación y resultados con trazabilidad.
+/**
+ * Comercial virtual: entrenamiento (qué sabe, cómo habla, cuándo escribe, cuándo pasa a una persona), prueba de conversación y resultados con trazabilidad.
+ * Pantalla de administración (solo admin: todos sus endpoints exigen administrador). Pestañas: agentes, entrenamiento, menús, prueba, motor de IA y resultados.
+ * Endpoints: CrmHub/agentConfig (GET), agentConfigSave, agentCreate, agentEnable, agentDelete, agentDispatchSave (reparto entre varios comerciales),
+ * agentTest y agentMenuTest (prueba de conversación / de un menú), agentStats y agentPending (resultados), aiConfig, aiOwnSave y aiTest (motor de IA);
+ * además lee la lista de usuarios con GET User.
+ * Peculiaridad: no usa plantilla .tpl; dibuja todo con innerHTML en draw() y delega los eventos (click/change/input) en el elemento raíz.
+ */
 define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep, ChUi, Tpl) {
     const esc = ChUi.esc;
     const DAYS = [[1, 'Lun'], [2, 'Mar'], [3, 'Mié'], [4, 'Jue'], [5, 'Vie'], [6, 'Sáb'], [7, 'Dom']];
@@ -63,6 +70,7 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
 
         dpWeights() { const w = {}; this.el.querySelectorAll('[data-dw]').forEach(i => { w[i.dataset.dw] = Math.max(0, Math.min(100, parseInt(i.value, 10) || 0)); }); return w; }
 
+        // Muestra los porcentajes del reparto entre comerciales mientras se editan los pesos
         dpPreview() {   // porcentajes del reparto mientras se editan los pesos
             const split = (this.el.querySelector('[name="dpmode"]:checked') || {}).value === 'split', w = this.dpWeights();
             const live = this.d.agents.filter(a => a.enabled && a.mode === 'auto').map(a => a.id), ks = (split ? ['humans'] : []).concat(live), tot = ks.reduce((s, k) => s + (w[k] || 0), 0);
@@ -75,6 +83,7 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
                 .catch(xhr => { const rs = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error(rs || 'No se pudo guardar el reparto'); });
         }
 
+        // Aplica la respuesta como nueva configuración y avisa; si falla muestra el motivo (X-Status-Reason) y recarga
         agentCall(promise, ok) {
             return promise.then(r => { this.d = r; this.sel = r.selectedId; if (ok) { Espo.Ui.success(ok); } this.draw(); })
                 .catch(xhr => { const rs = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error(rs || 'No se pudo completar la acción'); this.load(this.sel); });

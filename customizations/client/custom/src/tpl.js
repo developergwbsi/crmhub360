@@ -1,10 +1,14 @@
-// Plantillas personales del usuario (correo, WhatsApp, Telegram, SMS): carga, variables y relleno. Las plantillas son privadas de cada usuario.
+/**
+ * Plantillas personales del usuario (correo, WhatsApp, Telegram, SMS): carga, variables y relleno. Las plantillas son privadas de cada usuario.
+ * Endpoint: GET CrmHub/templates (con caché en memoria; invalidate() la descarta). Variables de relleno: nombre, apellido, nombre_completo, asesor, empresa.
+ */
 define('custom:tpl', [], function () {
     const CH = {email: {label: 'Correo', icon: 'fas fa-envelope', color: '#f59e0b'}, whatsapp: {label: 'WhatsApp', icon: 'fab fa-whatsapp', color: '#25d366'},
         telegram: {label: 'Telegram', icon: 'fab fa-telegram', color: '#229ed9'}, sms: {label: 'SMS', icon: 'fas fa-comment-sms', color: '#0ea5e9'}};
     const VARS = [['{nombre}', 'Nombre del cliente'], ['{apellido}', 'Apellido'], ['{nombre_completo}', 'Nombre completo'], ['{asesor}', 'Tu nombre'], ['{empresa}', 'Tu empresa'], ['{logo}', 'Dirección del logo de la empresa (para imágenes)']];
     let cache = null;
 
+    // Carga las plantillas del usuario (con caché); ante error devuelve lista vacía y máximo 10
     function load(force) {
         if (cache && !force) { return Promise.resolve(cache); }
         return Espo.Ajax.getRequest('CrmHub/templates').then(r => { cache = r; return r; }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } return {items: [], max: 10}; });
@@ -28,6 +32,7 @@ define('custom:tpl', [], function () {
         return v;
     }
     // Los textos de error viajan en una cabecera HTTP y el navegador los lee como Latin-1: se corrige la codificación (hasta dos veces)
+    // Motivo de error legible a partir de la respuesta del servidor
     function reason(xhr, fallback) {
         let s = (xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || '';
         for (let i = 0; i < 2 && /[\u00c2\u00c3]/.test(s); i++) { try { s = decodeURIComponent(escape(s)); } catch (e) { break; } }

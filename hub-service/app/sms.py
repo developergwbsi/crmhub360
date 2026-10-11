@@ -8,6 +8,7 @@ PROVIDERS = {"twilio": "Twilio", "generic": "Otro proveedor (API HTTP)"}
 
 
 def provider(tenant: dict) -> str:
+    """Proveedor de SMS activo («twilio» o «generic»), o cadena vacía si no hay."""
     p = (lines.effective(tenant, "sms").get("settings") or {}).get("sms_provider")
     return p if p in PROVIDERS else ""
 
@@ -22,6 +23,7 @@ def info(text: str) -> dict:
 
 
 async def send_text(tenant: dict, phone: str, text: str, lead: dict | None = None, agent: str = "") -> None:
+    """Envía un SMS por el proveedor configurado, sin dejar nota; ValueError si no hay proveedor."""
     tenant = lines.effective(tenant, "sms")
     p = provider(tenant)
     if p == "twilio":
@@ -34,6 +36,7 @@ async def send_text(tenant: dict, phone: str, text: str, lead: dict | None = Non
 
 
 async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str | None = None, number: str | None = None, line_id: str | None = None) -> dict:
+    """Envía un SMS a un lead (número elegido con whatsapp.pick_number), deja nota en su flujo y pausa al comercial virtual si lo manda un usuario. Devuelve {ok} y los segmentos del texto."""
     from . import whatsapp   # elección del número del cliente (misma regla que WhatsApp)
     tenant = lines.effective(tenant, "sms", line_id)
     espo = Espo(tenant)
@@ -49,6 +52,7 @@ async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str |
 
 
 async def test(tenant: dict, to: str) -> dict:
+    """SMS de prueba al número indicado; devuelve {ok, to}."""
     phone = normalize_phone(to)
     if not phone:
         raise ValueError("Escribe un número de celular válido.")

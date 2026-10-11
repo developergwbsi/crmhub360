@@ -1,4 +1,8 @@
-// Copias de seguridad y limpieza de leads (solo administrador). La limpieza siempre guarda antes una copia que se puede restaurar.
+/**
+ * Copias de seguridad y limpieza de leads (solo administrador). La limpieza siempre guarda antes una copia que se puede restaurar.
+ * Endpoints (todos solo admin): GET CrmHub/leadBackups, POST leadBackupCreate, leadBackupDelete, leadClean (exige confirm: 'LIMPIAR'), leadRestore,
+ * GET leadBackupDownload. Tras limpiar o restaurar descarta la lista de Lead guardada en el controlador para que se recargue.
+ */
 define('custom:views/lead-backup', ['view', 'custom:ui'], function (Dep, ChUi) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const fmt = d => { try { return new Date(String(d).replace(' ', 'T') + 'Z').toLocaleString('es', {dateStyle: 'medium', timeStyle: 'short'}); } catch (e) { return d || ''; } };

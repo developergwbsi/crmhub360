@@ -1,3 +1,7 @@
+/**
+ * Manual de usuario: la plantilla custom:manual lleva secciones marcadas con data-roles; esta vista muestra solo las del rol del usuario.
+ * Endpoint: GET CrmHub/myroles (isAdmin y roles). Roles: admin, gerente, director, comercial; el admin lo ve todo y los demás pueden alternar «ver todo».
+ */
 define('custom:views/manual', ['view'], function (Dep) {
     return class extends Dep {
         template = 'custom:manual'

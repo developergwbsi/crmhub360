@@ -1,5 +1,9 @@
-// Indicador global de lecturas de documentos: mientras una lectura sigue en el servidor (aunque hayas cerrado la ventana o cambiado de página) se ve abajo a la derecha;
-// al terminar avisa y deja «Revisar» para abrir los datos y decidir cuáles guardar.
+/**
+ * Indicador global de lecturas de documentos: mientras una lectura sigue en el servidor (aunque hayas cerrado la ventana o cambiado de página) se ve abajo a la derecha;
+ * al terminar avisa y deja «Revisar» para abrir los datos y decidir cuáles guardar.
+ * Lo inicia crmhub-boot.js (init). Endpoints: GET CrmHub/docPending (sondeo cada 3 s mientras haya lecturas) y POST CrmHub/docDismiss.
+ * Eventos: escucha ch-doc-watch (window) para sondear; «Revisar» guarda chDocReview en sessionStorage y lanza ch-doc-review o navega a #Lead/view/{id}.
+ */
 define('custom:doc-watch', ['custom:ui'], function (ChUi) {
     const esc = ChUi.esc;
     let box = null, timer = null, started = false, prev = {}, items = [];
@@ -31,6 +35,7 @@ define('custom:doc-watch', ['custom:ui'], function (ChUi) {
         }).join('') + (hidden > 0 ? `<div class="ch-dw ch-dw-more">y ${hidden} lectura(s) más listas · ábrelas desde el panel «Lectura de documentos» de cada lead</div>` : '');
     }
 
+    // Sondea las lecturas pendientes; mientras alguna esté en curso repite cada 3 s
     function poll() {
         clearTimeout(timer);
         return Espo.Ajax.getRequest('CrmHub/docPending').then(r => {

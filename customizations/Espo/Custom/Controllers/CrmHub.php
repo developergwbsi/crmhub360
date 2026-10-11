@@ -15,7 +15,11 @@ use Espo\Custom\Services\LeadAssigner;
 use Espo\Entities\User;
 use Espo\ORM\EntityManager;
 
-/** Panel de integraciones, asignación automática y reasignación de Crm Hub 360. */
+/**
+ * Controlador de la API CrmHub/* del CRM: integraciones, asignación y reasignación, panel gerencial,
+ * canales de mensajería, campañas, copias de leads, simulador, plantillas, procesos, lectura de documentos y comercial virtual.
+ * Casi todo se delega al Hub (HubClient). Las rutas están en Resources/routes.json; el permiso se valida en cada acción.
+ */
 class CrmHub
 {
     private const REASSIGNABLE = ['Lead', 'Contact', 'Account', 'Opportunity'];
@@ -34,6 +38,7 @@ class CrmHub
         private ConfigWriter $configWriter
     ) {}
 
+    /** Exige administrador; si no, 403. */
     private function admin(): void
     {
         if (!$this->user->isAdmin()) {
@@ -41,6 +46,7 @@ class CrmHub
         }
     }
 
+    /** Cliente del Hub; solo administradores. */
     private function hub(): HubClient
     {
         $this->admin();
@@ -54,11 +60,13 @@ class CrmHub
     }
 
     // ---------- Integraciones (Hub Service) ----------
+    /** GET /CrmHub/integrations. Admin. Hub: GET /v1/tenant/settings. */
     public function getActionIntegrations(Request $request): \stdClass
     {
         return (object) $this->hub()->request('GET', '/v1/tenant/settings');
     }
 
+    /** PUT /CrmHub/integrations. Admin. Hub: PUT /v1/tenant/settings (solo claves permitidas). */
     public function putActionIntegrations(Request $request): \stdClass
     {
         $data = json_decode(json_encode($request->getParsedBody()), true) ?: [];
@@ -74,12 +82,14 @@ class CrmHub
         }
     }
 
+    /** POST /CrmHub/integrations/reset-services. Admin. Hub: POST /v1/tenant/settings/reset-services. */
     public function postActionResetServices(Request $request): \stdClass
     {
         return (object) $this->hub()->request('POST', '/v1/tenant/settings/reset-services', []);
     }
 
     // ---------- Asignación automática (solo administradores) ----------
+    /** GET /CrmHub/assignment. Admin. Configuración de asignación automática. */
     public function getActionAssignment(Request $request): \stdClass
     {
         $this->admin();
@@ -110,6 +120,7 @@ class CrmHub
                          'method' => $assigner->method(), 'cap' => $assigner->cap()];
     }
 
+    /** PUT /CrmHub/assignment. Admin. Guarda la configuración de asignación automática. */
     public function putActionAssignment(Request $request): \stdClass
     {
         $this->admin();
@@ -169,6 +180,7 @@ class CrmHub
         ];
     }
 
+    /** PUT /CrmHub/pipeline. Admin. Guarda los estados del pipeline. */
     public function putActionPipeline(Request $request): \stdClass
     {
         $this->admin();
@@ -188,6 +200,7 @@ class CrmHub
     }
 
     // ---------- Reasignación (admin, directores y gerentes según su permiso de asignación) ----------
+    /** GET /CrmHub/assignees. Usuarios con permiso de asignación. Lista a quién se puede reasignar. */
     public function getActionAssignees(Request $request): array
     {
         $level = $this->assignmentLevel();
@@ -208,6 +221,7 @@ class CrmHub
         return $out;
     }
 
+    /** POST /CrmHub/reassign. Usuarios con permiso de asignación y edición del registro. */
     public function postActionReassign(Request $request): \stdClass
     {
         $level = $this->assignmentLevel();
@@ -263,6 +277,7 @@ class CrmHub
     // ---------- Panel gerencial: métricas con el alcance (ACL) del usuario que consulta ----------
     private const PIPELINE = ['Nuevo Lead', 'En Calificación', 'Calificado', 'En Enfriamiento/Contactado', 'Cierre Exitoso'];
 
+    /** GET /CrmHub/metrics. Usuario; datos según su ACL. Hub: GET /v1/agent/attended (comercial virtual). */
     public function getActionMetrics(Request $request): \stdClass
     {
         $days = (int) ($request->getQueryParam('days') ?: 30);
@@ -385,6 +400,7 @@ class CrmHub
     }
 
     // ---------- Organigrama: gerentes -> equipos (directores y asesores), derivado de roles y equipos ----------
+    /** GET /CrmHub/orgchart. Usuarios con permiso de asignación. Organigrama por roles y equipos. */
     public function getActionOrgchart(Request $request): \stdClass
     {
         $level = $this->assignmentLevel();
@@ -445,12 +461,14 @@ class CrmHub
     }
 
     // ---------- Proveedores (líneas) de mensajería ----------
+    /** Id de línea (lineId) del cuerpo de la petición, o null. */
     private function lineIdOf(Request $request): ?string
     {
         $b = $request->getParsedBody();
         return is_object($b) && !empty($b->lineId) && is_string($b->lineId) ? $b->lineId : null;
     }
 
+    /** Llama al Hub (admin) y convierte el error en BadRequest con mensaje de respaldo. */
     private function lineCall(string $method, string $path, ?array $body = null, string $fallback = 'No se pudo completar la acción.'): array
     {
         try {
@@ -461,41 +479,49 @@ class CrmHub
         }
     }
 
+    /** Cuerpo JSON de la petición como arreglo. */
     private function bodyArray(Request $request): array
     {
         return json_decode(json_encode($request->getParsedBody()), true) ?: [];
     }
 
+    /** GET /CrmHub/lines. Admin. Hub: GET /v1/lines. */
     public function getActionLines(Request $request): \stdClass
     {
         return (object) $this->lineCall('GET', '/v1/lines');
     }
 
+    /** POST /CrmHub/lineSave. Admin. Hub: POST /v1/lines. */
     public function postActionLineSave(Request $request): \stdClass
     {
         return (object) $this->lineCall('POST', '/v1/lines', $this->bodyArray($request), 'No se pudo guardar el proveedor.');
     }
 
+    /** POST /CrmHub/lineEnable. Admin. Hub: POST /v1/lines/enabled. */
     public function postActionLineEnable(Request $request): \stdClass
     {
         return (object) $this->lineCall('POST', '/v1/lines/enabled', ['id' => (string) ($request->getParsedBody()->id ?? ''), 'enabled' => !empty($request->getParsedBody()->enabled)]);
     }
 
+    /** POST /CrmHub/lineDefault. Admin. Hub: POST /v1/lines/default. */
     public function postActionLineDefault(Request $request): \stdClass
     {
         return (object) $this->lineCall('POST', '/v1/lines/default', ['id' => (string) ($request->getParsedBody()->id ?? '')]);
     }
 
+    /** POST /CrmHub/lineDelete. Admin. Hub: POST /v1/lines/delete. */
     public function postActionLineDelete(Request $request): \stdClass
     {
         return (object) $this->lineCall('POST', '/v1/lines/delete', ['id' => (string) ($request->getParsedBody()->id ?? '')]);
     }
 
+    /** POST /CrmHub/lineTest. Admin. Hub: POST /v1/lines/test. */
     public function postActionLineTest(Request $request): \stdClass
     {
         return (object) $this->lineCall('POST', '/v1/lines/test', ['id' => (string) ($request->getParsedBody()->id ?? '')], 'No se pudo probar la conexión.');
     }
 
+    /** POST /CrmHub/lineSendTest. Admin. Hub: POST /v1/lines/send-test. */
     public function postActionLineSendTest(Request $request): \stdClass
     {
         $d = $request->getParsedBody();
@@ -510,6 +536,7 @@ class CrmHub
     }
 
     // ---------- WhatsApp (envío) y llamadas ----------
+    /** POST /CrmHub/whatsapp/unlink. Admin. Hub: POST /v1/whatsapp/unlink. */
     public function postActionWhatsappUnlink(Request $request): \stdClass
     {
         try {
@@ -520,6 +547,7 @@ class CrmHub
         }
     }
 
+    /** POST /CrmHub/whatsapp/qr. Admin. Hub: POST /v1/whatsapp/qr. */
     public function postActionWhatsappQr(Request $request): \stdClass
     {
         try {
@@ -530,6 +558,7 @@ class CrmHub
         }
     }
 
+    /** POST /CrmHub/whatsapp/test. Admin. Hub: POST /v1/whatsapp/test. */
     public function postActionWhatsappTest(Request $request): \stdClass
     {
         try {
@@ -540,6 +569,7 @@ class CrmHub
         }
     }
 
+    /** POST /CrmHub/whatsapp/send. Usuario con edición del lead. Envía por el Hub. */
     public function postActionWhatsappSend(Request $request): \stdClass
     {
         $d = $request->getParsedBody();
@@ -588,11 +618,13 @@ class CrmHub
     // ---------- Historial del lead (chat, llamadas, correos, estados) ----------
     private const RECORD_SCOPES = ['Lead', 'Account', 'Contact', 'Opportunity'];
 
+    /** Normaliza el tipo de registro (por defecto Lead). */
     private function scopeOf(?string $s): string
     {
         return in_array($s, self::RECORD_SCOPES, true) ? $s : 'Lead';
     }
 
+    /** Lead de la petición; 403 si el usuario no puede leerlo. */
     private function leadFor(Request $request): \Espo\ORM\Entity
     {
         $lead = $this->em->getEntityById($this->scopeOf($request->getQueryParam('scope')), (string) $request->getQueryParam('leadId'));
@@ -602,6 +634,7 @@ class CrmHub
         return $lead;
     }
 
+    /** GET /CrmHub/leadTimeline. Usuario con lectura del lead. Usa LeadTimeline (llamadas, correos, chat, estados). */
     public function getActionLeadTimeline(Request $request): \stdClass
     {
         $lead = $this->leadFor($request);
@@ -644,11 +677,13 @@ class CrmHub
     }
 
     // ---------- Correo «como el usuario» (nombre, firma y respuestas personales) ----------
+    /** Servicio de marca de correo. */
     private function brand(): \Espo\Custom\Services\EmailBrand
     {
         return new \Espo\Custom\Services\EmailBrand($this->em, $this->config);
     }
 
+    /** Firma HTML del usuario. */
     private function signatureHtml(): string
     {
         return $this->brand()->signature($this->user);
@@ -670,6 +705,7 @@ class CrmHub
         return $this->brand()->wrap($body, $this->user);
     }
 
+    /** GET /CrmHub/emailSignature. Usuario. Firma y nombre del usuario. */
     public function getActionEmailSignature(Request $request): \stdClass
     {
         return (object) ['html' => $this->signatureHtml(), 'name' => $this->user->get('name'), 'custom' => (bool) trim((string) ($this->em->getEntityById('Preferences', $this->user->getId())?->get('signature') ?? ''))];
@@ -733,6 +769,7 @@ class CrmHub
     }
 
     // ---------- Web Push (notificaciones con la app cerrada) ----------
+    /** Llama al Hub sin exigir admin (20 s); error del Hub pasa a BadRequest. */
     private function hubAny(string $method, string $path, ?array $body = null): array
     {
         try {
@@ -743,11 +780,13 @@ class CrmHub
         }
     }
 
+    /** GET /CrmHub/push/key. Usuario. Hub: GET /v1/push/key. */
     public function getActionPushKey(Request $request): \stdClass
     {
         return (object) $this->hubAny('GET', '/v1/push/key');
     }
 
+    /** POST /CrmHub/push/subscribe. Usuario. Hub: POST /v1/push/subscribe. */
     public function postActionPushSubscribe(Request $request): \stdClass
     {
         $d = json_decode(json_encode($request->getParsedBody()), true) ?: [];
@@ -756,6 +795,7 @@ class CrmHub
         ]);
     }
 
+    /** POST /CrmHub/push/unsubscribe. Usuario. Hub: POST /v1/push/unsubscribe. */
     public function postActionPushUnsubscribe(Request $request): \stdClass
     {
         $d = json_decode(json_encode($request->getParsedBody()), true) ?: [];
@@ -771,18 +811,21 @@ class CrmHub
     }
 
     // ---------- Telegram ----------
+    /** POST /CrmHub/telegram/setup. Admin. Hub: POST /v1/telegram/setup. */
     public function postActionTelegramSetup(Request $request): \stdClass
     {
         $this->admin();
         return (object) $this->hubAny('POST', '/v1/telegram/setup', []);
     }
 
+    /** POST /CrmHub/telegram/test. Admin. Hub: POST /v1/telegram/test. */
     public function postActionTelegramTest(Request $request): \stdClass
     {
         $this->admin();
         return (object) $this->hubAny('POST', '/v1/telegram/test', []);
     }
 
+    /** POST /CrmHub/telegram/send. Usuario con edición del lead. Hub: POST /v1/telegram/send. */
     public function postActionTelegramSend(Request $request): \stdClass
     {
         $d = $request->getParsedBody();
@@ -807,12 +850,14 @@ class CrmHub
     }
 
     // ---------- SMS y llamadas ----------
+    /** POST /CrmHub/twilio/test. Admin. Hub: POST /v1/twilio/test. */
     public function postActionTwilioTest(Request $request): \stdClass
     {
         $this->admin();
         return (object) $this->hubAny('POST', '/v1/twilio/test', []);
     }
 
+    /** POST /CrmHub/sms/send. Usuario con edición del lead. Hub: POST /v1/sms/send. */
     public function postActionSmsSend(Request $request): \stdClass
     {
         $d = $request->getParsedBody();
@@ -824,6 +869,7 @@ class CrmHub
             'agent' => $this->user->get('name') ?: $this->user->get('userName'), 'userId' => $this->user->getId(), 'phone' => !empty($d->phone) ? (string) $d->phone : null, 'lineId' => $this->lineIdOf($request)]);
     }
 
+    /** POST /CrmHub/sms/test. Admin. Hub: POST /v1/sms/test. */
     public function postActionSmsTest(Request $request): \stdClass
     {
         $this->admin();
@@ -853,6 +899,7 @@ class CrmHub
     }
 
     // ---------- Campañas de mensajes masivos ----------
+    /** Exige permiso de asignación distinto de «no» para mensajes masivos. */
     private function broadcastGuard(): void
     {
         if ($this->assignmentLevel() === 'no') {
@@ -899,6 +946,7 @@ class CrmHub
         return ['ids' => $ids, 'sample' => $sample];
     }
 
+    /** POST /CrmHub/broadcast/audience. Usuario con permiso de masivos. Calcula la audiencia. */
     public function postActionBroadcastAudience(Request $request): \stdClass
     {
         $this->broadcastGuard();
@@ -908,6 +956,7 @@ class CrmHub
         return (object) ['count' => count($a['ids']), 'sample' => $a['sample']];
     }
 
+    /** POST /CrmHub/broadcast. Usuario con permiso de masivos. Hub: POST /v1/broadcasts. */
     public function postActionBroadcastCreate(Request $request): \stdClass
     {
         $this->broadcastGuard();
@@ -921,18 +970,21 @@ class CrmHub
         ]);
     }
 
+    /** GET /CrmHub/broadcasts. Usuario con permiso de masivos. Hub: GET /v1/broadcasts. */
     public function getActionBroadcasts(Request $request): \stdClass
     {
         $this->broadcastGuard();
         return (object) $this->hubAny('GET', '/v1/broadcasts');
     }
 
+    /** GET /CrmHub/broadcasts/:id. Usuario con permiso de masivos. Hub: GET /v1/broadcasts/{id}. */
     public function getActionBroadcast(Request $request): \stdClass
     {
         $this->broadcastGuard();
         return (object) $this->hubAny('GET', '/v1/broadcasts/' . (int) $request->getRouteParam('id'));
     }
 
+    /** POST /CrmHub/broadcasts/:id/:act. Usuario con permiso de masivos. Hub: POST /v1/broadcasts/{id}/{act}. */
     public function postActionBroadcastAction(Request $request): \stdClass
     {
         $this->broadcastGuard();
@@ -946,6 +998,7 @@ class CrmHub
     // ---------- Copias y limpieza de leads (solo administrador) ----------
     private const BK_CHILDREN = ['Note', 'Task', 'Call', 'Meeting'];
 
+    /** Carpeta donde se guardan las copias de leads. */
     private function bkDir(): string
     {
         $d = 'data/lead-backups';
@@ -955,6 +1008,7 @@ class CrmHub
         return $d;
     }
 
+    /** Índice de copias (arreglo leído del disco). */
     private function bkIndex(): array
     {
         $f = $this->bkDir() . '/index.json';
@@ -962,11 +1016,13 @@ class CrmHub
         return is_array($a) ? $a : [];
     }
 
+    /** Guarda el índice de copias. */
     private function bkSaveIndex(array $a): void
     {
         file_put_contents($this->bkDir() . '/index.json', json_encode(array_values($a), JSON_UNESCAPED_UNICODE), LOCK_EX);
     }
 
+    /** Busca una copia por id. */
     private function bkFind(string $id): array
     {
         foreach ($this->bkIndex() as $b) {
@@ -1012,6 +1068,7 @@ class CrmHub
         return $b;
     }
 
+    /** GET /CrmHub/leadBackups. Admin. Lista las copias. */
     public function getActionLeadBackups(Request $request): \stdClass
     {
         $this->admin();
@@ -1019,12 +1076,14 @@ class CrmHub
         return (object) ['items' => $this->bkIndex(), 'leads' => $n];
     }
 
+    /** POST /CrmHub/leadBackupCreate. Admin. Crea una copia manual. */
     public function postActionLeadBackupCreate(Request $request): \stdClass
     {
         $this->admin();
         return (object) $this->bkCreate('manual', trim((string) ($request->getParsedBody()->note ?? '')));
     }
 
+    /** POST /CrmHub/leadBackupDelete. Admin. Elimina una copia. */
     public function postActionLeadBackupDelete(Request $request): \stdClass
     {
         $this->admin();
@@ -1127,6 +1186,7 @@ class CrmHub
     }
 
     // ---------- Simulador del proceso comercial y banco de conocimiento ----------
+    /** Bloquea al usuario API y al de portal. */
     private function simGuard(): void
     {
         if ($this->user->isApi() || $this->user->isPortal()) {
@@ -1134,17 +1194,20 @@ class CrmHub
         }
     }
 
+    /** Filtro de usuario: vacío para admin (ve todo), el propio id para el resto. */
     private function simScope(): string
     {
         return $this->user->isAdmin() ? '' : $this->user->getId();   // el administrador ve las simulaciones de todos; cada usuario, las suyas
     }
 
+    /** GET /CrmHub/simConfig. Usuario (no API ni portal). Hub: GET /v1/sim/config. */
     public function getActionSimConfig(Request $request): \stdClass
     {
         $this->simGuard();
         return (object) ($this->hubAny('GET', '/v1/sim/config') + ['email' => (string) $this->user->get('emailAddress'), 'phone' => (string) $this->user->get('phoneNumber')]);
     }
 
+    /** POST /CrmHub/simRun. Usuario (no API ni portal). Hub: POST /v1/sim/runs. */
     public function postActionSimRun(Request $request): \stdClass
     {
         $this->simGuard();
@@ -1157,18 +1220,21 @@ class CrmHub
         ]);
     }
 
+    /** GET /CrmHub/simRuns. Usuario (no API ni portal). Hub: GET /v1/sim/runs. */
     public function getActionSimRuns(Request $request): \stdClass
     {
         $this->simGuard();
         return (object) $this->hubAny('GET', '/v1/sim/runs?userId=' . rawurlencode($this->simScope()));
     }
 
+    /** GET /CrmHub/simRun. Usuario (no API ni portal). Hub: GET /v1/sim/runs/{id}. */
     public function getActionSimRun(Request $request): \stdClass
     {
         $this->simGuard();
         return (object) $this->hubAny('GET', '/v1/sim/runs/' . (int) $request->getQueryParam('id') . '?userId=' . rawurlencode($this->simScope()));
     }
 
+    /** POST /CrmHub/simDelete. Usuario (no API ni portal). Hub: GET y DELETE /v1/sim/runs/{id}. */
     public function postActionSimDelete(Request $request): \stdClass
     {
         $this->simGuard();
@@ -1201,12 +1267,14 @@ class CrmHub
         }
     }
 
+    /** GET /CrmHub/kb. Usuario (no API ni portal). Hub: GET /v1/kb. */
     public function getActionKb(Request $request): \stdClass
     {
         $this->simGuard();
         return (object) $this->hubAny('GET', '/v1/kb');
     }
 
+    /** POST /CrmHub/kbRefresh. Usuario (no API ni portal). Hub: POST /v1/kb/refresh. */
     public function postActionKbRefresh(Request $request): \stdClass
     {
         $this->simGuard();
@@ -1217,6 +1285,7 @@ class CrmHub
         }
     }
 
+    /** POST /CrmHub/kbNote. Usuario (no API ni portal). Hub: POST /v1/kb/notes. */
     public function postActionKbNote(Request $request): \stdClass
     {
         $this->simGuard();
@@ -1224,6 +1293,7 @@ class CrmHub
         return (object) $this->hubAny('POST', '/v1/kb/notes', ['userId' => $this->user->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName')), 'text' => (string) ($d->text ?? '')]);
     }
 
+    /** POST /CrmHub/kbNoteDelete. Usuario (no API ni portal). Hub: DELETE /v1/kb/notes/{id}. */
     public function postActionKbNoteDelete(Request $request): \stdClass
     {
         $this->simGuard();
@@ -1278,12 +1348,14 @@ class CrmHub
     }
 
     // ---------- Plantillas personales de cada usuario (hasta 10 por canal) ----------
+    /** GET /CrmHub/templates. Usuario (no API ni portal). Hub: GET /v1/tpl del propio usuario. */
     public function getActionTemplates(Request $request): \stdClass
     {
         $this->simGuard();
         return (object) $this->hubAny('GET', '/v1/tpl?userId=' . rawurlencode($this->user->getId()));
     }
 
+    /** POST /CrmHub/templateSave. Usuario (no API ni portal). Guarda una plantilla personal en el Hub. */
     public function postActionTemplateSave(Request $request): \stdClass
     {
         $this->simGuard();
@@ -1302,6 +1374,7 @@ class CrmHub
         }
     }
 
+    /** POST /CrmHub/templateDelete. Usuario (no API ni portal). Elimina una plantilla personal en el Hub. */
     public function postActionTemplateDelete(Request $request): \stdClass
     {
         $this->simGuard();
@@ -1332,6 +1405,7 @@ class CrmHub
     }
 
     // ---------- Procesos al llegar un lead (API/webhook con la identificación y datos del lead) ----------
+    /** Llama al Hub con timeout propio; error del Hub pasa a BadRequest. */
     private function hubCall(string $method, string $path, ?array $body, int $timeout = 30): array
     {
         try {
@@ -1342,12 +1416,14 @@ class CrmHub
         }
     }
 
+    /** GET /CrmHub/processes. Admin. Hub: GET /v1/processes. */
     public function getActionProcesses(Request $request): \stdClass
     {
         $this->admin();
         return (object) $this->hubCall('GET', '/v1/processes', null, 10);
     }
 
+    /** POST /CrmHub/processesSave. Admin. Hub: PUT /v1/processes. */
     public function postActionProcessesSave(Request $request): \stdClass
     {
         $this->admin();
@@ -1355,6 +1431,7 @@ class CrmHub
         return (object) $this->hubCall('PUT', '/v1/processes', ['processes' => json_decode(json_encode($d->processes ?? []), true)], 20);
     }
 
+    /** POST /CrmHub/processTest. Admin. Hub: POST /v1/processes/test. */
     public function postActionProcessTest(Request $request): \stdClass
     {
         $this->admin();
@@ -1367,6 +1444,7 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/processes/test', ['process' => json_decode(json_encode($d->process ?? []), true), 'leadId' => $leadId], 60);
     }
 
+    /** GET /CrmHub/processRuns. Lectura del lead (o admin sin lead). Hub: GET /v1/process/runs. */
     public function getActionProcessRuns(Request $request): \stdClass
     {
         $leadId = (string) $request->getQueryParam('leadId');
@@ -1393,6 +1471,7 @@ class CrmHub
     }
 
     // ---------- Lectura de documentos (PDF) ----------
+    /** Lead de la petición; 403 si falta permiso de edición ($edit) o de lectura. */
     private function docLead(string $id, bool $edit): \Espo\ORM\Entity
     {
         $lead = $this->em->getEntityById('Lead', $id);
@@ -1402,12 +1481,14 @@ class CrmHub
         return $lead;
     }
 
+    /** GET /CrmHub/docProfiles. Usuario (no API ni portal). Hub: GET /v1/docs/profiles. */
     public function getActionDocProfiles(Request $request): \stdClass
     {
         $this->simGuard();
         return (object) $this->hubCall('GET', '/v1/docs/profiles', null, 10);
     }
 
+    /** POST /CrmHub/docProfilesSave. Admin. Hub: PUT /v1/docs/profiles. */
     public function postActionDocProfilesSave(Request $request): \stdClass
     {
         $this->admin();
@@ -1433,12 +1514,14 @@ class CrmHub
             'engine' => ($d->engine ?? '') === 'ai' ? 'ai' : 'internal', 'leadName' => (string) $lead->get('name')], 30);
     }
 
+    /** GET /CrmHub/docRun. Edición del lead. Hub: GET /v1/docs/run. */
     public function getActionDocRun(Request $request): \stdClass
     {
         $lead = $this->docLead((string) $request->getQueryParam('leadId'), true);
         return (object) $this->hubCall('GET', '/v1/docs/run?leadId=' . rawurlencode($lead->getId()) . '&runId=' . (int) $request->getQueryParam('runId'), null, 10);
     }
 
+    /** POST /CrmHub/docApply. Edición del lead. Hub: POST /v1/docs/apply (guarda los datos elegidos). */
     public function postActionDocApply(Request $request): \stdClass
     {
         $d = $request->getParsedBody();
@@ -1455,12 +1538,14 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/docs/remember', ['name' => (string) ($d->name ?? ''), 'items' => json_decode(json_encode($d->items ?? []), true)], 20);
     }
 
+    /** GET /CrmHub/docPending. Usuario (no API ni portal). Hub: GET /v1/docs/pending. */
     public function getActionDocPending(Request $request): \stdClass
     {
         $this->simGuard();
         return (object) $this->hubCall('GET', '/v1/docs/pending?userId=' . rawurlencode($this->user->getId()), null, 10);
     }
 
+    /** POST /CrmHub/docDismiss. Usuario (no API ni portal). Hub: POST /v1/docs/dismiss. */
     public function postActionDocDismiss(Request $request): \stdClass
     {
         $this->simGuard();
@@ -1468,6 +1553,7 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/docs/dismiss', ['userId' => $this->user->getId(), 'runId' => (int) ($d->runId ?? 0)], 10);
     }
 
+    /** GET /CrmHub/docHistory. Lectura del lead. Hub: GET /v1/docs/history. */
     public function getActionDocHistory(Request $request): \stdClass
     {
         $lead = $this->docLead((string) $request->getQueryParam('leadId'), false);
@@ -1475,12 +1561,14 @@ class CrmHub
     }
 
     // ---------- Comercial virtual (versión automática del seguimiento de leads) ----------
+    /** GET /CrmHub/agentConfig. Admin. Hub: GET /v1/agent/config. */
     public function getActionAgentConfig(Request $request): \stdClass
     {
         $this->admin();
         return (object) $this->hubCall('GET', '/v1/agent/config?agentId=' . rawurlencode((string) $request->getQueryParam('agentId')), null, 10);
     }
 
+    /** POST /CrmHub/agentConfigSave. Admin. Hub: PUT /v1/agent/config. */
     public function postActionAgentConfigSave(Request $request): \stdClass
     {
         $this->admin();
@@ -1488,6 +1576,7 @@ class CrmHub
         return (object) $this->hubCall('PUT', '/v1/agent/config', ['config' => json_decode(json_encode($d->config ?? new \stdClass()), true), 'agentId' => !empty($d->agentId) ? (string) $d->agentId : null, 'name' => isset($d->name) ? (string) $d->name : null], 20);
     }
 
+    /** POST /CrmHub/agentCreate. Admin. Hub: POST /v1/agents. */
     public function postActionAgentCreate(Request $request): \stdClass
     {
         $this->admin();
@@ -1495,6 +1584,7 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/agents', ['name' => (string) ($d->name ?? ''), 'cloneFrom' => !empty($d->cloneFrom) ? (string) $d->cloneFrom : null], 20);
     }
 
+    /** POST /CrmHub/agentEnable. Admin. Hub: POST /v1/agents/enabled. */
     public function postActionAgentEnable(Request $request): \stdClass
     {
         $this->admin();
@@ -1502,12 +1592,14 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/agents/enabled', ['id' => (string) ($d->id ?? ''), 'enabled' => !empty($d->enabled)], 20);
     }
 
+    /** POST /CrmHub/agentDelete. Admin. Hub: POST /v1/agents/delete. */
     public function postActionAgentDelete(Request $request): \stdClass
     {
         $this->admin();
         return (object) $this->hubCall('POST', '/v1/agents/delete', ['id' => (string) ($request->getParsedBody()->id ?? '')], 20);
     }
 
+    /** POST /CrmHub/agentDispatchSave. Admin. Hub: PUT /v1/agent/dispatch (reparto entre comerciales). */
     public function postActionAgentDispatchSave(Request $request): \stdClass
     {
         $this->admin();
@@ -1515,6 +1607,7 @@ class CrmHub
         return (object) $this->hubCall('PUT', '/v1/agent/dispatch', ['mode' => (string) ($d->mode ?? 'shared'), 'weights' => json_decode(json_encode($d->weights ?? new \stdClass()), true) ?: new \stdClass()], 20);
     }
 
+    /** POST /CrmHub/agentTest. Admin. Hub: POST /v1/agent/test. */
     public function postActionAgentTest(Request $request): \stdClass
     {
         $this->admin();
@@ -1522,6 +1615,7 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/agent/test', ['sample' => json_decode(json_encode($d->sample ?? new \stdClass()), true)], 290);
     }
 
+    /** POST /CrmHub/agentMenuTest. Admin. Hub: POST /v1/agent/menu-test. */
     public function postActionAgentMenuTest(Request $request): \stdClass
     {
         $this->admin();
@@ -1538,24 +1632,28 @@ class CrmHub
         return (object) $this->hubCall('GET', '/v1/forms/template/' . $key . '?slugs=' . $slugs, null, 20);
     }
 
+    /** GET /CrmHub/agentStats. Admin. Hub: GET /v1/agent/stats. */
     public function getActionAgentStats(Request $request): \stdClass
     {
         $this->admin();
         return (object) $this->hubCall('GET', '/v1/agent/stats?days=' . (int) ($request->getQueryParam('days') ?: 30), null, 15);
     }
 
+    /** GET /CrmHub/agentLead. Lectura del lead. Hub: GET /v1/agent/lead. */
     public function getActionAgentLead(Request $request): \stdClass
     {
         $lead = $this->docLead((string) $request->getQueryParam('leadId'), false);
         return (object) $this->hubCall('GET', '/v1/agent/lead?leadId=' . rawurlencode($lead->getId()), null, 10);
     }
 
+    /** GET /CrmHub/agentPending. Admin. Hub: GET /v1/agent/pending. */
     public function getActionAgentPending(Request $request): \stdClass
     {
         $this->admin();
         return (object) $this->hubCall('GET', '/v1/agent/pending', null, 10);
     }
 
+    /** POST /CrmHub/agentApproval. Hub: POST /v1/agent/approval (aprobar o editar un mensaje pendiente). */
     public function postActionAgentApproval(Request $request): \stdClass
     {
         $d = $request->getParsedBody();
@@ -1564,6 +1662,7 @@ class CrmHub
             'approve' => !empty($d->approve), 'by' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 60);
     }
 
+    /** POST /CrmHub/agentAction. Edición del lead. Hub: POST /v1/agent/lead/action (pause, resume, manual, auto, switch). */
     public function postActionAgentAction(Request $request): \stdClass
     {
         $d = $request->getParsedBody();
@@ -1576,12 +1675,14 @@ class CrmHub
     }
 
     // ---------- Motor de IA de la empresa ----------
+    /** GET /CrmHub/aiConfig. Admin. Hub: GET /v1/ai/config. */
     public function getActionAiConfig(Request $request): \stdClass
     {
         $this->admin();
         return (object) $this->hubCall('GET', '/v1/ai/config', null, 10);
     }
 
+    /** POST /CrmHub/aiOwnSave. Admin. Hub: PUT /v1/ai/own (motor de IA propio). */
     public function postActionAiOwnSave(Request $request): \stdClass
     {
         $this->admin();
@@ -1589,6 +1690,7 @@ class CrmHub
         return (object) $this->hubCall('PUT', '/v1/ai/own', ['kind' => (string) ($d->kind ?? ''), 'model' => (string) ($d->model ?? ''), 'base_url' => (string) ($d->base_url ?? ''), 'api_key' => (string) ($d->api_key ?? ''), 'workspace_id' => (string) ($d->workspace_id ?? '')], 20);
     }
 
+    /** POST /CrmHub/aiTest. Admin. Hub: POST /v1/ai/test. */
     public function postActionAiTest(Request $request): \stdClass
     {
         $this->admin();

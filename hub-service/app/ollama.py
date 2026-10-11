@@ -1,3 +1,5 @@
+"""Cliente del servidor Ollama (LLM local) configurado en config (OLLAMA_URL, OLLAMA_MODEL, OLLAMA_TIMEOUT).
+Lo usa llm.py cuando el tenant no tiene un proveedor de IA externo. LOCK serializa las inferencias."""
 import asyncio
 import json
 
@@ -25,6 +27,7 @@ async def chat_json(system: str, user: str, schema: dict, max_tokens: int | None
 
 
 async def chat_text(system: str, user: str) -> str:
+    """Respuesta de texto libre del modelo local (temperatura 0.3)."""
     payload = {
         "model": config.OLLAMA_MODEL,
         "stream": False,

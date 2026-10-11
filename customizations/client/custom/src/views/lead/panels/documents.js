@@ -1,4 +1,8 @@
-// Panel «Lectura de documentos»: sube un PDF en cualquier estado, sigue las lecturas en curso y reabre las que están listas para revisar.
+/**
+ * Panel «Lectura de documentos» del Lead: sube un PDF, sigue las lecturas en curso y reabre las listas para revisar.
+ * Endpoint: GET CrmHub/docHistory. La lectura se abre con custom:doc-reader.
+ * Escucha los eventos de ventana 'ch-doc-watch' y 'ch-doc-review' (los emite custom:doc-watch) y los retira en onRemove.
+ */
 define('custom:views/lead/panels/documents', ['views/record/panels/bottom', 'custom:ui', 'custom:doc-reader'], function (Dep, ChUi, Reader) {
     return class extends Dep {
         templateContent = '<div class="ch-docs"><button class="btn btn-default btn-sm" data-act="read"><span class="fas fa-file-pdf"></span> Subir PDF y leer</button><div class="ch-docs-l" data-role="l"></div></div>'

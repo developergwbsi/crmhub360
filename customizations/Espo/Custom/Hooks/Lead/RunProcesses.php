@@ -14,6 +14,7 @@ class RunProcesses
 
     public function __construct(private Config $config, private Log $log) {}
 
+    /** Evento afterSave de Lead (orden 90): avisa al Hub para que ejecute los procesos de la empresa. */
     public function afterSave(Entity $entity, array $options): void
     {
         if ($entity->get('isSimulation') || $entity->get('isThread') || !empty($options['skipProcesses'])) {

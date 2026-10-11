@@ -1,5 +1,9 @@
-// Leer un documento (PDF) en cualquier estado del lead. La lectura interna (propia, sin IA) es la opción por defecto: rápida y sin depender del servidor de IA; con IA es opcional, para
-// documentos difíciles. La lectura corre en segundo plano en el servidor: si cierras la ventana sigue y un indicador te avisa cuando está lista para revisar.
+/**
+ * Leer un documento (PDF) en cualquier estado del lead. La lectura interna (propia, sin IA) es la opción por defecto: rápida y sin depender del servidor de IA; con IA es opcional, para
+ * documentos difíciles. La lectura corre en segundo plano en el servidor: si cierras la ventana sigue y un indicador te avisa cuando está lista para revisar.
+ * Endpoints: GET CrmHub/docProfiles, POST CrmHub/docExtract, GET CrmHub/docRun (sondeo), POST CrmHub/docApply y POST CrmHub/docRemember.
+ * Expone open(model, onDone, opts); al cerrar con una lectura en curso activa custom:doc-watch (evento ch-doc-watch).
+ */
 define('custom:doc-reader', ['custom:ui', 'custom:tpl'], function (ChUi, Tpl) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const TARGET = f => f.to === 'note' ? 'Nota en el historial' : 'Campo del lead';
@@ -8,6 +12,7 @@ define('custom:doc-reader', ['custom:ui', 'custom:tpl'], function (ChUi, Tpl) {
     const DEST = [['note', 'Nota en el historial'], ...Object.keys(FIELD_LABEL).map(k => ['field:' + k, 'Campo: ' + FIELD_LABEL[k]])];
     const ENGINE_LABEL = {internal: 'lectura interna', ai: 'IA'};
 
+    // Abre el asistente de lectura: elegir perfil y PDF, leer en segundo plano, revisar y aplicar los datos al lead
     function open(model, onDone, opts) {
         opts = opts || {};
         return ChUi.panel({title: 'Leer documento (PDF)', icon: 'fas fa-file-pdf', close: 'Cerrar', mount: (body, close) => {

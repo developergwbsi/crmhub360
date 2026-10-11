@@ -26,11 +26,13 @@ STEPS = [("register", "Registro del lead"), ("welcome", "Correo de bienvenida"),
 
 
 def ensure_schema() -> None:
+    """Crea las tablas del simulador y del banco de conocimiento (sim_runs, sim_events, kb_notes, kb_insights) si no existen."""
     with db.pool.connection() as c:
         c.execute(SCHEMA)
 
 
 def config_probe(tenant: dict) -> dict:
+    """Qué tiene configurado la empresa (correo, WhatsApp, SMS, buzón, servicios gestionados) para saber qué pasos de la simulación se pueden ejecutar."""
     st = tenant.get("settings") or {}
     wa, sm = whatsapp.provider(tenant), sms.provider(tenant)
     return {"correo": bool((st.get("mailout") or {}).get("host")), "whatsapp": wa or None, "sms": sm or None, "buzon": bool((st.get("mailbox") or {}).get("enabled")),
@@ -56,6 +58,7 @@ def _page(company: str, user: str, body: str) -> str:
 
 
 async def start(tenant: dict, p: dict) -> int:
+    """Crea la simulación en sim_runs y la lanza en segundo plano (_run); devuelve su id."""
     ensure_schema()
     with db.pool.connection() as c:
         rid = c.execute("INSERT INTO sim_runs (tenant, user_id, user_name, params) VALUES (%s,%s,%s,%s) RETURNING id",
@@ -198,6 +201,7 @@ async def _run(tenant: dict, run: int, p: dict) -> None:
 
 
 def list_runs(tenant: str, user_id: str | None) -> list[dict]:
+    """Últimas 40 simulaciones de la empresa (solo las del usuario si se indica)."""
     ensure_schema()
     with db.pool.connection() as c:
         q = "SELECT id, user_id, user_name, lead_id, status, params, started_at, finished_at FROM sim_runs WHERE tenant=%s" + (" AND user_id=%s" if user_id else "") + " ORDER BY id DESC LIMIT 40"
@@ -205,6 +209,7 @@ def list_runs(tenant: str, user_id: str | None) -> list[dict]:
 
 
 def get_run(tenant: str, run: int, user_id: str | None) -> dict | None:
+    """Simulación con su línea de tiempo (sim_events); None si no existe o es de otro usuario."""
     with db.pool.connection() as c:
         r = c.execute("SELECT id, user_id, user_name, lead_id, status, params, refs, started_at, finished_at FROM sim_runs WHERE id=%s AND tenant=%s", (run, tenant)).fetchone()
         if not r or (user_id and r["user_id"] != user_id):

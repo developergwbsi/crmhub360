@@ -1,3 +1,7 @@
+/**
+ * Lista de correos: oculta la acción «Editar» (quickEdit) en las filas cuyo estado no es Draft.
+ * Se aplica en afterRender sobre las filas ya pintadas. Sin endpoints.
+ */
 define('custom:views/email/record/list', ['views/email/record/list'], function (Dep) {
     return class extends Dep {
         afterRender() {

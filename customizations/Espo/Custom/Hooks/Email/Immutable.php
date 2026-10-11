@@ -12,6 +12,7 @@ class Immutable
 
     private const LOCKED = ['name', 'body', 'bodyPlain', 'isHtml', 'from', 'to', 'cc', 'bcc', 'replyTo', 'dateSent'];
 
+    /** Evento beforeSave de Email (orden 1): rechaza cambios en los campos LOCKED de un correo ya enviado o recibido. */
     public function beforeSave(Entity $entity, array $options): void
     {
         if ($entity->isNew() || !in_array($entity->getFetched('status'), ['Sent', 'Archived', 'Received'], true)) {

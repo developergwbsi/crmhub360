@@ -1,4 +1,8 @@
-// Correos del registro: historial tipo bandeja y redacción dentro del mismo panel (sin ventanas aparte).
+/**
+ * Panel «Correos del registro»: historial tipo bandeja y redacción en el mismo panel.
+ * Endpoints: GET CrmHub/leadTimeline (kind=emails), GET CrmHub/channels, POST CrmHub/templateSave (guardar como plantilla), GET EmailTemplate y POST EmailTemplate/{id}/prepare; el envío va por custom:mail-send.
+ * Tras enviar dispara 'done' y avisa con Live.notify (custom:live-panel); usa pantalla dividida ('ch').
+ */
 define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:split', 'custom:mail-send', 'custom:tpl', 'custom:live-panel'], function (Dep, ChUi, Split, MailSend, Tpl, Live) {
     // HTML de una plantilla → texto editable (el correo se envía con saltos de línea convertidos a HTML)
     const toText = h => String(h || '').replace(/<\s*br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|h\d)>/gi, '\n').replace(/<li[^>]*>/gi, '• ').replace(/<[^>]+>/g, '')
@@ -80,6 +84,7 @@ define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:
             } else { go(); }
         }
 
+        // Guarda el correo en redacción como plantilla personal (CrmHub/templateSave).
         saveAsTemplate() {
             const box = this.el.querySelector('[data-role="compose"]'), subject = box.querySelector('[name="subject"]').value.trim(), body = box.querySelector('[name="body"]').value.trim();
             if (!subject || !body) { const e = box.querySelector('[data-role="err"]'); e.hidden = false; e.textContent = 'Escribe el asunto y el mensaje para guardarlos como plantilla.'; return; }
@@ -103,6 +108,7 @@ define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:
                 .then(() => { btn.disabled = false; });
         }
 
+        // Carga los correos del registro (CrmHub/leadTimeline kind=emails).
         load() {
             Espo.Ajax.getRequest('CrmHub/leadTimeline', {leadId: this.options.leadId, scope: this.scope, kind: 'emails'}).then(r => {
                 const list = this.el.querySelector('[data-role="list"]'); if (!list) { return; }

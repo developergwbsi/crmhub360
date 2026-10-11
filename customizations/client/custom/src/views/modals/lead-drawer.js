@@ -1,4 +1,8 @@
-// Panel lateral con la ficha del lead: deja ver el tablero y, si se necesita todo, «Abrir completo» lleva a pantalla completa.
+/**
+ * Panel lateral con la ficha de Lead, Cuenta, Contacto u Oportunidad (extiende views/modals/detail) sin fondo modal, para ver el tablero.
+ * Agrega botones de contacto (llamar, WhatsApp, SMS, Telegram, correo) que usan custom:handlers/lead-contact, y edita dentro del mismo panel (Guardar/Cancelar).
+ * Abre/cierra la pantalla dividida con custom:split ('lead'). Sin endpoints propios.
+ */
 define('custom:views/modals/lead-drawer', ['views/modals/detail', 'custom:handlers/lead-contact', 'custom:split'], function (Dep, ContactHandler, Split) {
     return class extends Dep {
         className = 'dialog dialog-record ch-drawer ch-lead-drawer'

@@ -1,3 +1,6 @@
+"""Asistente de IA sobre un lead (endpoint del hub que usa la ficha del CRM).
+Acciones: resumir la conversación, redactar un mensaje de WhatsApp y analizar sentimiento.
+Lee el lead y su flujo (notas) de EspoCRM y pide el texto al LLM del tenant (llm.chat_text)."""
 from . import llm
 from .espo import Espo
 
@@ -12,6 +15,7 @@ PROMPTS = {
 
 
 async def run(tenant: dict, lead_id: str, action: str) -> str:
+    """Ejecuta la acción («summarize», «draft» o «sentiment») sobre el flujo del lead y devuelve el texto generado; sin conversación devuelve un aviso."""
     espo = Espo(tenant)
     lead = await espo.get(f"Lead/{lead_id}")
     stream = await espo.get(f"Lead/{lead_id}/stream", maxSize=60)

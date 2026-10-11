@@ -1,3 +1,8 @@
+/**
+ * Detalle completo del Lead: monta el encabezado visual (custom:lead-hero) y oculta paneles que no aplican.
+ * Oculta «targetLists» siempre y el panel «credit» si la configuración crmhubCartera (módulo Cartera y cobranza) está apagada.
+ * Sin endpoints.
+ */
 define('custom:views/lead/record/detail', ['views/record/detail', 'custom:lead-hero'], function (Dep, Hero) {
     return class extends Dep {
         afterRender() {

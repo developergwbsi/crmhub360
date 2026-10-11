@@ -50,12 +50,14 @@ def _smtp_send(cfg: dict, msg: EmailMessage, rcpts: list[str]) -> None:
 
 
 def plain_of(html: str) -> str:
+    """Versión en texto plano de un HTML (para la parte alternativa del correo)."""
     t = re.sub(r"(?is)<(style|script|head).*?</\1>", "", html)
     t = re.sub(r"(?i)<br\s*/?>|</(p|div|tr|li|h\d)>", "\n", t)
     return re.sub(r"\n{3,}", "\n\n", _html.unescape(re.sub(r"<[^>]+>", "", t))).strip()
 
 
 async def send(tenant: dict, req: dict) -> dict:
+    """Envía un correo por SMTP en nombre del usuario (From con su nombre, Reply-To con alias propio) y lo registra en EspoCRM como «Sent», salvo que record sea False; si es un lead y no lo manda el agente, pausa al comercial virtual."""
     cfg = (tenant.get("settings") or {}).get("mailout") or {}
     if not cfg.get("host") or not cfg.get("from_address"):
         raise LookupError("Esta empresa no tiene el correo del Centro de control configurado.")

@@ -1,3 +1,6 @@
+"""Entrada de leads desde los canales: Facebook/Instagram Lead Ads, WhatsApp (Evolution, Meta, Gupshup, Twilio, genérico), Telegram y SMS.
+Busca o crea el lead en EspoCRM (por teléfono, correo o chat), registra cada mensaje como nota, avisa al responsable (push),
+aplica la baja («BAJA») y delega la respuesta automática en agent.on_inbound. Lo llaman los webhooks de main.py."""
 import json
 import logging
 
@@ -24,6 +27,7 @@ def normalize_phone(raw: str | None) -> str | None:
 
 async def upsert_lead(tenant: dict, *, name: str, phone: str | None, email: str | None, source: str,
                       extra: dict | None = None, campaign: str | None = None) -> str:
+    """Crea el lead en EspoCRM (estado inicial del pipeline); si ya existe (409) reutiliza el encontrado por teléfono o correo y deja una nota. Devuelve su id."""
     espo = Espo(tenant)
     first, last = _split_name(name)
     data = {"firstName": first, "lastName": last or first or "Sin nombre", "phoneNumber": normalize_phone(phone),
@@ -44,6 +48,7 @@ async def upsert_lead(tenant: dict, *, name: str, phone: str | None, email: str 
 
 
 async def find_campaign_id(tenant: dict, name: str | None) -> str | None:
+    """Id de la campaña de EspoCRM con ese nombre, o None (también si falla la consulta)."""
     if not name:
         return None
     try:
@@ -55,12 +60,14 @@ async def find_campaign_id(tenant: dict, name: str | None) -> str | None:
 
 
 async def find_lead(tenant: dict, attr: str, value: str) -> str | None:
+    """Id del primer lead cuyo atributo `attr` es igual a `value`, o None."""
     r = await Espo(tenant).get("Lead", **{"where[0][type]": "equals", "where[0][attribute]": attr, "where[0][value]": value,
                                           "maxSize": 1, "select": "id"})
     return r["list"][0]["id"] if r.get("list") else None
 
 
 async def find_lead_by_phone(tenant: dict, phone: str) -> str | None:
+    """Id del lead con ese teléfono (normalizado a E.164), o None."""
     espo = Espo(tenant)
     phone = normalize_phone(phone)
     r = await espo.get("Lead", **{"where[0][type]": "equals", "where[0][attribute]": "phoneNumber",
@@ -69,6 +76,7 @@ async def find_lead_by_phone(tenant: dict, phone: str) -> str | None:
 
 
 async def facebook_lead(tenant: dict, leadgen_id: str) -> dict:
+    """Consulta en Graph API los campos del formulario de un lead de Facebook (requiere settings.fb_page_token)."""
     token = (tenant.get("settings") or {}).get("fb_page_token")
     if not token:
         raise ValueError("Falta settings.fb_page_token para consultar el lead en Graph API")
@@ -80,6 +88,7 @@ async def facebook_lead(tenant: dict, leadgen_id: str) -> dict:
 
 
 async def from_facebook(tenant: dict, payload: dict) -> list[str]:
+    """Procesa el webhook de Lead Ads de Facebook/Instagram: crea o actualiza un lead por cada cambio y devuelve sus ids."""
     ids = []
     for entry in payload.get("entry", []):
         for ch in entry.get("changes", []):
@@ -180,6 +189,7 @@ async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None,
 
 
 async def from_evolution(tenant: dict, payload: dict) -> str | None:
+    """Procesa el webhook de Evolution API (messages.upsert): ignora grupos, resuelve el número (o el LID), registra la línea de entrada y delega en whatsapp_inbound."""
     from . import routing
     if payload.get("event", "").lower().replace("_", ".") != "messages.upsert":
         return None
@@ -242,6 +252,7 @@ OPTOUT = {"baja", "stop", "alto", "cancelar", "no mas", "no mas mensajes", "no q
 
 
 def is_optout(text: str) -> bool:
+    """True si el texto es una palabra de baja (BAJA, STOP, etc.), sin tildes ni mayúsculas."""
     import unicodedata
     t = "".join(c for c in unicodedata.normalize("NFD", (text or "").lower().strip().strip(".!¡")) if unicodedata.category(c) != "Mn")
     return t in OPTOUT
@@ -349,6 +360,7 @@ async def from_telegram(tenant: dict, update: dict) -> str | None:
 
 
 async def sms_inbound(tenant: dict, *, phone: str, text: str, name: str | None = None) -> str:
+    """SMS recibido: busca o crea el lead, deja la nota, procesa la baja o pasa el mensaje al comercial virtual. Devuelve el id del lead."""
     from . import sms
     lead_id = await find_lead_by_phone(tenant, phone) or await upsert_lead(
         tenant, name=name or phone, phone=phone, email=None, source="SMS", extra={"preferredChannel": "Teléfono"})

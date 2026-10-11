@@ -1,4 +1,8 @@
-// Teléfono del registro: el propio panel es el celular. Marcar, registrar la llamada y ver el historial, todo dentro del panel.
+/**
+ * Panel «Teléfono» del registro: marcar, registrar una llamada manual y ver el historial de llamadas.
+ * Endpoints: GET CrmHub/channels, GET CrmHub/linesActive, POST CrmHub/voice/call (llamada por el proveedor de voz), POST CrmHub/call (registrar llamada), GET CrmHub/leadTimeline (kind=calls).
+ * El teléfono del agente se recuerda con la clave crmhub-agent-phone-{usuario}. Recarga con 'sync' del modelo y avisa con Live.notify; usa pantalla dividida ('ch').
+ */
 define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split', 'custom:live-panel'], function (Dep, ChUi, Split, Live) {
     const STATUS = {Held: ['Realizada', 'ok'], 'Not Held': ['No contestada', 'bad'], Planned: ['En curso / pendiente', 'warn']};
     return class extends Dep {
@@ -40,6 +44,7 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split',
 
         onRemove() { clearInterval(this.timer); if (this._chSplit) { this._chSplit = false; Split.close('ch'); } }
 
+        // Cambia lo que muestra el panel: marcador, llamada en curso o registro manual.
         setMode(mode, opts) {
             const f = this.el.querySelector('[data-role="form"]'); if (!f) { return; }
             this.mode = mode;
@@ -80,6 +85,7 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split',
             this.setMode('log', {fromDialer: true});
         }
 
+        // Inicia la llamada vía el Hub (CrmHub/voice/call).
         startNow() {
             const agent = (this.el.querySelector('[name="agent"]').value || '').trim();
             if (!agent) { this.formError('Escribe tu teléfono o extensión.'); return; }

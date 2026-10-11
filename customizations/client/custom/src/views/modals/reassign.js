@@ -1,3 +1,7 @@
+/**
+ * Ventana «Reasignar» registros a otro asesor (o «Automático», el más libre), con motivo opcional.
+ * Endpoints: GET CrmHub/assignees y POST CrmHub/reassign. Dispara 'done' al terminar. La abre custom:handlers/reassign.
+ */
 define('custom:views/modals/reassign', ['views/modal'], function (Dep) {
     return class extends Dep {
         templateContent = `

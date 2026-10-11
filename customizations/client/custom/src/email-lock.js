@@ -1,4 +1,7 @@
-// Un correo ya enviado o recibido no se puede editar (evita malentendidos): solo los borradores. Se bloquea al abrirlo y al cargar su estado.
+/**
+ * Un correo ya enviado o recibido no se puede editar (evita malentendidos): solo los borradores. Se bloquea al abrirlo y al cargar su estado.
+ * mount(view) aplica el bloqueo y lo repite en cada evento sync del modelo. El servidor también lo impide (hook Email/Immutable). Sin endpoints.
+ */
 define('custom:email-lock', [], function () {
     function lock(view) {
         const st = view.model && view.model.get('status');

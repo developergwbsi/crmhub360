@@ -1,3 +1,7 @@
+/**
+ * Reasignar registros a otro usuario, desde el detalle (un registro) o desde la lista (acción masiva).
+ * Abre el modal custom:views/modals/reassign y, al evento done, recarga el modelo o la colección. Requiere ser admin o tener assignmentPermission distinto de «no»; si no, se quita la acción masiva.
+ */
 define('custom:handlers/reassign', ['action-handler'], function (Dep) {
     return class extends Dep {
         // Detalle (menú de acciones) y lista (acción masiva) comparten esta acción.

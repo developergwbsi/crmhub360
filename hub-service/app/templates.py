@@ -13,11 +13,13 @@ CREATE INDEX IF NOT EXISTS user_templates_owner ON user_templates (tenant, user_
 
 
 def ensure_schema() -> None:
+    """Crea la tabla user_templates si no existe."""
     with db.pool.connection() as c:
         c.execute(SCHEMA)
 
 
 def limit_of(tenant: dict) -> int:
+    """Máximo de plantillas por canal de la empresa: MAX o settings.limits.templates si es mayor."""
     try:
         return max(MAX, int(((tenant.get("settings") or {}).get("limits") or {}).get("templates") or MAX))
     except (TypeError, ValueError):
@@ -25,12 +27,14 @@ def limit_of(tenant: dict) -> int:
 
 
 def list_for(tenant: str, user_id: str, limit: int = MAX) -> dict:
+    """Plantillas del usuario (todas sus plantillas ordenadas por canal y nombre) y el máximo permitido."""
     with db.pool.connection() as c:
         rows = c.execute("SELECT id, channel, name, subject, body, design, updated_at FROM user_templates WHERE tenant=%s AND user_id=%s ORDER BY channel, lower(name)", (tenant, user_id)).fetchall()
     return {"items": [dict(r) for r in rows], "max": limit}
 
 
 def save(tenant: str, user_id: str, p: dict, limit: int = MAX) -> dict:
+    """Crea o actualiza una plantilla validando canal, nombre, contenido y diseño; PermissionError si supera el límite. Devuelve {id}."""
     ch, name, body, subject = p.get("channel"), (p.get("name") or "").strip(), (p.get("body") or "").strip(), (p.get("subject") or "").strip()
     if ch not in CHANNELS:
         raise ValueError("Canal inválido.")
@@ -67,5 +71,6 @@ def save(tenant: str, user_id: str, p: dict, limit: int = MAX) -> dict:
 
 
 def delete(tenant: str, user_id: str, tid: int) -> bool:
+    """Borra una plantilla del usuario; True si existía."""
     with db.pool.connection() as c:
         return bool(c.execute("DELETE FROM user_templates WHERE id=%s AND tenant=%s AND user_id=%s RETURNING id", (tid, tenant, user_id)).fetchone())

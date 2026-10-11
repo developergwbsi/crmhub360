@@ -1,3 +1,10 @@
+/**
+ * Mensajes masivos (campañas): lista con estado y progreso, asistente de creación (canal, audiencia, texto, ritmo por minuto, programación) y control de cada campaña.
+ * Endpoints: GET CrmHub/broadcasts, GET CrmHub/broadcasts/{id}, POST CrmHub/broadcasts/{id}/{acción} (pausar, reanudar, cancelar…),
+ * POST CrmHub/broadcast (crear), POST CrmHub/broadcast/audience (cuenta la audiencia), GET CrmHub/assignees (filtro por asesor).
+ * Permiso: quien tenga nivel de asignación distinto de «no» (el servidor lo valida). Peculiaridad: la lista se refresca sola cada 8 s salvo con el asistente abierto.
+ * Plantilla: custom:broadcasts.
+ */
 define('custom:views/broadcasts', ['view', 'custom:ui'], function (Dep, ChUi) {
     const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const STATUS = {running: ['En envío', 'info'], scheduled: ['Programada', 'warning'], paused: ['En pausa', 'warning'], done: ['Terminada', 'success'], cancelled: ['Cancelada', 'danger']};
@@ -15,6 +22,7 @@ define('custom:views/broadcasts', ['view', 'custom:ui'], function (Dep, ChUi) {
             this.timer = setInterval(() => { if (!this.wizard && this.isRendered()) { this.load(true); } }, 8000);
         }
 
+        // Detiene el refresco periódico de la lista
         onRemove() { clearInterval(this.timer); }
 
         load(silent) {

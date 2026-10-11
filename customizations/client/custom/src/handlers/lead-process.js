@@ -1,3 +1,7 @@
+/**
+ * Acciones del lead para procesos y documentos.
+ * actionDoc abre el lector de PDF (custom:doc-reader); actionRun vuelve a ejecutar los procesos del lead con POST CrmHub/processRun.
+ */
 define('custom:handlers/lead-process', ['action-handler', 'custom:doc-reader'], function (Dep, Reader) {
     return class extends Dep {
         actionDoc() { Reader.open(this.view.model); }

@@ -1,4 +1,8 @@
-// Tablero de cualquier entidad: al pulsar una tarjeta se abre la ficha en un panel lateral (pantalla dividida).
+/**
+ * Tablero Kanban de cualquier entidad: al pulsar una tarjeta abre la ficha en custom:views/modals/lead-drawer (pantalla dividida).
+ * Se recarga solo con custom:live-list (aviso por websocket de lead nuevo, respaldo cada 20 s).
+ * Los eventos mousedown/mouseup se escuchan en fase de captura porque el arrastre de Espo se come el click. Ctrl/Cmd/Shift o botón distinto mantienen el comportamiento normal.
+ */
 define('custom:views/record/kanban-drawer', ['views/record/kanban', 'custom:live-list'], function (Dep, Live) {
     return class extends Dep {
         setup() {

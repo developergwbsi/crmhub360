@@ -1,3 +1,8 @@
+/**
+ * Dashlet «Panel Crm Hub»: KPIs de captación y cartera, tendencia, y barras por estado, servicio, origen, campaña y asesor, con periodo 7/30/90/365 días.
+ * Endpoint: GET CrmHub/metrics?days=N (el alcance depende del permiso de asignación: todo / equipo / propio).
+ * Se recarga solo cuando llega un lead nuevo (custom:live-list, feed/unfeed). Sin la opción crmhubCartera solo muestra captación.
+ */
 define('custom:views/dashlets/crmhub-panel', ['views/dashlets/abstract/base', 'custom:live-list'], function (Dep, Live) {
     const STATUS_COLORS = {
         'Nuevo Lead': '#94a3b8', 'En Calificación': '#4f63e8', 'Calificado': '#8b5cf6',
@@ -32,8 +37,10 @@ define('custom:views/dashlets/crmhub-panel', ['views/dashlets/abstract/base', 'c
             Live.feed(this, () => this.load(true));   // lead nuevo → las cifras se actualizan solas
         }
 
+        // Deja de escuchar los avisos de leads nuevos
         onRemove() { Live.unfeed(this); super.onRemove && super.onRemove(); }
 
+        // silent = recarga por lead nuevo: no borra las cifras ni muestra error
         load(silent) {
             if (!silent) { this.state = null; }
             Espo.Ajax.getRequest('CrmHub/metrics', {days: this.days})

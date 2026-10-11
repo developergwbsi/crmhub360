@@ -1,6 +1,11 @@
-/* Crm Hub 360 - arranque global (se carga en todas las pantallas, incluido el login).
- * Modo claro/oscuro, colores por sección del menú, PWA (service worker, instalación),
- * aviso de pérdida/retorno de conexión y aviso de nueva versión. */
+/**
+ * Crm Hub 360 - arranque global (se carga en todas las pantallas, incluido el login).
+ * Se registra en Resources/metadata/app/client.json (scriptList), por eso no es un módulo AMD sino un IIFE.
+ * Modo claro/oscuro, colores por sección del menú, PWA (service worker /client/custom/sw.js, instalación),
+ * aviso de pérdida/retorno de conexión (eventos online/offline y latido a version.json) y aviso de nueva versión.
+ * Endpoints: CrmHub/push/key, CrmHub/push/subscribe y CrmHub/push/unsubscribe (notificaciones push); App/user (nombre de la empresa y modo solo lectura).
+ * También carga bajo demanda custom:doc-watch, decora tablas y estados vacíos y fija el encabezado de página.
+ */
 (function () {
     'use strict';
 
@@ -13,6 +18,7 @@
     function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
 
     /* ---------------- Tema claro / oscuro ---------------- */
+    // Tema efectivo (claro/oscuro): el guardado o, si no hay, el del sistema
     function resolved() {
         var p = lsGet(THEME_KEY);
         if (p === 'light' || p === 'dark') { return p; }
@@ -110,6 +116,7 @@
     /* ---------------- Notificaciones push (llegan con la app cerrada) ---------------- */
     var pushOn = false, pushSynced = false, docWatchStarted = false;
     function pushSupported() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext; }
+    // Llamada a la API de Espo (usa Espo.Ajax) para los endpoints CrmHub/push/*
     function api(method, url, data) {
         return (window.Espo && Espo.Ajax) ? Espo.Ajax[method + 'Request'](url, data) : Promise.reject(new Error('app no lista'));
     }
@@ -218,6 +225,7 @@
         return fetch(BASE + 'version.json?t=' + Date.now(), {cache: 'no-store'}).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
     }
 
+    // Compara version.json con la versión cargada y avisa si hay una nueva
     function checkVersion() {
         var atStart = !startupTried; startupTried = true;
         fetchVersion().then(function (v) {

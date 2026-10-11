@@ -15,6 +15,7 @@ _sent: dict[tuple[str, str], float] = {}  # (lead_id, texto) -> instante: evita 
 
 
 def recently_sent(lead_id: str, text: str, window: float = 180.0) -> bool:
+    """True si ese texto se envió a ese lead hace menos de `window` segundos (así no se duplica la nota con el eco del webhook); limpia las entradas viejas."""
     now = time.time()
     for k in [k for k, t in _sent.items() if now - t > window]:
         _sent.pop(k, None)
@@ -26,6 +27,7 @@ def _st(tenant: dict) -> dict:
 
 
 def provider(tenant: dict) -> str:
+    """Proveedor de WhatsApp activo de la línea por defecto (settings.wa_provider, o Evolution si hay URL), o cadena vacía."""
     st = _st(lines.effective(tenant, "whatsapp"))
     p = st.get("wa_provider")
     if p in PROVIDERS:
@@ -43,6 +45,7 @@ def _need(tenant: dict, *keys: str) -> list[str]:
 
 # ---------------- prueba de conexión ----------------
 async def test(tenant: dict) -> dict:
+    """Prueba de conexión según el proveedor (Evolution, Meta, Gupshup, Twilio o genérico); devuelve {provider, state, connected}. ValueError si falta configuración."""
     tenant = lines.effective(tenant, "whatsapp")
     p = provider(tenant)
     async with httpx.AsyncClient(timeout=12) as c:
@@ -121,6 +124,7 @@ def _err(r: httpx.Response) -> str:
 
 # ---------------- envío ----------------
 async def send_text(tenant: dict, phone: str, text: str) -> None:
+    """Envía un texto por el proveedor configurado, sin dejar nota; ValueError si el proveedor lo rechaza o no hay configuración."""
     tenant = lines.effective(tenant, "whatsapp")
     p = provider(tenant)
     number = phone.lstrip("+")
@@ -225,6 +229,7 @@ def lead_numbers(lead: dict) -> list[str]:
 
 
 def pick_number(lead: dict, wanted: str | None) -> str:
+    """Número del lead al que escribir: el pedido (si es suyo) o el principal; ValueError si no tiene teléfono."""
     nums = lead_numbers(lead)
     if not nums:
         raise ValueError("El lead no tiene teléfono.")
@@ -237,6 +242,7 @@ def pick_number(lead: dict, wanted: str | None) -> str:
 
 
 async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str | None = None, phone: str | None = None, line_id: str | None = None) -> dict:
+    """Envía un WhatsApp a un lead (por la línea por la que escribió, si sigue encendida), deja nota, registra la ruta para que la respuesta llegue a quien escribió y pausa al comercial virtual si lo manda una persona."""
     if not line_id:   # sin elección explícita se responde por la línea por la que el cliente escribió (si sigue encendida)
         last = (routing.route_of(tenant["slug"], lead_id) or {}).get("last_line")
         if last and any(c["id"] == last for c in lines.active_lines(tenant, "whatsapp")):

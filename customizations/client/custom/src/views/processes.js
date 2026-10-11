@@ -1,4 +1,9 @@
-// Procesos al llegar un lead: la empresa define a qué API/webhook se envía la identificación y los datos del lead, y qué se guarda de la respuesta.
+/**
+ * Procesos al llegar un lead: la empresa define a qué API/webhook se envía la identificación y los datos del lead, y qué se guarda de la respuesta.
+ * Solo admin. Pestañas: procesos, perfiles de lectura de documentos (docs) y ejecuciones recientes.
+ * Endpoints: GET CrmHub/processes y processRuns, POST CrmHub/processesSave y processTest (timeout 90 s), GET CrmHub/docProfiles y POST docProfilesSave.
+ * Dibuja con innerHTML en draw(); las variables {{...}} del lead se insertan en los campos del proceso.
+ */
 define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (Dep, ChUi, Tpl) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const VARS = [['{{identificacion}}', 'Identificación'], ['{{tipo_identificacion}}', 'Tipo de documento'], ['{{nombre}}', 'Nombre'], ['{{apellido}}', 'Apellido'], ['{{nombre_completo}}', 'Nombre completo'],

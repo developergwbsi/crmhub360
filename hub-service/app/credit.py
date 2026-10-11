@@ -1,3 +1,6 @@
+"""Lectura de historias de crédito en PDF: extrae el texto, el LLM saca score, deudas y obligaciones (JSON)
+y se guardan en los campos credit* del lead de EspoCRM. Al terminar lanza qualify.run (calificación por reglas).
+El lead pasa por creditParseStatus: Procesando, Completado o Error (en ese caso queda en «Revisión Manual»)."""
 import io
 
 from pypdf import PdfReader
@@ -36,12 +39,14 @@ SYSTEM = (
 
 
 def extract_text(pdf: bytes) -> str:
+    """Texto del PDF (modo layout, sin OCR); vacío si el PDF es un escaneo."""
     reader = PdfReader(io.BytesIO(pdf))
     text = "\n".join((p.extract_text(extraction_mode="layout") or "") for p in reader.pages)
     return text.strip()
 
 
 async def process(tenant: dict, lead_id: str, attachment_id: str) -> None:
+    """Procesa el PDF adjunto de un lead: extrae datos con el LLM, actualiza sus campos de crédito y lo recalifica. Si falla, marca el lead en revisión manual y relanza el error."""
     espo = Espo(tenant)
     await espo.put(f"Lead/{lead_id}", {"creditParseStatus": "Procesando"})
     try:

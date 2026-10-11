@@ -1,5 +1,10 @@
+/**
+ * Acciones del asistente IA en el lead (resumir, redactar respuesta, analizar sentimiento).
+ * Endpoint: POST Lead/{id}/ai/{summarize|draft|sentiment} (timeout de 5 min); muestra el texto en un modal «Asistente IA».
+ */
 define('custom:handlers/lead-ai', ['action-handler'], function (Dep) {
     return class extends Dep {
+        // Pide al servidor la acción de IA y muestra el resultado
         run(action) {
             Espo.Ui.notify(this.view.translate('Loading...', 'messages'));
             Espo.Ajax.postRequest(`Lead/${this.view.model.id}/ai/${action}`, {}, {timeout: 300000})

@@ -1,3 +1,7 @@
+/**
+ * Organigrama: gerentes, equipos (directores y miembros) y usuarios sin equipo, con avatar de iniciales y color estable por id.
+ * Endpoint: GET CrmHub/orgchart (el servidor responde canManage solo para admin). Plantilla: custom:orgchart.
+ */
 define('custom:views/orgchart', ['view'], function (Dep) {
     const COLORS = ['#4f63e8', '#8b5cf6', '#0ea5e9', '#2fa36b', '#f59e0b', '#ef5b5b', '#14b8a6', '#d4729b'];
     const decorate = u => {

@@ -1,5 +1,8 @@
-// Lienzo de diseño de correos por bloques: se arrastran bloques (cabecera, título, texto, imagen, botón…), se ajustan sus propiedades y se genera HTML
-// compatible con Gmail/Outlook (tablas y estilos en línea). Cada diseño se guarda como JSON para poder seguir editándolo.
+/**
+ * Lienzo de diseño de correos por bloques: se arrastran bloques (cabecera, título, texto, imagen, botón…), se ajustan sus propiedades y se genera HTML
+ * compatible con Gmail/Outlook (tablas y estilos en línea). Cada diseño se guarda como JSON para poder seguir editándolo.
+ * Exporta {Designer, renderEmail, starter, TYPES}. Lo usa custom:views/my-templates; no llama a endpoints propios (el guardado lo hace la vista que lo aloja).
+ */
 define('custom:designer', ['custom:ui', 'custom:mail-send'], function (ChUi, MailSend) {
     const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const FONTS = [['Arial, Helvetica, sans-serif', 'Arial'], ['Georgia, serif', 'Georgia'], ['Verdana, Geneva, sans-serif', 'Verdana'], ['Trebuchet MS, sans-serif', 'Trebuchet'], ['Tahoma, sans-serif', 'Tahoma']];
@@ -56,6 +59,7 @@ define('custom:designer', ['custom:ui', 'custom:mail-send'], function (ChUi, Mai
         return '';
     }
     const table = (rows, t) => `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:${+t.width || 600}px;margin:0 auto;background:${esc(t.card)};border-radius:12px;overflow:hidden;border-collapse:separate"><tbody>${rows}</tbody></table>`;
+    // Convierte el diseño (JSON de bloques) en el HTML final del correo
     function renderEmail(design) {
         const t = {...THEME, ...(design.theme || {})};
         return `<div data-ch-design="1" style="background:${esc(t.bg)};padding:22px 8px;${FONT(t)}">${table(design.blocks.map(b => row(b, t)).join(''), t)}</div>`;

@@ -42,6 +42,7 @@ def _dt(s: str | None) -> datetime | None:
 
 
 def compute(leads: list[dict]) -> dict:
+    """Estadísticas del historial real de leads: totales, tasa de cierre, días a cierre, conversión por fuente, servicio, campaña, asesor, día y hora, y últimos 30 días frente a los 30 previos."""
     total, won = len(leads), [l for l in leads if l["status"] in WON]
     dead = [l for l in leads if l["status"] == "Dead"]
     days = []
@@ -93,6 +94,7 @@ def findings(s: dict) -> list[str]:
 
 
 async def refresh(tenant: dict, llm) -> dict:
+    """Recalcula las estadísticas y los hallazgos, pide recomendaciones al LLM (si hay 10 leads o más) y las guarda en kb_insights; devuelve el estado de get."""
     simulate.ensure_schema()
     leads = await _leads(Espo(tenant))
     stats = compute(leads)
@@ -113,6 +115,7 @@ async def refresh(tenant: dict, llm) -> dict:
 
 
 def get(tenant: str) -> dict:
+    """Banco de conocimiento del tenant: estadísticas y resumen guardados (kb_insights), notas (kb_notes) y pasos de simulación omitidos o con error (sim_events)."""
     simulate.ensure_schema()
     with db.pool.connection() as c:
         r = c.execute("SELECT generated_at, stats, summary FROM kb_insights WHERE tenant=%s", (tenant,)).fetchone()
@@ -123,11 +126,13 @@ def get(tenant: str) -> dict:
 
 
 def add_note(tenant: str, user_id: str, user_name: str, text: str) -> None:
+    """Guarda una nota manual del usuario en kb_notes (máx. 2000 caracteres)."""
     with db.pool.connection() as c:
         c.execute("INSERT INTO kb_notes (tenant, user_id, user_name, text) VALUES (%s,%s,%s,%s)", (tenant, user_id, user_name, text[:2000]))
 
 
 def delete_note(tenant: str, note_id: int, user_id: str | None) -> bool:
+    """Borra una nota; si se indica user_id solo la borra cuando es de ese usuario. True si existía."""
     with db.pool.connection() as c:
         r = c.execute("DELETE FROM kb_notes WHERE id=%s AND tenant=%s" + (" AND user_id=%s" if user_id else "") + " RETURNING id", (note_id, tenant, user_id) if user_id else (note_id, tenant)).fetchone()
     return bool(r)
