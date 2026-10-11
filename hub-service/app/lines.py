@@ -150,6 +150,8 @@ def overview(tenant: dict) -> dict:
                 if c["type"] == "evolution" and (c["fields"].get("evolution_instance") or ""):
                     try:
                         pc["activity"] = routing.evo_activity(tenant["slug"], c["fields"]["evolution_instance"])
+                        from . import monitor
+                        pc["monitor"] = monitor.health(tenant["slug"], c["fields"]["evolution_instance"])   # prueba de extremo a extremo del Centro de control
                     except Exception:
                         pass
         out[ch] = {"label": spec["label"], "default": _default_id(st, ch, cards), "cards": pub,

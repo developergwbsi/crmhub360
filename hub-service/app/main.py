@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import monitor, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +39,7 @@ async def lifespan(_: FastAPI):
     processes.ensure_schema()
     documents.ensure_schema()
     agent.ensure_schema()
+    monitor.ensure_schema()
     templates.ensure_schema()
     bg = asyncio.create_task(broadcast.worker())
     mb = asyncio.create_task(mailbox.worker())

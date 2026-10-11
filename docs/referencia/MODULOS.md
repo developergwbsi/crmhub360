@@ -25,6 +25,7 @@
 | `mailbox.py` | Buzón de entrada: trae a la bandeja de EspoCRM los correos que llegan a la cuenta de correo de la empresa (IMAP). Corre en el Hub (red del servidor) porque el cortafuegos redirige IMAP (143/993) del tráfico de los contenedores a otro servidor. Configuración por empresa en tenants.settings.mailbox = {enabled, host, port, user, password, since, last_uid}. |
 | `mailout.py` | Envío de correos como el usuario: remitente con su nombre, firma propia y Reply-To personal sobre una cuenta compartida. Las respuestas llegan a «cuenta+<idUsuario>@dominio» (alias del mismo buzón) y el lector de buzón (mailbox.py) las entrega solo a ese usuario. Configuración por empresa en tenants.settings.mailout = {host, port, security, user, password, from_address, plus}. |
 | `main.py` | Hub Service de Crm Hub 360: API FastAPI que consume EspoCRM (interfaz PHP), que recibe los webhooks de los canales y mantiene los workers. |
+| `monitor.py` | Monitor de conexión de Evolution (lado del Hub): reconoce las respuestas automáticas de la línea de pruebas del Centro de control y expone el estado de la línea. |
 | `ollama.py` | Cliente del servidor Ollama (LLM local) configurado en config (OLLAMA_URL, OLLAMA_MODEL, OLLAMA_TIMEOUT). Lo usa llm.py cuando el tenant no tiene un proveedor de IA externo. LOCK serializa las inferencias. |
 | `processes.py` | Procesos al llegar un lead: cada empresa define qué se ejecuta (una llamada a una API/webhook) cuando entra un lead —con su identificación y demás datos— y qué se guarda de la respuesta. Se ejecutan en segundo plano, con reintentos y un registro de cada ejecución. El scraping se enchufa después como otro tipo de acción. |
 | `push.py` | Web Push con VAPID: el servidor envía notificaciones aunque la app esté cerrada (la reciben los navegadores suscritos). |
@@ -42,6 +43,7 @@
 
 | Módulo | Qué hace |
 |---|---|
+| `evomon.py` | Monitor de conexión de Evolution API (WhatsApp) del Centro de control. |
 | `main.py` | Crm Hub 360 - Centro de control: crear y vigilar empresas, restablecer claves y entrar en modo lectura. No ejecuta nada privilegiado: encola trabajos que realiza `bin/control-worker` en el servidor. |
 | `welcome.py` | Plantilla de bienvenida de una empresa nueva (correo HTML a prueba de clientes de correo: tablas y estilos en línea). Marcadores: {{nombre}} {{apellido}} {{empresa}} {{url}} {{usuario}} {{clave}} {{ciudad}} {{pais}} {{anio}} |
 

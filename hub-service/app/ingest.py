@@ -220,6 +220,10 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
         return None  # ignorar grupos
     msg = _unwrap(d.get("message") or {})
     text = msg.get("conversation") or (msg.get("extendedTextMessage") or {}).get("text")
+    if text:   # prueba automática de conexión del Centro de control: no es una conversación
+        from . import monitor
+        if monitor.consume(tenant["slug"], text):
+            return None
     if not text:   # respuestas a listas y botones
         text = ((msg.get("listResponseMessage") or {}).get("title") or (msg.get("buttonsResponseMessage") or {}).get("selectedDisplayText")
                 or (msg.get("templateButtonReplyMessage") or {}).get("selectedDisplayText")

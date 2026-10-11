@@ -120,15 +120,120 @@
   function shell() {
     $app.innerHTML = `<div class="top"><div class="brand"><i>◆</i><span>Crm Hub 360 <small>· Centro de control</small></span></div><span class="grow"></span>
       <button class="btn sm" id="acc"><span id="who">Mi cuenta</span></button><button class="btn sm" id="out">Salir</button></div>
-      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="actividad">Actividad</button></div>
+      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="monitor">Monitor WhatsApp<span class="tabdot" id="mon-badge" hidden></span></button><button class="tab" data-t="actividad">Actividad</button></div>
       <main id="main"></main>`;
     document.getElementById('acc').onclick = accountDialog;
     document.getElementById('out').onclick = async () => { try { await api('POST', '/logout'); } catch (e) { /* ya cerrada */ } renderLogin(); };
     document.querySelectorAll('.tab').forEach(b => b.onclick = () => { state.tab = b.dataset.t; draw(); });
   }
+
+  // ---------- Monitor de WhatsApp (Evolution): prueba de extremo a extremo, alertas y vinculación por QR
+  const MON_STATE = {ok: ['Funciona', 'ok'], unknown: ['Sin medir', ''], no_recibe: ['No recibe mensajes', 'bad'], no_entrega: ['No entrega', 'bad'], envio_rechazado: ['Envío rechazado', 'bad'],
+    desconectada: ['Desconectada', 'bad'], sin_instancia: ['Sin instancia', 'bad'], sin_vincular: ['Sin vincular', 'warn'], monitor_caido: ['Línea de pruebas caída', 'bad']};
+  const monChip = st => { const m = MON_STATE[st] || [st, '']; return `<span class="chip ${m[1]}">${esc(m[0])}</span>`; };
+  async function refreshMonBadge() {
+    try { const r = await api('GET', '/evo-monitor/summary'), b = document.getElementById('mon-badge'); if (b) { b.hidden = !r.openAlerts; b.textContent = r.openAlerts; } } catch (e) { /* sin sesión */ }
+  }
+  async function drawMonitor() {
+    const main = document.getElementById('main');
+    if (!main.querySelector('[data-mon]')) { main.innerHTML = '<h2>Monitor WhatsApp</h2><p class="sub">Cargando…</p><div data-mon></div>'; }
+    let r; try { r = await api('GET', '/evo-monitor'); } catch (e) { main.innerHTML = `<h2>Monitor WhatsApp</h2><div class="err">${esc(e.message)}</div>`; return; }
+    if (state.tab !== 'monitor') { return; }
+    const c = r.config, m = r.monitor, open = r.alerts.filter(a => !a.resolved_at && a.severity !== 'info');
+    const mst = m.configured ? (m.state === 'open' ? '<span class="chip ok">Conectada</span>' : `<span class="chip bad">${esc(m.state === 'missing' ? 'Sin crear' : 'Desconectada')}</span>`) : '<span class="chip warn">Sin configurar</span>';
+    const dots = h => h.slice().reverse().map(x => `<i class="mdot ${x.s === 'ok' ? 'ok' : x.s === 'pending' ? '' : 'bad'}" title="${esc(fmtDate(x.at))}${x.rtt ? ' · ' + x.rtt + ' ms' : ''}${x.k ? ' · ' + esc((MON_STATE[x.k] || [x.k])[0]) : ''}"></i>`).join('');
+    const rows = r.lines.map(l => `<tr><td><div class="name">${esc(l.company)}</div><div class="mut">${esc(l.line)} · ${esc(l.instance)}</div></td><td>${monChip(l.state)}${l.lastError && l.state !== 'ok' ? `<div class="mut" style="max-width:260px">${esc(l.lastError)}</div>` : ''}</td>
+      <td class="hide-m">${esc(ago(l.lastOkAt))}</td><td class="hide-m">${l.failsInRow || 0}</td><td class="hide-m">${l.rttMs ? l.rttMs + ' ms' : '—'}</td><td class="hide-m"><span class="mdots">${dots(l.history) || '<span class="mut">—</span>'}</span></td>
+      <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-p="${esc(l.slug)}" data-l="${esc(l.lineId)}">Probar</button> <button class="btn sm" data-q="${esc(l.slug)}" data-n="${esc(l.company)}" data-l="${esc(l.lineId)}">QR</button> <button class="btn sm" data-r="${esc(l.slug)}" data-l="${esc(l.lineId)}">Reiniciar</button></td></tr>`).join('');
+    const alerts = r.alerts.map(a => `<tr><td class="mut" style="white-space:nowrap">${esc(fmtDate(a.at))}</td><td>${a.resolved_at ? '<span class="chip ok">Resuelta</span>' : (a.severity === 'info' ? '<span class="chip info">Aviso</span>' : '<span class="chip bad">Abierta</span>')}</td><td>${esc(a.message)}</td>
+      <td style="text-align:right">${a.resolved_at ? '' : `<button class="btn sm" data-ok="${a.id}">Atendida</button>`}</td></tr>`).join('');
+    main.innerHTML = `<h2>Monitor WhatsApp</h2><p class="sub">Evolution puede figurar «conectado» y aun así no recibir ni entregar mensajes. Este monitor lo comprueba como un cliente: cada <b>${c.interval_min} min</b> cada línea escribe a la <b>línea de pruebas</b>, que responde sola; si la respuesta no llega, avisamos antes de que lo note el cliente.</p>
+      <div data-mon></div>
+      ${open.length ? `<div class="card" style="border-color:var(--bad);margin-bottom:16px"><div style="padding:12px 16px"><b style="color:var(--bad)">⚠ ${open.length} alerta${open.length > 1 ? 's' : ''} abierta${open.length > 1 ? 's' : ''}</b>${open.map(a => `<div style="margin-top:6px">${esc(a.message)}</div>`).join('')}</div></div>` : ''}
+      <div class="card" style="padding:16px;margin-bottom:16px"><div class="bar" style="margin:0 0 8px"><b style="font-size:15px">Línea de pruebas</b>${mst}<label class="chk" style="margin:0 0 0 8px"><input type="checkbox" id="mon-on" ${c.enabled ? 'checked' : ''}> Monitor ${c.enabled ? 'activo' : 'apagado'}</label><span class="grow"></span>
+        <button class="btn sm" id="mon-cfg">Configurar</button><button class="btn sm" id="mon-ens">Crear / ajustar instancia</button><button class="btn sm primary" id="mon-qr">Vincular por QR</button><button class="btn sm" id="mon-all">Probar todas ahora</button></div>
+        <div class="kv"><span>Instancia</span><span>${esc(m.instance || '—')}</span><span>Número</span><span>${m.number ? '+' + esc(m.number) : '<span class="mut">Se detecta al vincular</span>'}</span><span>Servidor</span><span>${esc(((r.providers.find(p => p.id === c.provider_id) || {}).name) || 'Sin elegir')}</span><span>Avisos</span><span>${esc([...(c.alert_emails || []), ...(c.alert_whatsapp || []).map(n => '+' + n)].join(', ') || 'Al correo del superadministrador')}</span></div>
+        ${!c.provider_id ? '<div class="mut" style="margin-top:8px">Primero elige el servidor Evolution y un nombre de instancia en <b>Configurar</b>; después crea la instancia y escanea su QR con un teléfono propio (distinto de los de las empresas).</div>' : ''}</div>
+      <h3 style="margin:18px 0 8px">Líneas de las empresas</h3><div class="card">${rows ? `<table><thead><tr><th>Empresa · línea</th><th>Estado</th><th class="hide-m">Último OK</th><th class="hide-m">Fallos</th><th class="hide-m">Respuesta</th><th class="hide-m">Últimas pruebas</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+        : '<div style="padding:20px" class="mut">Ninguna empresa tiene una línea de WhatsApp con Evolution configurada.</div>'}</div>
+      <h3 style="margin:18px 0 8px">Alertas</h3><div class="card">${alerts ? `<table><thead><tr><th>Cuándo</th><th>Estado</th><th>Detalle</th><th></th></tr></thead><tbody>${alerts}</tbody></table>` : '<div style="padding:20px" class="mut">Sin alertas.</div>'}</div>`;
+    const $ = id => document.getElementById(id);
+    $('mon-on').onchange = async e => { try { await api('PUT', '/evo-monitor/config', {enabled: e.target.checked}); toast(e.target.checked ? 'Monitor activado' : 'Monitor apagado'); } catch (x) { toast(x.message); e.target.checked = !e.target.checked; } drawMonitor(); };
+    $('mon-cfg').onclick = () => monConfigDialog(r);
+    $('mon-ens').onclick = async () => { try { const x = await api('POST', '/evo-monitor/instance'); toast(x.note); } catch (e) { toast(e.message); } drawMonitor(); };
+    $('mon-qr').onclick = () => waDialog('__monitor', 'Línea de pruebas');
+    $('mon-all').onclick = async () => { try { await api('POST', '/evo-monitor/run', {}); toast('Pruebas enviadas: el resultado aparece en unos minutos'); } catch (e) { toast(e.message); } };
+    main.querySelectorAll('[data-p]').forEach(b => b.onclick = async () => { try { await api('POST', '/evo-monitor/run', {slug: b.dataset.p, lineId: b.dataset.l}); toast('Prueba enviada: el resultado aparece en unos minutos'); } catch (e) { toast(e.message); } });
+    main.querySelectorAll('[data-q]').forEach(b => b.onclick = () => waDialog(b.dataset.q, b.dataset.n, b.dataset.l));
+    main.querySelectorAll('[data-r]').forEach(b => b.onclick = async () => { if (!await confirmBox('Reiniciar la línea', 'Se reinicia la instancia de Evolution (reconecta la sesión sin pedir el QR). Los mensajes se interrumpen unos segundos.', 'Reiniciar')) { return; }
+      try { await api('POST', `/whatsapp/${b.dataset.r}/restart`, {lineId: b.dataset.l}); toast('Línea reiniciada'); } catch (e) { toast(e.message); } });
+    main.querySelectorAll('[data-ok]').forEach(b => b.onclick = async () => { try { await api('POST', `/evo-monitor/alerts/${b.dataset.ok}/resolve`); } catch (e) { toast(e.message); } drawMonitor(); });
+    clearInterval(state.monTimer); state.monTimer = setInterval(() => { if (state.tab === 'monitor' && !document.querySelector('.back')) { drawMonitor(); } }, 15000);
+    refreshMonBadge();
+  }
+  function monConfigDialog(r) {
+    const c = r.config;
+    const m = modal(`<h3>Configurar el monitor</h3><p class="mut">La <b>línea de pruebas</b> es una instancia de Evolution vinculada a un teléfono nuestro. Recibe los «ping» de las líneas y responde sola.</p>
+      <div class="grid2"><div><label>Servidor Evolution</label><select id="m-p"><option value="">Elige…</option>${r.providers.map(p => `<option value="${esc(p.id)}" ${p.id === c.provider_id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></div>
+        <div><label>Nombre de la instancia de pruebas</label><input id="m-i" value="${esc(c.instance)}" maxlength="60"></div></div>
+      <label>Número de la línea de pruebas (opcional: se detecta solo)</label><input id="m-n" value="${esc(c.number || '')}" placeholder="573001234567">
+      <div class="grid2"><div><label>Probar cada (minutos)</label><input id="m-iv" type="number" min="2" max="240" value="${c.interval_min}"></div><div><label>Esperar la respuesta (segundos)</label><input id="m-to" type="number" min="30" max="900" value="${c.timeout_s}"></div></div>
+      <div class="grid2"><div><label>Fallos seguidos para alertar</label><input id="m-ft" type="number" min="1" max="10" value="${c.fail_threshold}"></div><div><label>Repetir el aviso cada (horas)</label><input id="m-ra" type="number" min="1" max="72" value="${c.realert_hours}"></div></div>
+      <label class="chk" style="margin-top:10px"><input type="checkbox" id="m-ar" ${c.auto_restart ? 'checked' : ''}> Reiniciar la instancia automáticamente una vez al detectar un fallo</label>
+      <label>Correos que reciben las alertas (separados por coma)</label><input id="m-e" value="${esc((c.alert_emails || []).join(', '))}" placeholder="vacío = correo del superadministrador">
+      <label>WhatsApp que reciben las alertas (con indicativo, separados por coma)</label><input id="m-w" value="${esc((c.alert_whatsapp || []).map(n => '+' + n).join(', '))}" placeholder="+573001234567">
+      <div class="mut">Webhook de la línea de pruebas (se configura solo al crear la instancia): <code>${esc(c.webhookUrl)}</code></div>
+      <div class="err" id="m-er" hidden></div><div class="foot"><button class="btn" data-x="n">Cancelar</button><button class="btn primary" data-x="y">Guardar</button></div>`, 'wide');
+    const $ = id => m.el.querySelector('#' + id), list = v => v.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
+    m.el.querySelector('[data-x=n]').onclick = m.close;
+    m.el.querySelector('[data-x=y]').onclick = async () => {
+      try {
+        await api('PUT', '/evo-monitor/config', {provider_id: $('m-p').value, instance: $('m-i').value.trim(), number: $('m-n').value.trim(), interval_min: +$('m-iv').value, timeout_s: +$('m-to').value, fail_threshold: +$('m-ft').value,
+          realert_hours: +$('m-ra').value, auto_restart: $('m-ar').checked, alert_emails: list($('m-e').value), alert_whatsapp: list($('m-w').value)});
+        m.close(); toast('Configuración guardada'); drawMonitor();
+      } catch (e) { const er = $('m-er'); er.hidden = false; er.textContent = e.message; }
+    };
+  }
+  // Vinculación por QR de la línea de WhatsApp de una empresa (o de la línea de pruebas): la puede escanear el equipo del Centro
+  function waDialog(slug, name, lineId) {
+    const m = modal(`<h3>WhatsApp de ${esc(name)}</h3><p class="mut" id="wa-t">Pidiendo el código…</p><div id="wa-b" style="text-align:center;min-height:240px"><span class="spin"></span></div>
+      <div class="mut" id="wa-h" style="margin-top:6px"></div><div class="err" id="wa-e" hidden></div>
+      <div class="foot"><button class="btn" id="wa-rs">Reiniciar la línea</button><button class="btn danger" id="wa-lo">Cambiar de número</button><button class="btn" id="wa-rf">Nuevo código</button><button class="btn primary" data-x="k">Cerrar</button></div>`, 'wide');
+    const $ = id => m.el.querySelector('#' + id); let alive = true, qrAt = 0, polling = false;
+    const stop = () => { alive = false; clearInterval(tm); };
+    m.el.querySelector('[data-x=k]').onclick = () => { stop(); m.close(); };
+    const err = t => { const e = $('wa-e'); e.hidden = !t; e.textContent = t || ''; };
+    async function qr() {
+      if (!alive) { return; }
+      try {
+        const r = await api('POST', `/whatsapp/${slug}/qr`, {lineId: lineId || ''}); err('');
+        if (r.connected) { $('wa-t').textContent = 'La línea está conectada.'; $('wa-b').innerHTML = '<div style="font-size:54px">✅</div><b>WhatsApp conectado</b>'; $('wa-h').textContent = ''; qrAt = 0; return; }
+        qrAt = Date.now(); const src = (r.qr || '').startsWith('data:') ? r.qr : 'data:image/png;base64,' + (r.qr || '');
+        $('wa-t').innerHTML = 'Escanea este código con el WhatsApp del teléfono de la línea: <b>Ajustes → Dispositivos vinculados → Vincular un dispositivo</b>.';
+        $('wa-b').innerHTML = r.qr ? `<img alt="Código QR de WhatsApp" src="${esc(src)}" style="width:260px;height:260px;image-rendering:pixelated;background:#fff;padding:8px;border-radius:12px">` : '<div class="mut">Evolution aún no generó el código; pulsa «Nuevo código».</div>';
+        $('wa-h').textContent = r.pairingCode ? 'Código de emparejamiento: ' + r.pairingCode : 'El código se renueva solo cada pocos segundos.';
+      } catch (e) { err(e.message); }
+    }
+    async function check() {
+      if (!alive || polling) { return; } polling = true;
+      try {
+        const s = await api('GET', `/whatsapp/${slug}?lineId=${encodeURIComponent(lineId || '')}`);
+        if (s.state === 'open') { if (qrAt) { toast('¡WhatsApp vinculado!'); } await qr(); }
+        else if (qrAt && Date.now() - qrAt > 25000) { await qr(); }
+      } catch (e) { /* se reintenta */ } polling = false;
+    }
+    const tm = setInterval(check, 3000);
+    $('wa-rf').onclick = qr;
+    $('wa-rs').onclick = async () => { try { await api('POST', `/whatsapp/${slug}/restart`, {lineId: lineId || ''}); toast('Línea reiniciada'); setTimeout(qr, 2500); } catch (e) { err(e.message); } };
+    $('wa-lo').onclick = async () => { if (!await confirmBox('Cambiar de número', 'Se cierra la sesión de WhatsApp de esta línea (el teléfono queda desvinculado) y podrás escanear otro número. Mientras tanto la línea no envía ni recibe.', 'Cerrar sesión', true)) { return; }
+      try { await api('POST', `/whatsapp/${slug}/logout`, {lineId: lineId || ''}); toast('Sesión cerrada'); setTimeout(qr, 1500); } catch (e) { err(e.message); } };
+    qr();
+  }
+
   function draw() {
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.t === state.tab));
-    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, servicios: drawLookups, correo: drawMail, bienvenida: drawTemplates, actividad: drawActivity}[state.tab])();
+    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, servicios: drawLookups, correo: drawMail, bienvenida: drawTemplates, monitor: drawMonitor, actividad: drawActivity}[state.tab])();
+    if (state.tab !== 'monitor') { clearInterval(state.monTimer); }
   }
 
   // ---------- empresas
@@ -232,7 +337,7 @@
     d.innerHTML = `<header><div style="flex:1"><div class="name" style="font-size:17px">${esc(c.name)}</div><div class="mut">${esc(c.host)}</div></div><button class="x" aria-label="Cerrar">×</button></header><div class="body">
       <div class="acts"><a class="btn" href="https://${esc(c.host)}" target="_blank" rel="noopener">Abrir sitio</a><button class="btn primary" data-a="ro">Ver en modo lectura</button>
         ${isClient ? `<button class="btn" data-a="up">Actualizar a la base actual</button><button class="btn ${c.status === 'active' ? 'danger' : ''}" data-a="pw">${c.status === 'active' ? 'Suspender' : 'Reactivar'}</button>` : ''}
-        <button class="btn" data-a="cred">Ver credenciales del admin</button><button class="btn" data-a="ren">Cambiar nombre</button><button class="btn" data-a="mail">Enviar correo…</button></div>
+        <button class="btn" data-a="cred">Ver credenciales del admin</button><button class="btn" data-a="wa">WhatsApp (QR)</button><button class="btn" data-a="ren">Cambiar nombre</button><button class="btn" data-a="mail">Enviar correo…</button></div>
       <h4 style="margin:18px 0 6px">Datos</h4><div class="kv"><span>Estado</span><span>${esc(c.status === 'active' ? 'Activa' : 'Suspendida')}</span><span>Plan</span><span>${esc(c.plan)} · hasta ${c.maxUsers} usuarios</span>
         <span>Licencia</span><span>${esc(c.license || 'Sin vencimiento')}</span><span>Versión instalada</span><span>${esc(c.health.version || '—')}</span><span>Base de producción</span><span>${esc(c.kind === 'client' ? (c.release || 'ninguna') : 'Código de desarrollo')}</span>
         ${c.profile && (c.profile.first || c.profile.email) ? `<span>Administrador</span><span>${esc([c.profile.first, c.profile.last].filter(Boolean).join(' ') || '—')}<br><span class="mut">${esc(c.profile.email || '')}${c.profile.phone ? ' · ' + esc(c.profile.phone) : ''}</span></span>` : ''}${c.profile && (c.profile.country || c.profile.city) ? `<span>Ubicación</span><span>${esc([c.profile.city, countryName(c.profile.country)].filter(Boolean).join(', '))}</span>` : ''}<span>Creada</span><span>${esc(fmtDate(c.createdAt))}</span><span>Respuesta</span><span>${c.health.ms == null ? '—' : c.health.ms + ' ms'}</span></div>
@@ -251,6 +356,7 @@
       try { await api('PUT', `/companies/${slug}/name`, {name: nm}); toast('Nombre actualizado'); close(); loadCompanies(); } catch (e) { toast(e.message); }
     };
     d.querySelector('[data-a=mail]').onclick = () => sendMailDialog(c);
+    d.querySelector('[data-a=wa]').onclick = () => waDialog(c.slug, c.name);
     const up = d.querySelector('[data-a=up]');
     if (up) { up.onclick = async () => { if (await confirmBox('Actualizar empresa', 'Se aplicará la base de producción actual (' + state.currentRelease + '). El sitio se reinicia unos segundos.', 'Actualizar')) { close(); const r = await api('POST', `/companies/${slug}/upgrade`); watchJob(r.job, 'Actualizando «' + c.name + '»'); } }; }
     const pw = d.querySelector('[data-a=pw]');
@@ -631,7 +737,7 @@
 
   async function boot() {
     let me; try { me = await api('GET', '/me'); state.base = me.baseDomain; } catch (e) { renderLogin(); return; }
-    shell(); state.me = me; document.getElementById('who').textContent = me.name || me.user; if (me.name) { store.set('cc-name', me.name); }
+    shell(); refreshMonBadge(); clearInterval(state.badgeTimer); state.badgeTimer = setInterval(refreshMonBadge, 60000); state.me = me; document.getElementById('who').textContent = me.name || me.user; if (me.name) { store.set('cc-name', me.name); }
     await Promise.all([loadCompanies(), loadSide()]); draw();
     clearInterval(state.timer); state.timer = setInterval(() => { if (!document.querySelector('.back, .drawer')) { loadCompanies().catch(() => {}); loadSide().catch(() => {}); } }, 20000);
   }

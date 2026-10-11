@@ -27,6 +27,10 @@ La web **no ejecuta nada**: encola un trabajo en `control_jobs` y `bin/control-w
 
 *Dev es la base:* `release:publish` congela `customizations/` en `releases/<id>/`; esa copia es con la que se crean empresas nuevas. Las existentes solo cambian al pulsar «Actualizar a la base actual» (o `tenant:upgrade`). Ver [VERSIONES](../VERSIONES.md).
 
+## Monitor de WhatsApp y QR de las líneas
+
+La pestaña **Monitor WhatsApp** vigila de extremo a extremo cada línea de Evolution de las empresas (envío y recepción) con una línea de pruebas que responde sola, abre alertas (pantalla, correo y WhatsApp), reinicia la instancia y permite **escanear el QR de cualquier empresa desde el Centro**. Detalle en [MONITOR-WHATSAPP](MONITOR-WHATSAPP.md).
+
 ## Modo lectura de soporte
 
 Crea (si falta) el rol «Soporte (solo lectura)» y el usuario `soporte-lectura`, genera una clave nueva y un código de un solo uso (90 s) que `/?support=<código>` canjea en la empresa (`CrmHubSupport/exchange` → Hub `/v1/support/exchange`). El rol impide toda escritura y un aviso fijo lo indica. También se puede ver incrustado en la página del Centro.
