@@ -4,6 +4,7 @@
 
 ## Sin publicar (después de v1.2.0)
 
+- `5835a7b` 2026-10-11 — Mensajes: los canales se muestran solo con su icono y RCS aparece bloqueado como próximamente
 - `055e0a7` 2026-10-11 — Nueva página Mensajes: bandeja de WhatsApp, SMS y Telegram del usuario con un chat por canal; el chat pasa a ser un componente común del panel y de la página; manual, documentación y changelog
 - `9b355eb` 2026-10-11 — Kanban: columna Perdido, el aviso Guardando no queda fijo al pedir el comentario del cambio de estado y los estados de fábrica se muestran en español
 - `208de53` 2026-10-11 — Línea de Evolution: la tarjeta muestra cuándo llegó el último mensaje de un cliente y avisa si hace más de 24 h que no llega nada

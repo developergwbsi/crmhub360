@@ -4,6 +4,7 @@
  * Modo claro/oscuro, colores por sección del menú, PWA (service worker /client/custom/sw.js, instalación),
  * aviso de pérdida/retorno de conexión (eventos online/offline y latido a version.json) y aviso de nueva versión.
  * Endpoints: CrmHub/push/key, CrmHub/push/subscribe y CrmHub/push/unsubscribe (notificaciones push); App/user (nombre de la empresa y modo solo lectura).
+ * Corrector ortográfico en español (lang=es y spellcheck) en todos los campos de texto libre.
  * Cierre de sesión por inactividad (ajuste crmhubIdleMinutes, por defecto 30 min; 0 = desactivado) con aviso de 60 s.
  * También carga bajo demanda custom:doc-watch, decora tablas y estados vacíos y fija el encabezado de página.
  */
@@ -381,6 +382,30 @@
             }
         }).catch(function () { roChecked = false; });
     }
+
+    /* ---------------- Corrector ortográfico en español ----------------
+       Todo texto libre (cajas de mensaje, correos, notas, descripciones, asuntos) se escribe con el corrector del navegador en español:
+       lang="es" + spellcheck. No se toca lo que no es texto corriente (usuario, claves, correos, teléfonos, números, códigos, identificaciones). */
+    document.documentElement.setAttribute('lang', 'es');
+    var FREE_TEXT = 'textarea, [contenteditable="true"], [contenteditable=""], .note-editable, input[name="subject"], input[data-name="name"], input[data-name="subject"]';
+    var NO_SPELL = /user|login|pass|email|phone|url|site|token|key|slug|code|zip|postal|number|iban|nit|identific|document|account|domain|host|port|color|date|time/i;
+    function spellFix(root) {
+        if (!root || !root.querySelectorAll) { return; }
+        var list = root.matches && root.matches(FREE_TEXT) ? [root] : [];
+        root.querySelectorAll(FREE_TEXT).forEach(function (e) { list.push(e); });
+        list.forEach(function (e) {
+            if (e._chSpell) { return; }
+            var n = (e.getAttribute('name') || '') + ' ' + (e.getAttribute('data-name') || '');
+            if (e.tagName === 'INPUT' && NO_SPELL.test(n)) { return; }
+            e._chSpell = true;
+            e.setAttribute('spellcheck', 'true'); e.setAttribute('lang', 'es'); e.setAttribute('autocorrect', 'on'); e.setAttribute('autocapitalize', 'sentences');
+        });
+    }
+    var spellTimer = null, spellQueue = [];
+    function spellScan() { spellQueue = []; spellFix(document.body); }
+    document.addEventListener('focusin', function (ev) { spellFix(ev.target.closest ? (ev.target.closest(FREE_TEXT) || ev.target) : ev.target); }, true);   // también lo que se crea justo antes de escribir
+    new MutationObserver(function () { clearTimeout(spellTimer); spellTimer = setTimeout(spellScan, 400); }).observe(document.documentElement, {childList: true, subtree: true});
+    spellScan();
 
     /* ---------------- Cierre de sesión por inactividad ----------------
        El servidor no puede saberlo: mientras haya una pestaña abierta, las consultas automáticas (avisos, listas en vivo) mantienen el acceso «activo».

@@ -46,6 +46,10 @@ Guárdalo en `tenants.settings` (Hub) y valida lo que llega de la interfaz con u
 ### Añadir una sección al manual
 Edita `customizations/client/custom/res/templates/manual.tpl` (panel `ch-m-<id>`, `data-roles` para los roles que la ven, y enlace en el índice). `bin/gen-docs` regenera `docs/MANUAL-USUARIO.md`.
 
+## Texto en español y corrector
+
+`crmhub-boot.js` marca la página con `lang="es"` y activa `spellcheck`/`autocorrect` en los campos de texto libre (textarea, editores `contenteditable`, asuntos y nombres de registro); los campos técnicos (usuario, clave, correo, teléfono, URL, números, identificaciones) se excluyen por su nombre. Un campo nuevo de texto libre queda cubierto solo; uno técnico cuyo nombre no coincida con la lista `NO_SPELL` debe agregarse a ella.
+
 ## Documentación derivada
 
 `bin/gen-docs` genera el manual en Markdown y las referencias (API del Hub, API del Centro, rutas de Espo, módulos, historial). **No se edita a mano.** `bin/tag-release` la verifica antes de etiquetar.

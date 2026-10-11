@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Corrector ortográfico
+- Todos los campos de texto libre (cajas de mensaje de WhatsApp/SMS/Telegram, correos y asuntos, notas, descripciones y el editor de texto) se escriben con el corrector del navegador **en español** (`lang="es"` y `spellcheck`); no se aplica a usuario, claves, correos, teléfonos, números ni identificaciones. La página completa declara `lang="es"`. El navegador debe tener el diccionario en español instalado (Chrome: Configuración → Idiomas → Revisión ortográfica).
+
 ### Página «Mensajes»
 - Nueva página **Mensajes** en el menú (grupo Actividad, junto a Llamadas y Correos): la bandeja de conversaciones de **WhatsApp, SMS y Telegram** del usuario. A la izquierda las conversaciones por lead (último mensaje, hora, canales, punto de «sin leer», filtros «Mis conversaciones / Todas» y por canal, búsqueda y búsqueda de otros leads para empezar una conversación); a la derecha el chat del lead con **una pestaña por canal**, cada una con su propio espacio de conversación (hilo, caja para escribir, plantillas, sugerencia con IA y elección de número y de línea de envío). Los canales se muestran solo con su icono (el nombre aparece al pasar el mouse) y **RCS** aparece bloqueado como «próximamente». Se actualiza sola (websocket, cada 12 s y al volver a la pestaña).
 - El chat se extrajo a un componente común (`custom:views/chat-pane`) que usan la página y el panel acoplado del lead. Nuevo endpoint `GET /CrmHub/conversations` (respeta los permisos de Espo).
