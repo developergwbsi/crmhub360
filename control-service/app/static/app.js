@@ -205,9 +205,13 @@
   // Vinculación por QR de la línea de WhatsApp de una empresa (o de la línea de pruebas): la puede escanear el equipo del Centro
   function waDialog(slug, name, lineId, ep) {
     const E = ep || {qr: () => api('POST', `/whatsapp/${slug}/qr`, {lineId: lineId || ''}), state: () => api('GET', `/whatsapp/${slug}?lineId=${encodeURIComponent(lineId || '')}`),
-      restart: () => api('POST', `/whatsapp/${slug}/restart`, {lineId: lineId || ''}), logout: () => api('POST', `/whatsapp/${slug}/logout`, {lineId: lineId || ''})};
+      restart: () => api('POST', `/whatsapp/${slug}/restart`, {lineId: lineId || ''}), logout: () => api('POST', `/whatsapp/${slug}/logout`, {lineId: lineId || ''}),
+      test: (to, text) => api('POST', `/whatsapp/${slug}/test`, {lineId: lineId || '', to, text})};
     const m = modal(`<h3>WhatsApp de ${esc(name)}</h3><p class="mut" id="wa-t">Pidiendo el código…</p><div id="wa-b" style="text-align:center;min-height:240px"><span class="spin"></span></div>
-      <div class="mut" id="wa-h" style="margin-top:6px"></div><div class="err" id="wa-e" hidden></div>
+      <div class="mut" id="wa-h" style="margin-top:6px"></div>
+      <div id="wa-tt" hidden style="margin-top:12px;border-top:1px solid var(--line,#ddd);padding-top:10px"><b>Probar el envío</b><div class="mut">Manda un mensaje desde esta línea para comprobar que funciona (con el código de país, p. ej. 573001234567).</div>
+        <div class="bar" style="margin-top:6px"><input id="wa-to" placeholder="Número de destino" inputmode="tel" style="width:190px"><input id="wa-tx" class="grow" placeholder="Mensaje (opcional)" maxlength="300"><button class="btn primary" id="wa-sn">Enviar prueba</button></div></div>
+      <div class="err" id="wa-e" hidden></div>
       <div class="foot"><button class="btn" id="wa-rs">Reiniciar la línea</button><button class="btn danger" id="wa-lo">Cambiar de número</button><button class="btn" id="wa-rf">Nuevo código</button><button class="btn primary" data-x="k">Cerrar</button></div>`, 'wide');
     const $ = id => m.el.querySelector('#' + id); let alive = true, qrAt = 0, polling = false;
     const stop = () => { alive = false; clearInterval(tm); };
@@ -217,6 +221,7 @@
       if (!alive) { return; }
       try {
         const r = await E.qr(); err('');
+        $('wa-tt').hidden = !r.connected;
         if (r.connected) { $('wa-t').textContent = 'La línea está conectada.'; $('wa-b').innerHTML = '<div style="font-size:54px">✅</div><b>WhatsApp conectado</b>'; $('wa-h').textContent = ''; qrAt = 0; return; }
         qrAt = Date.now(); const src = (r.qr || '').startsWith('data:') ? r.qr : 'data:image/png;base64,' + (r.qr || '');
         $('wa-t').innerHTML = 'Escanea este código con el WhatsApp del teléfono de la línea: <b>Ajustes → Dispositivos vinculados → Vincular un dispositivo</b>.';
@@ -234,6 +239,8 @@
     }
     const tm = setInterval(check, 3000);
     $('wa-rf').onclick = qr;
+    $('wa-sn').onclick = async () => { const b = $('wa-sn'); b.disabled = true; err('');
+      try { await E.test($('wa-to').value.trim(), $('wa-tx').value.trim()); toast('Mensaje de prueba enviado a ' + $('wa-to').value.trim()); } catch (e) { err(e.message); } b.disabled = false; };
     $('wa-rs').onclick = async () => { try { await E.restart(); toast('Línea reiniciada'); setTimeout(qr, 2500); } catch (e) { err(e.message); } };
     $('wa-lo').onclick = async () => { if (!await confirmBox('Cambiar de número', 'Se cierra la sesión de WhatsApp de esta línea (el teléfono queda desvinculado) y podrás escanear otro número. Mientras tanto la línea no envía ni recibe.', 'Cerrar sesión', true)) { return; }
       try { await E.logout(); toast('Sesión cerrada'); setTimeout(qr, 1500); } catch (e) { err(e.message); } };
@@ -305,7 +312,8 @@
   // ---------- Líneas de WhatsApp (Evolution): crear, vincular por QR y asignar a las empresas
   const LST = {open: ['Conectada', 'ok'], close: ['Desconectada', 'bad'], connecting: ['Sin vincular', 'warn'], missing: ['No existe', 'bad'], error: ['Sin respuesta', 'bad'], unknown: ['Desconocido', ''], sin_servidor: ['Sin servidor', 'bad']};
   const lineEp = name => ({qr: () => api('POST', `/wa-lines/${encodeURIComponent(name)}/qr`), state: () => api('GET', `/wa-lines/${encodeURIComponent(name)}/state`),
-    restart: () => api('POST', `/wa-lines/${encodeURIComponent(name)}/restart`), logout: () => api('POST', `/wa-lines/${encodeURIComponent(name)}/logout`)});
+    restart: () => api('POST', `/wa-lines/${encodeURIComponent(name)}/restart`), logout: () => api('POST', `/wa-lines/${encodeURIComponent(name)}/logout`),
+    test: (to, text) => api('POST', `/wa-lines/${encodeURIComponent(name)}/test`, {to, text})});
   async function drawLines() {
     const main = document.getElementById('main');
     if (!main.querySelector('[data-wl]')) { main.innerHTML = '<h2>Líneas de WhatsApp</h2><p class="sub">Cargando…</p><div data-wl></div>'; }

@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+- Centro de control: al vincular por QR la línea de una empresa (o una línea del inventario) y quedar conectada, el diálogo ofrece **Probar el envío**: manda un mensaje de WhatsApp desde esa línea al número que se indique, para comprobar que funciona. Queda auditado.
+
 ## [1.4.0] - 2026-10-11
 
 ### Líneas de WhatsApp desde el Centro de control

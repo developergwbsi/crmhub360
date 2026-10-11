@@ -15,6 +15,8 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from . import evomon
+
 ns = None
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{1,58}$")
 MAX_LINES = 12
@@ -286,6 +288,19 @@ def init(deps) -> None:
         d = q.json()
         ns.audit(actor, "ver_qr_whatsapp", name)
         return {"connected": False, "state": info["state"], "instance": name, "qr": d.get("base64") or "", "pairingCode": d.get("pairingCode") or ""}
+
+    @r.post("/api/wa-lines/{name}/test")
+    async def line_test(name: str, body: dict, actor: str = Depends(me)):
+        """Envía un mensaje de prueba por la línea al número indicado (usa la clave propia de la instancia si está asignada)."""
+        prov, asg = await locate(name)
+        key = prov["fields"].get("apikey", "")
+        if asg:
+            t = next((x for x in tenants() if x["slug"] == asg["slug"]), None)
+            st = (t or {}).get("settings") or {}
+            key = st.get("evolution_apikey") if st.get("evolution_instance") == name else next(((l.get("fields") or {}).get("evolution_apikey") for l in st.get("lines") or [] if (l.get("fields") or {}).get("evolution_instance") == name), None) or key
+        await evomon.send_test_text(prov["fields"]["url"], key or prov["fields"].get("apikey", ""), name, (body or {}).get("to", ""), (body or {}).get("text", ""))
+        ns.audit(actor, "prueba_envio_whatsapp", name)
+        return {"ok": True}
 
     @r.post("/api/wa-lines/{name}/logout")
     async def line_logout(name: str, actor: str = Depends(me)):

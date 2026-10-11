@@ -625,6 +625,18 @@ def tenant_by_slug(slug: str) -> dict:
     return t
 
 
+async def send_test_text(url: str, key: str, instance: str, to: str, text: str) -> None:
+    """Envía un mensaje de prueba por la instancia (desde el Centro de control). Lanza 400/502 con un motivo entendible."""
+    num = re.sub(r"\D", "", to or "")
+    if len(num) < 8:
+        raise HTTPException(400, "Escribe el número con código de país, p. ej. 573001234567.")
+    if await conn_state(url, key, instance) != "open":
+        raise HTTPException(400, "La línea no está conectada: escanea el QR primero.")
+    x = await ev("POST", url, key, f"/message/sendText/{instance}", json={"number": num, "text": (text or "").strip() or "Mensaje de prueba de Crm Hub 360 ✅"})
+    if x.status_code >= 400:
+        raise HTTPException(502, f"Evolution no pudo enviar ({x.status_code}): {x.text[:160]}")
+
+
 def line_for(slug: str, line_id: str = "") -> dict:
     """Línea de Evolution de la empresa (la indicada o la principal) para operarla desde el Centro."""
     ls = lines_of(tenant_by_slug(slug))
@@ -763,6 +775,14 @@ def init(deps) -> None:
         d = q.json()
         ns.audit(actor, "ver_qr_whatsapp", slug, {"instance": t["instance"]})
         return {"connected": False, "state": st, "instance": t["instance"], "qr": d.get("base64") or "", "pairingCode": d.get("pairingCode") or ""}
+
+    @r.post("/api/whatsapp/{slug}/test")
+    async def _wa_test(slug: str, body: dict, actor: str = Depends(me)):
+        """Envía un mensaje de prueba de WhatsApp por la línea (empresa o «__monitor») al número indicado."""
+        t = _target(slug, (body or {}).get("lineId", ""))
+        await send_test_text(t["url"], t["key"], t["instance"], (body or {}).get("to", ""), (body or {}).get("text", ""))
+        ns.audit(actor, "prueba_envio_whatsapp", slug, {"instance": t["instance"]})
+        return {"ok": True}
 
     @r.post("/api/whatsapp/{slug}/logout")
     async def _wa_logout(slug: str, body: dict, actor: str = Depends(me)):
