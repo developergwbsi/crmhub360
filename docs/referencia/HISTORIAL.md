@@ -2,8 +2,17 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.3.0)
+## Sin publicar (después de v1.4.0)
 
+- `16fa8e2` 2026-10-11 — Changelog 1.4.1
+- `4cfd7b1` 2026-10-11 — Líneas administradas por el Centro de control: la empresa no ve ni puede usar Vincular (QR) ni Cambiar de número; avisos de salud adaptados
+- `10b21ee` 2026-10-11 — Centro de control: «Probar el envío» siempre visible en el diálogo de la línea
+- `b6e7a78` 2026-10-11 — Monitor: la alerta de línea sin vincular o desconectada se cierra en cuanto la línea se conecta (al escanear desde el Centro o en la revisión de 1 minuto)
+- `1129dd9` 2026-10-11 — Centro de control: probar el envío de WhatsApp desde el diálogo del QR de una línea
+
+## v1.4.0
+
+- `c3d09eb` 2026-10-11 — Versión 1.4.0
 - `f48426e` 2026-10-11 — Changelog 1.4.0
 - `e57779a` 2026-10-11 — Centro de control: inventario de líneas de WhatsApp (crear, QR, asignar como principal o adicional, mover y quitar); error claro de línea desconectada en el CRM; el monitor detecta que la línea comparte teléfono con la de pruebas
 

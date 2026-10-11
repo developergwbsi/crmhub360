@@ -2,7 +2,7 @@
 
 FastAPI detrás de Apache en `control.<dominio>`. Todo requiere sesión firmada del Centro y cabecera anti-CSRF, salvo el login y `/monitor/evolution` (webhook de la línea de pruebas, autenticado con su propio secreto). Las operaciones peligrosas se encolan (`control_jobs`) y las ejecuta `bin/control-worker`.
 
-Total: **58** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `control-service/app/main.py`.*
+Total: **59** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `control-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -63,4 +63,5 @@ Total: **58** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings
 | POST | `/api/whatsapp/{slug}/logout` | `_wa_logout` | Cierra la sesión de WhatsApp de la línea (el teléfono queda desvinculado) para escanear otro número. |
 | POST | `/api/whatsapp/{slug}/qr` | `_wa_qr` | Código QR actual para vincular el WhatsApp de la línea (crea la instancia si falta). Se audita cada vez que se pide. |
 | POST | `/api/whatsapp/{slug}/restart` | `_wa_restart` | Reinicia la instancia de Evolution de la línea (reconecta la sesión sin pedir el QR). |
+| POST | `/api/whatsapp/{slug}/test` | `_wa_test` | Envía un mensaje de prueba de WhatsApp por la línea (empresa o «__monitor») al número indicado. |
 | POST | `/monitor/evolution` | `_webhook` | Webhook de la línea de pruebas (autenticado por el secreto del monitor, no por sesión): responde sola a los pings. |
