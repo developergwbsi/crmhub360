@@ -2,8 +2,9 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Cambios
+## v1.0.0
 
+- `c8a06c0` 2026-10-10 — Versión 1.0.0
 - `fa412c5` 2026-10-10 — Documentación completa del código: docs/ (arquitectura, operación, versionado, desarrollo, módulos, manual en Markdown y referencia generada), CHANGELOG, docstrings en todo el Python, cabeceras en el JS del cliente y docblocks en el PHP; bin/gen-docs y bin/tag-release
 - `969de08` 2026-10-10 — Panel gerencial: los leads que gestiona un comercial virtual dejan de contarse como «Sin asesor» y aparecen en el rendimiento con su nombre
 - `b791835` 2026-10-10 — Formularios web: galería de 8 plantillas listas (turismo, deudas, inmobiliaria, citas, cursos, seguros, evento, contacto), botón Duplicar y manual actualizado
