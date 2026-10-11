@@ -4,10 +4,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.4.1] - 2026-10-11
+
 - Líneas de WhatsApp **administradas por Crm Hub 360** (asignadas desde el Centro de control): en las integraciones de la empresa ya no aparecen «Vincular (QR)» ni «Cambiar de número» —el QR solo lo escanea el equipo desde el Centro— y los avisos de salud dicen que nuestro equipo la atiende. El Hub también lo impone (el QR y el cierre de sesión devuelven 403 a esas líneas). Las líneas propias de la empresa conservan todas las opciones.
 
 - Monitor: el aviso «La línea aún no está vinculada» (y «desconectada») se **cierra solo** en cuanto la línea queda conectada —al escanear el QR desde el Centro o en la siguiente revisión de 1 minuto, aunque el monitor esté apagado— y se lanza una prueba de confirmación. Antes esperaba hasta 30 minutos.
 
+### Líneas de WhatsApp
 - Centro de control: al vincular por QR la línea de una empresa (o una línea del inventario) y quedar conectada, el diálogo ofrece **Probar el envío**: manda un mensaje de WhatsApp desde esa línea al número que se indique, para comprobar que funciona. Queda auditado.
 
 ## [1.4.0] - 2026-10-11
