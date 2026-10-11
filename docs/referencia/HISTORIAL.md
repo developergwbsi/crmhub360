@@ -4,6 +4,8 @@
 
 ## Sin publicar (después de v1.1.0)
 
+- `53f2064` 2026-10-11 — Changelog 1.2.0
+- `ca7c46d` 2026-10-11 — Autoría de cada mensaje, llamada, correo y cambio de estado (persona, gerente, comercial virtual o sistema) sin deducirla del usuario asignado; entrantes de WhatsApp envueltos o con adjuntos ya se registran; guía de diagnóstico de Evolution
 - `3d1a0af` 2026-10-11 — Los paneles acoplados (WhatsApp, llamada, correo) ya no bloquean el scroll del detalle del lead
 - `3a00c59` 2026-10-11 — WhatsApp automático: negrilla en el nombre de la empresa y del asesor y en palabras clave, y botones de respuesta rápida en los mensajes del comercial virtual y de los formularios; ajustes, manual y documentación
 
