@@ -217,7 +217,7 @@ def init(deps) -> None:
             lines = list(st.get("lines") or [])
             if len(lines) >= MAX_LINES:
                 raise HTTPException(400, f"La empresa ya tiene el máximo de {MAX_LINES} líneas adicionales")
-            lines.append({"id": "l_" + secrets.token_hex(4), "channel": "whatsapp", "type": "evolution", "name": label, "enabled": True, "fields": fields, "extra": {}})
+            lines.append({"id": "l_" + secrets.token_hex(4), "channel": "whatsapp", "type": "evolution", "name": label, "enabled": True, "fields": fields, "extra": {}, "managed": True})   # «managed»: la vincula el Centro de control; la empresa no ve el QR
             st["lines"] = lines
         write(req.slug, st)
         await set_webhook(prov, name, f"https://{t['host']}/hub/evolution", t["hub_token"])

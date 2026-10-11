@@ -137,6 +137,12 @@ def _public(card: dict, ch: str) -> dict:
             "main": card["main"], "fields": fields, "http": http, "extra": card.get("extra") or {}}
 
 
+def is_managed(tenant: dict, lid: str) -> bool:
+    """True si la línea de Evolution la administra el Centro de control (la empresa no puede escanear ni cambiar su número)."""
+    c = next((x for x in raw_cards(tenant, "whatsapp") if x["id"] == (lid or "main:whatsapp")), None)
+    return bool(c) and c["type"] == "evolution" and (bool(c.get("managed")) or (bool(c.get("main")) and bool((_st(tenant).get("managed") or {}).get("whatsapp"))))
+
+
 def overview(tenant: dict) -> dict:
     """Vista para la interfaz (sin secretos) de las líneas de WhatsApp, SMS, llamadas y Telegram: predeterminada, tarjetas, tipos disponibles y si se pueden añadir más."""
     st = _st(tenant)
@@ -144,6 +150,8 @@ def overview(tenant: dict) -> dict:
     for ch, spec in SPEC.items():
         cards = raw_cards(tenant, ch)
         pub = [_public(c, ch) for c in cards]
+        for c, pc in zip(cards, pub):   # línea administrada por el Centro de control de Crm Hub 360: la vincula el equipo, no la empresa
+            pc["managed"] = c["type"] == "evolution" and (bool(c.get("managed")) or (bool(c.get("main")) and bool((st.get("managed") or {}).get("whatsapp"))))
         from . import monitor, routing
         for c, pc in zip(cards, pub):   # salud de cada línea: la mide el monitor del Centro de control (Evolution: prueba de extremo a extremo; Meta, Gupshup y Twilio: su API)
             try:

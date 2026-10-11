@@ -742,6 +742,8 @@ async def wa_test(body: dict | list | None = Body(None), tenant: dict = Depends(
 @app.post("/v1/whatsapp/qr")
 async def wa_qr(body: dict | list | None = Body(None), tenant: dict = Depends(tenant_auth)):
     """Obtiene el código QR para vincular un número de WhatsApp (Evolution)."""
+    if lines.is_managed(tenant, _lid(body)):
+        raise HTTPException(403, "Esta línea la administra Crm Hub 360: pídele a soporte que la vincule o cambie de número.")
     try:
         return await whatsapp.qr(lines.effective(tenant, "whatsapp", _lid(body), allow_off=True))
     except ValueError as e:
@@ -753,6 +755,8 @@ async def wa_qr(body: dict | list | None = Body(None), tenant: dict = Depends(te
 @app.post("/v1/whatsapp/unlink")
 async def wa_unlink(body: dict | list | None = Body(None), tenant: dict = Depends(tenant_auth)):
     """Cierra la sesión del número vinculado (Evolution) para poder escanear otro número."""
+    if lines.is_managed(tenant, _lid(body)):
+        raise HTTPException(403, "Esta línea la administra Crm Hub 360: pídele a soporte que la vincule o cambie de número.")
     try:
         return await whatsapp.unlink(lines.effective(tenant, "whatsapp", _lid(body), allow_off=True))
     except ValueError as e:
