@@ -573,6 +573,16 @@ def form_page(slug: str, form_slug: str):
     return HTMLResponse(forms.page(f), headers=_FORM_HEADERS)
 
 
+@app.get("/v1/public/{slug}/forms/{form_slug}/img/{action_id}/{n}")
+def form_image(slug: str, form_slug: str, action_id: str, n: int):
+    t = _public_tenant(slug)
+    f = forms.find(t, form_slug)
+    img = forms.image_bytes(f, action_id, n) if f else None
+    if not img:
+        raise HTTPException(404, "No encontrado")
+    return Response(img[0], media_type=img[1], headers={"Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff"})
+
+
 @app.post("/v1/public/{slug}/forms/{form_slug}", response_class=HTMLResponse)
 async def form_submit(slug: str, form_slug: str, request: Request):
     from urllib.parse import parse_qs
@@ -587,6 +597,8 @@ async def form_submit(slug: str, form_slug: str, request: Request):
     ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (request.client.host if request.client else "?"))
     try:
         res = await forms.submit(t, f, data, ip)
+    except forms.Duplicate as e:
+        return HTMLResponse(forms.page(f, done={"notice": str(e)}), headers=_FORM_HEADERS)
     except forms.FormError as e:
         return HTMLResponse(forms.page(f, error=str(e), values=data), 400, _FORM_HEADERS)
     except Exception:

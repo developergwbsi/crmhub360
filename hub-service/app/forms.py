@@ -21,7 +21,9 @@ CHANNELS = ["Teléfono", "WhatsApp", "Telegram", "Correo"]
 MAX_FORMS, MAX_FIELDS, MAX_ACTIONS = 20, 20, 10
 WIDTHS = [25, 33, 50, 66, 75, 100]
 OPS = ["eq", "neq", "filled", "empty"]
-ACTION_TYPES = ["email", "whatsapp"]
+ACTION_TYPES = ["email", "whatsapp", "notify"]
+MAX_IMAGES, MAX_ATTACH = 4, 3
+_PDF = re.compile(r"data:application/pdf;base64,[A-Za-z0-9+/=]{20,900000}")
 VARS_HELP = "{{nombre}}, {{empresa}}, {{telefono}}, {{correo}} y {{clave_del_campo}} de cualquier pregunta"
 _COLOR = re.compile(r"#[0-9a-fA-F]{6}")
 _IMG = re.compile(r"(https?://[^\s\"'()<>\\]{4,900}|data:image/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]{20,450000})")
@@ -42,13 +44,14 @@ def default_form(n: int = 1) -> dict:
             {"key": "canal", "label": "¿Cómo prefieres que te contactemos?", "type": "channel", "required": False, "maps_to": "", "placeholder": "", "options": [], "width": 100, "show_if": None},
         ],
         "consent_text": "Autorizo el tratamiento de mis datos personales para ser contactado, de acuerdo con la Ley 1581 de 2012 y la política de tratamiento de datos de la empresa.",
-        "consent_required": True, "campaign": "", "source": "Formulario Web",
+        "consent_required": True, "campaign": "", "source": "Formulario Web", "on_duplicate": "update", "duplicate_message": "Ya estás registrado con estos datos. Un asesor te contactará pronto.",
         "success_message": "¡Gracias! Recibimos tus datos y un asesor te contactará pronto.", "redirect_url": "", "actions": [],
     }
 
 
 def default_action() -> dict:
     return {"id": secrets.token_hex(3), "enabled": True, "type": "email", "when": None, "to": "lead", "to_custom": "",
+            "images": [], "attachments": [], "button_label": "", "button_kind": "whatsapp", "button_value": "", "button_text": "Hola, me registré en el formulario y quiero más información.", "notify_text": "",
             "subject": "Recibimos tu solicitud, {{nombre}}", "message": "Hola {{nombre}},\n\nGracias por escribirnos. Recibimos tus datos y un asesor te contactará muy pronto.\n\n{{empresa}}"}
 
 
@@ -124,7 +127,7 @@ def validate(forms) -> list[dict]:
         for a in (f.get("actions") or [])[:MAX_ACTIONS]:
             typ = a.get("type") if a.get("type") in ACTION_TYPES else "email"
             msg = _s(a.get("message"), 3000)
-            if not msg:
+            if not msg and typ != "notify":
                 raise ValueError(f"Una acción de «{name}» no tiene mensaje")
             to_custom = _s(a.get("to_custom"), 190)
             to = "custom" if typ == "email" and a.get("to") == "custom" else "lead"
@@ -134,9 +137,25 @@ def validate(forms) -> list[dict]:
                 raise ValueError(f"«{name}»: para enviar un correo al cliente el formulario necesita un campo de correo")
             if typ == "whatsapp" and "phone" not in {fd["maps_to"] for fd in fields}:
                 raise ValueError(f"«{name}»: para enviar un WhatsApp el formulario necesita un campo de teléfono")
+            images = [_img(x, "Imagen del correo") for x in (a.get("images") or [])[:MAX_IMAGES] if x]
+            attach = []
+            for at in (a.get("attachments") or [])[:MAX_ATTACH]:
+                data = _s(at.get("data"), 920000)
+                if not _PDF.fullmatch(data):
+                    raise ValueError(f"El adjunto «{_s(at.get('name'), 60)}» debe ser un PDF")
+                attach.append({"name": re.sub(r"[^\w.\- ]", "", _s(at.get("name"), 80)) or "documento.pdf", "data": data})
+            bk = a.get("button_kind") if a.get("button_kind") in ("whatsapp", "link") else "whatsapp"
+            bv = _s(a.get("button_value"), 300)
+            if _s(a.get("button_label"), 40) and bv:
+                if bk == "link" and urlparse(bv).scheme not in ("http", "https"):
+                    raise ValueError("El botón del correo necesita una dirección que empiece por http:// o https://")
+                if bk == "whatsapp" and not 7 <= len(re.sub(r"\D", "", bv)) <= 15:
+                    raise ValueError("El número de WhatsApp del botón no es válido (incluye el indicativo del país)")
             actions.append({"id": _s(a.get("id"), 12) or secrets.token_hex(3), "enabled": bool(a.get("enabled", True)), "type": typ,
                             "when": _cond(a.get("when"), keys, "una acción de " + name), "to": to, "to_custom": to_custom if to == "custom" else "",
-                            "subject": _s(a.get("subject"), 200), "message": msg})
+                            "subject": _s(a.get("subject"), 200), "message": msg, "images": images, "attachments": attach,
+                            "button_label": _s(a.get("button_label"), 40), "button_kind": bk, "button_value": bv, "button_text": _s(a.get("button_text"), 300),
+                            "notify_text": _s(a.get("notify_text"), 300)})
         out.append({
             "id": _s(f.get("id"), 16) or secrets.token_hex(4), "slug": slug, "name": name, "enabled": bool(f.get("enabled", True)),
             "title": _s(f.get("title"), 120), "intro": _s(f.get("intro"), 500), "button": _s(f.get("button"), 30) or "Enviar", "color": color,
@@ -146,6 +165,8 @@ def validate(forms) -> list[dict]:
             "button_color": col("button_color", color), "button_text_color": col("button_text_color", "#ffffff"),
             "bg_color": col("bg_color"), "bg_image": _img(f.get("bg_image"), "Imagen de fondo"), "header_image": _img(f.get("header_image"), "Imagen del encabezado"),
             "header_color": col("header_color", color), "actions": actions,
+            "on_duplicate": "block" if f.get("on_duplicate") == "block" else "update",
+            "duplicate_message": _s(f.get("duplicate_message"), 300) or "Ya estás registrado con estos datos. Un asesor te contactará pronto.",
         })
     return out
 
@@ -206,6 +227,8 @@ def page(form: dict, *, error: str | None = None, values: dict | None = None, do
     css = CSS % {"color": form["color"], "button": form.get("button_color") or form["color"], "btext": form.get("button_text_color") or "#fff", "header": form.get("header_color") or form["color"]}
     top = f'<img class="banner" src="{E(form["header_image"])}" alt="">' if form.get("header_image") else '<div class="band"></div>'
     head = f'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>{E(form["title"] or form["name"])}</title><style>{css}{bg}</style></head><body><main class="card">{top}<div class="body">'
+    if done is not None and done.get("notice"):
+        return head + f'<div class="ok"><div class="tick">i</div><h1>{E(form["title"] or "Ya estás registrado")}</h1><p>{E(done["notice"])}</p></div></div></main></body></html>'
     if done is not None:
         tg = f'<a class="btn" href="{E(done["telegram"])}" target="_blank" rel="noopener">Abrir Telegram</a><p class="foot">Pulsa «Iniciar» en Telegram para que un asesor te escriba por ahí.</p>' if done.get("telegram") else ""
         return head + f'<div class="ok"><div class="tick">✓</div><h1>{E(form["title"] or "¡Listo!")}</h1><p>{E(form["success_message"])}</p></div>{tg}</div></main></body></html>'
@@ -249,6 +272,10 @@ def _limited(key: str, limit: int = 8, window: int = 600) -> bool:
 
 class FormError(ValueError):
     pass
+
+
+class Duplicate(FormError):
+    """El cliente ya está registrado y el formulario está configurado para no repetirlo."""
 
 
 def _holds(c: dict | None, data: dict) -> bool:
@@ -348,6 +375,9 @@ async def submit(tenant: dict, form: dict, data: dict[str, str], ip: str) -> dic
     if not existing and lead.get("email"):
         existing = await ingest.find_lead(tenant, "emailAddress", lead["email"])
     again = bool(existing)
+    if existing and form.get("on_duplicate") == "block":
+        await espo.note(existing, f"[Formulario web: {form['name']}] Intentó registrarse de nuevo; no se creó otro registro ni se enviaron mensajes automáticos.")
+        raise Duplicate(form.get("duplicate_message") or "Ya estás registrado con estos datos.")
     if existing:
         cur = await espo.get(f"Lead/{existing}")
         upd = {}
@@ -382,29 +412,70 @@ def _fill(text: str, vars_: dict) -> str:
     return re.sub(r"\{\{\s*([a-z0-9_]+)\s*\}\}", lambda m: str(vars_.get(m.group(1), "")), text)
 
 
-def _mail_html(text: str, company: str, color: str) -> str:
+def _wa_link(number: str, text: str) -> str:
+    from urllib.parse import quote
+    return f"https://wa.me/{re.sub(chr(92) + 'D', '', number)}" + (f"?text={quote(text)}" if text else "")
+
+
+def _mail_html(text: str, company: str, color: str, images: list[str], button: tuple[str, str] | None) -> str:
+    """Correo con la marca de la empresa: imagen principal, texto, galería y botón. Las imágenes van como enlaces (los clientes de correo bloquean las incrustadas)."""
     paras = "".join(f"<p style='margin:0 0 12px'>{E(p).replace(chr(10), '<br>')}</p>" for p in re.split(r"\n{2,}", text.strip()))
+    hero = f"<img src='{E(images[0])}' alt='' width='560' style='display:block;width:100%;max-width:560px;height:auto;border:0'>" if images else ""
+    gallery = ""
+    if len(images) > 1:
+        w = 100 // min(len(images) - 1, 3)
+        gallery = "<table role='presentation' width='100%' style='margin:14px 0 4px;border-collapse:collapse'><tr>" + "".join(
+            f"<td style='padding:3px;width:{w}%'><img src='{E(u)}' alt='' style='display:block;width:100%;height:auto;border-radius:8px;border:0'></td>" for u in images[1:4]) + "</tr></table>"
+    btn = (f"<p style='margin:20px 0 4px'><a href='{E(button[1])}' style='display:inline-block;background:#25d366;color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:10px'>{E(button[0])}</a></p>"
+           if button else "")
     return (f"<div style='background:#eef1f7;padding:20px 8px;font-family:Arial,Helvetica,sans-serif'><div style='max-width:560px;margin:auto;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #dfe4f3'>"
-            f"<div style='background:{color};padding:16px 24px;color:#fff;font:700 18px Arial'>{E(company)}</div>"
-            f"<div style='padding:24px;font-size:15px;line-height:1.6;color:#161b2e'>{paras}</div></div></div>")
+            f"<div style='background:{color};padding:16px 24px;color:#fff;font:700 18px Arial'>{E(company)}</div>{hero}"
+            f"<div style='padding:24px;font-size:15px;line-height:1.6;color:#161b2e'>{paras}{gallery}{btn}</div></div></div>")
+
+
+def image_bytes(form: dict, action_id: str, n: int) -> tuple[bytes, str] | None:
+    """Imagen incrustada (data:) de una acción, para servirla como enlace público en los correos."""
+    import base64
+    for a in form.get("actions") or []:
+        if a["id"] == action_id and 0 <= n < len(a.get("images") or []):
+            m = re.fullmatch(r"data:(image/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)", a["images"][n])
+            if m:
+                return base64.b64decode(m.group(2)), m.group(1)
+    return None
+
+
+async def _notify(tenant: dict, espo: Espo, form: dict, lead_id: str, lead: dict, text: str) -> None:
+    """Campana del CRM y push al asesor del lead y a los administradores: «Nuevo registro»."""
+    from . import push
+    cur = await espo.get(f"Lead/{lead_id}")
+    admins = (await espo.get("User", **{"where[0][type]": "equals", "where[0][attribute]": "type", "where[0][value]": "admin", "where[1][type]": "isTrue", "where[1][attribute]": "isActive", "select": "id", "maxSize": 50})).get("list", [])
+    ids = list(dict.fromkeys([i for i in [cur.get("assignedUserId"), *[u["id"] for u in admins]] if i]))
+    link = f"[{(lead.get('name') or 'Registro').replace('[', '').replace(']', '')}](#Lead/view/{lead_id})"
+    try:
+        await espo.post("CrmHub/notifyTeam", {"userIds": ids, "message": f"Nuevo registro: {link} · {text}"})
+    except Exception as e:
+        log.warning("campana: %s", str(e)[:100])
+    await push.send(tenant["slug"], title="Nuevo registro", body=f"{lead.get('name') or 'Alguien'} · {text}"[:180], url=f"/#Lead/view/{lead_id}", tag=f"form-{lead_id}", kind="lead", user_ids=ids)
 
 
 async def run_actions(tenant: dict, form: dict, data: dict, lead_id: str, lead: dict) -> list[dict]:
     """Ejecuta las acciones del formulario cuyo «cuándo» se cumple (siempre, o según la respuesta de una lista). Cada resultado queda en las notas del lead."""
+    import base64
     from . import mailout, whatsapp
     espo, company = Espo(tenant), tenant.get("name") or "la empresa"
-    vars_ = {"nombre": lead.get("name", ""), "empresa": company, "telefono": lead.get("phone", ""), "correo": lead.get("email", "")}
+    vars_ = {"nombre": lead.get("name", ""), "empresa": company, "telefono": lead.get("phone", ""), "correo": lead.get("email", ""), "formulario": form["name"]}
     vars_.update({fd["key"]: (data.get(fd["key"]) or "").strip() for fd in form["fields"]})
     done = []
     for a in form.get("actions") or []:
         if not a.get("enabled", True) or not _holds(a.get("when"), data):
             continue
-        label = "correo" if a["type"] == "email" else "WhatsApp"
+        label = {"email": "correo", "whatsapp": "WhatsApp", "notify": "aviso interno"}[a["type"]]
         try:
-            text = _fill(a["message"], vars_)
-            if a["type"] == "whatsapp":
+            text = _fill(a.get("message") or "", vars_)
+            if a["type"] == "notify":
+                await _notify(tenant, espo, form, lead_id, lead, _fill(a.get("notify_text") or "{{nombre}} · {{formulario}}", vars_))
+            elif a["type"] == "whatsapp":
                 await whatsapp.send(tenant, lead_id, text, "Formulario web", None, None)
-                dest = lead.get("phone", "")
             else:
                 dest = a["to_custom"] if a.get("to") == "custom" else lead.get("email", "")
                 if not dest:
@@ -413,15 +484,17 @@ async def run_actions(tenant: dict, form: dict, data: dict, lead_id: str, lead: 
                 from . import mailbox
                 uid = cur.get("assignedUserId") or await mailbox._admin_id(espo) or ""
                 subject = _fill(a.get("subject") or "", vars_).strip() or f"{company}: recibimos tu solicitud"
-                await mailout.send(tenant, {"userId": uid, "userName": company, "to": [dest], "subject": subject[:200], "html": _mail_html(text, company, form.get("header_color") or form["color"]),
-                                            "parentType": "Lead", "parentId": lead_id, "agent": True})
-            if a["type"] == "email":
-                await espo.note(lead_id, f"[Formulario web: {form['name']}] Se envió un correo a {dest}.")
+                imgs = [u if not u.startswith("data:") else f"https://{tenant['host']}/f/{form['slug']}/img/{a['id']}/{i}" for i, u in enumerate(a.get("images") or [])]
+                btn = (a["button_label"], _wa_link(a["button_value"], _fill(a.get("button_text") or "", vars_)) if a["button_kind"] == "whatsapp" else a["button_value"]) if a.get("button_label") and a.get("button_value") else None
+                files = [{"name": x["name"], "bytes": base64.b64decode(x["data"].split(",", 1)[1])} for x in a.get("attachments") or []]
+                await mailout.send(tenant, {"userId": uid, "userName": company, "to": [dest], "subject": subject[:200], "html": _mail_html(text, company, form.get("header_color") or form["color"], imgs, btn),
+                                            "parentType": "Lead", "parentId": lead_id, "agent": True, "attachments": files})
+                await espo.note(lead_id, f"[Formulario web: {form['name']}] Se envió un correo a {dest}" + (f" con {len(files)} adjunto(s)." if files else "."))
             done.append({"id": a["id"], "ok": True})
         except Exception as e:
             log.warning("acción %s del formulario %s: %s", a.get("id"), form["slug"], str(e)[:160])
             try:
-                await espo.note(lead_id, f"[Formulario web: {form['name']}] No se pudo enviar el {label} automático: {str(e)[:200]}")
+                await espo.note(lead_id, f"[Formulario web: {form['name']}] No se pudo ejecutar el {label} automático: {str(e)[:200]}")
             except Exception:
                 pass
             done.append({"id": a["id"], "ok": False, "error": str(e)[:200]})

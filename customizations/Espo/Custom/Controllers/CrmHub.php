@@ -127,6 +127,32 @@ class CrmHub
     // ---------- Estados del pipeline de leads ----------
     private const PIPELINE_DEFAULTS = ['new' => 'Nuevo Lead', 'review' => 'En Calificación', 'qualified' => 'Calificado'];
 
+    /** Solo el usuario API del Hub: avisa en la campana del CRM (p. ej. «Nuevo registro» de un formulario web). */
+    public function postActionNotifyTeam(Request $request): \stdClass
+    {
+        if (!$this->user->isApi()) {
+            throw new Forbidden();
+        }
+        $d = $request->getParsedBody();
+        $message = trim((string) ($d->message ?? ''));
+        $ids = is_array($d->userIds ?? null) ? array_slice(array_unique(array_filter($d->userIds, 'is_string')), 0, 50) : [];
+        if ($message === '' || !$ids) {
+            throw new BadRequest('Faltan el mensaje o los usuarios.');
+        }
+        $n = 0;
+        foreach ($ids as $uid) {
+            $user = $this->em->getEntityById('User', $uid);
+            if (!$user || !$user->get('isActive')) {
+                continue;
+            }
+            $note = $this->em->getNewEntity('Notification');
+            $note->set(['type' => 'Message', 'userId' => $uid, 'message' => mb_substr($message, 0, 500)]);
+            $this->em->saveEntity($note);
+            $n++;
+        }
+        return (object) ['sent' => $n];
+    }
+
     /** Lo lee cualquier usuario autenticado (incluido el usuario API del Hub). */
     public function getActionPipeline(Request $request): \stdClass
     {

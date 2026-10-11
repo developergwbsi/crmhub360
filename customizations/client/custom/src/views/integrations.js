@@ -144,6 +144,33 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                 img.onerror = () => Espo.Ui.warning('No se pudo leer la imagen.');
                 img.src = url;
             },
+            'change [data-aimage]': function (e) {
+                const el = e.currentTarget, a = this.forms[+el.dataset.i].actions[+el.dataset.a], files = [...(el.files || [])];
+                a.images = a.images || [];
+                const next = files.filter(f => /^image\/(png|jpe?g|webp|gif)$/.test(f.type)).slice(0, Math.max(0, 4 - a.images.length));
+                if (!next.length) { Espo.Ui.warning('Usa imágenes PNG, JPG, WEBP o GIF (máximo 4 por correo).'); return; }
+                Promise.all(next.map(file => new Promise(res => {
+                    const img = new Image(), url = URL.createObjectURL(file);
+                    img.onload = () => { const k = Math.min(1, 1000 / img.width), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.78)); };
+                    img.onerror = () => res(null); img.src = url;
+                }))).then(list => { a.images.push(...list.filter(Boolean)); this.renderForms(); });
+            },
+            'change [data-aurl]': function (e) {
+                const el = e.currentTarget, a = this.forms[+el.dataset.i].actions[+el.dataset.a], v = el.value.trim();
+                if (v && a.images.length < 4) { a.images.push(v); this.renderForms(); }
+            },
+            'click [data-action="removeActImage"]': function (e) { this.forms[+e.currentTarget.dataset.i].actions[+e.currentTarget.dataset.a].images.splice(+e.currentTarget.dataset.n, 1); this.renderForms(); },
+            'change [data-afile]': function (e) {
+                const el = e.currentTarget, a = this.forms[+el.dataset.i].actions[+el.dataset.a], file = el.files && el.files[0];
+                if (!file) { return; }
+                if (file.type !== 'application/pdf') { Espo.Ui.warning('El adjunto debe ser un PDF.'); return; }
+                if (file.size > 650 * 1024) { Espo.Ui.warning('El PDF pesa más de 650 KB. Comprímelo antes de subirlo.'); return; }
+                const r = new FileReader();
+                r.onload = () => { a.attachments = a.attachments || []; if (a.attachments.length < 3) { a.attachments.push({name: file.name, data: r.result}); } this.renderForms(); };
+                r.readAsDataURL(file);
+            },
+            'click [data-action="removeActFile"]': function (e) { this.forms[+e.currentTarget.dataset.i].actions[+e.currentTarget.dataset.a].attachments.splice(+e.currentTarget.dataset.n, 1); this.renderForms(); },
             'change [data-abind]': function (e) {
                 const el = e.currentTarget, a = this.forms[+el.dataset.i].actions[+el.dataset.a], w = el.dataset.abind;
                 if (w === 'enabled') { a.enabled = el.checked; return; }
@@ -375,14 +402,27 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                     const pos = `data-i="${i}" data-a="${j}"`;
                     return `<div class="ch-faction ${a.enabled === false ? 'ch-off' : ''}">
                         <div class="ch-fa-head"><label class="ch-switch"><input type="checkbox" data-abind="enabled" ${pos} ${a.enabled === false ? '' : 'checked'}> Activa</label>
-                            <select class="form-control" data-abind="type" ${pos}><option value="email" ${a.type === 'email' ? 'selected' : ''}>Enviar un correo</option><option value="whatsapp" ${a.type === 'whatsapp' ? 'selected' : ''}>Enviar un WhatsApp</option></select>
+                            <select class="form-control" data-abind="type" ${pos}><option value="email" ${a.type === 'email' ? 'selected' : ''}>Enviar un correo</option><option value="whatsapp" ${a.type === 'whatsapp' ? 'selected' : ''}>Enviar un WhatsApp</option><option value="notify" ${a.type === 'notify' ? 'selected' : ''}>Avisar al equipo (campana y push)</option></select>
                             <span class="ch-spacer"></span><button class="btn btn-link text-danger" title="Quitar acción" data-action="removeFormAction" ${pos}><span class="far fa-trash-alt"></span></button></div>
                         <div class="ch-fcond"><span class="ch-muted ch-small">Cuándo</span>${cond(f, a.when, 'data-abind', pos, 'when_', '', 'Siempre que llegue el formulario')}</div>
                         ${a.type === 'email' ? `<div class="ch-fcond"><span class="ch-muted ch-small">Para</span>
                             <select class="form-control" data-abind="to" ${pos}><option value="lead" ${a.to !== 'custom' ? 'selected' : ''}>El cliente (su correo)</option><option value="custom" ${a.to === 'custom' ? 'selected' : ''}>Un correo interno</option></select>
                             ${a.to === 'custom' ? `<input class="form-control" data-abind="to_custom" ${pos} value="${esc(a.to_custom)}" placeholder="aviso@tuempresa.com">` : ''}</div>
                             <label>Asunto</label><input class="form-control" data-abind="subject" ${pos} value="${esc(a.subject)}">` : ''}
-                        <label>Mensaje</label><textarea class="form-control" rows="4" data-abind="message" ${pos}>${esc(a.message)}</textarea>
+                        ${a.type === 'notify' ? `<label>Texto del aviso (título: «Nuevo registro»)</label><input class="form-control" data-abind="notify_text" ${pos} value="${esc(a.notify_text)}" placeholder="{{nombre}} · {{formulario}}">
+                            <div class="ch-small ch-muted">Le llega a quien atiende el lead y a los administradores, en la campana del CRM y como notificación del dispositivo.</div>`
+                        : `<label>Mensaje</label><textarea class="form-control" rows="4" data-abind="message" ${pos}>${esc(a.message)}</textarea>`}
+                        ${a.type === 'email' ? `<label>Imágenes del correo (la primera va arriba; máx. 4)</label>
+                            <div class="ch-aimgs">${(a.images || []).map((u, n) => `<div class="ch-aimg" style="background-image:url('${esc(u)}')"><button class="btn btn-link text-danger" title="Quitar" data-action="removeActImage" ${pos} data-n="${n}"><span class="fas fa-times"></span></button></div>`).join('')}</div>
+                            <div class="ch-fcond"><input type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" class="form-control" data-aimage ${pos}><input class="form-control" data-aurl ${pos} placeholder="…o pega una dirección https:// y pulsa Enter"></div>
+                            <label>PDF adjunto (máx. 3, hasta 650 KB cada uno)</label>
+                            ${(a.attachments || []).map((x, n) => `<div class="ch-afile"><span class="far fa-file-pdf"></span> ${esc(x.name)} <button class="btn btn-link text-danger" title="Quitar" data-action="removeActFile" ${pos} data-n="${n}"><span class="fas fa-times"></span></button></div>`).join('')}
+                            <input type="file" accept="application/pdf" class="form-control" data-afile ${pos}>
+                            <label>Botón de contacto (opcional)</label>
+                            <div class="ch-fcond"><input class="form-control" data-abind="button_label" ${pos} value="${esc(a.button_label)}" placeholder="Texto, p. ej. Escríbenos por WhatsApp">
+                                <select class="form-control" data-abind="button_kind" ${pos}><option value="whatsapp" ${a.button_kind !== 'link' ? 'selected' : ''}>Abre WhatsApp</option><option value="link" ${a.button_kind === 'link' ? 'selected' : ''}>Abre un enlace</option></select>
+                                <input class="form-control" data-abind="button_value" ${pos} value="${esc(a.button_value)}" placeholder="${a.button_kind === 'link' ? 'https://…' : 'Número con indicativo, p. ej. 573001234567'}"></div>
+                            ${a.button_kind !== 'link' ? `<input class="form-control" style="margin-top:6px" data-abind="button_text" ${pos} value="${esc(a.button_text)}" placeholder="Mensaje que aparece escrito al abrir WhatsApp">` : ''}` : ''}
                     </div>`;
                 }).join('');
                 const editor = this.editing !== i ? '' : `<div class="ch-feditor">
@@ -411,6 +451,9 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                         <div><label>Redirigir tras enviar (URL, opcional)</label>${inp(i, 'redirect_url', f.redirect_url, 'https://…')}</div>
                     </div>
                     <label>Mensaje de éxito</label>${inp(i, 'success_message', f.success_message)}
+                    <div class="ch-cols2"><div><label>Si el cliente ya está registrado (mismo teléfono o correo)</label>
+                        <select class="form-control" data-fbind="on_duplicate" data-i="${i}"><option value="update" ${f.on_duplicate !== 'block' ? 'selected' : ''}>Actualizar su registro y continuar</option><option value="block" ${f.on_duplicate === 'block' ? 'selected' : ''}>No registrarlo otra vez y avisarle</option></select></div>
+                        ${f.on_duplicate === 'block' ? `<div><label>Mensaje para quien ya está registrado</label>${inp(i, 'duplicate_message', f.duplicate_message)}</div>` : ''}</div>
                     <label>Autorización de tratamiento de datos (habeas data)</label>
                     <textarea class="form-control" rows="3" data-fbind="consent_text" data-i="${i}">${esc(f.consent_text)}</textarea>
                     <label class="ch-switch" style="margin-top:6px"><input type="checkbox" data-fbind="consent_required" data-i="${i}" ${f.consent_required ? 'checked' : ''}> Es obligatorio aceptarla para enviar</label>

@@ -81,6 +81,8 @@ async def send(tenant: dict, req: dict) -> dict:
     html = req.get("html") or ""
     msg.set_content(plain_of(html))
     msg.add_alternative(html, subtype="html")
+    for f in req.get("attachments") or []:
+        msg.add_attachment(f["bytes"], maintype="application", subtype="pdf", filename=f["name"])
     await asyncio.to_thread(_smtp_send, cfg, msg, to + cc)
     data = {"name": msg["Subject"], "from": cfg["from_address"], "fromName": uname, "to": ";".join(to), "cc": ";".join(cc), "replyTo": reply_to, "body": html, "bodyPlain": plain_of(html),
             "isHtml": True, "status": "Sent", "dateSent": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), "messageId": mid, "assignedUserId": uid, "usersIds": [uid]}
