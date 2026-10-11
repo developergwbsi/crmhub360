@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.4.0] - 2026-10-11
+
 ### Líneas de WhatsApp desde el Centro de control
 - Nueva pestaña **Líneas WhatsApp**: inventario de las instancias de Evolution que administramos. Se pueden **crear** líneas, **vincularlas por QR**, reiniciarlas, cambiar de número, **asignarlas a una empresa** como **principal** (la predeterminada) o **adicional** (otra tarjeta con interruptor y «Enviar desde»), **moverlas** de una empresa a otra sin volver a escanear, quitarlas y eliminar las libres. Al asignar se apunta el webhook al Hub de la empresa con la clave propia de la instancia; al quitar o mover se **desactiva** el webhook para que los mensajes de una línea libre no creen leads en la empresa anterior. Todo auditado.
 - El CRM explica claramente el error de envío cuando la línea está desconectada («la sesión se cerró… vuelve a vincularla con «Vincular (QR)» o pide a soporte que la vincule desde el Centro») en vez de mostrar el error 500 de Evolution.
