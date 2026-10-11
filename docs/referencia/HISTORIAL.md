@@ -4,6 +4,7 @@
 
 ## Cambios
 
+- `fa412c5` 2026-10-10 — Documentación completa del código: docs/ (arquitectura, operación, versionado, desarrollo, módulos, manual en Markdown y referencia generada), CHANGELOG, docstrings en todo el Python, cabeceras en el JS del cliente y docblocks en el PHP; bin/gen-docs y bin/tag-release
 - `969de08` 2026-10-10 — Panel gerencial: los leads que gestiona un comercial virtual dejan de contarse como «Sin asesor» y aparecen en el rendimiento con su nombre
 - `b791835` 2026-10-10 — Formularios web: galería de 8 plantillas listas (turismo, deudas, inmobiliaria, citas, cursos, seguros, evento, contacto), botón Duplicar y manual actualizado
 - `511e0e1` 2026-10-10 — Formularios web: acción «Avisar al equipo» (campana y push «Nuevo registro»), correos con imágenes, PDF adjunto y botón de WhatsApp, y opción de no registrar dos veces al mismo cliente
