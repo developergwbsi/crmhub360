@@ -571,13 +571,13 @@ async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: s
         if cfg.get("bold", True):   # el nombre de la empresa y del comercial van en negrilla
             message = whatsapp.bold_names(message, [tenant.get("name") or "", persona])
         if menu:   # lista o botones; queda pendiente la elección del cliente para entender su respuesta («2», «Deudas en mora»…)
-            await whatsapp.send_menu(tenant, lead_id, menu, message, persona, None, route.get("last_in_phone"), bool(cfg.get("menus_native_evolution")))
+            await whatsapp.send_menu(tenant, lead_id, menu, message, f"{persona} (comercial virtual)", None, route.get("last_in_phone"), bool(cfg.get("menus_native_evolution")))
             _set(tenant["slug"], lead_id, pending=Jsonb({"menu": menu["id"], "name": menu["name"], "options": [{"id": o["id"], "title": o["title"], "status": o.get("status") or ""} for o in menu["options"]],
                                                          "at": datetime.now(timezone.utc).isoformat()}))
         else:
-            await whatsapp.send(tenant, lead_id, message, persona, None, route.get("last_in_phone"))
+            await whatsapp.send(tenant, lead_id, message, f"{persona} (comercial virtual)", None, route.get("last_in_phone"))
     elif channel == "sms":
-        await sms.send(tenant, lead_id, message, persona, None, None)
+        await sms.send(tenant, lead_id, message, f"{persona} (comercial virtual)", None, None)
     else:
         espo = Espo(tenant)
         uid = owner or cfg.get("handoff_user_id") or ""
@@ -586,7 +586,8 @@ async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: s
             uid = await mailbox._admin_id(espo) or ""
         subject = subject.strip() or f"{tenant.get('name') or 'Seguimiento'}: tu solicitud"
         await mailout.send(tenant, {"userId": uid, "userName": persona, "to": [lead["emailAddress"]], "subject": subject[:200],
-                                    "html": _email_html(message, persona, cfg["persona"]["role"], tenant.get("name") or ""), "parentType": "Lead", "parentId": lead_id, "agent": True})
+                                    "html": _email_html(message, persona, cfg["persona"]["role"], tenant.get("name") or ""), "parentType": "Lead", "parentId": lead_id, "agent": True,
+                                    "authorLabel": f"{persona} (comercial virtual)"})
     _last_send[tenant["slug"]] = time.time()
 
 

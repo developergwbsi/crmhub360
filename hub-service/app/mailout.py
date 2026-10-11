@@ -87,6 +87,7 @@ async def send(tenant: dict, req: dict) -> dict:
         msg.add_attachment(f["bytes"], maintype="application", subtype="pdf", filename=f["name"])
     await asyncio.to_thread(_smtp_send, cfg, msg, to + cc)
     data = {"name": msg["Subject"], "from": cfg["from_address"], "fromName": uname, "to": ";".join(to), "cc": ";".join(cc), "replyTo": reply_to, "body": html, "bodyPlain": plain_of(html),
+            "fromString": formataddr((str(req.get("authorLabel") or uname)[:100], cfg["from_address"])),   # quién lo envió (en el CRM se ve como remitente del registro)
             "isHtml": True, "status": "Sent", "dateSent": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), "messageId": mid, "assignedUserId": uid, "usersIds": [uid]}
     if req.get("parentType") and req.get("parentId"):
         data.update({"parentType": req["parentType"], "parentId": req["parentId"]})

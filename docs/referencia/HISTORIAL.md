@@ -2,6 +2,11 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
+## Sin publicar (después de v1.1.0)
+
+- `3d1a0af` 2026-10-11 — Los paneles acoplados (WhatsApp, llamada, correo) ya no bloquean el scroll del detalle del lead
+- `3a00c59` 2026-10-11 — WhatsApp automático: negrilla en el nombre de la empresa y del asesor y en palabras clave, y botones de respuesta rápida en los mensajes del comercial virtual y de los formularios; ajustes, manual y documentación
+
 ## v1.1.0
 
 - `197d0d6` 2026-10-11 — Versión 1.1.0

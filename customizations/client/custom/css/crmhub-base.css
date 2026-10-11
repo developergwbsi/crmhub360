@@ -1015,3 +1015,8 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-ag-quick h5 { margin: 0 0 4px; font-weight: 700; }
 .ch-ag-qb { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
 .ch-ag-qb input { flex: 1 1 140px; min-width: 120px; }
+
+/* Autor de cada mensaje en la conversación */
+.ch-msg-who small { font-weight: 500; opacity: .85; margin-left: 2px; }
+.ch-msg-who.ch-virt .fas { margin-right: 2px; }
+.ch-msg-in .ch-msg-who { font-size: 11.5px; font-weight: 700; opacity: .75; margin-bottom: 2px; }

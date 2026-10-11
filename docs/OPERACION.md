@@ -88,6 +88,7 @@ Pendiente: las copias están en el mismo servidor; sincronízalas a un almacenam
 | Avisos de un tenant llegan a otro | Cada websocket debe tener su propio DSN de ZeroMQ (`crmhub-<slug>-websocket`) en el compose. |
 | WhatsApp (Meta) no entrega texto libre | Solo dentro de 24 h desde el último mensaje del cliente; fuera de la ventana hay que usar plantillas aprobadas. |
 | Evolution rechaza con 400 | La instancia no está vinculada (escanear el QR en Integraciones → Mensajería). |
+| El cliente responde por WhatsApp (Evolution) y no llega nada al CRM | Primero mira si Evolution recibió el mensaje: `POST {evolution_url}/chat/findMessages/<instancia>` con `{"where":{"key":{"remoteJid":"<número>@s.whatsapp.net"}}}` (¿hay mensajes con `fromMe:false` del cliente?) y si el webhook sigue llegando: `grep "POST /hub/evolution" /var/log/apache2/crmhub-<env>-access.log`. Si Evolution no tiene el mensaje, el problema es la sesión de WhatsApp (típico tras un `disconnectionReasonCode 401`/nueva vinculación): `POST /instance/restart/<instancia>` y, si no basta, volver a vincular el QR (Integraciones → Cambiar de número). Si lo tiene pero el CRM no, revisa el webhook (`GET /webhook/find/<instancia>`) y los logs del Hub. |
 | «Sin asesor» pero lo atiende el comercial virtual | Corregido en 1.0.0: el panel consulta `/v1/agent/attended`. |
 
 ## Sesiones de usuario (cierre por inactividad)

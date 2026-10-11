@@ -72,8 +72,9 @@ define('custom:views/modals/whatsapp', ['views/modal', 'custom:ui', 'custom:spli
             this.items.forEach(m => {
                 const k = ChUi.fmt.dayKey(m.at);
                 if (k !== day) { day = k; html += `<div class="ch-chat-day"><span>${ChUi.esc(ChUi.fmt.day(m.at))}</span></div>`; }
-                const who = m.dir === 'out' ? (m.broadcast ? m.who : m.who) : '';
-                html += `<div class="ch-msg ch-msg-${m.dir}"><div class="ch-bubble">${m.dir === 'out' && who ? `<div class="ch-msg-who">${ChUi.esc(who)}</div>` : ''}` +
+                // cada mensaje dice quién lo escribió: la persona que lo envió (no la asignada al lead), el comercial virtual, el sistema o el propio cliente
+                const who = m.who || '', virt = /\(comercial virtual\)$/i.test(who), nm = virt ? who.replace(/\s*\(comercial virtual\)$/i, '') : who;
+                html += `<div class="ch-msg ch-msg-${m.dir}"><div class="ch-bubble">${who ? `<div class="ch-msg-who ${virt ? 'ch-virt' : ''}">${virt ? '<span class="fas fa-robot"></span> ' : ''}${ChUi.esc(nm)}${virt ? ' <small>comercial virtual</small>' : ''}</div>` : ''}` +
                     `<div class="ch-msg-text">${ChUi.esc(m.text)}</div><div class="ch-msg-time">${ChUi.esc(ChUi.fmt.time(m.at))}</div></div></div>`;
             });
             th.innerHTML = html || `<div class="ch-chat-empty"><span class="${this.meta.icon}"></span><p>Aún no hay mensajes por ${this.meta.title}.<br>Escribe el primero abajo.</p></div>`;

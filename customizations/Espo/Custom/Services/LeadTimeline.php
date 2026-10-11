@@ -13,7 +13,7 @@ class LeadTimeline
 
     public function __construct(private EntityManager $em) {}
 
-    /** Nombre del usuario con caché local. */
+    /** Nombre del usuario con caché local. El usuario técnico de la integración (API) no es una persona: se muestra como «Sistema automático». */
     private function userName(?string $id): string
     {
         if (!$id) {
@@ -21,9 +21,23 @@ class LeadTimeline
         }
         if (!isset($this->names[$id])) {
             $u = $this->em->getEntityById('User', $id);
-            $this->names[$id] = $u ? (string) ($u->get('name') ?: $u->get('userName')) : '';
+            $this->names[$id] = !$u ? '' : ($u->isApi() ? 'Sistema automático' : (string) ($u->get('name') ?: $u->get('userName')));
         }
         return $this->names[$id];
+    }
+
+    /**
+     * Quién realizó la acción: quien la creó; si la creó la integración (p. ej. una llamada iniciada desde el Hub) y tiene asignada a una persona, esa persona.
+     * Nunca se deduce del usuario asignado al lead: pudo atenderlo otra persona, un supervisor o el gerente.
+     */
+    private function actor(Entity $e): string
+    {
+        $by = $this->userName($e->get('createdById'));
+        if ($by !== '' && $by !== 'Sistema automático') {
+            return $by;
+        }
+        $as = $this->userName($e->get('assignedUserId'));
+        return $as !== '' ? $as : ($by !== '' ? $by : 'Sistema automático');
     }
 
     /** Notas de Stream del lead, filtradas y ordenadas. */
@@ -63,7 +77,7 @@ class LeadTimeline
         $list = $this->em->getRDBRepository('Call')->where(['parentType' => $scope, 'parentId' => $leadId])->order('dateStart', 'DESC')->limit(0, 100)->find();
         foreach ($list as $c) {
             $out[] = ['id' => $c->getId(), 'at' => $c->get('dateStart') ?: $c->get('createdAt'), 'dir' => strtolower((string) $c->get('direction')) === 'inbound' ? 'in' : 'out',
-                'status' => $c->get('status'), 'duration' => (int) $c->get('duration'), 'who' => $this->userName($c->get('assignedUserId')),
+                'status' => $c->get('status'), 'duration' => (int) $c->get('duration'), 'who' => $this->actor($c),
                 'title' => (string) $c->get('name'), 'notes' => (string) $c->get('description')];
         }
         return $out;
@@ -78,7 +92,7 @@ class LeadTimeline
             $body = (string) ($e->get('bodyPlain') ?: strip_tags((string) $e->get('body')));
             $sent = in_array($e->get('status'), ['Sent', 'Sending'], true);
             $out[] = ['id' => $e->getId(), 'at' => $e->get('dateSent') ?: $e->get('createdAt'), 'dir' => $sent ? 'out' : 'in', 'status' => $e->get('status'),
-                'subject' => (string) $e->get('name'), 'messageId' => (string) $e->get('messageId'), 'from' => (string) $e->get('fromString'), 'to' => (string) $e->get('to'),
+                'subject' => (string) $e->get('name'), 'messageId' => (string) $e->get('messageId'), 'from' => (string) (trim((string) preg_replace('/\\s*<[^>]*>\\s*$/u', '', (string) $e->get('fromString')), " \"'") ?: $e->get('fromName') ?: ($sent ? $this->actor($e) : '')), 'to' => (string) $e->get('to'),
                 'text' => mb_substr(trim($body), 0, 4000)];
         }
         return $out;
@@ -92,7 +106,8 @@ class LeadTimeline
             if (preg_match('/^\[Estado\] «(.*?)» → «(.*?)»(?:: (.*))?$/su', (string) $n->get('post'), $m)) {
                 $c = $m[3] ?? '';
                 $kind = str_starts_with($c, 'Acción previa:') ? 'action' : ($c === 'Automático' ? 'auto' : 'comment');
-                $out[] = ['id' => $n->getId(), 'at' => $n->get('createdAt'), 'from' => $m[1], 'to' => $m[2], 'comment' => $c, 'kind' => $kind, 'who' => $this->userName($n->get('createdById'))];
+                $who = str_contains($c, '[Comercial virtual]') ? 'Comercial virtual' : $this->userName($n->get('createdById'));
+                $out[] = ['id' => $n->getId(), 'at' => $n->get('createdAt'), 'from' => $m[1], 'to' => $m[2], 'comment' => $c, 'kind' => $kind, 'who' => $who];
             }
         }
         return $out;

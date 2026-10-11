@@ -494,9 +494,9 @@ async def run_actions(tenant: dict, form: dict, data: dict, lead_id: str, lead: 
                 btns = a.get("buttons") or []
                 if len(btns) >= 2:   # mensaje con botones: el cliente responde con un toque (Meta los muestra nativos; en otros proveedores va numerado)
                     menu = {"id": "form", "name": form["name"], "type": "buttons", "body": text, "options": [{"id": f"b{i + 1}", "title": t_, "description": "", "status": ""} for i, t_ in enumerate(btns[:3])]}
-                    await whatsapp.send_menu(tenant, lead_id, menu, text, "Formulario web", None, None, False)
+                    await whatsapp.send_menu(tenant, lead_id, menu, text, "Formulario web (automático)", None, None, False)
                 else:
-                    await whatsapp.send(tenant, lead_id, text, "Formulario web", None, None)
+                    await whatsapp.send(tenant, lead_id, text, "Formulario web (automático)", None, None)
             else:
                 dest = a["to_custom"] if a.get("to") == "custom" else lead.get("email", "")
                 if not dest:
@@ -509,7 +509,7 @@ async def run_actions(tenant: dict, form: dict, data: dict, lead_id: str, lead: 
                 btn = (a["button_label"], _wa_link(a["button_value"], _fill(a.get("button_text") or "", vars_)) if a["button_kind"] == "whatsapp" else a["button_value"]) if a.get("button_label") and a.get("button_value") else None
                 files = [{"name": x["name"], "bytes": base64.b64decode(x["data"].split(",", 1)[1])} for x in a.get("attachments") or []]
                 await mailout.send(tenant, {"userId": uid, "userName": company, "to": [dest], "subject": subject[:200], "html": _mail_html(text, company, form.get("header_color") or form["color"], imgs, btn),
-                                            "parentType": "Lead", "parentId": lead_id, "agent": True, "attachments": files})
+                                            "parentType": "Lead", "parentId": lead_id, "agent": True, "attachments": files, "authorLabel": "Formulario web (automático)"})
                 await espo.note(lead_id, f"[Formulario web: {form['name']}] Se envió un correo a {dest}" + (f" con {len(files)} adjunto(s)." if files else "."))
             done.append({"id": a["id"], "ok": True})
         except Exception as e:

@@ -5,6 +5,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Corregido
+- **Quién hizo cada cosa:** cada mensaje, llamada, correo y cambio de estado dice quién lo realizó, sin deducirlo del usuario asignado al lead (pudo atenderlo otra persona, un supervisor, el gerente o un comercial virtual). Los mensajes del comercial virtual se marcan «(comercial virtual)» y llevan un icono; los de formularios, «Formulario web (automático)»; lo escrito directamente desde el celular de la línea de Evolution, «Celular de la línea» (antes «Asesor»); los cambios de estado del comercial virtual dejan de aparecer hechos por `hub-api`; las llamadas se atribuyen a quien las hizo; y los correos automáticos guardan su remitente real. En el chat de WhatsApp también se ve el nombre del cliente en sus mensajes.
+- **Mensajes entrantes de WhatsApp (Evolution):** ahora se registran los que llegan envueltos como mensajes temporales o «ver una vez», y las fotos, videos, audios y documentos (como «[Imagen] texto», «[Audio]»…). Antes se descartaban sin dejar rastro.
 - Con un panel acoplado abierto (WhatsApp, llamada, correo) la página del detalle del lead no se podía desplazar: Bootstrap bloqueaba el scroll del `body`. Ahora la información de atrás se puede recorrer mientras escribes.
 
 ### Mensajes automáticos de WhatsApp

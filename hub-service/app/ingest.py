@@ -170,7 +170,7 @@ async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None,
             text = await agent.map_menu_reply(tenant, lead_id, text)
         except Exception as e:
             logging.getLogger("crmhub").warning("opción de menú: %s", str(e)[:100])
-    await Espo(tenant).note(lead_id, f"[WhatsApp] {'→ Asesor' if from_me else '← ' + (name or 'Cliente')}: {text}")
+    await Espo(tenant).note(lead_id, f"[WhatsApp] {'→ Celular de la línea' if from_me else '← ' + (name or 'Cliente')}: {text}")
     if not from_me:
         await notify_owner(tenant, lead_id, name, text)
         if not is_optout(text):
@@ -188,6 +188,22 @@ async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None,
     return lead_id
 
 
+# Evolution/Baileys envuelve algunos mensajes (chats con mensajes temporales, «ver una vez», documentos con título, ediciones)
+_WRAPS = ("ephemeralMessage", "viewOnceMessage", "viewOnceMessageV2", "viewOnceMessageV2Extension", "documentWithCaptionMessage", "editedMessage")
+_MEDIA = {"imageMessage": "Imagen", "videoMessage": "Video", "audioMessage": "Audio", "documentMessage": "Documento", "stickerMessage": "Sticker", "locationMessage": "Ubicación", "contactMessage": "Contacto"}
+_SILENT = {"messageContextInfo", "reactionMessage", "protocolMessage", "senderKeyDistributionMessage", "pollUpdateMessage", "keepInChatMessage"}
+
+
+def _unwrap(msg: dict) -> dict:
+    """Desenvuelve el mensaje real dentro de las envolturas de Evolution (temporales, ver una vez…)."""
+    for _ in range(4):
+        inner = next((msg[k].get("message") for k in _WRAPS if isinstance(msg.get(k), dict) and msg[k].get("message")), None)
+        if not inner:
+            break
+        msg = inner
+    return msg
+
+
 async def from_evolution(tenant: dict, payload: dict) -> str | None:
     """Procesa el webhook de Evolution API (messages.upsert): ignora grupos, resuelve el número (o el LID), registra la línea de entrada y delega en whatsapp_inbound."""
     from . import routing
@@ -198,13 +214,21 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
     remote = key.get("remoteJid", "") or ""
     if remote.endswith("@g.us"):
         return None  # ignorar grupos
-    msg = d.get("message", {})
+    msg = _unwrap(d.get("message") or {})
     text = msg.get("conversation") or (msg.get("extendedTextMessage") or {}).get("text")
     if not text:   # respuestas a listas y botones
         text = ((msg.get("listResponseMessage") or {}).get("title") or (msg.get("buttonsResponseMessage") or {}).get("selectedDisplayText")
                 or (msg.get("templateButtonReplyMessage") or {}).get("selectedDisplayText")
                 or (((msg.get("interactiveResponseMessage") or {}).get("nativeFlowResponseMessage") or {}).get("name")))
+    if not text:   # foto, video o documento con texto, o un adjunto sin texto: se registra para que se vea que el cliente escribió
+        for k, label in _MEDIA.items():
+            if msg.get(k):
+                cap = (msg[k] or {}).get("caption") or ""
+                text = f"[{label}]" + (f" {cap}" if cap else "")
+                break
     if not text:
+        if msg and not set(msg) <= _SILENT:
+            logging.getLogger("crmhub").warning("WhatsApp: mensaje sin texto que no se registró (%s): %s", ",".join(list(msg)[:4]), remote)
         return None
     from_me = bool(key.get("fromMe"))
     slug = tenant["slug"]

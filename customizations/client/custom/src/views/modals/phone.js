@@ -117,7 +117,7 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split',
                     const ic = c.status === 'Not Held' ? 'fa-xmark' : 'fa-phone';
                     return `<div class="ch-call"><span class="ch-call-ic ch-call-${st[1]}"><span class="fas ${ic}"></span></span><div class="ch-call-main">` +
                         `<div class="ch-call-top"><b>${c.dir === 'in' ? 'Entrante' : 'Saliente'}</b><span class="ch-chip ch-chip-${st[1] || 'info'}">${ChUi.esc(st[0])}</span></div>` +
-                        `<div class="ch-call-sub">${ChUi.esc(ChUi.fmt.dt(c.at))}${c.who ? ' · ' + ChUi.esc(c.who) : ''}</div>` +
+                        `<div class="ch-call-sub">${ChUi.esc(ChUi.fmt.dt(c.at))}${c.who ? ' · por ' + ChUi.esc(c.who) : ''}</div>` +
                         (c.notes ? `<div class="ch-call-notes">${ChUi.esc(c.notes)}</div>` : '') + `</div><div class="ch-call-dur">${c.duration ? ChUi.fmt.dur(c.duration) : '—'}</div></div>`;
                 }).join('') : '<div class="ch-chat-empty"><span class="fas fa-phone"></span><p>Aún no hay llamadas.</p></div>';
             }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });

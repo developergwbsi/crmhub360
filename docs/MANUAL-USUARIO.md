@@ -95,6 +95,7 @@ Quién lo atiende, de dónde llegó y su identificación
 
 - **Usuario asignado:** si el lead lo atiende un **comercial virtual** (no hay una persona asignada), la tarjeta lo dice: «Comercial virtual · nombre». Si ves «Ninguno», nadie lo atiende todavía.
 - **Creado:** muestra de dónde llegó el lead (por ejemplo «Formulario Web: Expediciones a montañas», «WhatsApp»…), no el usuario técnico de la integración. «Modificado» dice «Sistema automático» o «Comercial virtual» cuando el cambio lo hizo el sistema.
+- **Quién escribió o llamó:** cada mensaje del chat, cada llamada y cada correo muestran **quién lo realizó** (una persona del equipo, el gerente, un comercial virtual —con su icono— o un envío automático), sin importar a quién esté asignado el lead hoy. Lo escrito desde el propio celular de la línea de WhatsApp aparece como «Celular de la línea».
 - **Identificación (cédula, NIT…):** los formularios y canales automáticos casi nunca la traen. Si falta, el lead guarda una **identificación temporal** (el celular o el correo, según lo configure el administrador) con la marca *Temporal* y el aviso «Identificación temporal» en el encabezado. Cuando abordes al cliente, edita el lead y escribe su documento real: la marca desaparece sola.
 - Por regla, **no puedes pasar un lead a «Calificado» ni a «Cierre exitoso» mientras su identificación sea temporal**: primero registra la real. Los comerciales virtuales no se bloquean por esto.
 
