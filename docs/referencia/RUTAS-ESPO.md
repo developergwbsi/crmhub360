@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **100** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **101** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -30,6 +30,7 @@ Total: **100** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/broadcasts/:id/:act` | CrmHub.broadcastAction | POST /CrmHub/broadcasts/:id/:act. Usuario con permiso de masivos. Hub: POST /v1/broadcasts/{id}/{act}. */ |
 | POST | `/CrmHub/call` | CrmHub.logCall | Registra una llamada saliente hecha desde el lead (queda en Llamadas y en el historial). */ |
 | GET | `/CrmHub/channels` | CrmHub.channels | Qué canales están listos (el botón de llamar decide entre click-to-call y el marcador del equipo). */ |
+| GET | `/CrmHub/conversations` | CrmHub.conversations | GET /CrmHub/conversations?scope=mine/all&channel=whatsapp/sms/telegram. Cualquier usuario: la bandeja de Mensajes. Conversaciones (por lead) de WhatsApp, SMS y Telegram de los leads que el usuario puede ver (control de acceso de Espo): con «mine» solo las de sus leads o en las que escribió él; con «all» todas las visibles. Cada una trae el último mensaje y lo último de cada canal. |
 | POST | `/CrmHub/docApply` | CrmHub.docApply | POST /CrmHub/docApply. Edición del lead. Hub: POST /v1/docs/apply (guarda los datos elegidos). */ |
 | POST | `/CrmHub/docDismiss` | CrmHub.docDismiss | POST /CrmHub/docDismiss. Usuario (no API ni portal). Hub: POST /v1/docs/dismiss. */ |
 | POST | `/CrmHub/docExtract` | CrmHub.docExtract | Lee un PDF que el usuario acaba de subir y devuelve los datos extraídos para que los revise (todavía no se guarda nada en el lead). */ |

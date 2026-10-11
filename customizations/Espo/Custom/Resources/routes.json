@@ -82,6 +82,14 @@
         }
     },
     {
+        "route": "/CrmHub/conversations",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "conversations"
+        }
+    },
+    {
         "route": "/CrmHub/formTemplate",
         "method": "get",
         "params": {

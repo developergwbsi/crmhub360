@@ -1036,3 +1036,48 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-ln-health { margin: 6px 0 4px; padding: 6px 10px; border-radius: 10px; background: var(--ch-soft); font-size: 12.5px; color: var(--ch-muted); }
 .ch-ln-health.warn { background: #fef3c7; color: #92400e; } [data-ch-theme="dark"] .ch-ln-health.warn { background: rgba(245, 158, 11, .16); color: #fcd34d; }
 .ch-ln-health .fas { margin-right: 5px; }
+
+.ch-chat-host { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.ch-chat-modal .modal-body { padding: 0 !important; }
+.ch-chat-host.ch-chat { flex: 1 1 auto; min-height: 0; height: auto; }
+
+
+/* ======================= Página «Mensajes»: bandeja de WhatsApp, SMS y Telegram ======================= */
+.ch-ms { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; height: calc(100vh - 118px); min-height: 460px; border: 1px solid var(--ch-line); border-radius: 18px; overflow: hidden; background: var(--ch-surface); }
+.ch-ms-side { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--ch-line); background: var(--ch-surface); }
+.ch-ms-top { flex: none; padding: 14px 14px 10px; border-bottom: 1px solid var(--ch-line); display: flex; flex-direction: column; gap: 10px; }
+.ch-ms-top h3 { margin: 0; font-size: 18px; font-weight: 700; } .ch-ms-top h3 .fas { margin-right: 8px; color: var(--ch-primary); }
+.ch-ms-seg { display: flex; padding: 3px; border-radius: 12px; background: var(--ch-soft2); }
+.ch-ms-seg button { flex: 1; border: 0; background: transparent; padding: 6px 8px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--ch-muted); }
+.ch-ms-seg button.on { background: var(--ch-surface); color: var(--ch-ink); box-shadow: 0 1px 4px rgba(20, 28, 60, .12); }
+.ch-ms-search { position: relative; } .ch-ms-search .fas { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--ch-muted); font-size: 13px; }
+.ch-ms-search input { width: 100%; padding: 8px 10px 8px 32px; border: 1px solid var(--ch-line-strong); border-radius: 12px; background: var(--ch-soft); color: var(--ch-ink); font: inherit; }
+.ch-ms-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.ch-ms-chips button { border: 1px solid var(--ch-line); background: var(--ch-surface); border-radius: 999px; padding: 3px 11px; font-size: 12.5px; font-weight: 600; color: var(--ch-muted); }
+.ch-ms-chips button.on { border-color: var(--ch-primary); color: var(--ch-primary); background: color-mix(in srgb, var(--ch-primary) 10%, transparent); }
+.ch-ms-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.ch-ms-sub { padding: 10px 14px 4px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ch-muted); font-weight: 700; }
+.ch-ms-item { display: flex; gap: 12px; padding: 11px 14px; cursor: pointer; border-bottom: 1px solid var(--ch-line); }
+.ch-ms-item:hover, .ch-ms-item:focus { background: var(--ch-soft); outline: 0; } .ch-ms-item.on { background: color-mix(in srgb, var(--ch-primary) 9%, transparent); box-shadow: inset 3px 0 0 var(--ch-primary); }
+.ch-ms-av { flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 15px; }
+.ch-ms-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ch-ms-row { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; min-width: 0; }
+.ch-ms-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ch-ms-item.unread .ch-ms-name { font-weight: 800; }
+.ch-ms-time { flex: none; font-size: 11.5px; color: var(--ch-muted); }
+.ch-ms-last { font-size: 13px; color: var(--ch-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ch-ms-item.unread .ch-ms-last { color: var(--ch-ink); font-weight: 600; }
+.ch-ms-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--ch-primary); align-self: center; }
+.ch-ms-meta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ch-muted); } .ch-ms-asg { margin-left: auto; font-size: 11.5px; }
+.ch-ms-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--ch-bg); }
+.ch-ms-empty { margin: auto; max-width: 420px; padding: 20px; }
+.ch-ms-head { flex: none; display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--ch-line); background: var(--ch-surface); }
+.ch-ms-hinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; } .ch-ms-hinfo b { font-size: 15.5px; } .ch-ms-hinfo small { color: var(--ch-muted); }
+.ch-ms-back { display: none; }
+.ch-ms-tabs { flex: none; display: flex; gap: 4px; padding: 8px 12px 0; background: var(--ch-surface); border-bottom: 1px solid var(--ch-line); }
+.ch-ms-tabs button { border: 0; background: transparent; padding: 8px 14px; font-weight: 600; font-size: 13.5px; color: var(--ch-muted); border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; }
+.ch-ms-tabs button .fas, .ch-ms-tabs button .fab { color: var(--tc); margin-right: 4px; } .ch-ms-tabs button small { margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--ch-soft2); font-size: 11px; }
+.ch-ms-tabs button.on { color: var(--ch-ink); border-bottom-color: var(--tc); }
+.ch-ms-pane.ch-chat { flex: 1 1 auto; min-height: 0; height: auto; }
+@media (max-width: 900px) {
+  .ch-ms { grid-template-columns: 1fr; height: calc(100vh - 100px); } .ch-ms-main { display: none; }
+  .ch-ms.ch-ms-open .ch-ms-side { display: none; } .ch-ms.ch-ms-open .ch-ms-main { display: flex; } .ch-ms-back { display: inline-block; }
+}

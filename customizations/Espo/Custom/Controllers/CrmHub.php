@@ -638,6 +638,63 @@ class CrmHub
         return $lead;
     }
 
+    /**
+     * GET /CrmHub/conversations?scope=mine|all&channel=whatsapp|sms|telegram. Cualquier usuario: la bandeja de Mensajes.
+     * Conversaciones (por lead) de WhatsApp, SMS y Telegram de los leads que el usuario puede ver (control de acceso de Espo): con «mine» solo las de
+     * sus leads o en las que escribió él; con «all» todas las visibles. Cada una trae el último mensaje y lo último de cada canal.
+     */
+    public function getActionConversations(Request $request): \stdClass
+    {
+        $scope = $request->getQueryParam('scope') === 'all' ? 'all' : 'mine';
+        $only = in_array($request->getQueryParam('channel'), ['whatsapp', 'sms', 'telegram'], true) ? (string) $request->getQueryParam('channel') : '';
+        $tags = ['whatsapp' => 'WhatsApp', 'sms' => 'SMS', 'telegram' => 'Telegram'];
+        $or = [];
+        foreach ($only ? [$tags[$only]] : array_values($tags) as $t) {
+            $or[] = ['post*' => "[{$t}]%"];
+            $or[] = ['post*' => "[Difusión:%] {$t}:%"];
+        }
+        $acl = $this->selectBuilderFactory->create()->from('Lead')->withAccessControlFilter()->buildQueryBuilder()->select(['id']);
+        $where = ['type' => 'Post', 'parentType' => 'Lead', 'parentId=s' => $acl->build(), 'OR' => $or];
+        $me = $this->user->getId();
+        if ($scope === 'mine') {
+            $name = (string) ($this->user->get('name') ?: $this->user->get('userName'));
+            $wrote = [];
+            foreach ($this->em->getRDBRepository('Note')->where(['type' => 'Post', 'parentType' => 'Lead', 'post*' => '[%] → ' . $name . ':%'])->order('createdAt', 'DESC')->limit(0, 400)->find() as $n) {
+                $wrote[(string) $n->get('parentId')] = true;
+            }
+            $mine = $this->selectBuilderFactory->create()->from('Lead')->withAccessControlFilter()->buildQueryBuilder()->select(['id'])->where(['assignedUserId' => $me]);
+            $where = ['type' => 'Post', 'parentType' => 'Lead', 'parentId=s' => $acl->build(), 'OR' => $or,
+                'AND' => [['OR' => array_filter([['parentId=s' => $mine->build()], $wrote ? ['parentId' => array_keys($wrote)] : null])]]];
+        }
+        $t = new \Espo\Custom\Services\LeadTimeline($this->em);
+        $byLead = [];
+        foreach ($this->em->getRDBRepository('Note')->where($where)->order('createdAt', 'DESC')->limit(0, 2500)->find() as $n) {
+            $m = $t->parseChat((string) $n->get('post'));
+            if (!$m) {
+                continue;
+            }
+            $id = (string) $n->get('parentId');
+            if (!isset($byLead[$id]) && count($byLead) >= 120) {
+                continue;
+            }
+            $msg = ['channel' => $m['channel'], 'dir' => $m['dir'], 'who' => $m['who'], 'text' => mb_substr((string) $m['text'], 0, 160), 'at' => (string) $n->get('createdAt')];
+            $byLead[$id] ??= ['last' => $msg, 'channels' => []];
+            $byLead[$id]['channels'][$m['channel']] ??= ['last' => $msg, 'count' => 0];
+            $byLead[$id]['channels'][$m['channel']]['count']++;
+        }
+        $out = [];
+        if ($byLead) {
+            foreach ($this->em->getRDBRepository('Lead')->where(['id' => array_keys($byLead)])->find() as $l) {
+                $c = $byLead[$l->getId()];
+                $out[] = ['leadId' => $l->getId(), 'name' => (string) $l->get('name'), 'phone' => (string) $l->get('phoneNumber'), 'email' => (string) $l->get('emailAddress'),
+                    'assignedUserId' => $l->get('assignedUserId'), 'assignedUserName' => (string) $l->get('assignedUserName'), 'status' => (string) $l->get('status'),
+                    'last' => $c['last'], 'channels' => $c['channels']];
+            }
+            usort($out, fn ($a, $b) => strcmp($b['last']['at'], $a['last']['at']));
+        }
+        return (object) ['items' => array_slice($out, 0, 100), 'scope' => $scope, 'me' => $me];
+    }
+
     /** GET /CrmHub/leadTimeline. Usuario con lectura del lead. Usa LeadTimeline (llamadas, correos, chat, estados). */
     public function getActionLeadTimeline(Request $request): \stdClass
     {

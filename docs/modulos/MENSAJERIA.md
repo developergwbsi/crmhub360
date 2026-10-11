@@ -20,6 +20,10 @@ Cada canal admite **varias líneas** (tarjetas con interruptor de encendido, pru
 
 Webhooks (Apache publica `/hub/*` hacia `/v1/ingest/<tenant>/*` del Hub): `/hub/evolution`, `/hub/whatsapp-cloud` (firma `X-Hub-Signature-256` con App Secret), `/hub/gupshup`, `/hub/telegram` (secreto propio), `/hub/facebook`, `/hub/web`. Teléfonos a E.164. El eco de lo que enviamos (`fromMe`) se ignora. La línea Evolution se identifica por instancia (`routing.note_line`).
 
+## Página «Mensajes» y componente de chat
+
+`custom:views/messages` (ruta `#CrmHub/mensajes`, menú *Actividad → Mensajes*) es la bandeja: lista de conversaciones por lead desde `GET /CrmHub/conversations` (`scope=mine|all`, `channel`; agrupa las notas de chat `[WhatsApp]/[SMS]/[Telegram]/[Difusión…]` de los leads que el usuario puede ver, con `LeadTimeline::parseChat`) y, a la derecha, el chat del lead con una pestaña por canal. El chat es `custom:views/chat-pane` (hilo, composer, plantillas, IA, número y línea); lo usan también el panel acoplado del lead (`modals/whatsapp.js`, ahora un envoltorio con encabezado y pantalla dividida) y la página (`setChannel()` cambia de pestaña sin recrearlo). «Sin leer» es local: último mensaje entrante posterior a lo último visto por el usuario (`localStorage`).
+
 ## Salud de la línea de Evolution
 
 `routing.note_evo` guarda en `kv` el último webhook recibido por instancia (`wa_evt:<tenant>:<instancia>`) y el último mensaje de un cliente (`wa_in:…`); `lines.overview` los expone como `activity` y la tarjeta de la línea los muestra. Si hace más de 24 h que no llega nada a una línea encendida, la tarjeta avisa. Sirve para detectar la sesión «abierta pero sorda» que puede quedar tras una desconexión 401 y una nueva vinculación; la solución es volver a vincular el QR.

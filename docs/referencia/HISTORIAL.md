@@ -4,6 +4,7 @@
 
 ## Sin publicar (después de v1.2.0)
 
+- `9b355eb` 2026-10-11 — Kanban: columna Perdido, el aviso Guardando no queda fijo al pedir el comentario del cambio de estado y los estados de fábrica se muestran en español
 - `208de53` 2026-10-11 — Línea de Evolution: la tarjeta muestra cuándo llegó el último mensaje de un cliente y avisa si hace más de 24 h que no llega nada
 - `698aa63` 2026-10-11 — Paneles de llamada y de correo rediseñados con el estilo del chat: llamada sin el marco de teléfono, lista de correos legible y detalle del correo dentro del panel; manual y changelog
 

@@ -48,6 +48,18 @@ class LeadTimeline
             ->order('createdAt', $order)->limit(0, $limit)->find(), false);
     }
 
+    /** Interpreta una nota de chat («[WhatsApp] → Quien: texto», «[SMS] ← Cliente: texto», «[Difusión: x] WhatsApp: texto»). Null si no es un mensaje. */
+    public function parseChat(string $post): ?array
+    {
+        if (preg_match('/^\[(WhatsApp|Telegram|SMS)\]\s*(←|→)?\s*(.*?):\s(.*)$/su', $post, $m)) {
+            return ['channel' => strtolower($m[1]), 'dir' => ($m[2] === '→' || ($m[2] === '' && $m[3] === 'Asesor')) ? 'out' : 'in', 'who' => $m[3], 'text' => $m[4]];
+        }
+        if (preg_match('/^\[Difusión: (.*?)\] (WhatsApp|Telegram|SMS): (.*)$/su', $post, $m)) {
+            return ['channel' => strtolower($m[2]), 'dir' => 'out', 'who' => 'Difusión · ' . $m[1], 'text' => $m[3], 'broadcast' => true];
+        }
+        return null;
+    }
+
     /** Mensajes de un canal (o de todos) como conversación: dir = in | out. */
     public function chat(string $leadId, string $channel): array
     {

@@ -121,6 +121,9 @@
 <li>Haz la llamada. Cuando termines, en la ventana <b>Registrar llamada</b> elige el <b>resultado</b> (Contactado, No contesta, Buzón de voz, Número equivocado, Reagendar), los minutos y tus notas, y guarda.</li>
 <li>Queda en <b>Llamadas</b>, en el <b>Historial de actividades</b> y en el flujo del lead.</li>
 </ol>
+<h3>Página «Mensajes» (todas tus conversaciones)</h3>
+<p>En el menú, grupo <b>Actividad</b>, está <b>Mensajes</b>: igual que <i>Correos</i> y <i>Llamadas</i> reúnen lo tuyo, aquí están las conversaciones de <b>WhatsApp, SMS y Telegram</b>. A la izquierda ves tus conversaciones (una por cliente) con el último mensaje, la hora, los canales usados y un punto azul si hay algo sin leer. <b>Mis conversaciones</b> muestra las de tus leads y las que tú escribiste; <b>Todas</b>, las que tu rol permite ver. Filtra por canal o busca por nombre o teléfono (si el cliente aún no tiene conversación, aparece en «Otros leads» para escribirle).</p>
+<p>Al elegir un cliente, a la derecha se abre su chat con <b>una pestaña por canal</b> (WhatsApp, SMS, Telegram): cada una es su propio espacio, con el historial, la caja para escribir, <i>Mis plantillas</i>, <i>Sugerir con IA</i> y, si hay varios, el número y la línea de envío. Cada mensaje indica quién lo escribió. <i>Abrir lead</i> te lleva a su ficha.</p>
 <h3>Correo</h3>
 <p>El botón <b>Correo</b> abre el panel de correos del lead, con el mismo estilo que el chat: una <b>lista de tarjetas</b> (asunto, fecha, quién lo envió o de quién viene y una vista previa). Haz clic en una tarjeta y se abre <b>el detalle dentro del mismo panel</b> con el mensaje completo, sus adjuntos y los botones <i>Responder</i> y <i>Abrir en el CRM</i>; la flecha <i>Correos</i> vuelve a la lista. <i>Redactar correo</i> abre la redacción en el mismo panel.</p>
 <h3>WhatsApp</h3>

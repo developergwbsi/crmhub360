@@ -8,6 +8,7 @@ TABS = [
     "Account", "Contact", "Opportunity",
     {"type": "divider", "id": "t3", "text": "Actividad"},
     "Task", "Meeting", "Call", "Calendar", "Email",
+    {"type": "url", "id": "t20", "text": "Mensajes", "url": "#CrmHub/mensajes", "iconClass": "fas fa-comments"},
     {"type": "divider", "id": "t7", "text": "Organización"},
     "Campaign",
     {"type": "url", "id": "t8", "text": "Organigrama", "url": "#CrmHub/organigrama", "iconClass": "fas fa-sitemap", "aclScope": "Campaign"},

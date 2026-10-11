@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Página «Mensajes»
+- Nueva página **Mensajes** en el menú (grupo Actividad, junto a Llamadas y Correos): la bandeja de conversaciones de **WhatsApp, SMS y Telegram** del usuario. A la izquierda las conversaciones por lead (último mensaje, hora, canales, punto de «sin leer», filtros «Mis conversaciones / Todas» y por canal, búsqueda y búsqueda de otros leads para empezar una conversación); a la derecha el chat del lead con **una pestaña por canal**, cada una con su propio espacio de conversación (hilo, caja para escribir, plantillas, sugerencia con IA y elección de número y de línea de envío). Se actualiza sola (websocket, cada 12 s y al volver a la pestaña).
+- El chat se extrajo a un componente común (`custom:views/chat-pane`) que usan la página y el panel acoplado del lead. Nuevo endpoint `GET /CrmHub/conversations` (respeta los permisos de Espo).
+
 ### Estados de los leads
 - El tablero Kanban ahora muestra también la columna **Perdido** (antes estaba excluida, y por eso no se podía arrastrar un lead allí aunque aparecía en «Estados del pipeline»). **Convertido** sigue sin columna a propósito: se asigna con el botón *Convertir* del lead, que crea la cuenta y el contacto.
 - El aviso «Guardando…» ya no se queda fijo arriba mientras se pide el comentario del cambio de estado.
