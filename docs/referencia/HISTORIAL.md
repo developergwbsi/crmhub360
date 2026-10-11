@@ -4,6 +4,8 @@
 
 ## Sin publicar (después de v1.0.0)
 
+- `412f8a3` 2026-10-11 — Changelog 1.1.0
+- `fdb0a9b` 2026-10-11 — Detalle del lead: el comercial virtual aparece como usuario asignado, Creado muestra el origen en vez de hub-api, e identificación temporal (celular o correo) obligatoria de reemplazar para calificar o cerrar; ajustes en Estados del pipeline, manual y documentación
 - `e741e7a` 2026-10-11 — Seguridad de sesión: cierre automático por inactividad real (30 min con aviso de 60 s), vida máxima de 12 h y caducidad de 1 h en el servidor; manual y documentación
 - `8326b20` 2026-10-10 — Historial con la etiqueta v1.0.0; gen-docs --check ignora el historial (depende de los propios commits)
 - `78b064a` 2026-10-10 — Historial generado con la etiqueta v1.0.0
