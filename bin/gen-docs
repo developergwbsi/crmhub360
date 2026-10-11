@@ -83,10 +83,11 @@ def manual() -> str:
 
 
 # ---------------------------------------------------------------- endpoints FastAPI
-def endpoints(path: str, title: str, intro: str) -> str:
-    tree = ast.parse((ROOT / path).read_text())
+def endpoints(path: str, title: str, intro: str, extra: tuple = ()) -> str:
+    """Endpoints de un archivo FastAPI (y de módulos extra cuyas rutas se registran dentro de una función, como evomon.py)."""
     rows = []
-    for n in tree.body:
+    trees = [ast.parse((ROOT / x).read_text()) for x in (path, *extra)]
+    for n in (m for t in trees for m in ast.walk(t)):
         if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
             for d in n.decorator_list:
                 if isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute) and d.func.attr in ("get", "post", "put", "delete", "patch") and d.args and isinstance(d.args[0], ast.Constant):
@@ -170,7 +171,7 @@ def main():
     OUT[DOCS / "referencia/API-HUB.md"] = endpoints("hub-service/app/main.py", "API del Hub Service",
                                                      "FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).")
     OUT[DOCS / "referencia/API-CENTRO.md"] = endpoints("control-service/app/main.py", "API del Centro de control",
-                                                        "FastAPI detrás de Apache en `control.<dominio>`. Todo requiere sesión firmada del Centro y cabecera anti-CSRF, salvo el login. Las operaciones peligrosas se encolan (`control_jobs`) y las ejecuta `bin/control-worker`.")
+                                                        "FastAPI detrás de Apache en `control.<dominio>`. Todo requiere sesión firmada del Centro y cabecera anti-CSRF, salvo el login y `/monitor/evolution` (webhook de la línea de pruebas, autenticado con su propio secreto). Las operaciones peligrosas se encolan (`control_jobs`) y las ejecuta `bin/control-worker`.", extra=("control-service/app/evomon.py",))
     OUT[DOCS / "referencia/RUTAS-ESPO.md"] = espo_routes()
     OUT[DOCS / "referencia/MODULOS.md"] = modules()
     OUT[DOCS / "referencia/HISTORIAL.md"] = history()

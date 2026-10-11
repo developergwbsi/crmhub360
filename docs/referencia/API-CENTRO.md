@@ -1,8 +1,8 @@
 # API del Centro de control
 
-FastAPI detrás de Apache en `control.<dominio>`. Todo requiere sesión firmada del Centro y cabecera anti-CSRF, salvo el login. Las operaciones peligrosas se encolan (`control_jobs`) y las ejecuta `bin/control-worker`.
+FastAPI detrás de Apache en `control.<dominio>`. Todo requiere sesión firmada del Centro y cabecera anti-CSRF, salvo el login y `/monitor/evolution` (webhook de la línea de pruebas, autenticado con su propio secreto). Las operaciones peligrosas se encolan (`control_jobs`) y las ejecuta `bin/control-worker`.
 
-Total: **47** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `control-service/app/main.py`.*
+Total: **58** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `control-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -26,6 +26,12 @@ Total: **47** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings
 | GET | `/api/companies/{slug}/users` | `company_users` | Usuarios de la empresa (sin el de soporte ni «system»), consultados en su EspoCRM. Lo llama la interfaz web del Centro. |
 | POST | `/api/companies/{slug}/users/{uid}/password` | `reset_password` | Cambia la contraseña de un usuario de la empresa en su EspoCRM (genera una si no se indica) y, si es «admin», actualiza ADMIN_PASSWORD en su .env. Devuelve la clave. Lo llama la interfaz web del Centro. |
 | POST | `/api/companies/{slug}/welcome` | `resend_welcome` | Encola el trabajo «welcome» que reenvía el correo de bienvenida. Lo llama la interfaz web del Centro. |
+| GET | `/api/evo-monitor` | `_status` | Estado del monitor: configuración, línea de pruebas, cada línea de las empresas con su historial reciente y las alertas abiertas y recientes. Lo llama la interfaz web del Centro. |
+| POST | `/api/evo-monitor/alerts/{aid}/resolve` | `_resolve` | Da por atendida una alerta (se vuelve a abrir sola si el problema sigue). |
+| PUT | `/api/evo-monitor/config` | `_config` | Guarda la configuración del monitor (servidor y línea de pruebas, intervalos, avisos). Audita. |
+| POST | `/api/evo-monitor/instance` | `_ensure` | Crea la línea de pruebas (instancia de Evolution) y le configura el webhook hacia el Centro. Después se vincula por QR. |
+| POST | `/api/evo-monitor/run` | `_run` | Prueba ahora una línea (slug y lineId) o todas; devuelve el id de la prueba para seguir el resultado en el estado. |
+| GET | `/api/evo-monitor/summary` | `_summary` | Solo el número de alertas abiertas (para el indicador de la pestaña). |
 | POST | `/api/forgot` | `forgot` | Recuperación de acceso: si usuario y correo coinciden y hay correo general, guarda un token (30 min) y envía el enlace; responde siempre igual para no revelar datos. Máx. 5 intentos por IP. Lo llama la pantalla de ingreso. |
 | GET | `/api/hello` | `hello` | Datos públicos mínimos para la pantalla de bienvenida (sin revelar nada sensible). |
 | GET | `/api/jobs` | `jobs` | Últimos trabajos de la cola (máx. 50) con estado y quién los pidió. Lo llama la interfaz web del Centro. |
@@ -53,3 +59,8 @@ Total: **47** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings
 | PUT | `/api/settings/mail/enabled` | `mail_enabled` | Activa o desactiva el correo general. Al desactivarlo se retira de las empresas a las que se les había prestado. |
 | POST | `/api/settings/mail/test` | `test_mail` | Envía un correo de prueba con el correo general. Lo llama la interfaz web del Centro. |
 | GET | `/api/ui-version` | `ui_version` | Huella de la interfaz; la página la consulta para saber si hay una versión nueva. |
+| GET | `/api/whatsapp/{slug}` | `_wa_state` | Estado de la sesión de WhatsApp de una línea de Evolution (empresa o «__monitor»). |
+| POST | `/api/whatsapp/{slug}/logout` | `_wa_logout` | Cierra la sesión de WhatsApp de la línea (el teléfono queda desvinculado) para escanear otro número. |
+| POST | `/api/whatsapp/{slug}/qr` | `_wa_qr` | Código QR actual para vincular el WhatsApp de la línea (crea la instancia si falta). Se audita cada vez que se pide. |
+| POST | `/api/whatsapp/{slug}/restart` | `_wa_restart` | Reinicia la instancia de Evolution de la línea (reconecta la sesión sin pedir el QR). |
+| POST | `/monitor/evolution` | `_webhook` | Webhook de la línea de pruebas (autenticado por el secreto del monitor, no por sesión): responde sola a los pings. |
