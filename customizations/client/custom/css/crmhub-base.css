@@ -1032,3 +1032,7 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-em-text { white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px 14px; color: #1c2233; background: #fff; font-size: 14px; line-height: 1.55; }
 .ch-em-att { display: flex; gap: 6px; flex-wrap: wrap; } .ch-em-att a { display: inline-flex; gap: 6px; align-items: center; padding: 4px 10px; border: 1px solid var(--ch-line); border-radius: 999px; background: var(--ch-surface); font-size: 12.5px; }
 .ch-em-compose-wrap { padding: 12px 14px 0; flex: none; max-height: 70%; overflow-y: auto; }
+
+.ch-ln-health { margin: 6px 0 4px; padding: 6px 10px; border-radius: 10px; background: var(--ch-soft); font-size: 12.5px; color: var(--ch-muted); }
+.ch-ln-health.warn { background: #fef3c7; color: #92400e; } [data-ch-theme="dark"] .ch-ln-health.warn { background: rgba(245, 158, 11, .16); color: #fcd34d; }
+.ch-ln-health .fas { margin-right: 5px; }

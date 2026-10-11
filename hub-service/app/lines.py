@@ -143,7 +143,16 @@ def overview(tenant: dict) -> dict:
     out = {}
     for ch, spec in SPEC.items():
         cards = raw_cards(tenant, ch)
-        out[ch] = {"label": spec["label"], "default": _default_id(st, ch, cards), "cards": [_public(c, ch) for c in cards],
+        pub = [_public(c, ch) for c in cards]
+        if ch == "whatsapp":   # salud de las líneas de Evolution: cuándo llegó lo último (un «open» no garantiza que la sesión reciba mensajes)
+            from . import routing
+            for c, pc in zip(cards, pub):
+                if c["type"] == "evolution" and (c["fields"].get("evolution_instance") or ""):
+                    try:
+                        pc["activity"] = routing.evo_activity(tenant["slug"], c["fields"]["evolution_instance"])
+                    except Exception:
+                        pass
+        out[ch] = {"label": spec["label"], "default": _default_id(st, ch, cards), "cards": pub,
                    "types": [{"key": k, "label": v[0], "fields": [{"key": f[0], "label": f[1], "secret": f[2]} for f in (v[1] or [])], "http": v[1] is None} for k, v in spec["types"].items()],
                    "canAdd": len(st.get("lines") or []) < MAX_LINES}
     tok = (st.get("telegram_bot_token") or "").strip()

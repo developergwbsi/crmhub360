@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Salud de las líneas de WhatsApp (Evolution)
+- La tarjeta de cada línea de Evolution muestra cuándo llegó el último mensaje de un cliente (y avisa en ámbar si hace más de 24 h que no llega nada). Un estado «conectado» no garantiza que la sesión de WhatsApp esté recibiendo mensajes: tras una desconexión (código 401) y una nueva vinculación puede quedar «abierta» pero sorda. El Hub anota cada llamada del webhook en la tabla `kv` (`wa_evt:` y `wa_in:`).
+
 ### Paneles de llamada y de correo
 - **Llamada:** el panel dejó de verse como un teléfono pequeño y oscuro (chocaba con una regla antigua de la vista previa de plantillas) y ahora tiene el mismo estilo que el chat de WhatsApp: botón grande «Llamar a …», acciones secundarias, formulario para registrar una llamada hecha y la lista de llamadas con su estado, duración y **quién la hizo**.
 - **Correo:** la lista era ilegible (el asunto se partía palabra por palabra). Ahora cada correo es una tarjeta con asunto, fecha, quién lo envió o de quién viene, y una vista previa; al hacer clic se abre **el detalle dentro del mismo panel** con el mensaje completo (en un marco aislado, sin scripts), adjuntos, «Responder» y «Abrir en el CRM». Redactar sigue en el mismo panel.

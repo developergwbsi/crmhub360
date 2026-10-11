@@ -20,6 +20,10 @@ Cada canal admite **varias líneas** (tarjetas con interruptor de encendido, pru
 
 Webhooks (Apache publica `/hub/*` hacia `/v1/ingest/<tenant>/*` del Hub): `/hub/evolution`, `/hub/whatsapp-cloud` (firma `X-Hub-Signature-256` con App Secret), `/hub/gupshup`, `/hub/telegram` (secreto propio), `/hub/facebook`, `/hub/web`. Teléfonos a E.164. El eco de lo que enviamos (`fromMe`) se ignora. La línea Evolution se identifica por instancia (`routing.note_line`).
 
+## Salud de la línea de Evolution
+
+`routing.note_evo` guarda en `kv` el último webhook recibido por instancia (`wa_evt:<tenant>:<instancia>`) y el último mensaje de un cliente (`wa_in:…`); `lines.overview` los expone como `activity` y la tarjeta de la línea los muestra. Si hace más de 24 h que no llega nada a una línea encendida, la tarjeta avisa. Sirve para detectar la sesión «abierta pero sorda» que puede quedar tras una desconexión 401 y una nueva vinculación; la solución es volver a vincular el QR.
+
 ## Cambiar de número (Evolution)
 
 *Integraciones → Mensajería → Cambiar de número* llama a `POST /v1/whatsapp/unlink` (cierra la sesión de la instancia) y muestra un QR nuevo.

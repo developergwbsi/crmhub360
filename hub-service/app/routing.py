@@ -65,3 +65,24 @@ def lid_set(tenant: str, lid: str, lead_id: str) -> None:
     """Liga un LID de WhatsApp a un lead (reemplaza si ya existía)."""
     with db.pool.connection() as c:
         c.execute("INSERT INTO wa_lids (tenant, lid, lead_id) VALUES (%s,%s,%s) ON CONFLICT (tenant, lid) DO UPDATE SET lead_id=EXCLUDED.lead_id", (tenant, lid, lead_id))
+
+
+# ---------------- salud de la línea de Evolution: cuándo llegó lo último
+def note_evo(slug: str, instance: str, *, inbound: bool = False) -> None:
+    """Anota (tabla kv) que Evolution llamó al webhook de esa instancia —y, si fue un mensaje de un cliente, también ese momento—.
+    Sirve para ver en la tarjeta de la línea si la sesión de WhatsApp sigue entregando mensajes."""
+    if not instance:
+        return
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    with db.pool.connection() as c:
+        for key in ([f"wa_evt:{slug}:{instance}"] + ([f"wa_in:{slug}:{instance}"] if inbound else [])):
+            c.execute("INSERT INTO kv (key, value) VALUES (%s, %s) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", (key, now))
+
+
+def evo_activity(slug: str, instance: str) -> dict:
+    """{'event': ISO|None, 'inbound': ISO|None}: último webhook recibido de esa instancia y último mensaje de un cliente."""
+    with db.pool.connection() as c:
+        rows = c.execute("SELECT key, value FROM kv WHERE key = ANY(%s)", ([f"wa_evt:{slug}:{instance}", f"wa_in:{slug}:{instance}"],)).fetchall()
+    d = {r["key"].split(":", 1)[0]: r["value"] for r in rows}
+    return {"event": d.get("wa_evt"), "inbound": d.get("wa_in")}

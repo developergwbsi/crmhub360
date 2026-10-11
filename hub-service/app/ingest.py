@@ -212,6 +212,10 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
     d = payload.get("data", {})
     key = d.get("key", {})
     remote = key.get("remoteJid", "") or ""
+    try:
+        routing.note_evo(tenant["slug"], payload.get("instance") or "")   # Evolution sigue llamando al webhook (aunque sea un grupo o un adjunto)
+    except Exception:
+        pass
     if remote.endswith("@g.us"):
         return None  # ignorar grupos
     msg = _unwrap(d.get("message") or {})
@@ -232,6 +236,10 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
         return None
     from_me = bool(key.get("fromMe"))
     slug = tenant["slug"]
+    try:
+        routing.note_evo(slug, payload.get("instance") or "", inbound=not from_me)   # salud de la línea: llegó un mensaje por esta instancia
+    except Exception:
+        pass
     phone = _jid_phone(remote)
     lead_id = lid = None
     if not phone:   # WhatsApp a veces identifica al contacto con un LID y trae el número en otro campo

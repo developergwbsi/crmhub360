@@ -68,12 +68,19 @@ define('custom:views/channel-lines', ['view', 'custom:ui'], function (Dep, ChUi)
             const st = this.status[c.id];
             const isDef = sec.default === c.id, multi = sec.cards.length > 1;
             const evo = c.type === 'evolution', tg = c.channel === 'telegram';
+            // salud de la línea de Evolution: «Encendido» no garantiza que la sesión de WhatsApp reciba mensajes; se muestra cuándo llegó lo último
+            const ago = iso => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); return m < 2 ? 'hace un momento' : m < 60 ? 'hace ' + m + ' min' : m < 1440 ? 'hace ' + Math.round(m / 60) + ' h' : 'hace ' + Math.round(m / 1440) + ' días'; };
+            const ac = c.activity, quiet = ac && (!ac.event || Date.now() - new Date(ac.event).getTime() > 24 * 3600000);
+            const health = evo && ac ? `<div class="ch-ln-health ${c.enabled && quiet ? 'warn' : ''}"><span class="fas fa-satellite-dish"></span> ` +
+                (ac.inbound ? `Último mensaje de un cliente: <b>${esc(ago(ac.inbound))}</b>` : ac.event ? 'Aún no ha llegado un mensaje de clientes por esta línea' : 'Sin actividad registrada todavía') +
+                (c.enabled && quiet ? '<div class="ch-small">Si esperas respuestas y no llegan, la sesión de WhatsApp puede estar «conectada» pero sin recibir. Usa <b>Cambiar de número</b> para volver a vincular el QR.</div>' : '') + '</div>' : '';
             const testBtn = tg ? '' : `<button class="btn btn-default btn-sm" data-act="send" data-id="${esc(c.id)}"><span class="fas ${c.channel === 'voice' ? 'fa-phone-volume' : 'fa-paper-plane'}"></span> ${c.channel === 'voice' ? 'Llamada de prueba' : 'Enviar prueba'}</button>`;
             return `<div class="ch-ln-card ${c.enabled ? '' : 'off'}" data-id="${esc(c.id)}">
                 <div class="ch-ln-head"><div class="ch-ln-ic"><span class="${CH[c.channel][1]}"></span></div>
                     <div class="ch-ln-title"><b>${esc(c.name)}</b><span class="ch-muted">${esc(c.typeLabel)}</span></div>
                     <label class="ch-ln-sw" title="${c.enabled ? 'Encendido: se usa para enviar' : 'Apagado: no se usa'}"><input type="checkbox" data-sw="${esc(c.id)}" ${c.enabled ? 'checked' : ''}><i></i></label></div>
                 <div class="ch-ln-meta">${isDef && c.enabled && !tg ? '<span class="ch-ln-badge pri"><span class="fas fa-star"></span> Principal</span>' : ''}${c.enabled ? '<span class="ch-ln-badge on">Encendido</span>' : '<span class="ch-ln-badge">Apagado</span>'}<span class="ch-ln-sum">${esc(this.summary(c))}</span></div>
+                ${health}
                 ${st ? `<div class="ch-ln-st ${st.ok ? 'ok' : 'err'}">${st.busy ? '<span class="fas fa-spinner fa-spin"></span> ' : (st.ok ? '<span class="fas fa-circle-check"></span> ' : '<span class="fas fa-circle-exclamation"></span> ')}${esc(st.text)}</div>` : ''}
                 <div class="ch-ln-acts"><button class="btn btn-default btn-sm" data-act="test" data-id="${esc(c.id)}"><span class="fas fa-plug"></span> Probar conexión</button>${testBtn}
                     ${evo ? `<button class="btn btn-default btn-sm" data-act="qr" data-id="${esc(c.id)}"><span class="fas fa-qrcode"></span> Vincular (QR)</button><button class="btn btn-default btn-sm" data-act="chg" data-id="${esc(c.id)}"><span class="fas fa-right-left"></span> Cambiar de número</button>` : ''}
