@@ -114,7 +114,7 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
             },
             'click [data-action="addField"]': function (e) {
                 const f = this.forms[+e.currentTarget.dataset.i];
-                f.fields.push({key: this.uniqueKey(f, 'campo'), label: 'Nuevo campo', type: 'text', required: false, maps_to: '', placeholder: '', options: []});
+                f.fields.push({key: this.uniqueKey(f, 'campo'), label: 'Nuevo campo', type: 'text', required: false, maps_to: '', placeholder: '', options: [], width: 100, show_if: null});
                 this.renderForms();
             },
             'click [data-action="removeField"]': function (e) { this.forms[+e.currentTarget.dataset.i].fields.splice(+e.currentTarget.dataset.k, 1); this.renderForms(); },
@@ -123,11 +123,51 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                 if (j < 0 || j >= f.fields.length) { return; }
                 [f.fields[k], f.fields[j]] = [f.fields[j], f.fields[k]]; this.renderForms();
             },
+            'click [data-action="addFormAction"]': function (e) {
+                const f = this.forms[+e.currentTarget.dataset.i];
+                f.actions = f.actions || []; f.actions.push(JSON.parse(JSON.stringify(this.state.formAction))); this.renderForms();
+            },
+            'click [data-action="removeFormAction"]': function (e) { this.forms[+e.currentTarget.dataset.i].actions.splice(+e.currentTarget.dataset.a, 1); this.renderForms(); },
+            'click [data-action="clearFormImage"]': function (e) { this.forms[+e.currentTarget.dataset.i][e.currentTarget.dataset.w] = ''; this.renderForms(); },
+            'change [data-fimage]': function (e) {
+                const el = e.currentTarget, f = this.forms[+el.dataset.i], w = el.dataset.fimage, file = el.files && el.files[0];
+                if (!file) { return; }
+                if (!/^image\/(png|jpe?g|webp|gif)$/.test(file.type)) { Espo.Ui.warning('Usa una imagen PNG, JPG, WEBP o GIF.'); return; }
+                const img = new Image(), url = URL.createObjectURL(file);
+                img.onload = () => {   // se reduce y comprime en el navegador para que el formulario cargue rápido
+                    const max = w === 'header_image' ? 1400 : 1920, k = Math.min(1, max / img.width), c = document.createElement('canvas');
+                    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    URL.revokeObjectURL(url);
+                    f[w] = c.toDataURL('image/jpeg', 0.8); this.renderForms();
+                };
+                img.onerror = () => Espo.Ui.warning('No se pudo leer la imagen.');
+                img.src = url;
+            },
+            'change [data-abind]': function (e) {
+                const el = e.currentTarget, a = this.forms[+el.dataset.i].actions[+el.dataset.a], w = el.dataset.abind;
+                if (w === 'enabled') { a.enabled = el.checked; return; }
+                if (w.startsWith('when_')) {
+                    const part = w.slice(5);
+                    if (part === 'field') { a.when = el.value ? {field: el.value, op: 'eq', value: ''} : null; this.renderForms(); return; }
+                    a.when = a.when || {field: '', op: 'eq', value: ''}; a.when[part] = el.value;
+                    if (part === 'op') { this.renderForms(); }
+                    return;
+                }
+                a[w] = el.value; if (w === 'type' || w === 'to') { this.renderForms(); }
+            },
             'change [data-fbind]': function (e) {
                 const el = e.currentTarget, f = this.forms[+el.dataset.i], w = el.dataset.fbind;
                 if (el.dataset.k !== undefined) {
                     const fd = f.fields[+el.dataset.k];
-                    if (w === 'required') { fd.required = el.checked; }
+                    if (w === 'width') { fd.width = +el.value; }
+                    else if (w.startsWith('si_')) {
+                        const part = w.slice(3);
+                        if (part === 'field') { fd.show_if = el.value ? {field: el.value, op: 'eq', value: ''} : null; this.renderForms(); return; }
+                        fd.show_if = fd.show_if || {field: '', op: 'eq', value: ''}; fd.show_if[part] = el.value;
+                        if (part === 'op') { this.renderForms(); }
+                    }
+                    else if (w === 'required') { fd.required = el.checked; }
                     else if (w === 'options') { fd.options = el.value.split(',').map(x => x.trim()).filter(Boolean); }
                     else { fd[w] = el.value; if (w === 'type' || w === 'maps_to') { this.renderForms(); } }
                     if (w === 'label' && /^campo\d*$/.test(fd.key)) { fd.key = this.uniqueKey(f, this.slugify(el.value).replace(/-/g, '_') || 'campo', fd); }
@@ -298,6 +338,20 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
         renderForms() {
             const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
             const st = this.state, maps = st.fieldMaps, types = {text: 'Texto', email: 'Correo', tel: 'Teléfono', textarea: 'Texto largo', select: 'Lista', number: 'Número', checkbox: 'Casilla', channel: 'Canal preferido'};
+            const opsLbl = {eq: 'es igual a', neq: 'es distinto de', filled: 'tiene respuesta', empty: 'está vacío'};
+            const widthLbl = {25: '¼', 33: '⅓', 50: '½', 66: '⅔', 75: '¾', 100: 'Completo'};
+            // Editor de una condición «campo · operador · valor»: sirve para mostrar un campo y para decidir qué acción se ejecuta
+            const cond = (f, c, bind, pos, prefix, selfKey, none) => {
+                const at = n => `${bind}="${prefix}${n}" ${pos}`;
+                const sel = `<select class="form-control" ${at('field')}><option value="">${none}</option>${f.fields.filter(x => x.key !== selfKey).map(x => `<option value="${esc(x.key)}" ${c && c.field === x.key ? 'selected' : ''}>${esc(x.label || x.key)}</option>`).join('')}</select>`;
+                if (!c) { return sel; }
+                const target = f.fields.find(x => x.key === c.field);
+                const list = target && (target.type === 'select' ? target.options : target.type === 'channel' ? ['Teléfono', 'WhatsApp', 'Telegram', 'Correo'] : target.type === 'checkbox' ? ['Sí'] : null);
+                const op = `<select class="form-control" ${at('op')}>${Object.keys(opsLbl).map(o => `<option value="${o}" ${c.op === o ? 'selected' : ''}>${opsLbl[o]}</option>`).join('')}</select>`;
+                const val = c.op !== 'eq' && c.op !== 'neq' ? '' : list ? `<select class="form-control" ${at('value')}><option value="">Elige…</option>${list.map(o => `<option ${c.value === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`
+                    : `<input class="form-control" ${at('value')} value="${esc(c.value)}" placeholder="valor">`;
+                return sel + op + val;
+            };
             const inp = (i, w, v, ph) => `<input class="form-control" data-fbind="${w}" data-i="${i}" value="${esc(v)}" ${ph ? `placeholder="${esc(ph)}"` : ''}>`;
             const html = this.forms.map((f, i) => {
                 const url = this.formUrl(f);
@@ -309,14 +363,45 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                     <button class="btn btn-link" title="Subir" data-action="moveField" data-i="${i}" data-k="${k}" data-d="-1"><span class="fas fa-arrow-up"></span></button>
                     <button class="btn btn-link" title="Bajar" data-action="moveField" data-i="${i}" data-k="${k}" data-d="1"><span class="fas fa-arrow-down"></span></button>
                     <button class="btn btn-link text-danger" title="Quitar" data-action="removeField" data-i="${i}" data-k="${k}"><span class="far fa-trash-alt"></span></button>
+                    <div class="ch-fcond"><span class="ch-muted ch-small">Ancho</span>
+                        <select class="form-control ch-fwidth" data-fbind="width" data-i="${i}" data-k="${k}">${Object.keys(widthLbl).map(w => `<option value="${w}" ${(fd.width || 100) == w ? 'selected' : ''}>${widthLbl[w]}</option>`).join('')}</select>
+                        <span class="ch-muted ch-small">Mostrar solo si</span>${cond(f, fd.show_if, 'data-fbind', `data-i="${i}" data-k="${k}"`, 'si_', fd.key, 'Siempre visible')}</div>
                     ${fd.type === 'select' ? `<input class="form-control ch-fopts" data-fbind="options" data-i="${i}" data-k="${k}" value="${esc(fd.options.join(', '))}" placeholder="Opciones separadas por coma">` : ''}
                 </div>`).join('');
+                const imgPick = w => f[w] ? `<div class="ch-imgprev" style="background-image:url('${esc(f[w])}')"></div><button class="btn btn-default btn-sm" data-action="clearFormImage" data-i="${i}" data-w="${w}"><span class="far fa-trash-alt"></span> Quitar</button>`
+                    : `<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-fimage="${w}" data-i="${i}" class="form-control"><input class="form-control" style="margin-top:6px" data-fbind="${w}" data-i="${i}" placeholder="…o pega la dirección https:// de una imagen">`;
+                const colorPick = (label, w, v) => `<div class="ch-color"><label>${label}</label><input type="color" class="form-control" data-fbind="${w}" data-i="${i}" value="${esc(v)}"></div>`;
+                const acts = (f.actions || []).map((a, j) => {
+                    const pos = `data-i="${i}" data-a="${j}"`;
+                    return `<div class="ch-faction ${a.enabled === false ? 'ch-off' : ''}">
+                        <div class="ch-fa-head"><label class="ch-switch"><input type="checkbox" data-abind="enabled" ${pos} ${a.enabled === false ? '' : 'checked'}> Activa</label>
+                            <select class="form-control" data-abind="type" ${pos}><option value="email" ${a.type === 'email' ? 'selected' : ''}>Enviar un correo</option><option value="whatsapp" ${a.type === 'whatsapp' ? 'selected' : ''}>Enviar un WhatsApp</option></select>
+                            <span class="ch-spacer"></span><button class="btn btn-link text-danger" title="Quitar acción" data-action="removeFormAction" ${pos}><span class="far fa-trash-alt"></span></button></div>
+                        <div class="ch-fcond"><span class="ch-muted ch-small">Cuándo</span>${cond(f, a.when, 'data-abind', pos, 'when_', '', 'Siempre que llegue el formulario')}</div>
+                        ${a.type === 'email' ? `<div class="ch-fcond"><span class="ch-muted ch-small">Para</span>
+                            <select class="form-control" data-abind="to" ${pos}><option value="lead" ${a.to !== 'custom' ? 'selected' : ''}>El cliente (su correo)</option><option value="custom" ${a.to === 'custom' ? 'selected' : ''}>Un correo interno</option></select>
+                            ${a.to === 'custom' ? `<input class="form-control" data-abind="to_custom" ${pos} value="${esc(a.to_custom)}" placeholder="aviso@tuempresa.com">` : ''}</div>
+                            <label>Asunto</label><input class="form-control" data-abind="subject" ${pos} value="${esc(a.subject)}">` : ''}
+                        <label>Mensaje</label><textarea class="form-control" rows="4" data-abind="message" ${pos}>${esc(a.message)}</textarea>
+                    </div>`;
+                }).join('');
                 const editor = this.editing !== i ? '' : `<div class="ch-feditor">
                     <div class="ch-cols2">
                         <div><label>Nombre interno</label>${inp(i, 'name', f.name)}</div>
                         <div><label>Dirección (parte final de la URL)</label>${inp(i, 'slug', f.slug)}</div>
                         <div><label>Título</label>${inp(i, 'title', f.title)}</div>
-                        <div><label>Color del botón</label><input type="color" class="form-control" data-fbind="color" data-i="${i}" value="${esc(f.color)}" style="height:36px;padding:2px"></div>
+                    </div>
+                    <h5 class="ch-subtitle">Diseño</h5>
+                    <div class="ch-design">
+                        <div class="ch-dcol"><label>Encabezado (imagen)</label>${imgPick('header_image')}<div class="ch-small ch-muted">Se muestra arriba, como en Google Forms. Sin imagen se usa una franja de color.</div></div>
+                        <div class="ch-dcol"><label>Fondo de la página (imagen)</label>${imgPick('bg_image')}</div>
+                    </div>
+                    <div class="ch-colors">
+                        ${colorPick('Fondo de la página', 'bg_color', f.bg_color || '#f4f6fa', true)}
+                        ${colorPick('Franja del encabezado', 'header_color', f.header_color || f.color)}
+                        ${colorPick('Color principal (campos)', 'color', f.color)}
+                        ${colorPick('Fondo del botón', 'button_color', f.button_color || f.color)}
+                        ${colorPick('Texto del botón', 'button_text_color', f.button_text_color || '#ffffff')}
                     </div>
                     <label>Texto de introducción</label>${inp(i, 'intro', f.intro)}
                     <div class="ch-cols2">
@@ -331,6 +416,10 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                     <label class="ch-switch" style="margin-top:6px"><input type="checkbox" data-fbind="consent_required" data-i="${i}" ${f.consent_required ? 'checked' : ''}> Es obligatorio aceptarla para enviar</label>
                     <h5 class="ch-subtitle">Campos del formulario</h5>${fields}
                     <button class="btn btn-default btn-sm" data-action="addField" data-i="${i}"><span class="fas fa-plus"></span> Agregar campo</button>
+                    <h5 class="ch-subtitle">Al recibir el formulario</h5>
+                    <div class="ch-small ch-muted" style="margin-bottom:8px">Envía un correo o un WhatsApp automáticamente. Cada acción puede depender de la respuesta a una lista (por ejemplo, un mensaje distinto según el servicio que elija el cliente). Puedes usar ${esc(st.formVars)}.</div>
+                    ${acts}
+                    <button class="btn btn-default btn-sm" data-action="addFormAction" data-i="${i}"><span class="fas fa-plus"></span> Agregar acción</button>
                     <div class="ch-small ch-muted" style="margin-top:8px">Necesita un campo para el nombre y otro para teléfono o correo. «Canal preferido» deja al cliente elegir cómo contactarlo (si elige Telegram recibe el enlace a tu bot al enviar).</div>
                 </div>`;
                 return `<div class="ch-form-card ${f.enabled ? '' : 'ch-off'}">

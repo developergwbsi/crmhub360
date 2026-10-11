@@ -327,7 +327,7 @@ async def tenant_settings(tenant: dict = Depends(tenant_auth)):
         "telegram": {"tokenSet": bool(st.get("telegram_bot_token")), "tokenHint": ("…" + st["telegram_bot_token"][-4:]) if st.get("telegram_bot_token") else "",
                      "bot": st.get("telegram_bot_username") or "", "welcome": st.get("telegram_welcome") or ""},
         "forms": st.get("forms") or [], "formDefault": forms.default_form(len(st.get("forms") or []) + 1),
-        "fieldTypes": forms.FIELD_TYPES, "fieldMaps": forms.MAPS,
+        "fieldTypes": forms.FIELD_TYPES, "fieldMaps": forms.MAPS, "formAction": forms.default_action(), "formVars": forms.VARS_HELP,
         "services": qualify.services_for(tenant), "servicesCustomized": bool(st.get("services")), "pushDevices": push.count(tenant["slug"]),
         "metrics": [{"key": k, "label": v[0], "unit": v[2]} for k, v in qualify.METRICS.items()],
         "ops": qualify.OPS,
