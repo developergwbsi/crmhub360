@@ -535,7 +535,7 @@ async def tick() -> None:
             if await conn_state(m["url"], m["key"], m["instance"]) != "open":
                 await open_alert({"slug": "", "instance": "monitor", "company": "Línea de pruebas", "name": c["instance"], "line_id": ""}, "monitor_caido", "La línea de pruebas no está conectada: vincúlala por QR en el Monitor.")
                 return
-            await aq("UPDATE evo_alerts SET resolved_at=now() WHERE instance='monitor' AND kind='monitor_caido' AND resolved_at IS NULL AND at < now() - interval '10 minutes'")
+            await aq("UPDATE evo_alerts SET resolved_at=now() WHERE instance='monitor' AND kind='monitor_caido' AND resolved_at IS NULL")   # la línea de pruebas ya está conectada
             for l in [x for x in due if x["provider"] == "evolution"]:
                 await run_probe(l)
                 await asyncio.sleep(20)   # las pruebas se reparten: no salen todas a la vez
