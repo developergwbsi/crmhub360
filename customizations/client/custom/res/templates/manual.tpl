@@ -121,6 +121,8 @@
 <li>Haz la llamada. Cuando termines, en la ventana <b>Registrar llamada</b> elige el <b>resultado</b> (Contactado, No contesta, Buzón de voz, Número equivocado, Reagendar), los minutos y tus notas, y guarda.</li>
 <li>Queda en <b>Llamadas</b>, en el <b>Historial de actividades</b> y en el flujo del lead.</li>
 </ol>
+<h3>Correo</h3>
+<p>El botón <b>Correo</b> abre el panel de correos del lead, con el mismo estilo que el chat: una <b>lista de tarjetas</b> (asunto, fecha, quién lo envió o de quién viene y una vista previa). Haz clic en una tarjeta y se abre <b>el detalle dentro del mismo panel</b> con el mensaje completo, sus adjuntos y los botones <i>Responder</i> y <i>Abrir en el CRM</i>; la flecha <i>Correos</i> vuelve a la lista. <i>Redactar correo</i> abre la redacción en el mismo panel.</p>
 <h3>WhatsApp</h3>
 <ol>
 <li>Pulsa <b>WhatsApp</b>. Escribe el mensaje, o usa <b>Sugerir con IA</b> para que proponga un borrador según la conversación (revísalo y edítalo).</li>

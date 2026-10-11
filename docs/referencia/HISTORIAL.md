@@ -2,8 +2,9 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.1.0)
+## v1.2.0
 
+- `e9a82e9` 2026-10-11 — Versión 1.2.0
 - `53f2064` 2026-10-11 — Changelog 1.2.0
 - `ca7c46d` 2026-10-11 — Autoría de cada mensaje, llamada, correo y cambio de estado (persona, gerente, comercial virtual o sistema) sin deducirla del usuario asignado; entrantes de WhatsApp envueltos o con adjuntos ya se registran; guía de diagnóstico de Evolution
 - `3d1a0af` 2026-10-11 — Los paneles acoplados (WhatsApp, llamada, correo) ya no bloquean el scroll del detalle del lead

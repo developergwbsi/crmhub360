@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Paneles de llamada y de correo
+- **Llamada:** el panel dejó de verse como un teléfono pequeño y oscuro (chocaba con una regla antigua de la vista previa de plantillas) y ahora tiene el mismo estilo que el chat de WhatsApp: botón grande «Llamar a …», acciones secundarias, formulario para registrar una llamada hecha y la lista de llamadas con su estado, duración y **quién la hizo**.
+- **Correo:** la lista era ilegible (el asunto se partía palabra por palabra). Ahora cada correo es una tarjeta con asunto, fecha, quién lo envió o de quién viene, y una vista previa; al hacer clic se abre **el detalle dentro del mismo panel** con el mensaje completo (en un marco aislado, sin scripts), adjuntos, «Responder» y «Abrir en el CRM». Redactar sigue en el mismo panel.
+
 ## [1.2.0] - 2026-10-11
 
 ### Corregido

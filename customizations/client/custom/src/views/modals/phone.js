@@ -8,7 +8,7 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split',
     return class extends Dep {
         className = 'dialog ch-ch-panel ch-phone-modal'
         backdrop = false
-        templateContent = '<div class="ch-phone"></div>'
+        templateContent = '<div class="ch-cl"></div>'
 
         events = {
             'click [data-action="dial"]': function () { this.startCall(); },
@@ -22,7 +22,8 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split',
         setup() {
             this.buttonList = [];
             this.scope = this.options.scope || 'Lead';
-            this.headerHtml = '<span class="ch-phone-bar"><span>Crm Hub 360</span><span class="fas fa-signal"></span></span>';
+            this.headerHtml = '<span class="ch-chat-badge" style="background:#16a34a"><span class="fas fa-phone"></span></span> ' +
+                `<span class="ch-chat-title"><b>${ChUi.esc(this.options.name || '')}</b><small>${ChUi.esc(this.options.phone || '')} · Llamadas</small></span>`;
             this.listenTo(this.options.model, 'sync', () => this.load());
         }
 
@@ -30,14 +31,13 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split',
 
         afterRender() {
             if (!this._chSplit) { this._chSplit = true; Split.open('ch'); }
-            const initials = (this.options.name || '?').split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
-            this.el.querySelector('.ch-phone').innerHTML =
-                `<div class="ch-phone-top"><span class="ch-avatar ch-avatar-lg ch-phone-av">${ChUi.esc(initials)}</span><div class="ch-phone-name">${ChUi.esc(this.options.name || '')}</div>` +
-                `<div class="ch-phone-num">${ChUi.esc(this.options.phone || '')}</div><div class="ch-phone-hint" data-role="hint">Listo para llamar</div>` +
-                `<button type="button" class="ch-phone-call" data-action="dial" title="Llamar"><span class="fas fa-phone"></span></button>` +
-                `<div class="ch-phone-links"><a role="button" data-action="dialer">Usar el marcador del equipo</a><a role="button" data-action="manual">Registrar llamada hecha</a></div>` +
-                `<div class="ch-phone-form" data-role="form" hidden></div></div>` +
-                `<div class="ch-phone-hist"><h5>Recientes</h5><div data-role="list" class="ch-phone-list"><div class="ch-chat-empty">Cargando…</div></div></div>`;
+            this.el.querySelector('.ch-cl').innerHTML = '<div class="ch-cl-scroll">' +
+                '<div class="ch-cl-actions">' +
+                    `<button type="button" class="btn ch-cl-main" data-action="dial"><span class="fas fa-phone"></span> Llamar a ${ChUi.esc(this.options.phone || 'este número')}</button>` +
+                    '<div class="ch-cl-sub"><button type="button" class="btn btn-default btn-sm" data-action="dialer"><span class="fas fa-headset"></span> Usar el marcador del equipo</button>' +
+                    '<button type="button" class="btn btn-default btn-sm" data-action="manual"><span class="fas fa-clipboard-check"></span> Registrar llamada hecha</button></div>' +
+                    '<div class="ch-cl-hint" data-role="hint">Listo para llamar</div><div class="ch-cl-form" data-role="form" hidden></div></div>' +
+                '<div class="ch-cl-hist"><h5>Llamadas</h5><div data-role="list" class="ch-cl-list"><div class="ch-chat-empty">Cargando…</div></div></div></div>';
             this.load();
             this.timer = setInterval(() => this.load(), 8000);
         }
@@ -53,13 +53,13 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split',
             if (mode === 'start') {
                 let agent = ''; try { agent = localStorage.getItem(this.key()) || ''; } catch (e) { /* privado */ }
                 f.innerHTML = `<p>Primero <b>te llamamos a ti</b>; al contestar te conectamos con el cliente.</p><label>Tu teléfono o extensión</label>` +
-                    `<input name="agent" value="${ChUi.esc(agent)}" placeholder="3001234567 o 101" autocomplete="tel"><div class="ch-phone-err" hidden></div>` +
-                    `<div class="ch-phone-actions"><button type="button" class="btn btn-success" data-action="startNow">Llamar ahora</button><button type="button" class="btn btn-default" data-action="cancelForm">Cancelar</button></div>`;
+                    `<input name="agent" value="${ChUi.esc(agent)}" placeholder="3001234567 o 101" autocomplete="tel"><div class="ch-cl-err" hidden></div>` +
+                    `<div class="ch-cl-btns"><button type="button" class="btn btn-success" data-action="startNow">Llamar ahora</button><button type="button" class="btn btn-default" data-action="cancelForm">Cancelar</button></div>`;
                 setTimeout(() => { const i = f.querySelector('input'); i && i.focus(); }, 50);
                 // varias troncales encendidas: se puede elegir desde cuál se llama
                 Espo.Ajax.getRequest('CrmHub/linesActive').then(l => {
                     const v = l && l.voice; if (!v || !v.lines || v.lines.length < 2 || this.mode !== 'start') { return; }
-                    const acts = f.querySelector('.ch-phone-actions'); if (!acts || f.querySelector('[name="line"]')) { return; }
+                    const acts = f.querySelector('.ch-cl-btns'); if (!acts || f.querySelector('[name="line"]')) { return; }
                     acts.insertAdjacentHTML('beforebegin', '<label>Llamar desde</label><select name="line"><option value="">Automática (el proveedor principal)</option>' +
                         v.lines.map(x => `<option value="${ChUi.esc(x.id)}">${ChUi.esc(x.name)} · ${ChUi.esc(x.type)}${x.id === v.default ? ' (principal)' : ''}</option>`).join('') + '</select>');
                 }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
@@ -67,12 +67,12 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split',
                 f.innerHTML = `<p>${opts && opts.fromDialer ? 'Cuando termines la llamada, cuenta cómo fue:' : 'Registra una llamada que ya hiciste:'}</p>` +
                     `<label>Resultado</label><select name="result"><option>Contactado</option><option>No contesta</option><option>Buzón de voz</option><option>Número equivocado</option><option>Reagendar</option></select>` +
                     `<label>Duración (minutos)</label><input type="number" name="minutes" min="0" max="600" value="0">` +
-                    `<label>Notas</label><textarea name="note" rows="3" maxlength="1000" placeholder="Qué se habló, acuerdos, próximo paso…"></textarea><div class="ch-phone-err" hidden></div>` +
-                    `<div class="ch-phone-actions"><button type="button" class="btn btn-primary" data-action="saveLog">Guardar</button><button type="button" class="btn btn-default" data-action="cancelForm">Cancelar</button></div>`;
+                    `<label>Notas</label><textarea name="note" rows="3" maxlength="1000" placeholder="Qué se habló, acuerdos, próximo paso…"></textarea><div class="ch-cl-err" hidden></div>` +
+                    `<div class="ch-cl-btns"><button type="button" class="btn btn-primary" data-action="saveLog">Guardar</button><button type="button" class="btn btn-default" data-action="cancelForm">Cancelar</button></div>`;
             }
         }
 
-        formError(msg) { const e = this.el.querySelector('.ch-phone-err'); if (e) { e.hidden = !msg; e.textContent = msg || ''; } }
+        formError(msg) { const e = this.el.querySelector('.ch-cl-err'); if (e) { e.hidden = !msg; e.textContent = msg || ''; } }
 
         startCall() {
             if (this.scope !== 'Lead') { this.dialer(); return; }
@@ -114,11 +114,11 @@ define('custom:views/modals/phone', ['views/modal', 'custom:ui', 'custom:split',
                 const items = r.items || [];
                 list.innerHTML = items.length ? items.map(c => {
                     const st = STATUS[c.status] || [c.status || '', ''];
-                    const ic = c.status === 'Not Held' ? 'fa-xmark' : 'fa-phone';
-                    return `<div class="ch-call"><span class="ch-call-ic ch-call-${st[1]}"><span class="fas ${ic}"></span></span><div class="ch-call-main">` +
-                        `<div class="ch-call-top"><b>${c.dir === 'in' ? 'Entrante' : 'Saliente'}</b><span class="ch-chip ch-chip-${st[1] || 'info'}">${ChUi.esc(st[0])}</span></div>` +
-                        `<div class="ch-call-sub">${ChUi.esc(ChUi.fmt.dt(c.at))}${c.who ? ' · por ' + ChUi.esc(c.who) : ''}</div>` +
-                        (c.notes ? `<div class="ch-call-notes">${ChUi.esc(c.notes)}</div>` : '') + `</div><div class="ch-call-dur">${c.duration ? ChUi.fmt.dur(c.duration) : '—'}</div></div>`;
+                    const ic = c.status === 'Not Held' ? 'fa-phone-slash' : (c.dir === 'in' ? 'fa-phone-volume' : 'fa-phone-flip');
+                    return `<div class="ch-cl-item"><span class="ch-cl-ic ${st[1]}"><span class="fas ${ic}"></span></span><div class="ch-cl-info">` +
+                        `<div class="ch-cl-top"><b>${c.dir === 'in' ? 'Entrante' : 'Saliente'}</b><span class="ch-chip ch-chip-${st[1] || 'info'}">${ChUi.esc(st[0])}</span><span class="ch-cl-dur">${c.duration ? ChUi.fmt.dur(c.duration) : '—'}</span></div>` +
+                        `<div class="ch-cl-when">${ChUi.esc(ChUi.fmt.dt(c.at))}${c.who ? ' · por <b>' + ChUi.esc(c.who) + '</b>' : ''}</div>` +
+                        (c.notes ? `<div class="ch-cl-notes">${ChUi.esc(c.notes)}</div>` : '') + '</div></div>';
                 }).join('') : '<div class="ch-chat-empty"><span class="fas fa-phone"></span><p>Aún no hay llamadas.</p></div>';
             }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
         }
