@@ -10,6 +10,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - La tarjeta de la línea en *Integraciones → Mensajería* muestra «Monitoreada por Crm Hub 360: funciona» o el problema detectado con la guía para resolverlo.
 - Nuevas tablas `evo_probes`, `evo_health` y `evo_alerts`; el Hub reconoce el «pong» sin crear leads. Desactivado por defecto: requiere configurar la línea de pruebas (ver `docs/modulos/MONITOR-WHATSAPP.md`).
 
+### Monitor de canales (Meta, Gupshup y Twilio) y consumo
+- El monitor ahora vigila también las líneas de **Meta** (`health_status`, estado y calidad del número), **Twilio** (cuenta activa y saldo) y **Gupshup** (clave válida) consultando su API, con alertas, correo y WhatsApp como en Evolution; la tarjeta de la línea muestra su estado y métricas. La pestaña pasa a llamarse **Monitor de canales**.
+- **Libro de consumo** en el Hub y pestaña **Consumo** del Centro de control: cada mensaje, SMS (segmentos), llamada (minutos) y correo se mide por empresa, canal y proveedor, con tarifario (costo y precio), margen y exportación CSV; base de la recarga prepago y del postpago. Investigación y diseño en `docs/investigacion/`.
+- La Graph API de Meta pasa de `v21.0` (a punto de vencer) a `v25.0`.
+- Corregido: la primera escritura de estado de una línea nueva en el monitor se perdía.
+
 ### Corrector ortográfico
 - Todos los campos de texto libre (cajas de mensaje de WhatsApp/SMS/Telegram, correos y asuntos, notas, descripciones y el editor de texto) se escriben con el corrector del navegador **en español** (`lang="es"` y `spellcheck`); no se aplica a usuario, claves, correos, teléfonos, números ni identificaciones. La página completa declara `lang="es"`. El navegador debe tener el diccionario en español instalado (Chrome: Configuración → Idiomas → Revisión ortográfica).
 

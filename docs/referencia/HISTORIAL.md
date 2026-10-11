@@ -4,6 +4,7 @@
 
 ## Sin publicar (después de v1.2.0)
 
+- `dd2c7c9` 2026-10-11 — Libro de consumo en el Hub (WhatsApp, SMS, llamadas y correo por empresa, canal y proveedor) y pestaña Consumo del Centro de control con tarifas, margen y exportación CSV; base para recarga y postpago
 - `e752798` 2026-10-11 — gen-docs: incluye las rutas del monitor de WhatsApp en la referencia del Centro
 - `f1a17bc` 2026-10-11 — Monitor de conexión de WhatsApp (Evolution) en el Centro de control: prueba de extremo a extremo con línea de pruebas que responde sola, alertas, reinicio automático y vinculación por QR de las empresas desde el Centro; estado de monitoreo en la tarjeta de la línea
 - `2bd8eaf` 2026-10-11 — Corrector ortográfico en español en todos los campos de texto libre (lang=es y spellcheck)

@@ -31,8 +31,8 @@ VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:admin@example.com")
 # URLs base de los proveedores (configurables solo para poder probar con servidores simulados)
 # API de bots de Telegram; por defecto https://api.telegram.org
 TELEGRAM_API_BASE = os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org")
-# Graph API de Meta (WhatsApp Cloud y Lead Ads); por defecto https://graph.facebook.com/v21.0
-META_GRAPH_BASE = os.getenv("META_GRAPH_BASE", "https://graph.facebook.com/v21.0")
+# Graph API de Meta (WhatsApp Cloud y Lead Ads); por defecto https://graph.facebook.com/v25.0
+META_GRAPH_BASE = os.getenv("META_GRAPH_BASE", "https://graph.facebook.com/v25.0")
 # API de Gupshup; por defecto https://api.gupshup.io
 GUPSHUP_BASE = os.getenv("GUPSHUP_BASE", "https://api.gupshup.io")
 # API de Twilio (SMS, WhatsApp y voz); por defecto https://api.twilio.com

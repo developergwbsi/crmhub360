@@ -12,6 +12,8 @@
 
 **Módulos** (cómo funciona cada área por dentro): [Formularios web](modulos/FORMULARIOS.md) · [Comercial virtual](modulos/COMERCIAL-VIRTUAL.md) · [Mensajería](modulos/MENSAJERIA.md) · [Tiempo real y notificaciones](modulos/TIEMPO-REAL.md) · [Centro de control](modulos/CENTRO-DE-CONTROL.md) · [Monitor de WhatsApp](modulos/MONITOR-WHATSAPP.md) · [Consumo y tarifas](modulos/CONSUMO-Y-TARIFAS.md)
 
+**Investigación y diseño:** [Consumo, recarga y postpago](investigacion/DISENO-RECARGA-Y-POSTPAGO.md) · [índice de la investigación](investigacion/README.md)
+
 **Referencia generada** (`bin/gen-docs`): [API del Hub](referencia/API-HUB.md) · [API del Centro](referencia/API-CENTRO.md) · [Rutas de EspoCRM](referencia/RUTAS-ESPO.md) · [Módulos y archivos](referencia/MODULOS.md) · [Historial](referencia/HISTORIAL.md)
 
 Además: [`../CHANGELOG.md`](../CHANGELOG.md).

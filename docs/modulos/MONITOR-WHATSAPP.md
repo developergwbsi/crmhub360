@@ -2,6 +2,8 @@
 
 Código: `control-service/app/evomon.py` (motor, alertas, API y vinculación por QR), `hub-service/app/monitor.py` (reconoce el «pong» y expone el estado), pestaña **Monitor WhatsApp** del Centro de control (`static/app.js`) y la tarjeta de cada línea en *Integraciones → Mensajería* de la empresa.
 
+> **Monitor de canales:** además de Evolution, el monitor vigila las líneas de **Meta, Gupshup y Twilio** (ver la sección «Proveedores oficiales» al final).
+
 ## Por qué existe
 
 Con Evolution (Baileys) la sesión puede figurar **«conectada» y aun así no funcionar**: no recibir mensajes (sesión abierta pero sorda, típico tras una desconexión 401 y una nueva vinculación) o aceptar envíos que nunca se entregan. El cliente ve «enviado» y nunca llega; la empresa no se entera. Como somos el proveedor, lo comprobamos nosotros, antes que el cliente.
@@ -54,3 +56,17 @@ Para que el cliente no tenga que hacerlo solo: en **Monitor WhatsApp** (botón *
 ## Pruebas
 
 `control-service` se probó con un servidor Evolution simulado que reproduce los escenarios: línea sana, sorda, recuperación, desconectada y envío rechazado (el pong llegó al Hub real), además de la API y las rutas de QR/reinicio/cierre. Pendiente de probar contra WhatsApp real con la línea de pruebas.
+
+## Proveedores oficiales (Meta, Gupshup y Twilio)
+
+Con estos proveedores no hay una «sesión» que se caiga en silencio, así que el monitor consulta **su API** cada pocos minutos (≤ 10) con las credenciales de cada línea de la empresa (principal y adicionales; WhatsApp, SMS y voz) y abre alertas con los mismos avisos (pantalla, correo y WhatsApp):
+
+| Proveedor | Qué comprueba | Alertas |
+|---|---|---|
+| **Meta** | `GET /{phone-number-id}` con `health_status` (puede enviar: AVAILABLE/LIMITED/BLOCKED), `status` del número, `quality_rating` y el límite de mensajería | token inválido (error 190), sin permiso, desconectada, **bloqueada**, calidad **roja** (alta) o **amarilla** (media), **limitada** (media) |
+| **Twilio** | `GET /Accounts/{sid}` (cuenta activa/suspendida, credenciales) y `Balance.json` | credenciales inválidas, cuenta suspendida, **saldo bajo** (media; mínimo configurable en USD) |
+| **Gupshup** | La clave de la app sigue siendo válida (consulta de plantillas de su API). Solo 401/403 es fallo; la API de envío no publica un endpoint de salud | credenciales inválidas |
+
+Cuando el problema desaparece la alerta se resuelve sola. La tarjeta de la línea en la empresa muestra «Monitoreada por Crm Hub 360: funciona» (con calidad o saldo) o el problema y cómo resolverlo. Se activa con **Vigilar también las líneas de Meta, Gupshup y Twilio** en *Configurar* (por defecto sí). Detalle y límites de cada API: [investigación](../investigacion/README.md).
+
+Qué **no** cubre todavía: saldo y consumo de Gupshup (requiere cuenta Partner), calidad de plantillas, webhooks de estado (`phone_number_quality_update`, `account_update`) y tasa de errores de entrega.

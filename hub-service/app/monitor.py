@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS evo_health (
     tenant TEXT NOT NULL, instance TEXT NOT NULL, line_id TEXT NOT NULL DEFAULT '', state TEXT NOT NULL DEFAULT 'unknown', conn_state TEXT NOT NULL DEFAULT '', last_ok_at TIMESTAMPTZ,
     last_probe_at TIMESTAMPTZ, fails_in_row INT NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '', last_rtt_ms INT, restarts INT NOT NULL DEFAULT 0, incident_at TIMESTAMPTZ,
     last_alert_at TIMESTAMPTZ, updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant, instance));
+ALTER TABLE evo_health ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'evolution';
+ALTER TABLE evo_health ADD COLUMN IF NOT EXISTS metrics JSONB NOT NULL DEFAULT '{}';
 """
 
 
@@ -36,11 +38,22 @@ def consume(slug: str, text: str) -> bool:
     return bool(PING.match(text or ""))
 
 
+def line_key(card: dict) -> str:
+    """Identificador estable de una línea para el monitor: la instancia (Evolution) o «proveedor:canal:identidad» (Meta, Gupshup, Twilio). Debe coincidir con control-service/app/evomon.py."""
+    t, f, ch = card.get("type"), card.get("fields") or {}, card.get("channel")
+    if t == "evolution":
+        return f.get("evolution_instance") or ""
+    ident = {"meta": f.get("meta_phone_number_id"), "gupshup": f.get("gupshup_app_name"), "twilio": f.get("twilio_account_sid")}.get(t)
+    return f"{t}:{ch}:{ident}" if ident else ""
+
+
 def health(slug: str, instance: str) -> dict | None:
-    """Estado de monitoreo de una línea: {state, lastOkAt, lastProbeAt, failsInRow, error} o None si aún no se ha medido."""
+    """Estado de monitoreo de una línea: {state, lastOkAt, lastProbeAt, failsInRow, error, provider, metrics} o None si aún no se ha medido."""
+    if not instance:
+        return None
     with db.pool.connection() as c:
-        r = c.execute("SELECT state, last_ok_at, last_probe_at, fails_in_row, last_error FROM evo_health WHERE tenant = %s AND instance = %s", (slug, instance)).fetchone()
+        r = c.execute("SELECT state, last_ok_at, last_probe_at, fails_in_row, last_error, provider, metrics FROM evo_health WHERE tenant = %s AND instance = %s", (slug, instance)).fetchone()
     if not r:
         return None
     return {"state": r["state"], "lastOkAt": r["last_ok_at"].isoformat() if r["last_ok_at"] else None, "lastProbeAt": r["last_probe_at"].isoformat() if r["last_probe_at"] else None,
-            "failsInRow": r["fails_in_row"], "error": r["last_error"]}
+            "failsInRow": r["fails_in_row"], "error": r["last_error"], "provider": r["provider"], "metrics": r["metrics"] or {}}

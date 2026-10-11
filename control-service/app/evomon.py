@@ -16,6 +16,7 @@ import asyncio
 import hmac
 import json
 import logging
+import os
 import re
 import secrets
 import time
@@ -35,15 +36,26 @@ CREATE TABLE IF NOT EXISTS evo_health (
     tenant TEXT NOT NULL, instance TEXT NOT NULL, line_id TEXT NOT NULL DEFAULT '', state TEXT NOT NULL DEFAULT 'unknown', conn_state TEXT NOT NULL DEFAULT '', last_ok_at TIMESTAMPTZ,
     last_probe_at TIMESTAMPTZ, fails_in_row INT NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '', last_rtt_ms INT, restarts INT NOT NULL DEFAULT 0, incident_at TIMESTAMPTZ,
     last_alert_at TIMESTAMPTZ, updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant, instance));
+ALTER TABLE evo_health ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'evolution';
+ALTER TABLE evo_health ADD COLUMN IF NOT EXISTS metrics JSONB NOT NULL DEFAULT '{}';
 CREATE TABLE IF NOT EXISTS evo_alerts (
     id SERIAL PRIMARY KEY, at TIMESTAMPTZ NOT NULL DEFAULT now(), tenant TEXT NOT NULL DEFAULT '', instance TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL, severity TEXT NOT NULL DEFAULT 'alta',
     message TEXT NOT NULL, resolved_at TIMESTAMPTZ, notified BOOLEAN NOT NULL DEFAULT false);
 """
 DEFAULTS = {"enabled": False, "provider_id": "", "instance": "crmhub-monitor", "number": "", "secret": "", "interval_min": 30, "timeout_s": 180, "fail_threshold": 2,
-            "auto_restart": True, "realert_hours": 6, "alert_emails": [], "alert_whatsapp": []}
+            "auto_restart": True, "realert_hours": 6, "alert_emails": [], "alert_whatsapp": [], "balance_warn": 10, "check_providers": True}
 KINDS = {"no_recibe": "La línea envía pero NO RECIBE mensajes (la sesión está abierta pero sorda)", "no_entrega": "Los mensajes que envía la línea no llegan a su destino",
          "envio_rechazado": "Evolution rechazó el envío de la prueba", "desconectada": "La línea de WhatsApp está desconectada", "sin_instancia": "La instancia no existe en Evolution",
-         "monitor_caido": "La línea de pruebas del monitor no está respondiendo", "sin_vincular": "La línea aún no está vinculada (falta escanear el QR)"}
+         "monitor_caido": "La línea de pruebas del monitor no está respondiendo", "sin_vincular": "La línea aún no está vinculada (falta escanear el QR)",
+         "token_invalido": "Las credenciales del proveedor ya no son válidas (token vencido o revocado)", "cuenta_suspendida": "La cuenta del proveedor está suspendida o cerrada",
+         "saldo_bajo": "El saldo del proveedor está por debajo del mínimo", "calidad_baja": "La calidad del número de WhatsApp está en ROJO (riesgo de bloqueo)",
+         "calidad_media": "La calidad del número de WhatsApp bajó a AMARILLO", "bloqueada": "Meta bloqueó el envío de la línea", "limitada": "Meta tiene el envío de la línea limitado", "error_api": "La API del proveedor está respondiendo con errores", "sin_permiso": "El token no tiene permiso sobre este número o el número no existe"}
+SEV = {"sin_vincular": "info", "saldo_bajo": "media", "calidad_media": "media", "limitada": "media"}   # el resto de las alertas son «alta»
+TWILIO_BASE = os.environ.get("TWILIO_BASE", "https://api.twilio.com")
+META_BASE = os.environ.get("META_GRAPH_BASE", "https://graph.facebook.com/v25.0")
+GUPSHUP_BASE = os.environ.get("GUPSHUP_BASE", "https://api.gupshup.io")
+PROV_KEYS = {"meta": ["meta_phone_number_id", "meta_access_token"], "gupshup": ["gupshup_api_key", "gupshup_source", "gupshup_app_name"], "twilio": ["twilio_account_sid", "twilio_auth_token"]}
+CH_PKEY = {"whatsapp": "wa_provider", "sms": "sms_provider", "voice": "voice_provider"}
 PING = re.compile(r"\[crmhub-ping:([0-9a-f]{8})\]")
 PHRASES = ["Prueba automática de conexión de Crm Hub 360 (no necesitas responder).", "Verificación automática de la línea de WhatsApp (mensaje de sistema).",
            "Control de conexión de Crm Hub 360: mensaje automático.", "Chequeo de servicio automático de Crm Hub 360."]
@@ -118,9 +130,37 @@ def lines_of(t: dict) -> list[dict]:
     return out
 
 
-def all_lines() -> list[dict]:
+def other_lines_of(t: dict) -> list[dict]:
+    """Líneas de Meta, Gupshup y Twilio (WhatsApp, SMS y voz) de una empresa, con las credenciales que usa cada una. `instance` es un identificador estable «proveedor:canal:identidad»."""
+    st = t.get("settings") or {}
+    meta = st.get("line_meta") or {}
+    out = []
+
+    def add(ch: str, lid: str, name: str, typ: str, f: dict):
+        f = {k: (f.get(k) or "").strip() if isinstance(f.get(k), str) else "" for k in PROV_KEYS[typ]}
+        need = {"meta": ["meta_phone_number_id", "meta_access_token"], "gupshup": ["gupshup_api_key", "gupshup_app_name"], "twilio": ["twilio_account_sid", "twilio_auth_token"]}[typ]
+        if not all(f.get(k) for k in need):
+            return
+        ident = f.get({"meta": "meta_phone_number_id", "gupshup": "gupshup_app_name", "twilio": "twilio_account_sid"}[typ])
+        out.append({"slug": t["slug"], "company": t["name"], "line_id": lid, "name": name, "provider": typ, "channel": ch, "creds": f, "instance": f"{typ}:{ch}:{ident}"})
+
+    for ch, pk in CH_PKEY.items():
+        mt = st.get(pk)
+        if mt in ("meta", "gupshup", "twilio") and (meta.get("main:" + ch) or {}).get("enabled", True) is not False:
+            add(ch, "main:" + ch, (meta.get("main:" + ch) or {}).get("name") or "Principal", mt, st)
+        for ln in st.get("lines") or []:
+            if ln.get("channel") == ch and ln.get("type") in ("meta", "gupshup", "twilio") and ln.get("enabled", True) is not False:
+                add(ch, ln.get("id") or "", ln.get("name") or "Línea", ln["type"], ln.get("fields") or {})
+    return out
+
+
+def all_lines(with_others: bool = True) -> list[dict]:
+    """Todas las líneas vigiladas: Evolution (prueba de extremo a extremo) y, si se pide, las de Meta, Gupshup y Twilio (comprobaciones de la API del proveedor)."""
     rows = _q("SELECT slug, name, settings, status FROM tenants WHERE status='active'", many=True) or []
-    return [l for t in rows for l in lines_of(t)]
+    out = [{**l, "provider": "evolution"} for t in rows for l in lines_of(t)]
+    if with_others:
+        out += [l for t in rows for l in other_lines_of(t)]
+    return out
 
 
 async def ev(method: str, base: str, key: str, path: str, **kw) -> httpx.Response:
@@ -215,9 +255,15 @@ async def health_row(tenant: str, inst: str) -> dict:
 
 
 async def set_health(l: dict, **f) -> None:
-    cols = ", ".join(f"{k}=%s" for k in f)
-    await aq(f"INSERT INTO evo_health (tenant, instance, line_id) VALUES (%s,%s,%s) ON CONFLICT (tenant, instance) DO UPDATE SET {cols}, updated_at=now()" if f else "SELECT 1",
-             (l["slug"], l["instance"], l["line_id"], *f.values()) if f else ())
+    """Crea o actualiza el estado de la línea (todos los campos se guardan también en la primera escritura)."""
+    if not f:
+        return
+    f.setdefault("provider", l.get("provider", "evolution"))
+    if "metrics" in f:
+        f["metrics"] = json.dumps(f["metrics"])
+    names = list(f)
+    await aq(f"INSERT INTO evo_health (tenant, instance, line_id, {', '.join(names)}) VALUES (%s,%s,%s,{', '.join(['%s'] * len(names))}) "
+             f"ON CONFLICT (tenant, instance) DO UPDATE SET {', '.join(f'{k}=EXCLUDED.{k}' for k in names)}, updated_at=now()", (l["slug"], l["instance"], l["line_id"], *f.values()))
 
 
 async def notify(title: str, body: str) -> None:
@@ -238,11 +284,11 @@ async def notify(title: str, body: str) -> None:
 
 
 async def open_alert(l: dict, kind: str, detail: str = "") -> None:
-    msg = f"{l['company']} · línea «{l['name']}»: {KINDS.get(kind, kind)}." + (f" {detail}" if detail else "")
+    msg = f"{l['company']} · línea «{l['name']}» ({l.get('provider', 'evolution')}): {KINDS.get(kind, kind)}." + (f" {detail}" if detail else "")
     exists = await aq("SELECT id FROM evo_alerts WHERE tenant=%s AND instance=%s AND kind=%s AND resolved_at IS NULL", (l["slug"], l["instance"], kind), one=True)
     if exists:
         return
-    sev = "info" if kind == "sin_vincular" else "alta"
+    sev = SEV.get(kind, "alta")
     await aq("INSERT INTO evo_alerts (tenant, instance, kind, severity, message, notified) VALUES (%s,%s,%s,%s,%s,%s)", (l["slug"], l["instance"], kind, sev, msg, sev != "info"))
     if sev != "info":
         await notify(f"Línea de WhatsApp con problemas: {l['company']}", msg + "\n\nRevísalo en el Centro de control → Monitor WhatsApp (puedes reiniciar la línea o escanear su QR desde ahí).")
@@ -255,7 +301,7 @@ async def resolve_alerts(l: dict) -> None:
         await notify(f"Recuperada: {l['company']}", f"La línea «{l['name']}» de {l['company']} volvió a funcionar (envía y recibe).")
 
 
-async def record_result(l: dict, kind: str, ok: bool, detail: str = "", rtt: int | None = None) -> None:
+async def record_result(l: dict, kind: str, ok: bool, detail: str = "", rtt: int | None = None, *, immediate: bool = False, metrics: dict | None = None) -> None:
     """Aplica el resultado de una prueba al estado de la línea: recupera, cuenta fallos, abre alerta y reinicia la instancia una vez por incidente."""
     c = cfg()
     h = await health_row(l["slug"], l["instance"])
@@ -266,11 +312,11 @@ async def record_result(l: dict, kind: str, ok: bool, detail: str = "", rtt: int
             await resolve_alerts(l)
         return
     fails = h["fails_in_row"] + 1
-    await set_health(l, state=kind, last_probe_at=now(), fails_in_row=fails, last_error=detail[:300], incident_at=h.get("incident_at") or now())
+    await set_health(l, state=kind, last_probe_at=now(), fails_in_row=fails, last_error=detail[:300], incident_at=h.get("incident_at") or now(), **({"metrics": metrics} if metrics is not None else {}))
     if kind == "sin_vincular":
         await open_alert(l, kind)
         return
-    if fails >= c["fail_threshold"]:
+    if fails >= c["fail_threshold"] or immediate:
         again = h.get("last_alert_at") and now() - h["last_alert_at"] > timedelta(hours=c["realert_hours"])
         if again:
             await aq("UPDATE evo_alerts SET resolved_at=now() WHERE tenant=%s AND instance=%s AND kind=%s AND resolved_at IS NULL", (l["slug"], l["instance"], kind))
@@ -285,9 +331,123 @@ async def record_result(l: dict, kind: str, ok: bool, detail: str = "", rtt: int
                 log.warning("reinicio automático de %s: %s", l["instance"], str(e)[:100])
 
 
+
+# ---------------------------------------------------------------- Meta, Gupshup y Twilio: comprobaciones de la API del proveedor
+async def check_twilio(f: dict, warn_balance: float) -> tuple[str | None, str, list, dict]:
+    """(fallo, detalle, avisos, métricas). Cuenta activa (credenciales válidas) y saldo."""
+    sid, tok = f["twilio_account_sid"], f["twilio_auth_token"]
+    async with httpx.AsyncClient(timeout=20, auth=(sid, tok)) as c:
+        r = await c.get(f"{TWILIO_BASE}/2010-04-01/Accounts/{sid}.json")
+        if r.status_code in (401, 403):
+            return "token_invalido", f"Twilio respondió {r.status_code}", [], {}
+        if r.status_code >= 400:
+            return "error_api", f"Twilio respondió {r.status_code}", [], {}
+        acc = r.json()
+        m = {"cuenta": acc.get("status"), "tipo": acc.get("type")}
+        if acc.get("status") != "active":
+            return "cuenta_suspendida", f"Estado de la cuenta: {acc.get('status')}", [], m
+        warns = []
+        try:   # el saldo solo existe en cuentas principales con saldo prepago: si no se puede leer, no es un fallo
+            b = await c.get(f"{TWILIO_BASE}/2010-04-01/Accounts/{sid}/Balance.json")
+            if b.status_code == 200:
+                j = b.json()
+                m.update(saldo=float(j.get("balance")), moneda=j.get("currency"))
+                if (j.get("currency") or "USD") == "USD" and float(j.get("balance")) < warn_balance:
+                    warns.append(("saldo_bajo", f"Saldo: {j.get('balance')} {j.get('currency')} (mínimo {warn_balance})"))
+        except Exception:
+            pass
+    return None, "", warns, m
+
+
+async def check_meta(f: dict) -> tuple[str | None, str, list, dict]:
+    """Token válido, número conectado, **puede enviar** (health_status) y calidad/límite del número (Graph API). Si Meta rechaza algún campo opcional se reintenta sin él."""
+    pid, tok = f["meta_phone_number_id"], f["meta_access_token"]
+    base = "display_phone_number,verified_name,quality_rating,status,name_status,throughput,health_status"
+    async with httpx.AsyncClient(timeout=20) as c:
+        for fields in (base + ",whatsapp_business_manager_messaging_limit", base):
+            r = await c.get(f"{META_BASE}/{pid}", params={"fields": fields}, headers={"Authorization": f"Bearer {tok}"})
+            if r.status_code != 400 or "whatsapp_business_manager_messaging_limit" not in fields:
+                break
+            if ((r.json().get("error") or {}).get("code")) not in (100, 12):   # campo no disponible: se prueba sin él
+                break
+    j = {}
+    try:
+        j = r.json()
+    except Exception:
+        pass
+    if r.status_code >= 400:
+        e = (j.get("error") or {}) if isinstance(j, dict) else {}
+        code = e.get("code")
+        if code == 190 or r.status_code == 401:
+            return "token_invalido", (e.get("message") or "Token inválido o vencido")[:160], [], {}
+        if code in (100, 10, 200, 33, 368) or r.status_code in (403, 404):
+            return "sin_permiso", (e.get("message") or f"Meta respondió {r.status_code}")[:160], [], {}
+        return "error_api", f"Meta respondió {r.status_code}: {(e.get('message') or '')[:120]}", [], {}
+    hs = j.get("health_status") or {}
+    lim = j.get("whatsapp_business_manager_messaging_limit") or j.get("messaging_limit_tier")
+    m = {"numero": j.get("display_phone_number"), "nombre": j.get("verified_name"), "calidad": j.get("quality_rating"), "limite": lim, "estado": j.get("status"), "puede_enviar": hs.get("can_send_message")}
+    why = "; ".join(str((x.get("error_description") or x.get("error_code") or ""))[:100] for e in (hs.get("entities") or []) for x in (e.get("errors") or []))[:240]
+    if hs.get("can_send_message") == "BLOCKED":
+        return "bloqueada", "Meta bloquea el envío de esta línea" + (f": {why}" if why else ""), [], m
+    if j.get("status") and j["status"] not in ("CONNECTED",):
+        return "desconectada", f"Estado del número: {j['status']}", [], m
+    q = (j.get("quality_rating") or "").upper()
+    if q == "RED":
+        return "calidad_baja", "Meta puede limitar o bloquear el número: revisa los reportes y bloqueos de los clientes y baja el volumen.", [], m
+    warns = []
+    if q == "YELLOW":
+        warns.append(("calidad_media", "Baja el volumen y mejora el contenido de las plantillas para no llegar a rojo."))
+    if hs.get("can_send_message") == "LIMITED":
+        warns.append(("limitada", "Meta limita el envío de esta línea" + (f": {why}" if why else "")))
+    return None, "", warns, m
+
+
+async def check_gupshup(f: dict) -> tuple[str | None, str, list, dict]:
+    """La clave de la app sigue siendo válida (consulta de plantillas de la API de la app). Solo 401/403 se consideran fallo: la API de envío no publica un endpoint de salud."""
+    async with httpx.AsyncClient(timeout=20) as c:
+        r = await c.get(f"{GUPSHUP_BASE}/wa/api/v1/template/list/{f['gupshup_app_name']}", headers={"apikey": f["gupshup_api_key"]})
+    if r.status_code in (401, 403):
+        return "token_invalido", f"Gupshup respondió {r.status_code}", [], {}
+    if r.status_code >= 500:
+        return "error_api", f"Gupshup respondió {r.status_code}", [], {}
+    return None, "", [], {"app": f["gupshup_app_name"], "verificado": "clave"}
+
+
+async def check_line(l: dict) -> str:
+    """Comprueba una línea de proveedor oficial y aplica el resultado: abre/cierra alertas y guarda las métricas. Devuelve el estado."""
+    c = cfg()
+    try:
+        if l["provider"] == "twilio":
+            fail, detail, warns, m = await check_twilio(l["creds"], float(c.get("balance_warn") or 10))
+        elif l["provider"] == "meta":
+            fail, detail, warns, m = await check_meta(l["creds"])
+        else:
+            fail, detail, warns, m = await check_gupshup(l["creds"])
+    except Exception as e:
+        fail, detail, warns, m = "error_api", "No se pudo contactar al proveedor: " + str(e)[:100], [], {}
+    if fail:
+        await aq("UPDATE evo_alerts SET resolved_at=now() WHERE tenant=%s AND instance=%s AND resolved_at IS NULL AND kind <> %s", (l["slug"], l["instance"], fail))   # los avisos de otro problema ya no aplican
+        await record_result(l, fail, False, detail, immediate=True, metrics=m)
+        return fail
+    await set_health(l, state="ok", conn_state="ok", last_ok_at=now(), last_probe_at=now(), fails_in_row=0, last_error="", metrics=m)
+    active = {k for k, _ in warns}
+    for k, d in warns:
+        await open_alert(l, k, d)
+    # se resuelven las alertas de esta línea cuyo problema ya no existe
+    rows = await aq("SELECT id, kind FROM evo_alerts WHERE tenant=%s AND instance=%s AND resolved_at IS NULL", (l["slug"], l["instance"]), many=True) or []
+    cleared = [r for r in rows if r["kind"] not in active]
+    for r in cleared:
+        await aq("UPDATE evo_alerts SET resolved_at=now() WHERE id=%s", (r["id"],))
+    if any(SEV.get(r["kind"], "alta") != "info" for r in cleared):
+        await notify(f"Recuperada: {l['company']}", f"La línea «{l['name']}» ({l['provider']}) de {l['company']} volvió a estar en orden.")
+    return "ok"
+
+
 # ---------------------------------------------------------------- pruebas
 async def run_probe(l: dict) -> str:
-    """Una prueba de la línea: estado de la conexión y envío del ping. El resultado lo cierra evaluate() cuando llega el pong o vence el tiempo."""
+    """Una prueba de la línea (Evolution: ping de extremo a extremo; Meta, Gupshup y Twilio: comprobación de su API): estado de la conexión y envío del ping. El resultado lo cierra evaluate() cuando llega el pong o vence el tiempo."""
+    if l.get("provider", "evolution") != "evolution":
+        return await check_line(l)
     st = await conn_state(l["url"], l["key"], l["instance"])
     await set_health(l, conn_state=st[:60], last_probe_at=now())
     if st == "missing":
@@ -347,7 +507,8 @@ async def due_lines() -> list[dict]:
     for l in all_lines():
         h = await health_row(l["slug"], l["instance"])
         last = h.get("last_probe_at")
-        step = timedelta(minutes=c["interval_min"]) if h["state"] in ("ok", "unknown", "sin_vincular") else timedelta(minutes=max(2, c["interval_min"] // 3))   # con problemas se reprueba más seguido
+        base = c["interval_min"] if l.get("provider", "evolution") == "evolution" else min(c["interval_min"], 10)   # las consultas a la API de un proveedor son baratas: más seguido
+        step = timedelta(minutes=base) if h["state"] in ("ok", "unknown", "sin_vincular") else timedelta(minutes=max(2, base // 3))   # con problemas se reprueba más seguido
         if not last or now() - last >= step:
             out.append(l)
     return out
@@ -360,19 +521,26 @@ async def tick() -> None:
     _busy = True
     try:
         c = cfg()
-        if not c["enabled"] or not monitor_conn():
+        if not c["enabled"]:
             return
-        await evaluate()
-        m = monitor_conn()
-        if await conn_state(m["url"], m["key"], m["instance"]) != "open":
-            await open_alert({"slug": "", "instance": "monitor", "company": "Línea de pruebas", "name": c["instance"], "line_id": ""}, "monitor_caido", "La línea de pruebas no está conectada: vincúlala por QR en el Monitor WhatsApp.")
-            return
-        await aq("UPDATE evo_alerts SET resolved_at=now() WHERE instance='monitor' AND kind='monitor_caido' AND resolved_at IS NULL AND at < now() - interval '10 minutes'")
-        for l in await due_lines():
-            await run_probe(l)
-            await asyncio.sleep(20)   # las pruebas se reparten: no salen todas a la vez
+        due = await due_lines()
+        # Meta, Gupshup y Twilio: se consulta su API (no necesitan la línea de pruebas)
+        if c["check_providers"]:
+            for l in [x for x in due if x["provider"] != "evolution"]:
+                await check_line(l)
+        # Evolution: prueba de extremo a extremo con la línea de pruebas
+        if monitor_conn():
+            await evaluate()
+            m = monitor_conn()
+            if await conn_state(m["url"], m["key"], m["instance"]) != "open":
+                await open_alert({"slug": "", "instance": "monitor", "company": "Línea de pruebas", "name": c["instance"], "line_id": ""}, "monitor_caido", "La línea de pruebas no está conectada: vincúlala por QR en el Monitor.")
+                return
+            await aq("UPDATE evo_alerts SET resolved_at=now() WHERE instance='monitor' AND kind='monitor_caido' AND resolved_at IS NULL AND at < now() - interval '10 minutes'")
+            for l in [x for x in due if x["provider"] == "evolution"]:
+                await run_probe(l)
+                await asyncio.sleep(20)   # las pruebas se reparten: no salen todas a la vez
     except Exception:
-        log.exception("monitor de Evolution")
+        log.exception("monitor de canales")
     finally:
         _busy = False
 
@@ -433,6 +601,8 @@ class ConfigReq(BaseModel):
     realert_hours: int | None = None
     alert_emails: list[str] | None = None
     alert_whatsapp: list[str] | None = None
+    balance_warn: float | None = None
+    check_providers: bool | None = None
 
 
 def public_cfg(c: dict) -> dict:
@@ -478,7 +648,8 @@ def init(deps) -> None:
         for l in all_lines():
             h = await health_row(l["slug"], l["instance"])
             hist = await aq("SELECT status, kind, rtt_ms, sent_at FROM evo_probes WHERE tenant=%s AND instance=%s ORDER BY sent_at DESC LIMIT 14", (l["slug"], l["instance"]), many=True) or []
-            lines.append({"slug": l["slug"], "company": l["company"], "line": l["name"], "lineId": l["line_id"], "instance": l["instance"], "state": h["state"], "connState": h.get("conn_state") or "",
+            lines.append({"slug": l["slug"], "company": l["company"], "line": l["name"], "lineId": l["line_id"], "instance": l["instance"], "provider": l.get("provider", "evolution"), "channel": l.get("channel", "whatsapp"),
+                          "metrics": h.get("metrics") or {}, "state": h["state"], "connState": h.get("conn_state") or "",
                           "lastOkAt": h["last_ok_at"], "lastProbeAt": h.get("last_probe_at"), "failsInRow": h["fails_in_row"], "lastError": h.get("last_error") or "", "rttMs": h.get("last_rtt_ms"),
                           "incidentAt": h.get("incident_at"), "history": [{"s": x["status"], "k": x["kind"], "rtt": x["rtt_ms"], "at": x["sent_at"]} for x in hist]})
         alerts = await aq("SELECT id, at, tenant, instance, kind, severity, message, resolved_at FROM evo_alerts ORDER BY (resolved_at IS NULL) DESC, at DESC LIMIT 60", many=True) or []
@@ -526,12 +697,13 @@ def init(deps) -> None:
         """Prueba ahora una línea (slug y lineId) o todas; devuelve el id de la prueba para seguir el resultado en el estado."""
         if not cfg()["enabled"]:
             raise HTTPException(400, "Activa el monitor para probar.")
-        mc = monitor_conn()
-        if not mc or await conn_state(mc["url"], mc["key"], mc["instance"]) != "open":
-            raise HTTPException(400, "La línea de pruebas no está conectada: vincúlala por QR primero.")
         ls = [l for l in all_lines() if not body.get("slug") or (l["slug"] == body["slug"] and (not body.get("lineId") or l["line_id"] == body["lineId"]))]
         if not ls:
-            raise HTTPException(404, "No hay líneas de Evolution para probar.")
+            raise HTTPException(404, "No hay líneas para probar.")
+        if any(l["provider"] == "evolution" for l in ls):
+            mc = monitor_conn()
+            if not mc or await conn_state(mc["url"], mc["key"], mc["instance"]) != "open":
+                raise HTTPException(400, "La línea de pruebas de Evolution no está conectada: vincúlala por QR primero.")
         ids = [await run_probe(l) for l in ls[:30]]
         ns.audit(actor, "monitor_evolution_probar", body.get("slug") or "todas")
         return {"ok": True, "probes": ids}

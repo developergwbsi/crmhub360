@@ -144,16 +144,15 @@ def overview(tenant: dict) -> dict:
     for ch, spec in SPEC.items():
         cards = raw_cards(tenant, ch)
         pub = [_public(c, ch) for c in cards]
-        if ch == "whatsapp":   # salud de las líneas de Evolution: cuándo llegó lo último (un «open» no garantiza que la sesión reciba mensajes)
-            from . import routing
-            for c, pc in zip(cards, pub):
-                if c["type"] == "evolution" and (c["fields"].get("evolution_instance") or ""):
-                    try:
-                        pc["activity"] = routing.evo_activity(tenant["slug"], c["fields"]["evolution_instance"])
-                        from . import monitor
-                        pc["monitor"] = monitor.health(tenant["slug"], c["fields"]["evolution_instance"])   # prueba de extremo a extremo del Centro de control
-                    except Exception:
-                        pass
+        from . import monitor, routing
+        for c, pc in zip(cards, pub):   # salud de cada línea: la mide el monitor del Centro de control (Evolution: prueba de extremo a extremo; Meta, Gupshup y Twilio: su API)
+            try:
+                key = monitor.line_key(c)
+                if c["type"] == "evolution" and key:   # un «open» no garantiza que la sesión reciba mensajes: se muestra también cuándo llegó lo último
+                    pc["activity"] = routing.evo_activity(tenant["slug"], key)
+                pc["monitor"] = monitor.health(tenant["slug"], key)
+            except Exception:
+                pass
         out[ch] = {"label": spec["label"], "default": _default_id(st, ch, cards), "cards": pub,
                    "types": [{"key": k, "label": v[0], "fields": [{"key": f[0], "label": f[1], "secret": f[2]} for f in (v[1] or [])], "http": v[1] is None} for k, v in spec["types"].items()],
                    "canAdd": len(st.get("lines") or []) < MAX_LINES}

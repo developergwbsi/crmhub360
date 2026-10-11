@@ -120,7 +120,7 @@
   function shell() {
     $app.innerHTML = `<div class="top"><div class="brand"><i>◆</i><span>Crm Hub 360 <small>· Centro de control</small></span></div><span class="grow"></span>
       <button class="btn sm" id="acc"><span id="who">Mi cuenta</span></button><button class="btn sm" id="out">Salir</button></div>
-      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="consumo">Consumo</button><button class="tab" data-t="monitor">Monitor WhatsApp<span class="tabdot" id="mon-badge" hidden></span></button><button class="tab" data-t="actividad">Actividad</button></div>
+      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="consumo">Consumo</button><button class="tab" data-t="monitor">Monitor de canales<span class="tabdot" id="mon-badge" hidden></span></button><button class="tab" data-t="actividad">Actividad</button></div>
       <main id="main"></main>`;
     document.getElementById('acc').onclick = accountDialog;
     document.getElementById('out').onclick = async () => { try { await api('POST', '/logout'); } catch (e) { /* ya cerrada */ } renderLogin(); };
@@ -129,32 +129,38 @@
 
   // ---------- Monitor de WhatsApp (Evolution): prueba de extremo a extremo, alertas y vinculación por QR
   const MON_STATE = {ok: ['Funciona', 'ok'], unknown: ['Sin medir', ''], no_recibe: ['No recibe mensajes', 'bad'], no_entrega: ['No entrega', 'bad'], envio_rechazado: ['Envío rechazado', 'bad'],
-    desconectada: ['Desconectada', 'bad'], sin_instancia: ['Sin instancia', 'bad'], sin_vincular: ['Sin vincular', 'warn'], monitor_caido: ['Línea de pruebas caída', 'bad']};
+    desconectada: ['Desconectada', 'bad'], sin_instancia: ['Sin instancia', 'bad'], sin_vincular: ['Sin vincular', 'warn'], monitor_caido: ['Línea de pruebas caída', 'bad'],
+    token_invalido: ['Credenciales inválidas', 'bad'], cuenta_suspendida: ['Cuenta suspendida', 'bad'], saldo_bajo: ['Saldo bajo', 'warn'], calidad_baja: ['Calidad ROJA', 'bad'], calidad_media: ['Calidad amarilla', 'warn'],
+    error_api: ['API con errores', 'bad'], sin_permiso: ['Sin permiso', 'bad'], bloqueada: ['Bloqueada por Meta', 'bad'], limitada: ['Limitada por Meta', 'warn']};
+  const PROV = {evolution: 'Evolution', meta: 'Meta', gupshup: 'Gupshup', twilio: 'Twilio'}, CHN = {whatsapp: 'WhatsApp', sms: 'SMS', voice: 'Llamadas'};
+  const monMetrics = l => { const m = l.metrics || {}, o = [];
+    if (m.saldo != null) { o.push('Saldo ' + num(m.saldo, 2) + ' ' + (m.moneda || '')); } if (m.calidad) { o.push('Calidad ' + m.calidad); } if (m.limite) { o.push('Límite ' + m.limite); } if (m.estado && l.provider === 'meta') { o.push(m.estado); } if (m.cuenta && m.cuenta !== 'active') { o.push('Cuenta ' + m.cuenta); }
+    return o.length ? `<div class="mut">${esc(o.join(' · '))}</div>` : ''; };
   const monChip = st => { const m = MON_STATE[st] || [st, '']; return `<span class="chip ${m[1]}">${esc(m[0])}</span>`; };
   async function refreshMonBadge() {
     try { const r = await api('GET', '/evo-monitor/summary'), b = document.getElementById('mon-badge'); if (b) { b.hidden = !r.openAlerts; b.textContent = r.openAlerts; } } catch (e) { /* sin sesión */ }
   }
   async function drawMonitor() {
     const main = document.getElementById('main');
-    if (!main.querySelector('[data-mon]')) { main.innerHTML = '<h2>Monitor WhatsApp</h2><p class="sub">Cargando…</p><div data-mon></div>'; }
-    let r; try { r = await api('GET', '/evo-monitor'); } catch (e) { main.innerHTML = `<h2>Monitor WhatsApp</h2><div class="err">${esc(e.message)}</div>`; return; }
+    if (!main.querySelector('[data-mon]')) { main.innerHTML = '<h2>Monitor de canales</h2><p class="sub">Cargando…</p><div data-mon></div>'; }
+    let r; try { r = await api('GET', '/evo-monitor'); } catch (e) { main.innerHTML = `<h2>Monitor de canales</h2><div class="err">${esc(e.message)}</div>`; return; }
     if (state.tab !== 'monitor') { return; }
     const c = r.config, m = r.monitor, open = r.alerts.filter(a => !a.resolved_at && a.severity !== 'info');
     const mst = m.configured ? (m.state === 'open' ? '<span class="chip ok">Conectada</span>' : `<span class="chip bad">${esc(m.state === 'missing' ? 'Sin crear' : 'Desconectada')}</span>`) : '<span class="chip warn">Sin configurar</span>';
     const dots = h => h.slice().reverse().map(x => `<i class="mdot ${x.s === 'ok' ? 'ok' : x.s === 'pending' ? '' : 'bad'}" title="${esc(fmtDate(x.at))}${x.rtt ? ' · ' + x.rtt + ' ms' : ''}${x.k ? ' · ' + esc((MON_STATE[x.k] || [x.k])[0]) : ''}"></i>`).join('');
-    const rows = r.lines.map(l => `<tr><td><div class="name">${esc(l.company)}</div><div class="mut">${esc(l.line)} · ${esc(l.instance)}</div></td><td>${monChip(l.state)}${l.lastError && l.state !== 'ok' ? `<div class="mut" style="max-width:260px">${esc(l.lastError)}</div>` : ''}</td>
+    const rows = r.lines.map(l => `<tr><td><div class="name">${esc(l.company)}</div><div class="mut">${esc(l.line)} · <span class="chip info">${esc(PROV[l.provider] || l.provider)}</span> ${esc(CHN[l.channel] || '')}${l.provider === 'evolution' ? ' · ' + esc(l.instance) : ''}</div></td><td>${monChip(l.state)}${monMetrics(l)}${l.lastError && l.state !== 'ok' ? `<div class="mut" style="max-width:280px">${esc(l.lastError)}</div>` : ''}</td>
       <td class="hide-m">${esc(ago(l.lastOkAt))}</td><td class="hide-m">${l.failsInRow || 0}</td><td class="hide-m">${l.rttMs ? l.rttMs + ' ms' : '—'}</td><td class="hide-m"><span class="mdots">${dots(l.history) || '<span class="mut">—</span>'}</span></td>
-      <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-p="${esc(l.slug)}" data-l="${esc(l.lineId)}">Probar</button> <button class="btn sm" data-q="${esc(l.slug)}" data-n="${esc(l.company)}" data-l="${esc(l.lineId)}">QR</button> <button class="btn sm" data-r="${esc(l.slug)}" data-l="${esc(l.lineId)}">Reiniciar</button></td></tr>`).join('');
+      <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-p="${esc(l.slug)}" data-l="${esc(l.lineId)}">Probar</button>${l.provider === 'evolution' ? ` <button class="btn sm" data-q="${esc(l.slug)}" data-n="${esc(l.company)}" data-l="${esc(l.lineId)}">QR</button> <button class="btn sm" data-r="${esc(l.slug)}" data-l="${esc(l.lineId)}">Reiniciar</button>` : ''}</td></tr>`).join('');
     const alerts = r.alerts.map(a => `<tr><td class="mut" style="white-space:nowrap">${esc(fmtDate(a.at))}</td><td>${a.resolved_at ? '<span class="chip ok">Resuelta</span>' : (a.severity === 'info' ? '<span class="chip info">Aviso</span>' : '<span class="chip bad">Abierta</span>')}</td><td>${esc(a.message)}</td>
       <td style="text-align:right">${a.resolved_at ? '' : `<button class="btn sm" data-ok="${a.id}">Atendida</button>`}</td></tr>`).join('');
-    main.innerHTML = `<h2>Monitor WhatsApp</h2><p class="sub">Evolution puede figurar «conectado» y aun así no recibir ni entregar mensajes. Este monitor lo comprueba como un cliente: cada <b>${c.interval_min} min</b> cada línea escribe a la <b>línea de pruebas</b>, que responde sola; si la respuesta no llega, avisamos antes de que lo note el cliente.</p>
+    main.innerHTML = `<h2>Monitor de canales</h2><p class="sub"><b>Evolution</b> puede figurar «conectado» y aun así no recibir ni entregar mensajes: cada <b>${c.interval_min} min</b> cada línea escribe a la <b>línea de pruebas</b>, que responde sola. Para <b>Meta, Gupshup y Twilio</b> se consulta cada pocos minutos la API del proveedor (credenciales, estado de la cuenta o del número, calidad, saldo). Si algo falla, avisamos antes de que lo note el cliente.</p>
       <div data-mon></div>
       ${open.length ? `<div class="card" style="border-color:var(--bad);margin-bottom:16px"><div style="padding:12px 16px"><b style="color:var(--bad)">⚠ ${open.length} alerta${open.length > 1 ? 's' : ''} abierta${open.length > 1 ? 's' : ''}</b>${open.map(a => `<div style="margin-top:6px">${esc(a.message)}</div>`).join('')}</div></div>` : ''}
       <div class="card" style="padding:16px;margin-bottom:16px"><div class="bar" style="margin:0 0 8px"><b style="font-size:15px">Línea de pruebas</b>${mst}<label class="chk" style="margin:0 0 0 8px"><input type="checkbox" id="mon-on" ${c.enabled ? 'checked' : ''}> Monitor ${c.enabled ? 'activo' : 'apagado'}</label><span class="grow"></span>
         <button class="btn sm" id="mon-cfg">Configurar</button><button class="btn sm" id="mon-ens">Crear / ajustar instancia</button><button class="btn sm primary" id="mon-qr">Vincular por QR</button><button class="btn sm" id="mon-all">Probar todas ahora</button></div>
         <div class="kv"><span>Instancia</span><span>${esc(m.instance || '—')}</span><span>Número</span><span>${m.number ? '+' + esc(m.number) : '<span class="mut">Se detecta al vincular</span>'}</span><span>Servidor</span><span>${esc(((r.providers.find(p => p.id === c.provider_id) || {}).name) || 'Sin elegir')}</span><span>Avisos</span><span>${esc([...(c.alert_emails || []), ...(c.alert_whatsapp || []).map(n => '+' + n)].join(', ') || 'Al correo del superadministrador')}</span></div>
         ${!c.provider_id ? '<div class="mut" style="margin-top:8px">Primero elige el servidor Evolution y un nombre de instancia en <b>Configurar</b>; después crea la instancia y escanea su QR con un teléfono propio (distinto de los de las empresas).</div>' : ''}</div>
-      <h3 style="margin:18px 0 8px">Líneas de las empresas</h3><div class="card">${rows ? `<table><thead><tr><th>Empresa · línea</th><th>Estado</th><th class="hide-m">Último OK</th><th class="hide-m">Fallos</th><th class="hide-m">Respuesta</th><th class="hide-m">Últimas pruebas</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+      <h3 style="margin:18px 0 8px">Líneas de las empresas (todos los proveedores)</h3><div class="card">${rows ? `<table><thead><tr><th>Empresa · línea</th><th>Estado</th><th class="hide-m">Último OK</th><th class="hide-m">Fallos</th><th class="hide-m">Respuesta</th><th class="hide-m">Últimas pruebas</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
         : '<div style="padding:20px" class="mut">Ninguna empresa tiene una línea de WhatsApp con Evolution configurada.</div>'}</div>
       <h3 style="margin:18px 0 8px">Alertas</h3><div class="card">${alerts ? `<table><thead><tr><th>Cuándo</th><th>Estado</th><th>Detalle</th><th></th></tr></thead><tbody>${alerts}</tbody></table>` : '<div style="padding:20px" class="mut">Sin alertas.</div>'}</div>`;
     const $ = id => document.getElementById(id);
@@ -179,7 +185,9 @@
       <label>Número de la línea de pruebas (opcional: se detecta solo)</label><input id="m-n" value="${esc(c.number || '')}" placeholder="573001234567">
       <div class="grid2"><div><label>Probar cada (minutos)</label><input id="m-iv" type="number" min="2" max="240" value="${c.interval_min}"></div><div><label>Esperar la respuesta (segundos)</label><input id="m-to" type="number" min="30" max="900" value="${c.timeout_s}"></div></div>
       <div class="grid2"><div><label>Fallos seguidos para alertar</label><input id="m-ft" type="number" min="1" max="10" value="${c.fail_threshold}"></div><div><label>Repetir el aviso cada (horas)</label><input id="m-ra" type="number" min="1" max="72" value="${c.realert_hours}"></div></div>
-      <label class="chk" style="margin-top:10px"><input type="checkbox" id="m-ar" ${c.auto_restart ? 'checked' : ''}> Reiniciar la instancia automáticamente una vez al detectar un fallo</label>
+      <label class="chk" style="margin-top:10px"><input type="checkbox" id="m-ar" ${c.auto_restart ? 'checked' : ''}> Reiniciar la instancia (Evolution) automáticamente una vez al detectar un fallo</label>
+      <label class="chk"><input type="checkbox" id="m-cp" ${c.check_providers ? 'checked' : ''}> Vigilar también las líneas de Meta, Gupshup y Twilio (consulta a su API)</label>
+      <label>Saldo mínimo para alertar (USD, Twilio)</label><input id="m-bw" type="number" min="0" step="1" value="${c.balance_warn}">
       <label>Correos que reciben las alertas (separados por coma)</label><input id="m-e" value="${esc((c.alert_emails || []).join(', '))}" placeholder="vacío = correo del superadministrador">
       <label>WhatsApp que reciben las alertas (con indicativo, separados por coma)</label><input id="m-w" value="${esc((c.alert_whatsapp || []).map(n => '+' + n).join(', '))}" placeholder="+573001234567">
       <div class="mut">Webhook de la línea de pruebas (se configura solo al crear la instancia): <code>${esc(c.webhookUrl)}</code></div>
@@ -189,7 +197,7 @@
     m.el.querySelector('[data-x=y]').onclick = async () => {
       try {
         await api('PUT', '/evo-monitor/config', {provider_id: $('m-p').value, instance: $('m-i').value.trim(), number: $('m-n').value.trim(), interval_min: +$('m-iv').value, timeout_s: +$('m-to').value, fail_threshold: +$('m-ft').value,
-          realert_hours: +$('m-ra').value, auto_restart: $('m-ar').checked, alert_emails: list($('m-e').value), alert_whatsapp: list($('m-w').value)});
+          realert_hours: +$('m-ra').value, auto_restart: $('m-ar').checked, check_providers: $('m-cp').checked, balance_warn: +$('m-bw').value, alert_emails: list($('m-e').value), alert_whatsapp: list($('m-w').value)});
         m.close(); toast('Configuración guardada'); drawMonitor();
       } catch (e) { const er = $('m-er'); er.hidden = false; er.textContent = e.message; }
     };
