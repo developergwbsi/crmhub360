@@ -1520,6 +1520,15 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/agent/menu-test', ['menuId' => (string) ($d->menuId ?? ''), 'to' => (string) ($d->to ?? ''), 'agentId' => !empty($d->agentId) ? (string) $d->agentId : null], 40);
     }
 
+    /** Un formulario web ya diseñado a partir de una plantilla (se guarda al pulsar «Guardar»). */
+    public function getActionFormTemplate(Request $request): \stdClass
+    {
+        $this->admin();
+        $key = preg_replace('/[^a-z0-9_-]/', '', (string) $request->getQueryParam('key'));
+        $slugs = preg_replace('/[^a-z0-9,-]/', '', (string) $request->getQueryParam('slugs'));
+        return (object) $this->hubCall('GET', '/v1/forms/template/' . $key . '?slugs=' . $slugs, null, 20);
+    }
+
     public function getActionAgentStats(Request $request): \stdClass
     {
         $this->admin();

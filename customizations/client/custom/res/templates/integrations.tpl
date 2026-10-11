@@ -43,6 +43,7 @@
       <div class="ch-forms"></div>
       <div class="ch-row ch-services-actions">
         <button class="btn btn-default btn-sm" data-action="addForm"><span class="fas fa-plus"></span> Nuevo formulario</button>
+        <button class="btn btn-default btn-sm" data-action="toggleGallery"><span class="fas fa-table-cells-large"></span> Plantillas</button>
         <button class="btn btn-primary" data-action="saveForms">Guardar formularios</button>
       </div>
     </div>

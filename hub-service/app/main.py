@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -327,7 +327,7 @@ async def tenant_settings(tenant: dict = Depends(tenant_auth)):
         "telegram": {"tokenSet": bool(st.get("telegram_bot_token")), "tokenHint": ("…" + st["telegram_bot_token"][-4:]) if st.get("telegram_bot_token") else "",
                      "bot": st.get("telegram_bot_username") or "", "welcome": st.get("telegram_welcome") or ""},
         "forms": st.get("forms") or [], "formDefault": forms.default_form(len(st.get("forms") or []) + 1),
-        "fieldTypes": forms.FIELD_TYPES, "fieldMaps": forms.MAPS, "formAction": forms.default_action(), "formVars": forms.VARS_HELP,
+        "fieldTypes": forms.FIELD_TYPES, "fieldMaps": forms.MAPS, "formAction": forms.default_action(), "formTemplates": form_templates.catalog(), "formVars": forms.VARS_HELP,
         "services": qualify.services_for(tenant), "servicesCustomized": bool(st.get("services")), "pushDevices": push.count(tenant["slug"]),
         "metrics": [{"key": k, "label": v[0], "unit": v[2]} for k, v in qualify.METRICS.items()],
         "ops": qualify.OPS,
@@ -386,6 +386,14 @@ def tenant_settings_update(body: dict = Body(...), tenant: dict = Depends(tenant
     with db.pool.connection() as c:
         c.execute("UPDATE tenants SET settings = settings || %s::jsonb WHERE slug = %s", (json.dumps(patch), tenant["slug"]))
     return {"ok": True}
+
+
+@app.get("/v1/forms/template/{key}")
+def form_template(key: str, slugs: str = "", tenant: dict = Depends(tenant_auth)):
+    try:
+        return form_templates.build(key, {x for x in slugs.split(",") if x})
+    except ValueError as e:
+        raise HTTPException(404, str(e))
 
 
 @app.post("/v1/tenant/settings/reset-services")

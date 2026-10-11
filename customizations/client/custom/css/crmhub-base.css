@@ -411,6 +411,14 @@ body[data-navbar=side].minimized.side-menu-opened #navbar .navbar-right > li > a
 .ch-color { display: flex; flex-direction: column; }
 .ch-color input[type=color].form-control { width: 84px; height: 36px; padding: 2px; }
 .ch-faction { border: 1px solid var(--ch-line); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; background: var(--ch-soft); }
+.ch-gallery { border: 1px solid var(--ch-line); border-radius: 14px; padding: 14px; margin-bottom: 14px; background: var(--ch-soft); }
+.ch-gallery-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+.ch-ftpls { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.ch-ftpl { border: 1px solid var(--ch-line); border-radius: 12px; overflow: hidden; background: var(--ch-surface); display: flex; flex-direction: column; }
+.ch-ftpl-top { height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; color: #fff; font-size: 24px; }
+.ch-ftpl-top .ch-pill { font-size: 11px; background: rgba(255,255,255,.2); color: #fff; }
+.ch-ftpl-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.ch-ftpl-body p { margin: 0; font-size: 12.5px; color: var(--ch-muted); flex: 1; }
 .ch-aimgs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
 .ch-aimg { width: 110px; height: 70px; border-radius: 8px; border: 1px solid var(--ch-line); background-size: cover; background-position: center; position: relative; }
 .ch-aimg .btn { position: absolute; top: -4px; right: -2px; padding: 0 4px; background: var(--ch-surface); border-radius: 50%; }

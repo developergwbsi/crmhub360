@@ -82,6 +82,14 @@
         }
     },
     {
+        "route": "/CrmHub/formTemplate",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "formTemplate"
+        }
+    },
+    {
         "route": "/CrmHub/notifyTeam",
         "method": "post",
         "params": {

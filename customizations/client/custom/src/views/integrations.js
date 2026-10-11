@@ -112,6 +112,24 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                 const f = this.forms[+e.currentTarget.dataset.i];
                 this.copyText(`<iframe src="${this.formUrl(f)}" style="width:100%;max-width:520px;height:720px;border:0" loading="lazy" title="${f.name.replace(/"/g, '')}"></iframe>`);
             },
+            'click [data-action="toggleGallery"]': function () { this.gallery = !this.gallery; this.renderForms(); },
+            'click [data-action="useTemplate"]': function (e) {
+                const key = e.currentTarget.dataset.key;
+                if (this.forms.length >= 20) { Espo.Ui.warning('Máximo 20 formularios.'); return; }
+                Espo.Ui.notify('Preparando la plantilla…');
+                Espo.Ajax.getRequest('CrmHub/formTemplate', {key, slugs: this.forms.map(f => f.slug).join(',')})
+                    .then(f => { Espo.Ui.notify(false); f._saved = false; this.forms.push(f); this.editing = this.forms.length - 1; this.gallery = false; this.renderForms();
+                        Espo.Ui.success('Plantilla agregada: ajústala y pulsa «Guardar formularios».'); })
+                    .catch(xhr => { Espo.Ui.error('No se pudo cargar la plantilla'); if (xhr) { xhr.errorIsHandled = true; } });
+            },
+            'click [data-action="dupForm"]': function (e) {
+                if (this.forms.length >= 20) { Espo.Ui.warning('Máximo 20 formularios.'); return; }
+                const src = this.forms[+e.currentTarget.dataset.i], f = JSON.parse(JSON.stringify(src));
+                f.id = Math.random().toString(16).slice(2, 10); f.slug = this.uniqueSlug(src.slug.replace(/-\d+$/, '')); f.name = src.name + ' (copia)'; f._saved = false;
+                (f.actions || []).forEach(a => { a.id = Math.random().toString(16).slice(2, 8); });
+                this.forms.push(f); this.editing = this.forms.length - 1; this.renderForms();
+                Espo.Ui.success('Copia creada: cámbiale el nombre y la dirección, y pulsa «Guardar formularios».');
+            },
             'click [data-action="addField"]': function (e) {
                 const f = this.forms[+e.currentTarget.dataset.i];
                 f.fields.push({key: this.uniqueKey(f, 'campo'), label: 'Nuevo campo', type: 'text', required: false, maps_to: '', placeholder: '', options: [], width: 100, show_if: null});
@@ -469,6 +487,7 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                     <div class="ch-form-head"><b>${esc(f.name)}</b><span class="ch-pill">${f.fields.length} campos</span>
                         <label class="ch-switch"><input type="checkbox" data-fbind="enabled" data-i="${i}" ${f.enabled ? 'checked' : ''}> Activo</label><span class="ch-spacer"></span>
                         <button class="btn btn-default btn-sm" data-action="editForm" data-i="${i}">${this.editing === i ? 'Cerrar' : 'Editar'}</button>
+                        <button class="btn btn-link" title="Duplicar" data-action="dupForm" data-i="${i}"><span class="far fa-clone"></span></button>
                         <button class="btn btn-link text-danger" title="Eliminar" data-action="removeForm" data-i="${i}"><span class="far fa-trash-alt"></span></button></div>
                     <div class="ch-form-urls"><code class="ch-url">${esc(url)}</code>
                         <button class="btn btn-default btn-sm" data-action="copy" data-value="${esc(url)}"><span class="far fa-copy"></span> Copiar URL</button>
@@ -477,7 +496,11 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                     ${editor}
                 </div>`;
             }).join('') || ChUi.empty({kind: 'doc', title: 'Aún no tienes formularios', text: 'Pulsa «Nuevo formulario» para crear el primero con una plantilla lista.', compact: true});
-            this.$el.find('.ch-forms').html(html);
+            const gal = !this.gallery ? '' : `<div class="ch-gallery"><div class="ch-gallery-head"><b>Empieza con una plantilla</b><span class="ch-muted ch-small">Ya traen diseño, preguntas con condiciones y los correos que se envían al recibirlas. Ajusta lo que necesites.</span></div>
+                <div class="ch-ftpls">${(st.formTemplates || []).map(t => `<div class="ch-ftpl"><div class="ch-ftpl-top" style="background:${esc(t.color || '#4f63e8')}"><span class="fas ${esc(t.icon)}"></span><span class="ch-pill">${esc(t.category)}</span></div>
+                    <div class="ch-ftpl-body"><b>${esc(t.name)}</b><p>${esc(t.description)}</p><div class="ch-small ch-muted">${t.fields} campos · ${t.actions} acciones</div>
+                    <button class="btn btn-primary btn-sm" data-action="useTemplate" data-key="${esc(t.key)}">Usar esta plantilla</button></div></div>`).join('')}</div></div>`;
+            this.$el.find('.ch-forms').html(gal + html);
         }
 
         renderServices() {
