@@ -210,7 +210,7 @@ Página «Mensajes» (todas tus conversaciones)
 
 En el menú, grupo **Actividad**, está **Mensajes**: igual que *Correos* y *Llamadas* reúnen lo tuyo, aquí están las conversaciones de **WhatsApp, SMS y Telegram**. A la izquierda ves tus conversaciones (una por cliente) con el último mensaje, la hora, los canales usados y un punto azul si hay algo sin leer. **Mis conversaciones** muestra las de tus leads y las que tú escribiste; **Todas**, las que tu rol permite ver. Filtra por canal o busca por nombre o teléfono (si el cliente aún no tiene conversación, aparece en «Otros leads» para escribirle).
 
-Al elegir un cliente, a la derecha se abre su chat con **una pestaña por canal** (WhatsApp, SMS, Telegram): cada una es su propio espacio, con el historial, la caja para escribir, *Mis plantillas*, *Sugerir con IA* y, si hay varios, el número y la línea de envío. Cada mensaje indica quién lo escribió. *Abrir lead* te lleva a su ficha.
+Al elegir un cliente, a la derecha se abre su chat con **una pestaña por canal** (WhatsApp, SMS y Telegram, mostrados solo con su icono; pasa el mouse para ver el nombre; **RCS** aparece bloqueado hasta que esté disponible): cada una es su propio espacio, con el historial, la caja para escribir, *Mis plantillas*, *Sugerir con IA* y, si hay varios, el número y la línea de envío. Cada mensaje indica quién lo escribió. *Abrir lead* te lleva a su ficha.
 
 Correo
 

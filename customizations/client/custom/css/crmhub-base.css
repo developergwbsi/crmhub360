@@ -1073,11 +1073,16 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-ms-hinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; } .ch-ms-hinfo b { font-size: 15.5px; } .ch-ms-hinfo small { color: var(--ch-muted); }
 .ch-ms-back { display: none; }
 .ch-ms-tabs { flex: none; display: flex; gap: 4px; padding: 8px 12px 0; background: var(--ch-surface); border-bottom: 1px solid var(--ch-line); }
-.ch-ms-tabs button { border: 0; background: transparent; padding: 8px 14px; font-weight: 600; font-size: 13.5px; color: var(--ch-muted); border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; }
-.ch-ms-tabs button .fas, .ch-ms-tabs button .fab { color: var(--tc); margin-right: 4px; } .ch-ms-tabs button small { margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--ch-soft2); font-size: 11px; }
+.ch-ms-tabs button { border: 0; background: transparent; padding: 8px 16px; font-weight: 600; font-size: 20px; line-height: 1; color: var(--ch-muted); border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; display: inline-flex; align-items: center; gap: 6px; }
+.ch-ms-tabs button .fas, .ch-ms-tabs button .fab { color: var(--tc); } .ch-ms-tabs button small { margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--ch-soft2); font-size: 11px; }
 .ch-ms-tabs button.on { color: var(--ch-ink); border-bottom-color: var(--tc); }
 .ch-ms-pane.ch-chat { flex: 1 1 auto; min-height: 0; height: auto; }
 @media (max-width: 900px) {
   .ch-ms { grid-template-columns: 1fr; height: calc(100vh - 100px); } .ch-ms-main { display: none; }
   .ch-ms.ch-ms-open .ch-ms-side { display: none; } .ch-ms.ch-ms-open .ch-ms-main { display: flex; } .ch-ms-back { display: inline-block; }
 }
+
+.ch-ms-chips button.ch-ms-ic { padding: 4px 12px; font-size: 16px; line-height: 1; }
+.ch-ms-lock { position: relative; opacity: .5; cursor: not-allowed !important; color: #8b5cf6 !important; border-style: dashed !important; }
+.ch-ms-tabs button.ch-ms-lock { color: #8b5cf6; }
+.ch-ms-lock .fa-lock { font-size: .5em !important; position: relative; top: 4px; margin-left: -2px; color: var(--ch-muted) !important; }

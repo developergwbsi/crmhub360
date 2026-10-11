@@ -2,12 +2,15 @@
  * Página «Mensajes» (#CrmHub/mensajes): la bandeja de conversaciones de WhatsApp, SMS y Telegram del usuario, como Correos y Llamadas agrupan lo suyo.
  * Izquierda: conversaciones (por lead) con el último mensaje, hora, canales y un punto si hay algo sin leer; filtros «Mis conversaciones / Todas» y por canal; búsqueda.
  * Derecha: el chat del lead seleccionado con una pestaña por canal (custom:views/chat-pane): cada canal tiene su propio espacio de conversación.
+ * Los canales se muestran solo con su icono (tooltip con el nombre); RCS aparece bloqueado («próximamente»).
  * Endpoints: GET CrmHub/conversations (scope, channel) y GET Lead (búsqueda de otros leads para empezar una conversación); el chat usa los de custom:views/chat-pane.
  * Se actualiza sola: aviso por websocket (newNotification), cada 12 s y al volver a la pestaña. Opciones de la ruta: leadId, channel.
  */
 define('custom:views/messages', ['view', 'custom:ui'], function (Dep, ChUi) {
     const esc = ChUi.esc;
-    const CH = {whatsapp: ['WhatsApp', 'fab fa-whatsapp', '#25d366'], sms: ['SMS', 'fas fa-comment-sms', '#0ea5e9'], telegram: ['Telegram', 'fab fa-telegram', '#229ed9']};
+    // Los canales se muestran solo con su icono (el espacio es corto; el nombre va en el tooltip). RCS aún no está disponible: se muestra bloqueado.
+    const CH = {whatsapp: ['WhatsApp', 'fab fa-whatsapp', '#25d366'], sms: ['SMS', 'fas fa-comment-sms', '#0ea5e9'], telegram: ['Telegram', 'fab fa-telegram', '#229ed9'], rcs: ['RCS', 'fas fa-comment-dots', '#8b5cf6', true]};
+    const LIVE = Object.keys(CH).filter(k => !CH[k][3]);   // canales con conversaciones reales
     const COLORS = ['#4f63e8', '#2fa36b', '#d97706', '#8b5cf6', '#0d9488', '#e11d48', '#0ea5e9', '#7c3aed'];
     const parse = d => new Date(String(d).replace(' ', 'T') + 'Z');
     const short = d => {
@@ -29,7 +32,7 @@ define('custom:views/messages', ['view', 'custom:ui'], function (Dep, ChUi) {
             'click [data-action="chan"]': function (e) { this.filter = e.currentTarget.dataset.v || ''; this.paintList(); },
             'input [name="q"]': function (e) { this.q = e.currentTarget.value; this.paintList(); this.searchOthers(); },
             'click [data-action="open"]': function (e) { this.select(e.currentTarget.dataset.id, e.currentTarget.dataset.ch || ''); },
-            'click [data-action="tab"]': function (e) { this.setTab(e.currentTarget.dataset.v); },
+            'click [data-action="tab"]': function (e) { if (!e.currentTarget.disabled) { this.setTab(e.currentTarget.dataset.v); } },
             'click [data-action="back"]': function () { this.sel = null; this.paintAll(); },
         }
 
@@ -92,7 +95,8 @@ define('custom:views/messages', ['view', 'custom:ui'], function (Dep, ChUi) {
             if (!list) { return; }
             seg.innerHTML = ['mine', 'all'].map(v => `<button type="button" data-action="scope" data-v="${v}" class="${this.scope === v ? 'on' : ''}">${v === 'mine' ? 'Mis conversaciones' : 'Todas'}</button>`).join('');
             chips.innerHTML = `<button type="button" data-action="chan" data-v="" class="${this.filter ? '' : 'on'}">Todos</button>` +
-                Object.keys(CH).map(k => `<button type="button" data-action="chan" data-v="${k}" class="${this.filter === k ? 'on' : ''}"><span class="${CH[k][1]}" style="color:${CH[k][2]}"></span> ${CH[k][0]}</button>`).join('');
+                Object.keys(CH).map(k => CH[k][3] ? `<button type="button" class="ch-ms-lock" disabled title="${CH[k][0]}: próximamente"><span class="${CH[k][1]}"></span><span class="fas fa-lock"></span></button>`
+                    : `<button type="button" data-action="chan" data-v="${k}" class="ch-ms-ic ${this.filter === k ? 'on' : ''}" title="${CH[k][0]}"><span class="${CH[k][1]}" style="color:${CH[k][2]}"></span></button>`).join('');
             const q = this.q.trim().toLowerCase(), digits = q.replace(/\D/g, '');
             const rows = this.items.filter(c => (!this.filter || c.channels[this.filter]) &&
                 (!q || (c.name || '').toLowerCase().includes(q) || (digits.length >= 3 && String(c.phone || '').replace(/\D/g, '').includes(digits))));
@@ -103,7 +107,7 @@ define('custom:views/messages', ['view', 'custom:ui'], function (Dep, ChUi) {
                     `<span class="ch-avatar ch-ms-av" style="background:${color(c.leadId)}">${esc(initials(c.name))}</span><div class="ch-ms-info">` +
                     `<div class="ch-ms-row"><b class="ch-ms-name">${esc(c.name || '(sin nombre)')}</b><span class="ch-ms-time">${esc(short(l.at))}</span></div>` +
                     `<div class="ch-ms-row"><span class="ch-ms-last">${who}${esc(l.text)}</span>${un ? '<i class="ch-ms-dot"></i>' : ''}</div>` +
-                    `<div class="ch-ms-meta">${Object.keys(CH).filter(k => c.channels[k]).map(k => `<span class="${CH[k][1]}" style="color:${CH[k][2]}" title="${CH[k][0]}: ${c.channels[k].count}"></span>`).join('')}` +
+                    `<div class="ch-ms-meta">${LIVE.filter(k => c.channels[k]).map(k => `<span class="${CH[k][1]}" style="color:${CH[k][2]}" title="${CH[k][0]}: ${c.channels[k].count}"></span>`).join('')}` +
                     `${c.assignedUserName ? `<span class="ch-ms-asg"><span class="fas fa-user"></span> ${esc(c.assignedUserName)}</span>` : ''}</div></div></div>`;
             }).join('');
             if (this.others.length && q.length >= 2) {
@@ -143,8 +147,10 @@ define('custom:views/messages', ['view', 'custom:ui'], function (Dep, ChUi) {
 
         paintTabs() {
             const c = this.current(), box = this.el.querySelector('[data-role="tabs"]'); if (!c || !box) { return; }
-            box.innerHTML = Object.keys(CH).map(k => `<button type="button" data-action="tab" data-v="${k}" class="${this.tab === k ? 'on' : ''}" style="--tc:${CH[k][2]}"><span class="${CH[k][1]}"></span> ${CH[k][0]}` +
-                `${c.channels[k] ? `<small>${c.channels[k].count}</small>` : ''}</button>`).join('');
+            box.innerHTML = Object.keys(CH).map(k => CH[k][3]
+                ? `<button type="button" class="ch-ms-lock" disabled title="${CH[k][0]}: próximamente" aria-label="${CH[k][0]} (próximamente)"><span class="${CH[k][1]}"></span><span class="fas fa-lock"></span></button>`
+                : `<button type="button" data-action="tab" data-v="${k}" class="${this.tab === k ? 'on' : ''}" style="--tc:${CH[k][2]}" title="${CH[k][0]}" aria-label="${CH[k][0]}"><span class="${CH[k][1]}"></span>` +
+                    `${c.channels[k] ? `<small>${c.channels[k].count}</small>` : ''}</button>`).join('');
         }
 
         paintMain(keep) {
