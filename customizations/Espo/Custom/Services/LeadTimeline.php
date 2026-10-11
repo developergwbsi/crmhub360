@@ -105,6 +105,8 @@ class LeadTimeline
         foreach ($this->notes($leadId, ['post*' => '[Estado]%'], 'DESC', 200) as $n) {
             if (preg_match('/^\[Estado\] «(.*?)» → «(.*?)»(?:: (.*))?$/su', (string) $n->get('post'), $m)) {
                 $c = $m[3] ?? '';
+                $m[1] = ['Dead' => 'Perdido', 'Converted' => 'Convertido'][$m[1]] ?? $m[1];   // notas antiguas guardadas con el nombre de fábrica
+                $m[2] = ['Dead' => 'Perdido', 'Converted' => 'Convertido'][$m[2]] ?? $m[2];
                 $kind = str_starts_with($c, 'Acción previa:') ? 'action' : ($c === 'Automático' ? 'auto' : 'comment');
                 $who = str_contains($c, '[Comercial virtual]') ? 'Comercial virtual' : $this->userName($n->get('createdById'));
                 $out[] = ['id' => $n->getId(), 'at' => $n->get('createdAt'), 'from' => $m[1], 'to' => $m[2], 'comment' => $c, 'kind' => $kind, 'who' => $who];

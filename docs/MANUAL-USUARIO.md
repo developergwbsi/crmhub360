@@ -137,7 +137,7 @@ del lead: de qué estado a cuál, quién, cuándo y por qué.
 
 Al entrar a **Leads** verás el tablero Kanban: cada columna es un estado. Con los iconos de arriba a la derecha alternas entre el tablero y la lista.
 
-- **Arrastra** una tarjeta a otra columna para cambiar su estado.
+- **Arrastra** una tarjeta a otra columna para cambiar su estado. Para descartar un lead, arrástralo a la columna **Perdido** (pide un comentario con el motivo). El estado **Convertido** no tiene columna: se asigna con el botón *Convertir* del lead.
 - Cada tarjeta muestra el avatar (foto de WhatsApp si existe, o las iniciales), el resultado del filtro, el servicio sugerido, la deuda, el teléfono, el asesor y la antigüedad.
 - Cada columna tiene su propio **buscador**: escribe un nombre, teléfono, servicio o asesor y se filtran solo las tarjetas de ese estado (aparece *n/total*). Si hay más tarjetas sin cargar, usa «Mostrar más» primero.
 - Usa los filtros de arriba para ver solo los tuyos o los de tu equipo.

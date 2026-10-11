@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Estados de los leads
+- El tablero Kanban ahora muestra también la columna **Perdido** (antes estaba excluida, y por eso no se podía arrastrar un lead allí aunque aparecía en «Estados del pipeline»). **Convertido** sigue sin columna a propósito: se asigna con el botón *Convertir* del lead, que crea la cuenta y el contacto.
+- El aviso «Guardando…» ya no se queda fijo arriba mientras se pide el comentario del cambio de estado.
+- El diálogo de cambio de estado, el historial y las notas muestran «Perdido» y «Convertido» en vez de los nombres de fábrica `Dead` y `Converted`.
+
 ### Salud de las líneas de WhatsApp (Evolution)
 - La tarjeta de cada línea de Evolution muestra cuándo llegó el último mensaje de un cliente (y avisa en ámbar si hace más de 24 h que no llega nada). Un estado «conectado» no garantiza que la sesión de WhatsApp esté recibiendo mensajes: tras una desconexión (código 401) y una nueva vinculación puede quedar «abierta» pero sorda. El Hub anota cada llamada del webhook en la tabla `kv` (`wa_evt:` y `wa_in:`).
 

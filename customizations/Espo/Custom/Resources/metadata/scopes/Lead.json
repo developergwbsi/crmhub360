@@ -1,3 +1,5 @@
 {
-    "kanbanStatusIgnoreList": ["Converted", "Dead"]
+    "kanbanStatusIgnoreList": [
+        "Converted"
+    ]
 }

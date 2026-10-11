@@ -8,7 +8,7 @@
     <div class="panel-body">
       <ol class="ch-stages">
         {{#each stages}}<li><span class="label label-{{tone}}">{{label}}</span>
-          {{#if hidden}}<span class="ch-muted ch-small">no se muestra en el Kanban</span>{{/if}}
+          {{#if hidden}}<span class="ch-muted ch-small">no se muestra en el tablero Kanban</span>{{/if}}
           {{#if closed}}<span class="ch-muted ch-small">cuenta como cerrado</span>{{/if}}</li>{{/each}}
       </ol>
       <a class="btn btn-primary" href="#Admin/fieldManager/scope=Lead&field=status"><span class="fas fa-pen"></span> Crear, renombrar u ordenar estados</a>

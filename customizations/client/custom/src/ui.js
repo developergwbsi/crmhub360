@@ -88,12 +88,13 @@ define('custom:ui', [], function () {
         // Cambio de estado: pide comentario (obligatorio si no hubo una acción previa con el lead). → {comment} o null
         // Diálogo de cambio de estado: pide el comentario obligatorio y, si hay, muestra la acción previa
         statusChange(o) {
+            const lbl = v => ({Dead: 'Perdido', Converted: 'Convertido'}[v] || v);   // estados de fábrica de Espo que se muestran en español
             const act = o.action ? `<div class="ch-dlg-note ok"><span class="fas fa-circle-check"></span> Ya hay una acción registrada: <b>${esc(o.action.label)}</b> (${esc(fmt.dt(o.action.at))}). El comentario es opcional.</div>`
                 : '<div class="ch-dlg-note warn"><span class="fas fa-circle-info"></span> Aún no hay una acción con este lead desde el último cambio de estado. Cuenta qué pasó (o llama / escribe antes).</div>';
             return ChUi.prompt({
                 title: 'Cambiar estado', icon: 'fas fa-right-left', required: !o.action, min: 3, ok: 'Cambiar estado', rows: 3, max: 500, label: 'Comentario',
                 placeholder: 'Ej.: Cliente confirmó interés, agendamos reunión para el jueves',
-                html: true, text: `<span class="ch-st-move"><span class="ch-chip">${esc(o.from || '—')}</span> <span class="fas fa-arrow-right"></span> <span class="ch-chip ch-chip-main">${esc(o.to)}</span></span>${act}`,
+                html: true, text: `<span class="ch-st-move"><span class="ch-chip">${esc(lbl(o.from) || '—')}</span> <span class="fas fa-arrow-right"></span> <span class="ch-chip ch-chip-main">${esc(lbl(o.to))}</span></span>${act}`,
                 requiredText: 'El comentario es obligatorio para cambiar el estado (mínimo 3 caracteres).',
             }).then(v => (v === null ? null : {comment: v}));
         },

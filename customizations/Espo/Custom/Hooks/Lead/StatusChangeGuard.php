@@ -43,10 +43,11 @@ class StatusChangeGuard
         }
         $text = $this->pending[$id];
         unset($this->pending[$id]);
-        $from = (string) $entity->getFetched('status');
+        $lbl = fn (string $v): string => ['Dead' => 'Perdido', 'Converted' => 'Convertido'][$v] ?? $v;   // estados de fábrica de Espo, en español
+        $from = $lbl((string) $entity->getFetched('status'));
         $this->em->createEntity('Note', [
             'type' => 'Post', 'parentType' => 'Lead', 'parentId' => $id,
-            'post' => "[Estado] «{$from}» → «{$entity->get('status')}»: {$text}",
+            'post' => "[Estado] «{$from}» → «{$lbl((string) $entity->get('status'))}»: {$text}",
         ]);
     }
 }
