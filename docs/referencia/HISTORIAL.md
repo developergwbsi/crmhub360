@@ -2,8 +2,9 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.2.0)
+## v1.3.0
 
+- `93f6aaf` 2026-10-11 — Versión 1.3.0
 - `ecc9b8b` 2026-10-11 — Changelog 1.3.0
 - `a74cd9c` 2026-10-11 — Monitor: la alerta de línea de pruebas caída se resuelve en cuanto se conecta
 - `84dd4bb` 2026-10-11 — Monitor de canales: salud de Meta, Gupshup y Twilio (credenciales, calidad, bloqueo y saldo) con alertas; Graph API v25; investigación y diseño de consumo, recarga y postpago

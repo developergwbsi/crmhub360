@@ -31,6 +31,10 @@ La web **no ejecuta nada**: encola un trabajo en `control_jobs` y `bin/control-w
 
 La pestaña **Monitor WhatsApp** vigila de extremo a extremo cada línea de Evolution de las empresas (envío y recepción) con una línea de pruebas que responde sola, abre alertas (pantalla, correo y WhatsApp), reinicia la instancia y permite **escanear el QR de cualquier empresa desde el Centro**. Detalle en [MONITOR-WHATSAPP](MONITOR-WHATSAPP.md).
 
+## Líneas de WhatsApp (inventario)
+
+La pestaña **Líneas WhatsApp** (`control-service/app/walines.py`) lista las instancias de Evolution que administramos —las creadas aquí (`control_settings` «wa_pool») y las que ya usan las empresas— con su número, estado y empresa asignada. Acciones: **Nueva línea** (crea la instancia sin webhook activo y muestra su QR), **QR / Reiniciar / cambiar de número**, **Asignar o Mover** (como *principal* —claves planas `wa_provider`/`evolution_*`, reemplaza a la anterior, que queda libre— o *adicional* —`settings.lines`—), **Quitar** y **Eliminar** (solo líneas libres). La empresa recibe la clave **propia** de la instancia y su webhook apunta a `https://<empresa>/hub/evolution`; al quitar/mover la línea el webhook se desactiva. Una línea (teléfono) no puede ser a la vez de una empresa y la **línea de pruebas** del [monitor](MONITOR-WHATSAPP.md).
+
 ## Modo lectura de soporte
 
 Crea (si falta) el rol «Soporte (solo lectura)» y el usuario `soporte-lectura`, genera una clave nueva y un código de un solo uso (90 s) que `/?support=<código>` canjea en la empresa (`CrmHubSupport/exchange` → Hub `/v1/support/exchange`). El rol impide toda escritura y un aviso fijo lo indica. También se puede ver incrustado en la página del Centro.

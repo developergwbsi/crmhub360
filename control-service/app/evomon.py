@@ -49,7 +49,7 @@ KINDS = {"no_recibe": "La línea envía pero NO RECIBE mensajes (la sesión est�
          "monitor_caido": "La línea de pruebas del monitor no está respondiendo", "sin_vincular": "La línea aún no está vinculada (falta escanear el QR)",
          "token_invalido": "Las credenciales del proveedor ya no son válidas (token vencido o revocado)", "cuenta_suspendida": "La cuenta del proveedor está suspendida o cerrada",
          "saldo_bajo": "El saldo del proveedor está por debajo del mínimo", "calidad_baja": "La calidad del número de WhatsApp está en ROJO (riesgo de bloqueo)",
-         "calidad_media": "La calidad del número de WhatsApp bajó a AMARILLO", "bloqueada": "Meta bloqueó el envío de la línea", "limitada": "Meta tiene el envío de la línea limitado", "error_api": "La API del proveedor está respondiendo con errores", "sin_permiso": "El token no tiene permiso sobre este número o el número no existe"}
+         "misma_linea": "Esta línea usa el mismo teléfono que la línea de pruebas del monitor: la prueba necesita un número distinto", "calidad_media": "La calidad del número de WhatsApp bajó a AMARILLO", "bloqueada": "Meta bloqueó el envío de la línea", "limitada": "Meta tiene el envío de la línea limitado", "error_api": "La API del proveedor está respondiendo con errores", "sin_permiso": "El token no tiene permiso sobre este número o el número no existe"}
 SEV = {"sin_vincular": "info", "saldo_bajo": "media", "calidad_media": "media", "limitada": "media"}   # el resto de las alertas son «alta»
 TWILIO_BASE = os.environ.get("TWILIO_BASE", "https://api.twilio.com")
 META_BASE = os.environ.get("META_GRAPH_BASE", "https://graph.facebook.com/v25.0")
@@ -461,6 +461,15 @@ async def run_probe(l: dict) -> str:
     num = await monitor_number()
     if not num:
         return "sin_monitor"
+    try:   # una línea no puede probarse a sí misma: si comparte teléfono con la línea de pruebas no hay prueba posible
+        info = await ev("GET", l["url"], l["key"], "/instance/fetchInstances", params={"instanceName": l["instance"]}, timeout=15)
+        d = info.json()
+        d = d[0] if isinstance(d, list) and d else d
+        if digits(((d or {}).get("ownerJid") or "").split("@")[0]) == num:
+            await record_result(l, "misma_linea", False, f"Ambas usan el +{num}", immediate=True)
+            return "misma_linea"
+    except Exception:
+        pass
     pid = secrets.token_hex(4)
     ok, err = await send_text(l["url"], l["key"], l["instance"], num, f"[crmhub-ping:{pid}]\n{PHRASES[int(pid, 16) % len(PHRASES)]}")
     await aq("INSERT INTO evo_probes (id, tenant, line_id, instance, send_ok, send_error, status) VALUES (%s,%s,%s,%s,%s,%s,%s)", (pid, l["slug"], l["line_id"], l["instance"], ok, err, "pending" if ok else "send_failed"))

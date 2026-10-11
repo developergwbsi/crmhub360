@@ -47,6 +47,7 @@
 | `evomon.py` | Monitor de conexión de Evolution API (WhatsApp) del Centro de control. |
 | `main.py` | Crm Hub 360 - Centro de control: crear y vigilar empresas, restablecer claves y entrar en modo lectura. No ejecuta nada privilegiado: encola trabajos que realiza `bin/control-worker` en el servidor. |
 | `usage_cc.py` | Consumo y tarifas en el Centro de control: lee el libro de consumo del Hub (tabla usage_events) y lo resume por empresa, canal y proveedor. |
+| `walines.py` | Líneas de WhatsApp (Evolution) del Centro de control: un inventario de las instancias que nosotros administramos, para crearlas, vincularlas por QR y **asignarlas a las empresas**. |
 | `welcome.py` | Plantilla de bienvenida de una empresa nueva (correo HTML a prueba de clientes de correo: tablas y estilos en línea). Marcadores: {{nombre}} {{apellido}} {{empresa}} {{url}} {{usuario}} {{clave}} {{ciudad}} {{pais}} {{anio}} |
 
 ## EspoCRM — PHP (`customizations/Espo/Custom/`)

@@ -120,7 +120,7 @@
   function shell() {
     $app.innerHTML = `<div class="top"><div class="brand"><i>◆</i><span>Crm Hub 360 <small>· Centro de control</small></span></div><span class="grow"></span>
       <button class="btn sm" id="acc"><span id="who">Mi cuenta</span></button><button class="btn sm" id="out">Salir</button></div>
-      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="consumo">Consumo</button><button class="tab" data-t="monitor">Monitor de canales<span class="tabdot" id="mon-badge" hidden></span></button><button class="tab" data-t="actividad">Actividad</button></div>
+      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="lineas">Líneas WhatsApp</button><button class="tab" data-t="consumo">Consumo</button><button class="tab" data-t="monitor">Monitor de canales<span class="tabdot" id="mon-badge" hidden></span></button><button class="tab" data-t="actividad">Actividad</button></div>
       <main id="main"></main>`;
     document.getElementById('acc').onclick = accountDialog;
     document.getElementById('out').onclick = async () => { try { await api('POST', '/logout'); } catch (e) { /* ya cerrada */ } renderLogin(); };
@@ -131,7 +131,7 @@
   const MON_STATE = {ok: ['Funciona', 'ok'], unknown: ['Sin medir', ''], no_recibe: ['No recibe mensajes', 'bad'], no_entrega: ['No entrega', 'bad'], envio_rechazado: ['Envío rechazado', 'bad'],
     desconectada: ['Desconectada', 'bad'], sin_instancia: ['Sin instancia', 'bad'], sin_vincular: ['Sin vincular', 'warn'], monitor_caido: ['Línea de pruebas caída', 'bad'],
     token_invalido: ['Credenciales inválidas', 'bad'], cuenta_suspendida: ['Cuenta suspendida', 'bad'], saldo_bajo: ['Saldo bajo', 'warn'], calidad_baja: ['Calidad ROJA', 'bad'], calidad_media: ['Calidad amarilla', 'warn'],
-    error_api: ['API con errores', 'bad'], sin_permiso: ['Sin permiso', 'bad'], bloqueada: ['Bloqueada por Meta', 'bad'], limitada: ['Limitada por Meta', 'warn']};
+    error_api: ['API con errores', 'bad'], sin_permiso: ['Sin permiso', 'bad'], bloqueada: ['Bloqueada por Meta', 'bad'], limitada: ['Limitada por Meta', 'warn'], misma_linea: ['Mismo teléfono que la línea de pruebas', 'bad']};
   const PROV = {evolution: 'Evolution', meta: 'Meta', gupshup: 'Gupshup', twilio: 'Twilio'}, CHN = {whatsapp: 'WhatsApp', sms: 'SMS', voice: 'Llamadas'};
   const monMetrics = l => { const m = l.metrics || {}, o = [];
     if (m.saldo != null) { o.push('Saldo ' + num(m.saldo, 2) + ' ' + (m.moneda || '')); } if (m.calidad) { o.push('Calidad ' + m.calidad); } if (m.limite) { o.push('Límite ' + m.limite); } if (m.estado && l.provider === 'meta') { o.push(m.estado); } if (m.cuenta && m.cuenta !== 'active') { o.push('Cuenta ' + m.cuenta); }
@@ -203,7 +203,9 @@
     };
   }
   // Vinculación por QR de la línea de WhatsApp de una empresa (o de la línea de pruebas): la puede escanear el equipo del Centro
-  function waDialog(slug, name, lineId) {
+  function waDialog(slug, name, lineId, ep) {
+    const E = ep || {qr: () => api('POST', `/whatsapp/${slug}/qr`, {lineId: lineId || ''}), state: () => api('GET', `/whatsapp/${slug}?lineId=${encodeURIComponent(lineId || '')}`),
+      restart: () => api('POST', `/whatsapp/${slug}/restart`, {lineId: lineId || ''}), logout: () => api('POST', `/whatsapp/${slug}/logout`, {lineId: lineId || ''})};
     const m = modal(`<h3>WhatsApp de ${esc(name)}</h3><p class="mut" id="wa-t">Pidiendo el código…</p><div id="wa-b" style="text-align:center;min-height:240px"><span class="spin"></span></div>
       <div class="mut" id="wa-h" style="margin-top:6px"></div><div class="err" id="wa-e" hidden></div>
       <div class="foot"><button class="btn" id="wa-rs">Reiniciar la línea</button><button class="btn danger" id="wa-lo">Cambiar de número</button><button class="btn" id="wa-rf">Nuevo código</button><button class="btn primary" data-x="k">Cerrar</button></div>`, 'wide');
@@ -214,7 +216,7 @@
     async function qr() {
       if (!alive) { return; }
       try {
-        const r = await api('POST', `/whatsapp/${slug}/qr`, {lineId: lineId || ''}); err('');
+        const r = await E.qr(); err('');
         if (r.connected) { $('wa-t').textContent = 'La línea está conectada.'; $('wa-b').innerHTML = '<div style="font-size:54px">✅</div><b>WhatsApp conectado</b>'; $('wa-h').textContent = ''; qrAt = 0; return; }
         qrAt = Date.now(); const src = (r.qr || '').startsWith('data:') ? r.qr : 'data:image/png;base64,' + (r.qr || '');
         $('wa-t').innerHTML = 'Escanea este código con el WhatsApp del teléfono de la línea: <b>Ajustes → Dispositivos vinculados → Vincular un dispositivo</b>.';
@@ -225,16 +227,16 @@
     async function check() {
       if (!alive || polling) { return; } polling = true;
       try {
-        const s = await api('GET', `/whatsapp/${slug}?lineId=${encodeURIComponent(lineId || '')}`);
+        const s = await E.state();
         if (s.state === 'open') { if (qrAt) { toast('¡WhatsApp vinculado!'); } await qr(); }
         else if (qrAt && Date.now() - qrAt > 25000) { await qr(); }
       } catch (e) { /* se reintenta */ } polling = false;
     }
     const tm = setInterval(check, 3000);
     $('wa-rf').onclick = qr;
-    $('wa-rs').onclick = async () => { try { await api('POST', `/whatsapp/${slug}/restart`, {lineId: lineId || ''}); toast('Línea reiniciada'); setTimeout(qr, 2500); } catch (e) { err(e.message); } };
+    $('wa-rs').onclick = async () => { try { await E.restart(); toast('Línea reiniciada'); setTimeout(qr, 2500); } catch (e) { err(e.message); } };
     $('wa-lo').onclick = async () => { if (!await confirmBox('Cambiar de número', 'Se cierra la sesión de WhatsApp de esta línea (el teléfono queda desvinculado) y podrás escanear otro número. Mientras tanto la línea no envía ni recibe.', 'Cerrar sesión', true)) { return; }
-      try { await api('POST', `/whatsapp/${slug}/logout`, {lineId: lineId || ''}); toast('Sesión cerrada'); setTimeout(qr, 1500); } catch (e) { err(e.message); } };
+      try { await E.logout(); toast('Sesión cerrada'); setTimeout(qr, 1500); } catch (e) { err(e.message); } };
     qr();
   }
 
@@ -300,9 +302,72 @@
     };
   }
 
+  // ---------- Líneas de WhatsApp (Evolution): crear, vincular por QR y asignar a las empresas
+  const LST = {open: ['Conectada', 'ok'], close: ['Desconectada', 'bad'], connecting: ['Sin vincular', 'warn'], missing: ['No existe', 'bad'], error: ['Sin respuesta', 'bad'], unknown: ['Desconocido', ''], sin_servidor: ['Sin servidor', 'bad']};
+  const lineEp = name => ({qr: () => api('POST', `/wa-lines/${encodeURIComponent(name)}/qr`), state: () => api('GET', `/wa-lines/${encodeURIComponent(name)}/state`),
+    restart: () => api('POST', `/wa-lines/${encodeURIComponent(name)}/restart`), logout: () => api('POST', `/wa-lines/${encodeURIComponent(name)}/logout`)});
+  async function drawLines() {
+    const main = document.getElementById('main');
+    if (!main.querySelector('[data-wl]')) { main.innerHTML = '<h2>Líneas de WhatsApp</h2><p class="sub">Cargando…</p><div data-wl></div>'; }
+    let r; try { r = await api('GET', '/wa-lines'); } catch (e) { main.innerHTML = `<h2>Líneas de WhatsApp</h2><div class="err">${esc(e.message)}</div>`; return; }
+    if (state.tab !== 'lineas') { return; }
+    state.waLines = r;
+    const rows = r.items.map(l => { const st = LST[l.state] || [l.state, '']; const a = l.assigned;
+      return `<tr><td><div class="name">${esc(l.label || l.name)}</div><div class="mut">${esc(l.name)}</div></td><td>${l.owner ? '+' + esc(l.owner) : '<span class="mut">—</span>'}${l.profile ? `<div class="mut">${esc(l.profile)}</div>` : ''}</td>
+        <td><span class="chip ${st[1]}">${esc(st[0])}</span></td><td>${a ? `<b>${esc(a.company)}</b> <span class="chip info">${a.mode === 'main' ? 'Principal' : 'Adicional'}</span>` : '<span class="mut">Libre</span>'}</td>
+        <td style="text-align:right;white-space:nowrap"><button class="btn sm primary" data-q="${esc(l.name)}" data-t="${esc(l.label || l.name)}">QR</button> <button class="btn sm" data-a="${esc(l.name)}">${a ? 'Mover…' : 'Asignar…'}</button>
+          ${a ? `<button class="btn sm" data-u="${esc(l.name)}">Quitar</button>` : `<button class="btn sm danger" data-d="${esc(l.name)}">Eliminar</button>`} <button class="btn sm" data-r="${esc(l.name)}">Reiniciar</button></td></tr>`; }).join('');
+    main.innerHTML = `<h2>Líneas de WhatsApp</h2><p class="sub">Las líneas (instancias de Evolution con su teléfono) que administramos nosotros. Crea una, <b>escanea su QR</b> y asígnala a una empresa como <b>línea principal</b> o como <b>línea adicional</b>: la empresa la ve en <i>Integraciones → Canales de mensajería</i> y puede probar el envío. Una empresa puede tener varias y una línea se puede mover a otra empresa sin volver a escanear.</p>
+      <div data-wl></div><div class="bar"><button class="btn primary" id="wl-new">+ Nueva línea</button><span class="grow"></span><button class="btn sm" id="wl-ref">Actualizar</button></div>
+      <div class="card">${rows ? `<table><thead><tr><th>Línea</th><th>Número</th><th>Estado</th><th>Asignada a</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<div style="padding:22px" class="mut">Aún no hay líneas. Crea la primera con «Nueva línea».</div>'}</div>
+      <p class="mut" style="margin-top:10px">Un mismo teléfono no puede ser a la vez una línea de empresa y la línea de pruebas del monitor: la de pruebas necesita su propio número.</p>`;
+    const $ = id => document.getElementById(id), find = n => r.items.find(x => x.name === n);
+    $('wl-ref').onclick = () => drawLines();
+    $('wl-new').onclick = () => newLineDialog(r);
+    main.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { waDialog(b.dataset.q, b.dataset.t, '', lineEp(b.dataset.q)); });
+    main.querySelectorAll('[data-a]').forEach(b => b.onclick = () => assignDialog(r, find(b.dataset.a)));
+    main.querySelectorAll('[data-u]').forEach(b => b.onclick = async () => { const l = find(b.dataset.u);
+      if (!await confirmBox('Quitar la línea', `La línea «${l.label || l.name}» dejará de estar en ${l.assigned.company} (su WhatsApp ya no enviará ni recibirá por ahí) y quedará libre. La sesión de WhatsApp no se cierra.`, 'Quitar', true)) { return; }
+      try { await api('POST', `/wa-lines/${encodeURIComponent(l.name)}/unassign`); toast('Línea liberada'); } catch (e) { toast(e.message); } drawLines(); });
+    main.querySelectorAll('[data-d]').forEach(b => b.onclick = async () => { const l = find(b.dataset.d);
+      if (!await confirmBox('Eliminar la línea', `Se borra la instancia «${l.name}» del servidor Evolution y de la lista. No se puede deshacer.`, 'Eliminar', true)) { return; }
+      try { await api('DELETE', `/wa-lines/${encodeURIComponent(l.name)}`); toast('Línea eliminada'); } catch (e) { toast(e.message); } drawLines(); });
+    main.querySelectorAll('[data-r]').forEach(b => b.onclick = async () => { try { await lineEp(b.dataset.r).restart(); toast('Línea reiniciada'); } catch (e) { toast(e.message); } });
+    clearInterval(state.monTimer); state.monTimer = setInterval(() => { if (state.tab === 'lineas' && !document.querySelector('.back')) { drawLines(); } }, 20000);
+  }
+  function newLineDialog(r) {
+    const m = modal(`<h3>Nueva línea de WhatsApp</h3><p class="mut">Se crea la instancia en el servidor Evolution (sin empresa todavía). Después se muestra su QR para escanearlo con el teléfono de la línea.</p>
+      <label>Nombre de la instancia (sin espacios)</label><input id="nl-n" maxlength="59" placeholder="linea-ventas-01"><label>Etiqueta (cómo la reconoces)</label><input id="nl-l" maxlength="60" placeholder="Ventas Bogotá · +57 300 …">
+      ${r.providers.length > 1 ? `<label>Servidor Evolution</label><select id="nl-p">${r.providers.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select>` : ''}
+      <div class="err" id="nl-e" hidden></div><div class="foot"><button class="btn" data-x="n">Cancelar</button><button class="btn primary" data-x="y">Crear y mostrar QR</button></div>`);
+    const $ = id => m.el.querySelector('#' + id);
+    m.el.querySelector('[data-x=n]').onclick = m.close;
+    $('nl-n').addEventListener('input', () => { $('nl-n').value = $('nl-n').value.replace(/[^A-Za-z0-9_-]/g, '-'); });
+    m.el.querySelector('[data-x=y]').onclick = async () => {
+      try { const x = await api('POST', '/wa-lines', {name: $('nl-n').value.trim(), label: $('nl-l').value.trim(), provider_id: $('nl-p') ? $('nl-p').value : ''}); m.close(); toast('Línea creada'); drawLines(); waDialog(x.name, $('nl-l').value.trim() || x.name, '', lineEp(x.name)); }
+      catch (e) { const er = $('nl-e'); er.hidden = false; er.textContent = e.message; }
+    };
+  }
+  function assignDialog(r, l) {
+    const cur = l.assigned;
+    const m = modal(`<h3>${cur ? 'Mover' : 'Asignar'} la línea «${esc(l.label || l.name)}»</h3>${l.owner ? `<p class="mut">Número: +${esc(l.owner)} · ${esc((LST[l.state] || [l.state])[0])}</p>` : ''}
+      <label>Empresa</label><select id="as-s">${r.companies.filter(c => c.status === 'active').map(c => `<option value="${esc(c.slug)}" ${cur && cur.slug === c.slug ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+      <label>Cómo la usa la empresa</label><div><label class="chk"><input type="radio" name="as-m" value="main" ${cur && cur.mode === 'main' ? 'checked' : ''}> <b>Línea principal</b> (la predeterminada; reemplaza a la principal actual)</label>
+        <label class="chk"><input type="radio" name="as-m" value="extra" ${!cur || cur.mode !== 'main' ? 'checked' : ''}> <b>Línea adicional</b> (otra tarjeta, con interruptor y «Enviar desde»)</label></div>
+      <label>Nombre que verá la empresa (opcional)</label><input id="as-l" maxlength="60" value="${esc(l.label || '')}" placeholder="Ventas, Cobranza…">
+      <div class="mut">Se apunta el webhook al sitio de la empresa y se le entrega la clave propia de la instancia. ${l.state !== 'open' ? '<b>La línea aún no está conectada:</b> escanea su QR para que pueda enviar.' : ''}</div>
+      <div class="err" id="as-e" hidden></div><div class="foot"><button class="btn" data-x="n">Cancelar</button><button class="btn primary" data-x="y">${cur ? 'Mover' : 'Asignar'}</button></div>`);
+    const $ = id => m.el.querySelector('#' + id);
+    m.el.querySelector('[data-x=n]').onclick = m.close;
+    m.el.querySelector('[data-x=y]').onclick = async () => {
+      try { await api('POST', `/wa-lines/${encodeURIComponent(l.name)}/assign`, {slug: $('as-s').value, mode: m.el.querySelector('[name=as-m]:checked').value, label: $('as-l').value.trim()}); m.close(); toast('Línea asignada'); drawLines(); }
+      catch (e) { const er = $('as-e'); er.hidden = false; er.textContent = e.message; }
+    };
+  }
+
   function draw() {
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.t === state.tab));
-    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, servicios: drawLookups, correo: drawMail, bienvenida: drawTemplates, monitor: drawMonitor, consumo: drawUsage, actividad: drawActivity}[state.tab])();
+    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, servicios: drawLookups, correo: drawMail, bienvenida: drawTemplates, monitor: drawMonitor, consumo: drawUsage, lineas: drawLines, actividad: drawActivity}[state.tab])();
     if (state.tab !== 'monitor') { clearInterval(state.monTimer); }
   }
 

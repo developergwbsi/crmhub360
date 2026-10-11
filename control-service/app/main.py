@@ -1579,10 +1579,12 @@ async def security_headers(request: Request, call_next):
 from types import SimpleNamespace  # noqa: E402
 from . import evomon  # noqa: E402
 _deps = SimpleNamespace(app=app, db=db, get_setting=get_setting, put_setting=put_setting, audit=audit, smtp_send=smtp_send, providers_list=providers_list, me=me,
-                        account=account, CONTROL_HOST=CONTROL_HOST)
+                        account=account, CONTROL_HOST=CONTROL_HOST, get_tenant=get_tenant, services_of=services_of, evolution_token=evolution_token)
 evomon.init(_deps)
 from . import usage_cc  # noqa: E402  consumo y tarifas
 usage_cc.init(_deps)
+from . import walines  # noqa: E402  inventario de líneas de WhatsApp (Evolution)
+walines.init(_deps)
 
 if __name__ == "__main__":
     uvicorn.run(app, host=BIND_HOST, port=PORT, log_level="info", proxy_headers=False)

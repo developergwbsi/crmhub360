@@ -159,6 +159,17 @@ async def send_text(tenant: dict, phone: str, text: str, *, kind: str = "text") 
         else:
             raise ValueError("WhatsApp no está configurado (Integraciones → Mensajería).")
     if r.status_code >= 400:
+        if p == "evolution":   # el error de Evolution con la sesión cerrada («Connection Closed», 500) no le dice nada a quien escribe: se explica
+            try:
+                url, key, inst = _need(tenant, "evolution_url", "evolution_apikey", "evolution_instance")
+                async with httpx.AsyncClient(timeout=10) as c2:
+                    st = (await c2.get(f"{url.rstrip('/')}/instance/connectionState/{inst}", headers={"apikey": key})).json()
+                if ((st.get("instance") or st).get("state") or "") != "open":
+                    raise ValueError("La línea de WhatsApp está desconectada (la sesión se cerró). Vuelve a vincularla con «Vincular (QR)» en Integraciones → Canales de mensajería, o pide a soporte que la vincule desde el Centro de control.")
+            except ValueError:
+                raise
+            except Exception:
+                pass
         raise ValueError(f"{PROVIDERS[p]} rechazó el mensaje ({r.status_code}): {_err(r)}")
     usage.record(tenant, "whatsapp", p, kind=kind, ext_id=ext)   # consumo medido (empresa, proveedor y línea)
 
