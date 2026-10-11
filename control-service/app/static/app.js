@@ -209,7 +209,7 @@
       test: (to, text) => api('POST', `/whatsapp/${slug}/test`, {lineId: lineId || '', to, text})};
     const m = modal(`<h3>WhatsApp de ${esc(name)}</h3><p class="mut" id="wa-t">Pidiendo el código…</p><div id="wa-b" style="text-align:center;min-height:240px"><span class="spin"></span></div>
       <div class="mut" id="wa-h" style="margin-top:6px"></div>
-      <div id="wa-tt" hidden style="margin-top:12px;border-top:1px solid var(--line,#ddd);padding-top:10px"><b>Probar el envío</b><div class="mut">Manda un mensaje desde esta línea para comprobar que funciona (con el código de país, p. ej. 573001234567).</div>
+      <div id="wa-tt" style="margin-top:12px;border-top:1px solid var(--line,#ddd);padding-top:10px"><b>Probar el envío</b><div class="mut">Manda un mensaje desde esta línea para comprobar que funciona (con el código de país, p. ej. 573001234567).</div>
         <div class="bar" style="margin-top:6px"><input id="wa-to" placeholder="Número de destino" inputmode="tel" style="width:190px"><input id="wa-tx" class="grow" placeholder="Mensaje (opcional)" maxlength="300"><button class="btn primary" id="wa-sn">Enviar prueba</button></div></div>
       <div class="err" id="wa-e" hidden></div>
       <div class="foot"><button class="btn" id="wa-rs">Reiniciar la línea</button><button class="btn danger" id="wa-lo">Cambiar de número</button><button class="btn" id="wa-rf">Nuevo código</button><button class="btn primary" data-x="k">Cerrar</button></div>`, 'wide');
@@ -221,7 +221,7 @@
       if (!alive) { return; }
       try {
         const r = await E.qr(); err('');
-        $('wa-tt').hidden = !r.connected;
+        
         if (r.connected) { $('wa-t').textContent = 'La línea está conectada.'; $('wa-b').innerHTML = '<div style="font-size:54px">✅</div><b>WhatsApp conectado</b>'; $('wa-h').textContent = ''; qrAt = 0; return; }
         qrAt = Date.now(); const src = (r.qr || '').startsWith('data:') ? r.qr : 'data:image/png;base64,' + (r.qr || '');
         $('wa-t').innerHTML = 'Escanea este código con el WhatsApp del teléfono de la línea: <b>Ajustes → Dispositivos vinculados → Vincular un dispositivo</b>.';
