@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Mensajes automáticos de WhatsApp
+- **Negrillas:** el nombre de la empresa y el del comercial/asesor van en negrilla (`*texto*`), y la IA resalta de 2 a 4 palabras clave. También en las acciones de WhatsApp de los formularios (nueva variable `{{asesor}}`) y en los mensajes masivos (empresa).
+- **Botones de respuesta rápida:** los mensajes proactivos del comercial virtual (primer contacto y seguimientos) llevan botones configurables (por defecto «Sí, me interesa», «Más información», «Ahora no»); nativos con Meta y numerados en los demás proveedores. Las acciones de WhatsApp de los formularios admiten 2–3 botones propios. Ajustes en *Comercial virtual → Mensajes con opciones* (con «Probar en mi WhatsApp»).
+
 ## [1.1.0] - 2026-10-11
 
 ### Detalle del lead

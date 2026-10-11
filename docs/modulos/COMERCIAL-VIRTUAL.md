@@ -27,6 +27,10 @@ Una empresa puede tener varios (`settings.agents`, hasta `limits.agents`), cada 
 
 La empresa define menús (lista o botones) en *Mensajes con opciones*; la IA decide cuándo usarlos. Con **Meta** se envían como listas/botones nativos; con otros proveedores (Evolution, Twilio, Gupshup, HTTP) llegan como **texto numerado**. La respuesta del cliente («2», «opción 2» o el título) la interpreta `map_menu_reply`, se anota en el lead y puede cambiar su estado. Evolution nativo es experimental y está apagado por defecto.
 
+## Botones de respuesta rápida y negrillas
+
+Los mensajes **proactivos** de WhatsApp (`first` y `followup`) llevan por defecto un menú «virtual» de botones (`agent.quick_menu`, id `quick`, configurable en `cfg.quick`: `enabled` y hasta 3 `buttons` de ≤ 20 caracteres). Si la IA ya eligió un menú de la empresa, ese manda; las respuestas a un mensaje del cliente (`reply`) no llevan botones. `find_menu` resuelve tanto los menús guardados como `quick` (también al aprobar una propuesta). Con Meta salen como botones nativos; con los demás proveedores como texto numerado, y `pending` guarda las opciones para interpretar el «1», «2» o el título. La negrilla (`cfg.bold`, por defecto sí) tiene dos partes: el prompt pide a la IA resaltar con `*asteriscos*` empresa, comercial y 2–4 palabras clave, y `whatsapp.bold_names` asegura la empresa y el comercial en `_deliver`. La pantalla es *Mensajes con opciones* y el botón *Probar en mi WhatsApp* usa `agentMenuTest` con `menuId = quick`.
+
 ## Motor de IA
 
 `llm.py` habla con Anthropic (herramientas `tool_use` para JSON; **sin `temperature`**), cualquier API compatible con OpenAI u Ollama. El proveedor y la clave se asignan por empresa desde el Centro (*Servicios → Motor de IA*); sin ellos se usa la IA local de la plataforma.

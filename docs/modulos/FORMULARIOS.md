@@ -38,7 +38,7 @@ Cada formulario se guarda en `tenants.settings.forms` y se publica en `https://<
 | Tipo | Qué hace |
 |---|---|
 | `email` | Correo con marca de la empresa: imagen principal, texto, hasta 3 imágenes más, **PDF adjunto** (hasta 3, 650 KB c/u) y **botón** (WhatsApp con mensaje prellenado, o enlace). Sale como el asesor del lead (o el admin) y queda en el historial. Puede ir al cliente o a un correo interno. |
-| `whatsapp` | Mensaje de WhatsApp al cliente por la línea efectiva. Con Meta, el texto libre solo llega dentro de 24 h del último mensaje del cliente. |
+| `whatsapp` | Mensaje de WhatsApp al cliente por la línea efectiva, con la empresa y el asesor (`{{asesor}}`: la persona asignada o el comercial virtual) en negrilla y, opcionalmente, 2–3 **botones de respuesta** (`buttons`): nativos con Meta, numerados en otros proveedores. Con Meta, el texto libre solo llega dentro de 24 h del último mensaje del cliente. |
 | `notify` | **«Nuevo registro»**: campana del CRM (`POST /CrmHub/notifyTeam`, solo usuario API) y *push* al asesor y a los administradores. |
 
 Cada acción tiene `when` (siempre, o solo si una respuesta coincide: así cada destino/servicio recibe su propio mensaje). Variables: `{{nombre}}`, `{{empresa}}`, `{{telefono}}`, `{{correo}}`, `{{formulario}}` y `{{<clave_del_campo>}}`. Cada resultado (o fallo y su motivo) queda en las notas del lead.

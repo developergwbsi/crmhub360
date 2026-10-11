@@ -1010,3 +1010,8 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 [data-ch-theme="dark"] .ch-idtemp { background: rgba(245, 158, 11, .2); color: #fcd34d; }
 .ch-meta-warn { color: #b45309; font-weight: 600; }
 [data-ch-theme="dark"] .ch-meta-warn { color: #fcd34d; }
+
+.ch-ag-quick { border: 1px solid var(--ch-line); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; background: var(--ch-soft); }
+.ch-ag-quick h5 { margin: 0 0 4px; font-weight: 700; }
+.ch-ag-qb { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.ch-ag-qb input { flex: 1 1 140px; min-width: 120px; }

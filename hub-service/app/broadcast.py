@@ -121,6 +121,7 @@ async def _send_one(tenant: dict, b: dict, item: dict) -> tuple[str, str | None]
         if not phone:
             return "skipped", "Sin teléfono"
         if b["channel"] == "whatsapp":
+            text = whatsapp.bold_names(text, [tenant.get("name") or ""])   # el nombre de la empresa va en negrilla
             await whatsapp.send_text(tenant, phone, text)
             whatsapp._sent[(item["lead_id"], text)] = time.time()
         else:

@@ -24,7 +24,7 @@ OPS = ["eq", "neq", "filled", "empty"]
 ACTION_TYPES = ["email", "whatsapp", "notify"]
 MAX_IMAGES, MAX_ATTACH = 4, 3
 _PDF = re.compile(r"data:application/pdf;base64,[A-Za-z0-9+/=]{20,900000}")
-VARS_HELP = "{{nombre}}, {{empresa}}, {{telefono}}, {{correo}} y {{clave_del_campo}} de cualquier pregunta"
+VARS_HELP = "{{nombre}}, {{empresa}}, {{asesor}} (solo en WhatsApp), {{telefono}}, {{correo}} y {{clave_del_campo}} de cualquier pregunta"
 _COLOR = re.compile(r"#[0-9a-fA-F]{6}")
 _IMG = re.compile(r"(https?://[^\s\"'()<>\\]{4,900}|data:image/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]{20,450000})")
 log = logging.getLogger('forms')
@@ -53,7 +53,7 @@ def default_form(n: int = 1) -> dict:
 def default_action() -> dict:
     """Acción al recibir por defecto: un correo de agradecimiento al cliente, sin condición."""
     return {"id": secrets.token_hex(3), "enabled": True, "type": "email", "when": None, "to": "lead", "to_custom": "",
-            "images": [], "attachments": [], "button_label": "", "button_kind": "whatsapp", "button_value": "", "button_text": "Hola, me registré en el formulario y quiero más información.", "notify_text": "",
+            "images": [], "attachments": [], "buttons": [], "button_label": "", "button_kind": "whatsapp", "button_value": "", "button_text": "Hola, me registré en el formulario y quiero más información.", "notify_text": "",
             "subject": "Recibimos tu solicitud, {{nombre}}", "message": "Hola {{nombre}},\n\nGracias por escribirnos. Recibimos tus datos y un asesor te contactará muy pronto.\n\n{{empresa}}"}
 
 
@@ -157,6 +157,7 @@ def validate(forms) -> list[dict]:
             actions.append({"id": _s(a.get("id"), 12) or secrets.token_hex(3), "enabled": bool(a.get("enabled", True)), "type": typ,
                             "when": _cond(a.get("when"), keys, "una acción de " + name), "to": to, "to_custom": to_custom if to == "custom" else "",
                             "subject": _s(a.get("subject"), 200), "message": msg, "images": images, "attachments": attach,
+                            "buttons": [_s(x, 20) for x in (a.get("buttons") or []) if _s(x, 20)][:3] if typ == "whatsapp" else [],   # botones de respuesta rápida (WhatsApp)
                             "button_label": _s(a.get("button_label"), 40), "button_kind": bk, "button_value": bv, "button_text": _s(a.get("button_text"), 300),
                             "notify_text": _s(a.get("notify_text"), 300)})
         out.append({
@@ -483,7 +484,19 @@ async def run_actions(tenant: dict, form: dict, data: dict, lead_id: str, lead: 
             if a["type"] == "notify":
                 await _notify(tenant, espo, form, lead_id, lead, _fill(a.get("notify_text") or "{{nombre}} · {{formulario}}", vars_))
             elif a["type"] == "whatsapp":
-                await whatsapp.send(tenant, lead_id, text, "Formulario web", None, None)
+                cur = await espo.get(f"Lead/{lead_id}")
+                asesor = cur.get("assignedUserName") or ""
+                if not asesor:   # sin persona asignada lo atiende un comercial virtual
+                    from . import agent as _agent
+                    att = _agent.attended(tenant).get(lead_id)
+                    asesor = (att or {}).get("name") or ""
+                text = whatsapp.bold_names(_fill(a.get("message") or "", {**vars_, "asesor": asesor}), [company, asesor])   # empresa y asesor en negrilla
+                btns = a.get("buttons") or []
+                if len(btns) >= 2:   # mensaje con botones: el cliente responde con un toque (Meta los muestra nativos; en otros proveedores va numerado)
+                    menu = {"id": "form", "name": form["name"], "type": "buttons", "body": text, "options": [{"id": f"b{i + 1}", "title": t_, "description": "", "status": ""} for i, t_ in enumerate(btns[:3])]}
+                    await whatsapp.send_menu(tenant, lead_id, menu, text, "Formulario web", None, None, False)
+                else:
+                    await whatsapp.send(tenant, lead_id, text, "Formulario web", None, None)
             else:
                 dest = a["to_custom"] if a.get("to") == "custom" else lead.get("email", "")
                 if not dest:

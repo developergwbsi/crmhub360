@@ -1,5 +1,6 @@
 """WhatsApp con varios proveedores: Evolution API, Meta WhatsApp Cloud API y Gupshup.
 Cada empresa elige uno (tenants.settings.wa_provider). Las credenciales viven en tenants.settings y nunca se devuelven a la interfaz."""
+import re
 import json
 import time
 
@@ -155,12 +156,21 @@ async def send_text(tenant: dict, phone: str, text: str) -> None:
         raise ValueError(f"{PROVIDERS[p]} rechazó el mensaje ({r.status_code}): {_err(r)}")
 
 
+# ---------------- formato ----------------
+def bold_names(text: str, names: list[str]) -> str:
+    """Pone en negrilla de WhatsApp (*texto*) cada aparición de los nombres dados (empresa, asesor…) que no esté ya resaltada.
+    Solo palabras completas, sin tocar lo que ya va entre asteriscos."""
+    for n in sorted({x.strip() for x in names if x and len(x.strip()) >= 3}, key=len, reverse=True):
+        text = re.sub(r"(?<![\w*])(" + re.escape(n) + r")(?![\w*])", r"*\1*", text, flags=re.I)
+    return text
+
+
 # ---------------- mensajes con opciones (lista / botones) ----------------
 def menu_text(menu: dict, intro: str = "") -> str:
     """Versión en texto del menú (numerada): se usa donde WhatsApp no muestra listas nativas (Evolution/Baileys, Twilio, Gupshup, HTTP) y en el historial del CRM."""
     body = (intro or menu["body"]).strip()
     rows = [f"{i + 1}. {o['title']}" + (f" — {o['description']}" if o.get("description") else "") for i, o in enumerate(menu["options"])]
-    return f"{body}\n\n" + "\n".join(rows) + "\n\nResponde con el número de tu opción."
+    return f"{body}\n\n" + "\n".join(rows) + ("\n\nResponde con el número de tu opción." if menu.get("type") != "buttons" else "\n\nResponde con el número: " + ", ".join(f"*{i + 1}*" for i in range(len(menu["options"]))) + ".")
 
 
 async def send_menu_phone(tenant: dict, phone: str, menu: dict, intro: str = "", native_evolution: bool = False) -> dict:

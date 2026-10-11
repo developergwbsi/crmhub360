@@ -205,6 +205,7 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                     if (part === 'op') { this.renderForms(); }
                     return;
                 }
+                if (w === 'buttons') { a.buttons = el.value.split(',').map(x => x.trim()).filter(Boolean).slice(0, 3); return; }
                 a[w] = el.value; if (w === 'type' || w === 'to') { this.renderForms(); }
             },
             'change [data-fbind]': function (e) {
@@ -436,6 +437,8 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                         ${a.type === 'notify' ? `<label>Texto del aviso (título: «Nuevo registro»)</label><input class="form-control" data-abind="notify_text" ${pos} value="${esc(a.notify_text)}" placeholder="{{nombre}} · {{formulario}}">
                             <div class="ch-small ch-muted">Le llega a quien atiende el lead y a los administradores, en la campana del CRM y como notificación del dispositivo.</div>`
                         : `<label>Mensaje</label><textarea class="form-control" rows="4" data-abind="message" ${pos}>${esc(a.message)}</textarea>`}
+                        ${a.type === 'whatsapp' ? `<label>Botones de respuesta (opcional, 2 o 3 separados por coma)</label><input class="form-control" data-abind="buttons" ${pos} value="${esc((a.buttons || []).join(', '))}" placeholder="Sí, me interesa, Más información, Ahora no">
+                            <div class="ch-small ch-muted">El cliente responde con un toque. Con WhatsApp oficial (Meta) salen como botones; con otros proveedores, como opciones numeradas. El nombre de la empresa y del asesor se ponen en negrilla solos; puedes usar {{asesor}}.</div>` : ''}
                         ${a.type === 'email' ? `<label>Imágenes del correo (la primera va arriba; máx. 4)</label>
                             <div class="ch-aimgs">${(a.images || []).map((u, n) => `<div class="ch-aimg" style="background-image:url('${esc(u)}')"><button class="btn btn-link text-danger" title="Quitar" data-action="removeActImage" ${pos} data-n="${n}"><span class="fas fa-times"></span></button></div>`).join('')}</div>
                             <div class="ch-fcond"><input type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" class="form-control" data-aimage ${pos}><input class="form-control" data-aurl ${pos} placeholder="…o pega una dirección https:// y pulsa Enter"></div>

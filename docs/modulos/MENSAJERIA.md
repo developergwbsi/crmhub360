@@ -32,6 +32,10 @@ Audiencia resuelta en PHP con ACL; worker con ritmo, programación, pausa y canc
 
 `mailout.send` envía con el SMTP de la empresa: remitente con el nombre del usuario, firma propia y `Reply-To` personal (`cuenta+<idUsuario>@dominio` en Gmail/Zoho), así `mailbox.py` entrega la respuesta solo a ese usuario. Todo correo enviado desde EspoCRM se envuelve con la marca de la empresa (`EmailBrand`, hook `BrandOnSend`). Admite adjuntos PDF (`attachments`).
 
+## Formato y botones
+
+WhatsApp admite negrilla con `*texto*`: `whatsapp.bold_names(texto, [nombres])` resalta palabras completas sin tocar lo ya resaltado (lo usan el comercial virtual, las acciones de los formularios y los mensajes masivos para el nombre de la empresa). Los botones de respuesta (máx. 3, título ≤ 20) son nativos solo con **Meta**; con Evolution/Baileys, Twilio, Gupshup y HTTP se envían como texto numerado (`menu_text`), porque esos canales no muestran mensajes interactivos de forma fiable. Meta devuelve la elección como un mensaje con el título del botón (`ingest.py`).
+
 ## Proveedor HTTP genérico
 
 `httpgen.py`: cualquier API REST con plantillas (`{{to}}`, `{{text}}`, `{{from}}`…), autenticación ninguna/Bearer/Basic/cabecera y mapeo de entrantes por ruta JSON. Bloquea destinos locales/privados (anti-SSRF) salvo `ALLOW_LOOPBACK_URLS=1` (solo pruebas).

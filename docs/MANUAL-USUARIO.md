@@ -593,6 +593,14 @@ En el lead
 
 El panel **Comercial virtual** muestra quién lo atiende, en qué va y qué hizo. Puedes **Pausar**, **Tomar el control** (pasa a gestión manual), **Pasar al comercial virtual** o elegir en **Lo atiende** a otro comercial. Si hay aprobación previa, aquí apruebas o editas cada mensaje.
 
+Mensajes automáticos con botones y negrillas
+
+Los mensajes de WhatsApp que el comercial virtual envía **por su cuenta** (el primer contacto y los seguimientos) salen con **botones de respuesta rápida** —por defecto «Sí, me interesa», «Más información» y «Ahora no»— para que el cliente conteste con un toque; su elección le llega al comercial como si la hubiera escrito. Además, el **nombre de la empresa y el del comercial** van en **negrilla** y la IA resalta las palabras clave (beneficio, fecha, acción). Todo se ajusta en **Comercial virtual → Mensajes con opciones** (cambia los textos de los botones, apágalos o apaga la negrilla; el botón *Probar en mi WhatsApp* te lo envía).
+
+- Con **WhatsApp oficial (Meta)** los botones son nativos. Con Evolution (QR), Twilio, Gupshup u otro proveedor WhatsApp no los muestra, así que el mensaje llega con las opciones **numeradas** («Responde 1, 2 o 3») y el comercial entiende la respuesta igual.
+- Las respuestas a preguntas del cliente no llevan botones: solo los mensajes que el comercial inicia.
+- Los **formularios web** también pueden enviar un WhatsApp con botones (campo *Botones de respuesta* de la acción) y ponen en negrilla la empresa y el asesor ({{asesor}}); los **mensajes masivos** resaltan el nombre de la empresa.
+
 
 ## 9d. Reparto de leads entre personas y comerciales virtuales
 

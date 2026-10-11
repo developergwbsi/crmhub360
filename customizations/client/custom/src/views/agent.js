@@ -172,7 +172,14 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
                 ${m.type === 'list' ? `<label>Texto del botón que abre la lista (máx. 20)</label><input data-m="button" maxlength="20" value="${esc(m.button)}">` : ''}
                 <label>Opciones</label>${m.options.map((o, j) => `<div class="ch-ag-op" data-op="${j}"><input data-o="title" maxlength="${m.type === 'buttons' ? 20 : 24}" value="${esc(o.title)}" placeholder="Opción ${j + 1} (máx. ${m.type === 'buttons' ? 20 : 24} letras)">${m.type === 'list' ? `<input data-o="description" maxlength="72" value="${esc(o.description || '')}" placeholder="Descripción (opcional, máx. 72)">` : ''}<select data-o="status" title="Estado del lead cuando el cliente elige esta opción">${stOpt(o.status)}</select><a data-act="opdel" data-i="${i}" data-o="${j}" title="Quitar opción"><span class="fas fa-xmark"></span></a></div>`).join('')}
                 <div class="ch-mail-actions"><button class="btn btn-default btn-sm" data-act="opadd" data-i="${i}" ${m.options.length >= (m.type === 'buttons' ? 3 : 10) ? 'disabled' : ''}><span class="fas fa-plus"></span> Agregar opción</button><button class="btn btn-default btn-sm" data-act="mntest" data-i="${i}"><span class="fab fa-whatsapp"></span> Probar en mi WhatsApp</button></div></div>`;
-            return `<div class="ch-sim-card"><p class="ch-muted">En vez de pedirle al cliente que escriba, el comercial virtual puede enviar <b>una lista o botones</b> de WhatsApp: «¿cuál de estas opciones describe mejor tu situación?». Tú defines los menús y <b>cuándo usarlos</b>; la IA decide el momento. Cuando el cliente elige una opción queda registrada en su historial y puede cambiar el estado del lead.</p>
+            const q = c.quick || {enabled: true, buttons: ['Sí, me interesa', 'Más información', 'Ahora no']}, qb = [0, 1, 2].map(i => (q.buttons || [])[i] || '');
+            const quick = `<div class="ch-ag-quick"><h5><span class="fab fa-whatsapp"></span> Mensajes automáticos con botones y negrillas</h5>
+                <p class="ch-muted ch-small">Los mensajes que el comercial virtual envía <b>por su cuenta</b> (primer contacto y seguimientos) pueden llevar botones para que el cliente responda con un toque. Su respuesta llega al comercial como si la hubiera escrito.</p>
+                <label class="ch-dz-chk"><input type="checkbox" data-q="enabled" ${q.enabled ? 'checked' : ''}> Agregar botones de respuesta rápida a los mensajes de WhatsApp</label>
+                <div class="ch-ag-qb">${qb.map((t, i) => `<input data-q="b${i}" maxlength="20" value="${esc(t)}" placeholder="Botón ${i + 1}${i < 2 ? '' : ' (opcional)'}">`).join('')}</div>
+                <label class="ch-dz-chk"><input type="checkbox" data-q="bold" ${c.bold !== false ? 'checked' : ''}> Poner en <b>negrilla</b> el nombre de la empresa y el del comercial virtual (y la IA resalta las palabras clave)</label>
+                <div class="ch-mail-actions"><button class="btn btn-default btn-sm" data-act="quicktest"><span class="fas fa-paper-plane"></span> Probar en mi WhatsApp</button></div></div>`;
+            return `<div class="ch-sim-card">${quick}<p class="ch-muted">En vez de pedirle al cliente que escriba, el comercial virtual puede enviar <b>una lista o botones</b> de WhatsApp: «¿cuál de estas opciones describe mejor tu situación?». Tú defines los menús y <b>cuándo usarlos</b>; la IA decide el momento. Cuando el cliente elige una opción queda registrada en su historial y puede cambiar el estado del lead.</p>
                 <div class="ch-help"><b>Cómo lo recibe el cliente:</b> con <b>WhatsApp oficial (Meta)</b> aparece como lista o botones nativos. Con una línea no oficial (<b>Evolution / QR</b>), Twilio, Gupshup u otro proveedor, WhatsApp no muestra listas: se envía como <b>texto numerado</b> («1. … 2. …, responde con el número») y el sistema entiende la respuesta igual.</div>
                 <label class="ch-dz-chk"><input type="checkbox" data-mf="native" ${c.menus_native_evolution ? 'checked' : ''}> Intentar lista/botones nativos también con Evolution API <small class="ch-muted">(experimental: WhatsApp suele ocultarlos en líneas no oficiales; si no los ves, déjalo apagado)</small></label>
                 ${menus.map(card).join('') || ChUi.empty({kind: 'chat', title: 'Aún no tienes mensajes con opciones', text: 'Crea uno desde cero o parte del ejemplo «Situación del cliente».', compact: true})}
@@ -188,6 +195,21 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
                     options: [...card.querySelectorAll('[data-op]')].map((op, j) => { const f = k => (op.querySelector(`[data-o="${k}"]`) || {}).value || ''; return {id: ((old.options || [])[j] || {}).id || '', title: f('title'), description: f('description'), status: f('status')}; })};
             });
             const n = this.el.querySelector('[data-mf="native"]'); if (n) { c.menus_native_evolution = n.checked; }
+            const qe = this.el.querySelector('[data-q="enabled"]');
+            if (qe) {
+                c.quick = {enabled: qe.checked, buttons: [0, 1, 2].map(i => (this.el.querySelector(`[data-q="b${i}"]`) || {}).value || '').map(v => v.trim()).filter(Boolean)};
+                c.bold = !!(this.el.querySelector('[data-q="bold"]') || {}).checked;
+            }
+        }
+
+        quickTest() {
+            this.menusCollect();
+            ChUi.prompt({title: 'Probar en tu WhatsApp', text: 'Se envía un mensaje de ejemplo con tus botones y las negrillas a tu número. Antes guarda los cambios.', label: 'Tu número de WhatsApp (con indicativo)', rows: 1, max: 20, ok: 'Enviar prueba', required: true, min: 7, requiredText: 'Escribe un número con indicativo, p. ej. +57 300 123 4567'}).then(to => {
+                if (!to) { return; }
+                Espo.Ui.notify('Enviando…');
+                Espo.Ajax.postRequest('CrmHub/agentMenuTest', {menuId: 'quick', to, agentId: this.d.selectedId}).then(r => { Espo.Ui.notify(false); Espo.Ui.success(r.native ? 'Enviado con botones nativos' : 'Enviado como texto numerado (este proveedor no muestra botones)'); })
+                    .catch(xhr => { Espo.Ui.notify(false); const rs = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error(rs || 'No se pudo enviar la prueba'); });
+            });
         }
 
         menusSave() {
@@ -299,6 +321,7 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             else if (act === 'agtrain') { this.load(a.dataset.id, () => { this.tab = 'train'; this.draw(); }); }
             else if (act === 'agtest') { this.load(a.dataset.id, () => { this.tab = 'test'; this.draw(); }); }
             else if (act === 'dpsave') { this.dpSave(); }
+            else if (act === 'quicktest') { this.quickTest(); }
             else if (act === 'addfaq') { this.d.config = this.collect(); this.d.config.faq.push({q: '', a: ''}); this.draw(); }
             else if (act === 'delfaq') { this.d.config = this.collect(); this.d.config.faq.splice(+a.dataset.i, 1); this.draw(); }
             else if (act === 'save') { this.save(); }
