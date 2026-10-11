@@ -486,7 +486,7 @@ input[type=color].form-control { width: 96px; cursor: pointer; }
 .ch-drawer .ch-avatar-lg { width: 52px; height: 52px; font-size: 18px; }
 .ch-drawer .ch-lh-name { font-size: 18px; }
 .ch-drawer .ch-lh-kpis { grid-template-columns: repeat(2, 1fr); flex-basis: 100%; }
-body.modal-open:has(.ch-drawer) { overflow: auto !important; padding-right: 0 !important; }
+body.modal-open:has(.ch-drawer), body.modal-open:has(.ch-ch-panel) { overflow: auto !important; padding-right: 0 !important; }   /* los paneles acoplados (ficha del lead, WhatsApp, llamada, correo) no bloquean el scroll de la página de atrás */
 @keyframes ch-drawer-in { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .ch-drawer .modal-dialog { animation: none; } }
 .ch-card { cursor: pointer; }
