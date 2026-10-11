@@ -301,6 +301,22 @@ async def resolve_alerts(l: dict) -> None:
         await notify(f"Recuperada: {l['company']}", f"La línea «{l['name']}» de {l['company']} volvió a funcionar (envía y recibe).")
 
 
+async def on_connected(slug: str, instance: str) -> None:
+    """La línea quedó vinculada/conectada: cierra al instante las alertas de «sin vincular / desconectada / sin instancia» (sin esperar a la próxima prueba) y lanza una prueba."""
+    l = next((x for x in all_lines(False) if x["slug"] == slug and x["instance"] == instance), None)
+    if not l:
+        return
+    h = await health_row(slug, instance)
+    if h.get("state") in ("sin_vincular", "desconectada", "sin_instancia"):
+        await set_health(l, state="unknown", conn_state="open", fails_in_row=0, last_error="", incident_at=None)
+        await aq("UPDATE evo_alerts SET resolved_at=now() WHERE tenant=%s AND instance=%s AND resolved_at IS NULL AND kind IN ('sin_vincular','desconectada','sin_instancia')", (slug, instance))
+        if cfg()["enabled"]:   # solo al recuperarse (el diálogo consulta el estado cada pocos segundos): una prueba para confirmar el envío y la recepción
+            try:
+                await run_probe(l)
+            except Exception as e:
+                log.warning("prueba tras vincular %s: %s", instance, str(e)[:100])
+
+
 async def record_result(l: dict, kind: str, ok: bool, detail: str = "", rtt: int | None = None, *, immediate: bool = False, metrics: dict | None = None) -> None:
     """Aplica el resultado de una prueba al estado de la línea: recupera, cuenta fallos, abre alerta y reinicia la instancia una vez por incidente."""
     c = cfg()
@@ -517,10 +533,18 @@ async def due_lines() -> list[dict]:
         h = await health_row(l["slug"], l["instance"])
         last = h.get("last_probe_at")
         base = c["interval_min"] if l.get("provider", "evolution") == "evolution" else min(c["interval_min"], 10)   # las consultas a la API de un proveedor son baratas: más seguido
-        step = timedelta(minutes=base) if h["state"] in ("ok", "unknown", "sin_vincular") else timedelta(minutes=max(2, base // 3))   # con problemas se reprueba más seguido
+        step = timedelta(minutes=base) if h["state"] in ("ok", "unknown") else timedelta(minutes=max(2, base // 3))   # con problemas se reprueba más seguido
         if not last or now() - last >= step:
             out.append(l)
     return out
+
+
+async def recover_linked() -> None:
+    """Líneas marcadas «sin vincular / desconectada / sin instancia» que ya están conectadas: cierra la alerta sin esperar la prueba (también con el monitor apagado)."""
+    for l in all_lines(False):
+        h = await health_row(l["slug"], l["instance"])
+        if h.get("state") in ("sin_vincular", "desconectada", "sin_instancia") and await conn_state(l["url"], l["key"], l["instance"]) == "open":
+            await on_connected(l["slug"], l["instance"])
 
 
 async def tick() -> None:
@@ -529,6 +553,7 @@ async def tick() -> None:
         return
     _busy = True
     try:
+        await recover_linked()
         c = cfg()
         if not c["enabled"]:
             return
@@ -749,7 +774,10 @@ def init(deps) -> None:
     async def _wa_state(slug: str, lineId: str = "", actor: str = Depends(me)):
         """Estado de la sesión de WhatsApp de una línea de Evolution (empresa o «__monitor»)."""
         t = _target(slug, lineId)
-        return {"instance": t["instance"], "company": t["company"], "state": await conn_state(t["url"], t["key"], t["instance"])}
+        st = await conn_state(t["url"], t["key"], t["instance"])
+        if st == "open" and slug != "__monitor":
+            asyncio.create_task(on_connected(slug, t["instance"]))
+        return {"instance": t["instance"], "company": t["company"], "state": st}
 
     @r.post("/api/whatsapp/{slug}/qr")
     async def _wa_qr(slug: str, body: dict, actor: str = Depends(me)):
@@ -768,6 +796,8 @@ def init(deps) -> None:
                     raise HTTPException(502, f"Evolution respondió {cr.status_code}: {cr.text[:140]}")
             st = await conn_state(t["url"], t["key"], t["instance"])
         if st == "open":
+            if slug != "__monitor":
+                asyncio.create_task(on_connected(slug, t["instance"]))
             return {"connected": True, "state": st, "instance": t["instance"]}
         q = await ev("GET", t["url"], t["key"], f"/instance/connect/{t['instance']}")
         if q.status_code >= 400:

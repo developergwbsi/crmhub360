@@ -272,15 +272,20 @@ def init(deps) -> None:
     @r.get("/api/wa-lines/{name}/state")
     async def line_state(name: str, actor: str = Depends(me)):
         """Estado de la sesión de WhatsApp de la línea (open, close, connecting…)."""
-        prov, _ = await locate(name)
-        return {"instance": name, "state": (await instance_info(prov, name))["state"]}
+        prov, asg = await locate(name)
+        st = (await instance_info(prov, name))["state"]
+        if st == "open" and asg:
+            asyncio.create_task(evomon.on_connected(asg["slug"], name))
+        return {"instance": name, "state": st}
 
     @r.post("/api/wa-lines/{name}/qr")
     async def line_qr(name: str, actor: str = Depends(me)):
         """Código QR actual para vincular el teléfono de la línea (se audita cada vez que se pide)."""
-        prov, _ = await locate(name)
+        prov, asg = await locate(name)
         info = await instance_info(prov, name)
         if info["state"] == "open":
+            if asg:
+                asyncio.create_task(evomon.on_connected(asg["slug"], name))
             return {"connected": True, "state": "open", "instance": name}
         q = await ev("GET", prov, f"/instance/connect/{name}")
         if q.status_code >= 400:
