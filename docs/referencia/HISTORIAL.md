@@ -2,6 +2,11 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
+## Sin publicar (después de v1.0.0)
+
+- `8326b20` 2026-10-10 — Historial con la etiqueta v1.0.0; gen-docs --check ignora el historial (depende de los propios commits)
+- `78b064a` 2026-10-10 — Historial generado con la etiqueta v1.0.0
+
 ## v1.0.0
 
 - `c8a06c0` 2026-10-10 — Versión 1.0.0

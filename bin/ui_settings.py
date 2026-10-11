@@ -84,6 +84,17 @@ if __name__ == "__main__":  # python3 ui_settings.py <base_url> <admin_user> <ad
             return json.loads(raw) if raw else {}
 
     call("PUT", "Settings", UI_SETTINGS)
+    # sesiones: solo se fijan si siguen en el valor de fábrica de EspoCRM (así no se pisa lo que el administrador ajuste en Administración → Autenticación)
+    cur = call("GET", "Settings")
+    sess = {}
+    if not cur.get("authTokenLifetime"):                    # 0 = la sesión nunca vence
+        sess["authTokenLifetime"] = 12                      # horas: una jornada
+    if (cur.get("authTokenMaxIdleTime") or 48) >= 48:       # 48 h sin uso es el valor de fábrica
+        sess["authTokenMaxIdleTime"] = 1                    # horas sin ninguna consulta (pestaña cerrada)
+    if cur.get("crmhubIdleMinutes") in (None, ""):
+        sess["crmhubIdleMinutes"] = 30                      # minutos sin actividad de la persona (el navegador avisa y cierra); 0 = desactivado
+    if sess:
+        call("PUT", "Settings", sess)
     me = call("GET", "App/user")["user"]["id"]
     # el administrador ya tiene Preferencias propias: se reinician el dashboard y el tema para que hereden lo nuevo
     call("PUT", f"Preferences/{me}", {"dashboardLayout": DASH_LAYOUT, "dashletsOptions": DASH_OPTIONS, "useCustomTabList": False, "theme": ""})

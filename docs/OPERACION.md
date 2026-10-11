@@ -90,6 +90,16 @@ Pendiente: las copias están en el mismo servidor; sincronízalas a un almacenam
 | Evolution rechaza con 400 | La instancia no está vinculada (escanear el QR en Integraciones → Mensajería). |
 | «Sin asesor» pero lo atiende el comercial virtual | Corregido en 1.0.0: el panel consulta `/v1/agent/attended`. |
 
+## Sesiones de usuario (cierre por inactividad)
+
+| Ajuste de EspoCRM | Valor por defecto del producto | Efecto |
+|---|---|---|
+| `crmhubIdleMinutes` | 30 | El navegador avisa 60 s antes y cierra la sesión tras ese tiempo sin actividad **real** de la persona (mouse, teclado, toque, scroll; compartido entre pestañas). `0` lo desactiva. |
+| `authTokenLifetime` | 12 (horas) | Vida máxima de una sesión (de fábrica en Espo: 0 = nunca vence). |
+| `authTokenMaxIdleTime` | 1 (hora) | Caducidad en el servidor si no llega **ninguna** consulta (navegador cerrado). De fábrica: 48 h. |
+
+El cierre del navegador (`crmhub-boot.js`, `startIdle`) es necesario porque, mientras una pestaña esté abierta, las consultas automáticas (avisos, listas en vivo) mantienen el acceso «activo» para el servidor. `tenant:ui` aplica estos valores **solo si siguen en el de fábrica** (`bin/ui_settings.py`); los dos de autenticación se cambian en *Administración → Autenticación*, y `crmhubIdleMinutes` con `PUT /api/v1/Settings`. El Centro de control tiene su propia sesión con caducidad; los comerciales virtuales no usan sesión de navegador (el Hub usa un usuario API con clave).
+
 ## Pendientes operativos conocidos
 
 Cambiar la clave del admin de prod, respaldos fuera del servidor, afinar la lectura de PDF con documentos reales, aplicar `max_users` dentro de EspoCRM y vincular el QR de WhatsApp de prod (lo hace la empresa desde Integraciones).

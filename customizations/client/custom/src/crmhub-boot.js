@@ -4,6 +4,7 @@
  * Modo claro/oscuro, colores por sección del menú, PWA (service worker /client/custom/sw.js, instalación),
  * aviso de pérdida/retorno de conexión (eventos online/offline y latido a version.json) y aviso de nueva versión.
  * Endpoints: CrmHub/push/key, CrmHub/push/subscribe y CrmHub/push/unsubscribe (notificaciones push); App/user (nombre de la empresa y modo solo lectura).
+ * Cierre de sesión por inactividad (ajuste crmhubIdleMinutes, por defecto 30 min; 0 = desactivado) con aviso de 60 s.
  * También carga bajo demanda custom:doc-watch, decora tablas y estados vacíos y fija el encabezado de página.
  */
 (function () {
@@ -66,6 +67,7 @@
     function ensureTools() {
         var bar = document.querySelector('#navbar .navbar-right');
         var login = document.querySelector('.crmhub-login');
+        idleNotice(login);
         // Dentro de la app: en la barra superior. En el login (sin barra): flotante arriba a la derecha.
         if (bar) {
             var f = document.getElementById('ch-float-tools'); if (f) { f.remove(); }
@@ -364,6 +366,7 @@
         if (roChecked || !document.body.classList.contains('has-navbar') || !window.Espo || !Espo.Ajax) { return; }
         roChecked = true;
         Espo.Ajax.getRequest('App/user').then(function (r) {
+            startIdle(r && r.settings);
             var n = r && r.settings && r.settings.applicationName;
             if (n) { try { localStorage.setItem('ch-app-name', n); } catch (e) { /* privado */ } paintBrand(); }
             // el nombre del usuario recordado se guarda para la bienvenida del próximo inicio de sesión
@@ -377,6 +380,66 @@
                 }
             }
         }).catch(function () { roChecked = false; });
+    }
+
+    /* ---------------- Cierre de sesión por inactividad ----------------
+       El servidor no puede saberlo: mientras haya una pestaña abierta, las consultas automáticas (avisos, listas en vivo) mantienen el acceso «activo».
+       Por eso se mide la actividad REAL de la persona (mouse, teclado, toque, desplazamiento), compartida entre pestañas, y al cumplirse el tiempo
+       se avisa 60 s antes y se cierra la sesión. Tiempo en minutos: ajuste crmhubIdleMinutes (0 = sin cierre automático). */
+    var IDLE_KEY = 'ch-activity', IDLE_OUT = 'ch-idle-out', idleOn = false, idleLast = Date.now(), idleWritten = 0, idleWarn = null;
+    function idleTouch() {
+        idleLast = Date.now();
+        if (idleLast - idleWritten > 10000) { idleWritten = idleLast; lsSet(IDLE_KEY, String(idleLast)); }
+        if (idleWarn) { idleHideWarn(); }
+    }
+    function idleSince() { return Date.now() - Math.max(idleLast, parseInt(lsGet(IDLE_KEY) || '0', 10) || 0); }
+    function idleHideWarn() { if (idleWarn) { clearInterval(idleWarn.t); idleWarn.node.remove(); idleWarn = null; } }
+    function idleLogout() {
+        idleHideWarn();
+        lsSet(IDLE_OUT, String(Date.now()));
+        // se usa el mismo «Salir» del menú: así Espo anula el acceso en el servidor y limpia su estado; si no está, se descarta el acceso local y se recarga
+        var out = document.querySelector('#navbar a[data-name="logout"]');
+        if (out) { out.click(); } else { try { localStorage.removeItem('espo-user-auth'); } catch (e) { /* privado */ } location.reload(); }
+    }
+    function idleShowWarn(msLeft) {
+        if (idleWarn) { return; }
+        var node = el('<div class="ch-idle-back" role="alertdialog" aria-live="assertive"><div class="ch-idle-box"><span class="fas fa-hourglass-half ch-idle-ico"></span>' +
+            '<h4>¿Sigues ahí?</h4><p>Por seguridad cerraremos tu sesión por inactividad en <b data-ch-idle-n></b> segundos.</p>' +
+            '<button class="btn btn-primary" data-ch-idle-stay>Seguir conectado</button></div></div>');
+        document.body.appendChild(node);
+        idleWarn = {node: node, t: setInterval(function () {
+            var left = Math.ceil((idleWarn ? idleWarn.end - Date.now() : 0) / 1000);
+            var n = node.querySelector('[data-ch-idle-n]'); if (n) { n.textContent = Math.max(0, left); }
+            if (left <= 0) { idleLogout(); }
+        }, 500), end: Date.now() + msLeft};
+        node.querySelector('[data-ch-idle-n]').textContent = Math.ceil(msLeft / 1000);
+        node.querySelector('[data-ch-idle-stay]').addEventListener('click', idleTouch);
+    }
+    function startIdle(settings) {
+        if (idleOn) { return; }
+        var m = settings && settings.crmhubIdleMinutes;
+        m = (m === undefined || m === null || m === '') ? 30 : Number(m);
+        if (!(m > 0)) { return; }
+        idleOn = true;
+        var limit = m * 60000, warn = Math.min(60000, limit / 2);
+        ['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(function (ev) { document.addEventListener(ev, idleTouch, {passive: true, capture: true}); });
+        idleTouch();
+        setInterval(function () {
+            if (!document.body.classList.contains('has-navbar')) { return; }
+            var idle = idleSince();
+            if (idle >= limit) { idleLogout(); }
+            else if (idle >= limit - warn && !idleWarn) { idleShowWarn(limit - idle); }
+            else if (idle < limit - warn && idleWarn) { idleHideWarn(); }   // hubo actividad en otra pestaña
+        }, 5000);
+    }
+    // Tras cerrarse por inactividad, el login lo explica
+    function idleNotice(login) {
+        if (!login || document.getElementById('ch-idle-note')) { return; }
+        var t = parseInt(lsGet(IDLE_OUT) || '0', 10);
+        if (!t || Date.now() - t > 6 * 3600000) { return; }
+        var box = login.querySelector('form') || login;
+        box.insertBefore(el('<div id="ch-idle-note" class="ch-idle-note"><span class="fas fa-lock"></span> Cerramos tu sesión por inactividad. Ingresa de nuevo para continuar.</div>'), box.firstChild);
+        try { localStorage.removeItem(IDLE_OUT); } catch (e) { /* privado */ }
     }
 
     /* ---------------- Estados vacíos: ilustración divertida en vez de un texto suelto ---------------- */

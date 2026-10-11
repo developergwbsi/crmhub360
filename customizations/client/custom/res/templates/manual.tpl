@@ -13,6 +13,7 @@
 <li>Entra a la dirección de tu empresa e inicia sesión con tu usuario y contraseña.</li>
 <li>Cambia tu contraseña la primera vez: menú de tu usuario (arriba a la derecha) → <b>Preferencias</b>.</li>
 <li>El menú lateral izquierdo da acceso a <b>Leads</b>, cuentas, contactos, oportunidades, tareas y calendario.</li>
+<li><b>Seguridad de la sesión:</b> si dejas de usar la pantalla durante <b>30 minutos</b> (sin mover el mouse, teclear ni tocar), aparece el aviso «¿Sigues ahí?» y, si no respondes en 60 segundos, la sesión se cierra sola. Al volver verás el inicio de sesión con un aviso. Además, una sesión nunca dura más de <b>12 horas</b>, y si cierras el navegador y pasa más de una hora sin usarla, también caduca. Guarda tu trabajo antes de dejar la pantalla sola.</li>
 <li>Usa la lupa superior para buscar cualquier registro por nombre, teléfono o correo.</li>
 <li>Con la flecha de abajo a la izquierda puedes <b>contraer el menú</b>; al pasar el mouse sobre cada ícono verás su nombre. Si lo abres desde el modo contraído (☰), el contenido se desplaza en vez de taparse.</li>
 </ol>
