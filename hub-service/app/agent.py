@@ -857,6 +857,19 @@ def stats(tenant: str, days: int = 30) -> dict:
             "series": [dict(r) for r in series], "states": {r["state"]: r["n"] for r in states}, "usage": usage(tenant), "byAgent": by_agent(tenant, days)}
 
 
+def attended(tenant: dict) -> dict:
+    """Leads que hoy gestiona un comercial virtual (activo o esperando respuesta del cliente): {lead_id: {"agent", "name"}}. Los que ya pasó a una persona o detuvo no cuentan."""
+    if not licensed(tenant):
+        return {}
+    names = {a["id"]: {"agent": a["id"], "name": (a["config"].get("persona") or {}).get("name") or a.get("name") or "Comercial virtual"} for a in agents(tenant) if a.get("enabled", True)}
+    out: dict[str, dict] = {}
+    with db.pool.connection() as c:
+        for r in c.execute("SELECT lead_id, coalesce(agent_id, 'main') a FROM agent_leads WHERE tenant=%s AND state IN ('active','waiting_reply','awaiting_approval')", (tenant["slug"],)).fetchall():
+            if r["a"] in names:
+                out[r["lead_id"]] = names[r["a"]]
+    return out
+
+
 def by_agent(tenant: str, days: int = 30) -> dict:
     """Por comercial virtual: leads a su cargo, activos y mensajes enviados de verdad en el periodo."""
     out: dict[str, dict] = {}

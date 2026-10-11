@@ -50,7 +50,7 @@ define('custom:views/dashlets/crmhub-panel', ['views/dashlets/abstract/base', 'c
             const k = m.kpi;
             const kpis = [
                 {label: 'Leads captados', value: nf.format(k.leads), sub: `${nf.format(k.nuevosHoy)} nuevos hoy`, icon: 'fas fa-user-plus', tone: 'primary'},
-                {label: 'Sin asesor', value: nf.format(k.sinAsesor), sub: k.sinAsesor ? 'Requieren asignación' : 'Todo asignado', icon: 'fas fa-user-clock', tone: k.sinAsesor ? 'warn' : 'ok'},
+                {label: 'Sin asesor', value: nf.format(k.sinAsesor), sub: (k.sinAsesor ? 'Requieren asignación' : 'Todo asignado') + (k.conVirtual ? ` · ${nf.format(k.conVirtual)} los atiende el comercial virtual` : ''), icon: 'fas fa-user-clock', tone: k.sinAsesor ? 'warn' : 'ok'},
                 {label: 'Tasa de calificación', value: nf.format(k.tasaCalificacion) + '%', sub: `${nf.format(k.califican)} de ${nf.format(k.evaluados)} evaluados`, icon: 'fas fa-filter', tone: 'violet'},
                 {label: 'Cierres exitosos', value: nf.format(k.cierres), sub: `${nf.format(k.tasaCierre)}% de los captados`, icon: 'fas fa-handshake', tone: 'ok'},
                 {label: 'Deuda en cartera', value: money(k.deudaTotal), sub: 'Suma de los leads visibles', icon: 'fas fa-wallet', tone: 'info'},
@@ -66,7 +66,7 @@ define('custom:views/dashlets/crmhub-panel', ['views/dashlets/abstract/base', 'c
                 servicio: bars(m.servicio, (r, i) => PALETTE[i % PALETTE.length]),
                 origen: bars(m.origen, (r, i) => PALETTE[(i + 3) % PALETTE.length]),
                 campanas: bars(m.campanas, (r, i) => PALETTE[(i + 1) % PALETTE.length]),
-                asesores: m.asesores, hasAsesores: m.asesores.length > 0, multi: m.scope !== 'no',
+                asesores: m.asesores.map(a => ({...a, virtual: !!a.virtual})), hasAsesores: m.asesores.length > 0, multi: m.scope !== 'no',
                 tendencia, trendTotal: tot, trendNote: m.bucketDays > 1 ? `Cada barra agrupa ${m.bucketDays} días` : 'Una barra por día',
                 hasServicio: m.servicio.length > 0, hasCampanas: m.campanas.length > 0,
             };

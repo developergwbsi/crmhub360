@@ -1240,6 +1240,11 @@ async def agent_approval(req: AgentApprovalReq, tenant: dict = Depends(tenant_au
     return agent.lead_state(tenant, req.leadId)
 
 
+@app.get("/v1/agent/attended")
+def agent_attended(tenant: dict = Depends(tenant_auth)):
+    return {"leads": agent.attended(tenant)}
+
+
 @app.get("/v1/agent/stats")
 async def agent_stats(days: int = 30, tenant: dict = Depends(tenant_auth)):
     return {**agent.stats(tenant["slug"], max(1, min(365, days))), "events": agent.events(tenant["slug"], None, 40)}

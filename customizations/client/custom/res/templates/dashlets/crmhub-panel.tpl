@@ -41,7 +41,7 @@
     <div class="ch-box"><h5>{{#if multi}}Rendimiento por asesor{{else}}Mi rendimiento{{/if}}</h5>
       {{#if hasAsesores}}
       <table class="table ch-table ch-rank"><thead><tr><th>Asesor</th><th>Leads</th><th>Califican</th><th>Cierres</th></tr></thead>
-        <tbody>{{#each asesores}}<tr><td>{{name}}</td><td>{{leads}}</td><td>{{califican}}</td><td><b>{{cierres}}</b></td></tr>{{/each}}</tbody></table>
+        <tbody>{{#each asesores}}<tr><td>{{#if virtual}}<span class="fas fa-robot" title="Lo atiende un comercial virtual" style="margin-right:6px;opacity:.7"></span>{{/if}}{{name}}</td><td>{{leads}}</td><td>{{califican}}</td><td><b>{{cierres}}</b></td></tr>{{/each}}</tbody></table>
       {{else}}<div class="ch-muted ch-small">Sin datos en el periodo.</div>{{/if}}
     </div>
     <div class="ch-box"><h5>Campañas con más leads</h5>

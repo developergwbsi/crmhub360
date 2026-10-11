@@ -289,7 +289,7 @@ class CrmHub
         $closedList = $assigner->closedStatuses();
         $ignored = $this->metadata->get(['scopes', 'Lead', 'kanbanStatusIgnoreList'], []);
         $stages = array_values(array_diff($this->metadata->get(['entityDefs', 'Lead', 'fields', 'status', 'options'], self::PIPELINE), $ignored));
-        $k = ['leads' => 0, 'nuevosHoy' => 0, 'sinAsesor' => 0, 'evaluados' => 0, 'califican' => 0, 'cierres' => 0,
+        $k = ['leads' => 0, 'nuevosHoy' => 0, 'sinAsesor' => 0, 'conVirtual' => 0, 'evaluados' => 0, 'califican' => 0, 'cierres' => 0,
               'deudaTotal' => 0, 'deudaMora' => 0, 'abiertos' => 0];
         $estado = array_fill_keys($stages, 0);
         $servicio = $origen = $campana = $asesor = [];
@@ -299,6 +299,12 @@ class CrmHub
             $trend[gmdate('Y-m-d', $now - $i * $bucket * 86400)] = 0;
         }
         $trendKeys = array_keys($trend);
+        // leads que hoy gestiona un comercial virtual: sin asesor humano, pero no «sin atender»
+        $virtual = [];
+        try {
+            $virtual = (array) (($this->hubCall('GET', '/v1/agent/attended', null, 5)['leads'] ?? []));
+        } catch (\Throwable $e) {
+        }
 
         foreach ($leads as $l) {
             if ($l->get('isSimulation') || $l->get('isThread')) {
@@ -323,7 +329,10 @@ class CrmHub
             }
             $k['leads']++;
             $uid = $l->get('assignedUserId');
-            if (!$uid) {
+            $va = !$uid ? ($virtual[$l->getId()] ?? null) : null;
+            if (!$uid && $va) {
+                $k['conVirtual']++;
+            } elseif (!$uid) {
                 $k['sinAsesor']++;
             }
             $q = (string) $l->get('qualificationStatus');
@@ -343,8 +352,8 @@ class CrmHub
                 $cn = $camps[$cid] ?? 'Campaña';
                 $campana[$cn] = ($campana[$cn] ?? 0) + 1;
             }
-            $an = $uid ? ($names[$uid] ?? $uid) : 'Sin asesor';
-            $asesor[$an] ??= ['name' => $an, 'leads' => 0, 'califican' => 0, 'cierres' => 0];
+            $an = $uid ? ($names[$uid] ?? $uid) : ($va ? 'Comercial virtual · ' . ($va['name'] ?? '') : 'Sin asesor');
+            $asesor[$an] ??= ['name' => $an, 'leads' => 0, 'califican' => 0, 'cierres' => 0, 'virtual' => !$uid && $va];
             $asesor[$an]['leads']++;
             $asesor[$an]['califican'] += $q === 'Califica' ? 1 : 0;
             $asesor[$an]['cierres'] += $won ? 1 : 0;
