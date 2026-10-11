@@ -172,6 +172,9 @@ async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None,
             logging.getLogger("crmhub").warning("opción de menú: %s", str(e)[:100])
     await Espo(tenant).note(lead_id, f"[WhatsApp] {'→ Celular de la línea' if from_me else '← ' + (name or 'Cliente')}: {text}")
     if not from_me:
+        from . import usage
+        usage.record(tenant, "whatsapp", whatsapp.provider(tenant), direction="in")
+    if not from_me:
         await notify_owner(tenant, lead_id, name, text)
         if not is_optout(text):
             from . import agent

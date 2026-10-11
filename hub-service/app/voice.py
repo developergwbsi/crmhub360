@@ -1,6 +1,6 @@
 """Llamadas desde el CRM (click-to-call): el proveedor/central llama PRIMERO al teléfono o extensión del asesor y, al contestar,
 lo conecta con el cliente. La troncal SIP vive en el proveedor (Twilio, Telnyx…) o en tu central (Asterisk/FreePBX, 3CX…)."""
-from . import config, httpgen, lines, twilio
+from . import config, httpgen, lines, twilio, usage
 from .espo import Espo
 from .ingest import normalize_phone
 
@@ -64,7 +64,9 @@ async def call(tenant: dict, lead_id: str, agent_phone: str, agent: str, agent_i
                 "Url": f"https://{host}/hub/voice-bridge?token={token}&to={customer.lstrip('+')}",
                 "StatusCallback": f"https://{host}/hub/voice-status?token={token}&call={rec['id']}", "StatusCallbackEvent": "completed"}
         res = await twilio.post(tenant, "Calls.json", data)
+        usage.record(tenant, "voice", p, units=1, kind="call", ext_id=res.get("sid") or "")   # los minutos se suman cuando el proveedor avisa que la llamada terminó
         return {"ok": True, "callId": rec["id"], "provider": p, "sid": res.get("sid")}
     cfg = (tenant.get("settings") or {}).get("generic_voice")
     await httpgen.call(cfg, {"to": customer, "agent_phone": me, "lead_id": lead_id, "name": lead.get("name", ""), "agent": agent})
+    usage.record(tenant, "voice", p, units=1, kind="call")
     return {"ok": True, "callId": rec["id"], "provider": p}

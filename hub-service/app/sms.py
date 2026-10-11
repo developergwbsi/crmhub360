@@ -1,6 +1,6 @@
 """SMS: Twilio o cualquier proveedor por API HTTP. El remitente puede ser un número largo, un código corto o un ID alfanumérico
 (lo que tu proveedor haya habilitado para tu cuenta)."""
-from . import httpgen, lines, twilio
+from . import httpgen, lines, twilio, usage
 from .espo import Espo
 from .ingest import normalize_phone
 
@@ -27,10 +27,12 @@ async def send_text(tenant: dict, phone: str, text: str, lead: dict | None = Non
     tenant = lines.effective(tenant, "sms")
     p = provider(tenant)
     if p == "twilio":
-        await twilio.post(tenant, "Messages.json", {**twilio.sender(tenant, "twilio_sms_from"), "To": phone, "Body": text})
+        res = await twilio.post(tenant, "Messages.json", {**twilio.sender(tenant, "twilio_sms_from"), "To": phone, "Body": text})
+        usage.record(tenant, "sms", p, units=info(text)["segments"], ext_id=res.get("sid") or "")   # el consumo de SMS se mide en segmentos
     elif p == "generic":
         cfg = (tenant.get("settings") or {}).get("generic_sms")
         await httpgen.call(cfg, {"to": phone, "text": text, "name": (lead or {}).get("name", ""), "lead_id": (lead or {}).get("id", ""), "agent": agent})
+        usage.record(tenant, "sms", p, units=info(text)["segments"])
     else:
         raise ValueError("SMS no está configurado (Integraciones → SMS).")
 

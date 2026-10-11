@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 
+from . import usage
 from .espo import Espo
 
 ADDR = re.compile(r"^[^@\s,;<>]{1,64}@[^@\s,;<>]{1,190}\.[A-Za-z]{2,}$")
@@ -86,6 +87,7 @@ async def send(tenant: dict, req: dict) -> dict:
     for f in req.get("attachments") or []:
         msg.add_attachment(f["bytes"], maintype="application", subtype="pdf", filename=f["name"])
     await asyncio.to_thread(_smtp_send, cfg, msg, to + cc)
+    usage.record(tenant, "email", "smtp", units=len(to + cc), ext_id=mid)
     data = {"name": msg["Subject"], "from": cfg["from_address"], "fromName": uname, "to": ";".join(to), "cc": ";".join(cc), "replyTo": reply_to, "body": html, "bodyPlain": plain_of(html),
             "fromString": formataddr((str(req.get("authorLabel") or uname)[:100], cfg["from_address"])),   # quién lo envió (en el CRM se ve como remitente del registro)
             "isHtml": True, "status": "Sent", "dateSent": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), "messageId": mid, "assignedUserId": uid, "usersIds": [uid]}

@@ -1578,8 +1578,11 @@ async def security_headers(request: Request, call_next):
 # Monitor de conexión de Evolution (alertas, línea de pruebas y vinculación por QR desde el Centro): módulo aparte que recibe las utilidades de este archivo
 from types import SimpleNamespace  # noqa: E402
 from . import evomon  # noqa: E402
-evomon.init(SimpleNamespace(app=app, db=db, get_setting=get_setting, put_setting=put_setting, audit=audit, smtp_send=smtp_send, providers_list=providers_list, me=me,
-                            account=account, CONTROL_HOST=CONTROL_HOST))
+_deps = SimpleNamespace(app=app, db=db, get_setting=get_setting, put_setting=put_setting, audit=audit, smtp_send=smtp_send, providers_list=providers_list, me=me,
+                        account=account, CONTROL_HOST=CONTROL_HOST)
+evomon.init(_deps)
+from . import usage_cc  # noqa: E402  consumo y tarifas
+usage_cc.init(_deps)
 
 if __name__ == "__main__":
     uvicorn.run(app, host=BIND_HOST, port=PORT, log_level="info", proxy_headers=False)

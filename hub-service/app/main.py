@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import monitor, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -40,6 +40,7 @@ async def lifespan(_: FastAPI):
     documents.ensure_schema()
     agent.ensure_schema()
     monitor.ensure_schema()
+    usage.ensure_schema()
     templates.ensure_schema()
     bg = asyncio.create_task(broadcast.worker())
     mb = asyncio.create_task(mailbox.worker())
@@ -227,6 +228,8 @@ async def voice_status(slug: str, request: Request):
     form = {k: v[0] for k, v in parse_qs((await request.body()).decode("utf-8", "replace"), keep_blank_values=True).items()}
     call_id = request.query_params.get("call", "")
     st, dur = form.get("CallStatus", ""), int(form.get("CallDuration") or 0)
+    if st == "completed" and dur > 0:   # minutos facturables de la llamada (se redondea hacia arriba, como cobran los proveedores)
+        usage.record(tenant, "voice", "twilio", units=-(-dur // 60), kind="minutes", ext_id=form.get("CallSid", ""))
     if call_id and st:
         from .espo import Espo
         espo = Espo(tenant)

@@ -6,7 +6,7 @@ import time
 
 import httpx
 
-from . import config, httpgen, lines, routing, twilio
+from . import config, httpgen, lines, routing, twilio, usage
 from .espo import Espo
 from .ingest import normalize_phone
 
@@ -124,36 +124,56 @@ def _err(r: httpx.Response) -> str:
 
 
 # ---------------- envío ----------------
-async def send_text(tenant: dict, phone: str, text: str) -> None:
+async def send_text(tenant: dict, phone: str, text: str, *, kind: str = "text") -> None:
     """Envía un texto por el proveedor configurado, sin dejar nota; ValueError si el proveedor lo rechaza o no hay configuración."""
     tenant = lines.effective(tenant, "whatsapp")
     p = provider(tenant)
     number = phone.lstrip("+")
+    ext = ""
     async with httpx.AsyncClient(timeout=25) as c:
         if p == "evolution":
             url, key, inst = _need(tenant, "evolution_url", "evolution_apikey", "evolution_instance")
             r = await c.post(f"{url.rstrip('/')}/message/sendText/{inst}", headers={"apikey": key}, json={"number": number, "text": text})
+            ext = _jget(r, "key", "id")
         elif p == "meta":
             pid, tok = _need(tenant, "meta_phone_number_id", "meta_access_token")
             r = await c.post(f"{config.META_GRAPH_BASE}/{pid}/messages", headers={"Authorization": f"Bearer {tok}"},
                              json={"messaging_product": "whatsapp", "to": number, "type": "text", "text": {"body": text, "preview_url": False}})
+            ext = _jget(r, "messages", 0, "id")
         elif p == "gupshup":
             key, src, app = _need(tenant, "gupshup_api_key", "gupshup_source", "gupshup_app_name")
             r = await c.post(f"{config.GUPSHUP_BASE}/wa/api/v1/msg", headers={"apikey": key},
                              data={"channel": "whatsapp", "source": src.lstrip("+"), "destination": number, "src.name": app,
                                    "message": json.dumps({"type": "text", "text": text})})
+            ext = _jget(r, "messageId")
         elif p == "twilio":
             frm = twilio.sender(tenant, "twilio_wa_from")
-            await twilio.post(tenant, "Messages.json", {**({"MessagingServiceSid": frm["MessagingServiceSid"]} if "MessagingServiceSid" in frm else {"From": "whatsapp:" + frm["From"].replace("whatsapp:", "")}),
-                                                        "To": "whatsapp:" + phone, "Body": text})
+            res = await twilio.post(tenant, "Messages.json", {**({"MessagingServiceSid": frm["MessagingServiceSid"]} if "MessagingServiceSid" in frm else {"From": "whatsapp:" + frm["From"].replace("whatsapp:", "")}),
+                                                              "To": "whatsapp:" + phone, "Body": text})
+            usage.record(tenant, "whatsapp", p, kind=kind, ext_id=res.get("sid") or "")
             return
         elif p == "generic":
             await httpgen.call((tenant.get("settings") or {}).get("generic_whatsapp"), {"to": phone, "text": text})
+            usage.record(tenant, "whatsapp", p, kind=kind)
             return
         else:
             raise ValueError("WhatsApp no está configurado (Integraciones → Mensajería).")
     if r.status_code >= 400:
         raise ValueError(f"{PROVIDERS[p]} rechazó el mensaje ({r.status_code}): {_err(r)}")
+    usage.record(tenant, "whatsapp", p, kind=kind, ext_id=ext)   # consumo medido (empresa, proveedor y línea)
+
+
+
+
+def _jget(r: httpx.Response, *path):
+    """Valor anidado de la respuesta JSON de un proveedor (para guardar el id del mensaje); cadena vacía si no está."""
+    try:
+        v = r.json()
+        for k in path:
+            v = v[k]
+        return str(v)
+    except Exception:
+        return ""
 
 
 # ---------------- formato ----------------
@@ -191,6 +211,7 @@ async def send_menu_phone(tenant: dict, phone: str, menu: dict, intro: str = "",
             r = await c.post(f"{config.META_GRAPH_BASE}/{pid}/messages", headers={"Authorization": f"Bearer {tok}"},
                              json={"messaging_product": "whatsapp", "to": number, "type": "interactive", "interactive": inter})
             if r.status_code < 400:
+                usage.record(tenant, "whatsapp", "meta", kind="interactive", ext_id=_jget(r, "messages", 0, "id"))
                 return {"text": body + "\n\n" + "\n".join(f"• {o['title']}" for o in opts), "native": True}
         elif p == "evolution" and native_evolution:
             url, key, inst = _need(tenant, "evolution_url", "evolution_apikey", "evolution_instance")

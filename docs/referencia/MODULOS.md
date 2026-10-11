@@ -36,6 +36,7 @@
 | `telegram.py` | Telegram (Bot API): el cliente puede escribir al bot de la empresa o abrir el enlace de invitación que recibe del formulario/asesor; los mensajes se registran en el flujo del lead y los asesores responden desde el CRM. |
 | `templates.py` | Plantillas personales de cada usuario (correo, WhatsApp, Telegram y SMS): privadas, hasta MAX por canal. |
 | `twilio.py` | Cliente mínimo de Twilio (SMS, WhatsApp y llamadas con la misma cuenta). |
+| `usage.py` | Libro de consumo: cada mensaje, llamada o correo que sale (o entra) por el Hub queda registrado por empresa, canal, proveedor y línea, con unidades y costo/precio estimados. |
 | `voice.py` | Llamadas desde el CRM (click-to-call): el proveedor/central llama PRIMERO al teléfono o extensión del asesor y, al contestar, lo conecta con el cliente. La troncal SIP vive en el proveedor (Twilio, Telnyx…) o en tu central (Asterisk/FreePBX, 3CX…). |
 | `whatsapp.py` | WhatsApp con varios proveedores: Evolution API, Meta WhatsApp Cloud API y Gupshup. Cada empresa elige uno (tenants.settings.wa_provider). Las credenciales viven en tenants.settings y nunca se devuelven a la interfaz. |
 
@@ -45,6 +46,7 @@
 |---|---|
 | `evomon.py` | Monitor de conexión de Evolution API (WhatsApp) del Centro de control. |
 | `main.py` | Crm Hub 360 - Centro de control: crear y vigilar empresas, restablecer claves y entrar en modo lectura. No ejecuta nada privilegiado: encola trabajos que realiza `bin/control-worker` en el servidor. |
+| `usage_cc.py` | Consumo y tarifas en el Centro de control: lee el libro de consumo del Hub (tabla usage_events) y lo resume por empresa, canal y proveedor. |
 | `welcome.py` | Plantilla de bienvenida de una empresa nueva (correo HTML a prueba de clientes de correo: tablas y estilos en línea). Marcadores: {{nombre}} {{apellido}} {{empresa}} {{url}} {{usuario}} {{clave}} {{ciudad}} {{pais}} {{anio}} |
 
 ## EspoCRM — PHP (`customizations/Espo/Custom/`)

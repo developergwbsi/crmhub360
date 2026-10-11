@@ -10,7 +10,7 @@
 | [ESPOCRM-PERSONALIZACION](ESPOCRM-PERSONALIZACION.md) | Qué se agrega a EspoCRM (PHP, hooks, cliente, tema, PWA) |
 | [MANUAL-USUARIO](MANUAL-USUARIO.md) | Manual de usuario completo (generado desde el del CRM) |
 
-**Módulos** (cómo funciona cada área por dentro): [Formularios web](modulos/FORMULARIOS.md) · [Comercial virtual](modulos/COMERCIAL-VIRTUAL.md) · [Mensajería](modulos/MENSAJERIA.md) · [Tiempo real y notificaciones](modulos/TIEMPO-REAL.md) · [Centro de control](modulos/CENTRO-DE-CONTROL.md) · [Monitor de WhatsApp](modulos/MONITOR-WHATSAPP.md)
+**Módulos** (cómo funciona cada área por dentro): [Formularios web](modulos/FORMULARIOS.md) · [Comercial virtual](modulos/COMERCIAL-VIRTUAL.md) · [Mensajería](modulos/MENSAJERIA.md) · [Tiempo real y notificaciones](modulos/TIEMPO-REAL.md) · [Centro de control](modulos/CENTRO-DE-CONTROL.md) · [Monitor de WhatsApp](modulos/MONITOR-WHATSAPP.md) · [Consumo y tarifas](modulos/CONSUMO-Y-TARIFAS.md)
 
 **Referencia generada** (`bin/gen-docs`): [API del Hub](referencia/API-HUB.md) · [API del Centro](referencia/API-CENTRO.md) · [Rutas de EspoCRM](referencia/RUTAS-ESPO.md) · [Módulos y archivos](referencia/MODULOS.md) · [Historial](referencia/HISTORIAL.md)
 

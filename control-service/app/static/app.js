@@ -120,7 +120,7 @@
   function shell() {
     $app.innerHTML = `<div class="top"><div class="brand"><i>◆</i><span>Crm Hub 360 <small>· Centro de control</small></span></div><span class="grow"></span>
       <button class="btn sm" id="acc"><span id="who">Mi cuenta</span></button><button class="btn sm" id="out">Salir</button></div>
-      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="monitor">Monitor WhatsApp<span class="tabdot" id="mon-badge" hidden></span></button><button class="tab" data-t="actividad">Actividad</button></div>
+      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="consumo">Consumo</button><button class="tab" data-t="monitor">Monitor WhatsApp<span class="tabdot" id="mon-badge" hidden></span></button><button class="tab" data-t="actividad">Actividad</button></div>
       <main id="main"></main>`;
     document.getElementById('acc').onclick = accountDialog;
     document.getElementById('out').onclick = async () => { try { await api('POST', '/logout'); } catch (e) { /* ya cerrada */ } renderLogin(); };
@@ -230,9 +230,71 @@
     qr();
   }
 
+  // ---------- Consumo y tarifas: lo que se envía por empresa, lo que nos cuesta y lo que se cobra
+  const CH_LABEL = {whatsapp: 'WhatsApp', sms: 'SMS', voice: 'Llamadas', email: 'Correo'};
+  const CH_UNIT = {whatsapp: 'mensajes', sms: 'segmentos', voice: 'llamadas / min', email: 'correos'};
+  const num = (n, d) => Number(n || 0).toLocaleString('es-CO', {maximumFractionDigits: d == null ? 0 : d});
+  const money = (n, cur) => (cur || '$') + ' ' + num(n, 2);
+  async function drawUsage() {
+    const main = document.getElementById('main');
+    const f = state.usageF || (state.usageF = {period: 'month', from: '', to: ''});
+    if (!main.querySelector('[data-use]')) { main.innerHTML = '<h2>Consumo</h2><p class="sub">Cargando…</p><div data-use></div>'; }
+    const q = `period=${encodeURIComponent(f.period)}&from=${f.from}&to=${f.to}`;
+    let r; try { r = await api('GET', '/usage?' + q); } catch (e) { main.innerHTML = `<h2>Consumo</h2><div class="err">${esc(e.message)}</div>`; return; }
+    if (state.tab !== 'consumo') { return; }
+    const cur = r.currency, rows = r.items.map(t => {
+      const ch = k => t.byChannel[k] ? `${num(t.byChannel[k].out)}${t.byChannel[k].in ? ` <span class="mut">/ ${num(t.byChannel[k].in)} recib.</span>` : ''}` : '<span class="mut">—</span>';
+      return `<tr data-u="${esc(t.slug)}"><td><div class="name">${esc(t.name)}</div><div class="mut">${esc(t.slug)}</div></td><td>${ch('whatsapp')}</td><td>${ch('sms')}</td><td class="hide-m">${ch('voice')}</td><td class="hide-m">${ch('email')}</td>
+        <td class="hide-m">${money(t.cost, cur)}</td><td>${money(t.price, cur)}</td><td class="hide-m ${t.price - t.cost < 0 ? 'neg' : ''}">${money(t.price - t.cost, cur)}</td></tr>`; }).join('');
+    main.innerHTML = `<h2>Consumo</h2><p class="sub">Todo lo que sale por Crm Hub 360 (WhatsApp, SMS, llamadas y correo) se mide por empresa. El <b>costo</b> es lo que nos cobra el proveedor y el <b>precio</b> lo que cobramos a la empresa, según el tarifario; sirve de base para la recarga y el postpago. Hora de Bogotá.</p>
+      <div data-use></div><div class="bar"><select id="u-p"><option value="month">Este mes</option><option value="prev">Mes anterior</option><option value="7d">Últimos 7 días</option><option value="30d">Últimos 30 días</option><option value="custom">Fechas…</option></select>
+        <span id="u-c" ${f.period === 'custom' ? '' : 'hidden'}><input type="date" id="u-f" value="${esc(f.from)}"> <input type="date" id="u-t" value="${esc(f.to)}"> <button class="btn sm" id="u-go">Ver</button></span>
+        <span class="grow"></span><button class="btn sm" id="u-rates">Tarifas</button><a class="btn sm" id="u-csv" href="/api/usage-export?${q}">Exportar CSV</a></div>
+      <div class="kpis"><div class="kpi"><span>Periodo</span><b>${esc(r.period)}</b></div><div class="kpi"><span>Costo estimado</span><b>${money(r.total.cost, cur)}</b></div><div class="kpi"><span>Precio</span><b>${money(r.total.price, cur)}</b></div><div class="kpi"><span>Margen</span><b>${money(r.total.margin, cur)}</b></div></div>
+      <div class="card">${rows ? `<table><thead><tr><th>Empresa</th><th>WhatsApp</th><th>SMS (seg.)</th><th class="hide-m">Llamadas (min)</th><th class="hide-m">Correos</th><th class="hide-m">Costo</th><th>Precio</th><th class="hide-m">Margen</th></tr></thead><tbody>${rows}</tbody></table>`
+        : '<div style="padding:22px" class="mut">Aún no hay consumo registrado en este periodo. Se empieza a medir con el primer mensaje enviado después de esta actualización.</div>'}</div>
+      <p class="mut" style="margin-top:10px">Las tarifas en cero no generan costo ni precio: configúralas en <b>Tarifas</b> (por canal y proveedor). Los eventos ya registrados conservan la tarifa que tenían.</p>`;
+    const $ = id => document.getElementById(id);
+    $('u-p').value = f.period;
+    $('u-p').onchange = e => { f.period = e.target.value; if (f.period === 'custom') { $('u-c').hidden = false; } else { drawUsage(); } };
+    if ($('u-go')) { $('u-go').onclick = () => { f.from = $('u-f').value; f.to = $('u-t').value; drawUsage(); }; }
+    $('u-rates').onclick = ratesDialog;
+    main.querySelectorAll('[data-u]').forEach(tr => tr.onclick = () => usageDetail(r, tr.dataset.u, q));
+  }
+  async function usageDetail(r, slug, q) {
+    const t = r.items.find(x => x.slug === slug); if (!t) { return; }
+    const d = await api('GET', `/usage/${slug}/daily?${q}`).catch(() => ({items: []}));
+    const rows = t.detail.sort((a, b) => a.channel.localeCompare(b.channel) || a.provider.localeCompare(b.provider)).map(x => `<tr><td>${esc(CH_LABEL[x.channel] || x.channel)}</td><td>${esc(x.provider || '—')}</td><td>${x.direction === 'in' ? 'Entrante' : 'Saliente'}${x.kind && x.kind !== 'text' ? ` · ${esc(x.kind)}` : ''}</td><td>${num(x.units, 1)}</td><td>${money(x.cost, r.currency)}</td><td>${money(x.price, r.currency)}</td><td>${x.costReal != null ? money(x.costReal, r.currency) + ` <span class="mut">(${x.reconciled})</span>` : '<span class="mut">—</span>'}</td></tr>`).join('');
+    const days = d.items.slice(0, 40).map(x => `<tr><td>${esc(x.day)}</td><td>${esc(CH_LABEL[x.channel] || x.channel)}</td><td>${num(x.units, 1)}</td><td>${money(x.cost, r.currency)}</td><td>${money(x.price, r.currency)}</td></tr>`).join('');
+    const m = modal(`<h3>Consumo de ${esc(t.name)}</h3><p class="mut">${esc(r.period)} · costo ${money(t.cost, r.currency)} · precio ${money(t.price, r.currency)}</p>
+      <div class="card" style="margin-bottom:12px"><table><thead><tr><th>Canal</th><th>Proveedor</th><th>Tipo</th><th>Unidades</th><th>Costo</th><th>Precio</th><th>Costo real</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <h4 style="margin:10px 0 6px">Por día</h4><div class="card" style="max-height:240px;overflow:auto"><table><thead><tr><th>Día</th><th>Canal</th><th>Unidades</th><th>Costo</th><th>Precio</th></tr></thead><tbody>${days || '<tr><td colspan="5" class="mut">Sin datos</td></tr>'}</tbody></table></div>
+      <div class="foot"><a class="btn" href="/api/usage-export?${q}&slug=${encodeURIComponent(slug)}">Exportar CSV</a><button class="btn primary" data-x="k">Cerrar</button></div>`, 'wide');
+    m.el.querySelector('[data-x=k]').onclick = m.close;
+  }
+  async function ratesDialog() {
+    let r; try { r = await api('GET', '/rates'); } catch (e) { toast(e.message); return; }
+    const row = (i = {}) => `<tr><td><select data-f="channel">${Object.keys(r.channels).map(k => `<option value="${k}" ${i.channel === k ? 'selected' : ''}>${esc(r.channels[k])}</option>`).join('')}</select></td>
+      <td><select data-f="provider"><option value="">Todos</option>${r.providers.map(p => `<option ${i.provider === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></td>
+      <td><select data-f="direction"><option value="">Ambas</option><option value="out" ${i.direction === 'out' ? 'selected' : ''}>Saliente</option><option value="in" ${i.direction === 'in' ? 'selected' : ''}>Entrante</option></select></td>
+      <td><select data-f="kind"><option value="">Todos</option>${r.kinds.map(k => `<option ${i.kind === k ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select></td>
+      <td><input data-f="cost" type="number" step="any" min="0" value="${i.cost || 0}" style="width:96px"></td><td><input data-f="price" type="number" step="any" min="0" value="${i.price || 0}" style="width:96px"></td><td><button class="btn sm" data-del>✕</button></td></tr>`;
+    const m = modal(`<h3>Tarifas por unidad</h3><p class="mut">Unidad: mensaje (WhatsApp), segmento (SMS), llamada o minuto (voz) y correo. <b>Costo</b> = lo que nos cobra el proveedor; <b>precio</b> = lo que cobramos a la empresa. Gana la fila más específica; un campo en «Todos» sirve de tarifa general.</p>
+      <label>Moneda</label><input id="r-cur" value="${esc(r.currency)}" maxlength="3" style="width:90px;text-transform:uppercase">
+      <div class="card" style="margin:10px 0;max-height:46vh;overflow:auto"><table id="r-t"><thead><tr><th>Canal</th><th>Proveedor</th><th>Dirección</th><th>Tipo</th><th>Costo</th><th>Precio</th><th></th></tr></thead><tbody>${r.items.map(row).join('')}</tbody></table></div>
+      <button class="btn sm" id="r-add">+ Agregar tarifa</button><div class="err" id="r-er" hidden></div><div class="foot"><button class="btn" data-x="n">Cancelar</button><button class="btn primary" data-x="y">Guardar</button></div>`, 'wide');
+    const tb = m.el.querySelector('#r-t tbody'), bind = () => tb.querySelectorAll('[data-del]').forEach(b => b.onclick = () => b.closest('tr').remove());
+    bind(); m.el.querySelector('#r-add').onclick = () => { tb.insertAdjacentHTML('beforeend', row({channel: 'whatsapp'})); bind(); };
+    m.el.querySelector('[data-x=n]').onclick = m.close;
+    m.el.querySelector('[data-x=y]').onclick = async () => {
+      const items = [...tb.rows].map(tr => { const g = k => tr.querySelector(`[data-f=${k}]`).value; return {channel: g('channel'), provider: g('provider'), direction: g('direction'), kind: g('kind'), cost: +g('cost') || 0, price: +g('price') || 0}; });
+      try { await api('PUT', '/rates', {currency: m.el.querySelector('#r-cur').value.toUpperCase(), items}); m.close(); toast('Tarifas guardadas'); drawUsage(); } catch (e) { const er = m.el.querySelector('#r-er'); er.hidden = false; er.textContent = e.message; }
+    };
+  }
+
   function draw() {
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.t === state.tab));
-    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, servicios: drawLookups, correo: drawMail, bienvenida: drawTemplates, monitor: drawMonitor, actividad: drawActivity}[state.tab])();
+    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, servicios: drawLookups, correo: drawMail, bienvenida: drawTemplates, monitor: drawMonitor, consumo: drawUsage, actividad: drawActivity}[state.tab])();
     if (state.tab !== 'monitor') { clearInterval(state.monTimer); }
   }
 
