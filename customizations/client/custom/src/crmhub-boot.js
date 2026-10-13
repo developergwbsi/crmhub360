@@ -612,6 +612,18 @@
     }
     new MutationObserver(onDom).observe(root, {childList: true, subtree: true});
 
+
+    /* Detalle a pantalla completa con dos columnas que se desplazan por separado (ver crmhub-base.css): al girar la rueda sobre una columna,
+       primero sube la cabecera de la página (datos del registro) y, ya fija, es la columna la que se desplaza; al volver arriba, al revés. */
+    document.addEventListener('wheel', function (e) {
+        if (window.innerWidth < 992 || e.ctrlKey || !e.target.closest) { return; }
+        var col = e.target.closest('#content .record-grid > .left, #content .record-grid > .side');
+        if (!col || !col.parentElement.querySelector(':scope > .side')) { return; }
+        var room = col.parentElement.getBoundingClientRect().top - 168;
+        if (e.deltaY > 0 && room > 1) { e.preventDefault(); window.scrollBy(0, Math.min(e.deltaY, room)); }
+        else if (e.deltaY < 0 && col.scrollTop <= 0 && window.scrollY > 0) { e.preventDefault(); window.scrollBy(0, e.deltaY); }
+    }, {passive: false});
+
     function ready() { injectPwaHead(); onDom(); startWorker(); }
     if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ready); } else { ready(); }
 })();

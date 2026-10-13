@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Detalle de registros
+- En el detalle a pantalla completa (lead, cuenta, contacto, oportunidad) la columna izquierda (general, detalles, historia) y la derecha (asignado, documentos, comercial virtual, actividad…) **se desplazan por separado**. Con la rueda sobre una columna primero sube la cabecera del registro y, ya fija, se mueve solo esa columna.
+
 ### Enlaces y archivos en las conversaciones
 - **Enlaces clicables en todas partes**: en los chats (WhatsApp, SMS, Telegram, Mensajes), correos (texto y HTML), historial de actividad y banco de conocimiento, toda dirección (`https://…`, `www.…`) y correo electrónico se muestra como hipervínculo que abre en una pestaña nueva, sin arrastrar la puntuación final.
 - **Vistas previas**: las direcciones a imágenes se ven como miniatura, las de video y audio con reproductor, las de documentos (PDF, Word, Excel…) como tarjeta con icono y nombre, y los enlaces de videollamada como tarjeta «Videollamada».

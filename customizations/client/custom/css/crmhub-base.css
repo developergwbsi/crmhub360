@@ -1104,3 +1104,13 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-em-att .ch-att-img { display: inline-flex; flex-direction: column; gap: 4px; margin: 4px 8px 4px 0; text-decoration: none; }
 .ch-em-att .ch-att-img img { max-width: 180px; max-height: 130px; border-radius: 8px; border: 1px solid var(--ch-line, #e2e6ee); object-fit: cover; }
 .ch-em-att .ch-att-img small { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #5d6678; }
+
+/* Detalle a pantalla completa (lead, cuenta, contacto, oportunidad…): la columna izquierda (datos) y la derecha (asignado, documentos, historial…) se desplazan por separado */
+@media (min-width: 992px) {
+    #content .record-grid:has(> .side) { align-items: flex-start; }
+    #content .record-grid:has(> .side) > .left,
+    #content .record-grid:has(> .side) > .side {
+        position: sticky; top: 168px; max-height: calc(100vh - 184px); overflow-y: auto; overscroll-behavior: contain;
+        scrollbar-width: thin; padding-right: 4px;
+    }
+}
