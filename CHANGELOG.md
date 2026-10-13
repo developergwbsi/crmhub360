@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Centro de control
+- **Gestionar empresas como los leads**: la empresa se abre en un panel a la derecha con la lista siempre visible a la izquierda (se cambia de empresa sin cerrar), botón de **pantalla completa** y pestañas Resumen, Servicios y módulos, WhatsApp, Consumo y facturación e Historial de cambios (quién y cuándo cambió qué, con los trabajos del servidor).
+
 ### Videollamadas propias (en desarrollo)
 - **Servicio adicional por empresa**: se habilita desde el Centro de control (*Servicios → Videollamadas*: no incluidas / videollamadas / videollamadas + subtítulos). Apagado, el botón «Videollamada» no aparece, el Hub no crea salas y los enlaces existentes dejan de funcionar.
 - **Subtítulos en vivo español↔inglés, sin traducir el audio**: cada frase se transcribe con IA local (faster-whisper) y se traduce con un traductor local liviano; cada quien ve la traducción a su idioma con el original en pequeño y un botón **CC**. El audio y el texto no se guardan. Nuevo servicio `crmhub-stt` (`stt-service/`).

@@ -2,7 +2,7 @@
   'use strict';
   const $app = document.getElementById('app');
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-  const state = {tab: 'empresas', companies: [], currentRelease: null, base: '', releases: [], jobs: [], audit: [], timer: null};
+  const state = {tab: 'empresas', sel: null, full: false, ctab: 'resumen', companies: [], currentRelease: null, base: '', releases: [], jobs: [], audit: [], timer: null};
 
   async function api(method, path, body) {
     const r = await fetch('/api' + path, {method, headers: {'Content-Type': 'application/json', 'X-CC': '1'}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin'});
@@ -380,8 +380,17 @@
   }
 
   // ---------- empresas
-  async function loadCompanies() { const r = await api('GET', '/companies'); state.companies = r.items; state.currentRelease = r.currentRelease; if (state.tab === 'empresas') { drawCompanies(); } }
+  async function loadCompanies() {
+    const r = await api('GET', '/companies'); state.companies = r.items; state.currentRelease = r.currentRelease;
+    if (state.tab !== 'empresas') { return; }
+    if (!state.sel) { drawCompanies(); return; }
+    paintList();   // con una empresa abierta solo se repinta la lista y el encabezado: el detalle no pierde lo que estás viendo
+    const c = state.companies.find(x => x.slug === state.sel);
+    if (c) { paintHead(); if (state.ctab === 'resumen' && state.paneSig !== sigOf(c) && !document.querySelector('.back')) { paintPane(); } }
+  }
   function drawCompanies() {
+    if (state.sel && state.companies.some(c => c.slug === state.sel)) { drawSplit(); return; }
+    state.sel = null;
     const main = document.getElementById('main');
     const rows = state.companies.map(c => {
       const st = c.status === 'active' ? (c.health.up ? '<span class="chip ok"><span class="dot up"></span> En línea</span>' : '<span class="chip bad"><span class="dot down"></span> Sin respuesta</span>') : '<span class="chip warn">Suspendida</span>';
@@ -397,7 +406,8 @@
       <div class="card">${state.companies.length ? `<table><thead><tr><th>Empresa</th><th>Estado</th><th class="hide-m">Usuarios</th><th class="hide-m">Leads</th><th class="hide-m">Último ingreso</th><th class="hide-m">Base</th><th class="hide-m">Licencia</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : window.ChEmpty.html({kind: 'box', title: 'Aún no hay empresas', text: 'Crea la primera con «Nueva empresa» y aparecerá aquí.'})}</div>`;
     document.getElementById('new').onclick = newCompany;
     document.getElementById('ref').onclick = () => loadCompanies().then(() => toast('Lista actualizada'));
-    main.querySelectorAll('[data-manage]').forEach(b => b.onclick = () => manage(b.dataset.manage));
+    main.querySelectorAll('[data-manage]').forEach(b => b.onclick = e => { e.stopPropagation(); manage(b.dataset.manage); });
+    main.querySelectorAll('tr[data-s]').forEach(r => r.onclick = () => manage(r.dataset.s));
   }
 
   const COUNTRIES = [['CO', 'Colombia'], ['MX', 'México'], ['PE', 'Perú'], ['CL', 'Chile'], ['AR', 'Argentina'], ['EC', 'Ecuador'], ['PA', 'Panamá'], ['CR', 'Costa Rica'], ['DO', 'República Dominicana'],
@@ -472,23 +482,100 @@
     try { fr.src = await readLink(c.slug); } catch (e) { v.remove(); toast(e.message); }
   }
 
-  // ---------- gestión de una empresa
-  async function manage(slug) {
-    const c = state.companies.find(x => x.slug === slug); if (!c) { return; }
-    const d = document.createElement('div'); d.className = 'drawer';
+  // ---------- gestión de una empresa: lista a la izquierda (siempre visible) y detalle a la derecha, con pantalla completa
+  const CTABS = [['resumen', 'Resumen'], ['servicios', 'Servicios y módulos'], ['whatsapp', 'WhatsApp'], ['consumo', 'Consumo y facturación'], ['historial', 'Historial de cambios']];
+  const sigOf = c => [c.name, c.status, c.release, c.health && c.health.version, c.plan, c.maxUsers, c.license, c.kind].join('|');
+  function manage(slug, tab) {
+    if (!state.companies.find(x => x.slug === slug)) { return; }
+    if (state.sel !== slug) { state.paneSig = null; }
+    state.sel = slug; state.ctab = tab || state.ctab || 'resumen'; state.full = !!state.full && state.tab === 'empresas';
+    drawCompanies();
+  }
+  function drawSplit() {
+    const main = document.getElementById('main');
+    main.innerHTML = `<div class="split ${state.full ? 'full' : ''}" id="split"><aside class="clist card"><div class="clh"><input id="cq" placeholder="Buscar empresa…" value="${esc(state.cq || '')}" autocomplete="off"><button class="btn sm" id="cx" title="Cerrar el detalle y ver la lista completa">Lista</button></div><div id="cl"></div>
+      <div class="clf"><button class="btn sm primary" id="cn" style="width:100%">+ Nueva empresa</button></div></aside><section class="cpane card" id="cp"></section></div>`;
+    document.getElementById('cq').oninput = e => { state.cq = e.target.value; paintList(); };
+    document.getElementById('cx').onclick = () => { state.sel = null; state.full = false; drawCompanies(); };
+    document.getElementById('cn').onclick = newCompany;
+    paintList(); paintPane();
+  }
+  function paintList() {
+    const box = document.getElementById('cl'); if (!box) { return; }
+    const q = (state.cq || '').toLowerCase().trim();
+    const items = state.companies.filter(c => !q || (c.name + ' ' + c.slug + ' ' + c.host).toLowerCase().includes(q));
+    box.innerHTML = items.map(c => `<button class="citem ${c.slug === state.sel ? 'on' : ''}" data-s="${esc(c.slug)}"><span class="dot ${c.status !== 'active' ? '' : c.health.up ? 'up' : 'down'}"></span><span class="ci"><b>${esc(c.name)}</b><span class="mut">${esc(c.host)}${c.status !== 'active' ? ' · suspendida' : ''}</span></span></button>`).join('') || '<div class="mut" style="padding:14px">Sin resultados.</div>';
+    box.querySelectorAll('.citem').forEach(b => b.onclick = () => { if (b.dataset.s !== state.sel) { manage(b.dataset.s, state.ctab); } });
+  }
+  function paintHead() {
+    const c = state.companies.find(x => x.slug === state.sel), h = document.getElementById('cph'); if (!c || !h) { return; }
+    const st = c.status === 'active' ? (c.health.up ? '<span class="chip ok"><span class="dot up"></span> En línea</span>' : '<span class="chip bad"><span class="dot down"></span> Sin respuesta</span>') : '<span class="chip warn">Suspendida</span>';
+    h.innerHTML = `<div style="flex:1;min-width:0"><div class="name" style="font-size:18px">${esc(c.name)} ${st}</div><div class="mut">${esc(c.host)}</div></div>
+      <button class="btn sm" id="cfull" title="${state.full ? 'Volver a ver la lista de empresas' : 'Ver todo el detalle a pantalla completa'}">${state.full ? '⤡ Ver lista' : '⤢ Pantalla completa'}</button><button class="btn sm" id="cclose" title="Cerrar el detalle">✕ Cerrar</button>`;
+    document.getElementById('cfull').onclick = () => { state.full = !state.full; document.getElementById('split').classList.toggle('full', state.full); paintHead(); };
+    document.getElementById('cclose').onclick = () => { state.sel = null; state.full = false; drawCompanies(); };
+  }
+  async function paintPane() {
+    const c = state.companies.find(x => x.slug === state.sel), pane = document.getElementById('cp'); if (!c || !pane) { return; }
+    state.paneSig = sigOf(c);
+    pane.innerHTML = `<div class="cph" id="cph"></div><div class="ctabs">${CTABS.map(([k, l]) => `<button class="ctab ${state.ctab === k ? 'on' : ''}" data-t="${k}">${l}</button>`).join('')}</div><div class="cbody" id="cb"><span class="spin"></span></div>`;
+    paintHead();
+    pane.querySelectorAll('.ctab').forEach(b => b.onclick = () => { state.ctab = b.dataset.t; paintPane(); });
+    const box = document.getElementById('cb'), slug = c.slug, tab = state.ctab;
+    const guard = () => state.sel === slug && state.ctab === tab && document.body.contains(box);
+    try {
+      if (tab === 'resumen') { box.innerHTML = ''; await summaryTab(c, box); }
+      else if (tab === 'servicios') { box.innerHTML = '<div class="mut" style="margin-bottom:8px">Aquí se asignan los proveedores y se habilitan los módulos de la empresa (cartera, comerciales virtuales, plantillas, videollamadas, consultas, IA, correo…).</div><div id="sv"><span class="spin"></span></div>'; loadServices(slug, box.querySelector('#sv')); }
+      else if (tab === 'whatsapp') { await waTab(c, box, guard); }
+      else if (tab === 'consumo') { await usageTab(c, box, guard); }
+      else if (tab === 'historial') { await historyTab(c, box, guard); }
+    } catch (e) { if (guard()) { box.innerHTML = `<div class="err">${esc(e.message)}</div>`; } }
+  }
+  // WhatsApp: las líneas de esta empresa (inventario del Centro) con su estado; el QR y la prueba de envío salen del diálogo de cada línea
+  async function waTab(c, box, guard) {
+    const r = await api('GET', '/wa-lines'); if (!guard()) { return; }
+    const mine = r.items.filter(l => l.assigned && l.assigned.slug === c.slug);
+    box.innerHTML = `<div class="mut" style="margin-bottom:10px">Líneas de WhatsApp (Evolution) asignadas a esta empresa. Para asignar, mover o crear líneas usa la pestaña «Líneas WhatsApp». Las cuentas Meta, Gupshup y Twilio se gestionan en <b>Servicios y módulos</b>.</div>` +
+      (mine.length ? `<table><thead><tr><th>Línea</th><th>Número</th><th>Estado</th><th></th></tr></thead><tbody>${mine.map(l => { const s = LST[l.state] || LST.unknown; return `<tr><td><div class="name">${esc(l.assigned.lineName)}</div><div class="mut">${esc(l.name)} · ${l.assigned.mode === 'main' ? 'Principal' : 'Adicional'}</div></td><td>${l.owner ? '+' + esc(l.owner) : '—'}</td><td><span class="chip ${s[1]}">${esc(s[0])}</span></td><td style="text-align:right"><button class="btn sm primary" data-q="${esc(l.name)}" data-t="${esc(l.assigned.lineName)}">QR y prueba de envío</button></td></tr>`; }).join('')}</tbody></table>`
+        : '<div class="empty">Esta empresa no tiene líneas de Evolution asignadas.</div>');
+    box.querySelectorAll('[data-q]').forEach(b => b.onclick = () => waDialog(b.dataset.q, b.dataset.t, '', lineEp(b.dataset.q)));
+  }
+  // Consumo y facturación: lo que envió la empresa en el periodo, su costo para nosotros y lo que se le cobra (base de la facturación)
+  async function usageTab(c, box, guard) {
+    const per = state.cper || 'month';
+    const [u, d] = await Promise.all([api('GET', `/usage?period=${per}`), api('GET', `/usage/${c.slug}/daily?period=${per}`)]); if (!guard()) { return; }
+    const t = u.items.find(x => x.slug === c.slug), cur = u.currency;
+    const chn = {whatsapp: 'WhatsApp', sms: 'SMS', voice: 'Llamadas', email: 'Correo'};
+    box.innerHTML = `<div class="bar"><select id="cp-per" style="width:auto"><option value="month">Este mes</option><option value="prev">Mes anterior</option><option value="7d">Últimos 7 días</option><option value="30d">Últimos 30 días</option></select><span class="mut">${esc(u.period)}</span></div>
+      <div class="kvs"><div><span>Costo (lo que nos cobran)</span><b>${money(t ? t.cost : 0, cur)}</b></div><div><span>Precio (lo que se cobra a la empresa)</span><b>${money(t ? t.price : 0, cur)}</b></div><div><span>Margen</span><b>${money(t ? t.price - t.cost : 0, cur)}</b></div></div>
+      <h4 style="margin:16px 0 6px">Por canal</h4>${t && t.detail.length ? `<table><thead><tr><th>Canal</th><th>Proveedor</th><th>Tipo</th><th>Unidades</th><th>Costo</th><th>Precio</th></tr></thead><tbody>${t.detail.map(x => `<tr><td>${esc(chn[x.channel] || x.channel)} <span class="mut">${x.direction === 'in' ? 'recibido' : 'enviado'}</span></td><td>${esc(x.provider || '—')}</td><td>${esc(x.kind)}</td><td>${num(x.units, 1)}</td><td>${money(x.cost, cur)}</td><td>${money(x.price, cur)}</td></tr>`).join('')}</tbody></table>` : '<div class="mut">Sin consumo en este periodo.</div>'}
+      <h4 style="margin:16px 0 6px">Por día</h4>${d.items.length ? `<table><thead><tr><th>Día</th><th>Canal</th><th>Unidades</th><th>Costo</th><th>Precio</th></tr></thead><tbody>${d.items.map(x => `<tr><td>${esc(x.day)}</td><td>${esc(chn[x.channel] || x.channel)}</td><td>${num(x.units, 1)}</td><td>${money(x.cost, cur)}</td><td>${money(x.price, cur)}</td></tr>`).join('')}</tbody></table>` : '<div class="mut">Sin movimientos.</div>'}
+      <div class="notice" style="margin-top:14px">Aún no se emiten facturas desde el Centro: este consumo valorizado con las tarifas vigentes es la base para facturar (recarga y postpago están en diseño). Las tarifas se editan en la pestaña «Consumo».</div>`;
+    const sel = box.querySelector('#cp-per'); sel.value = per; sel.onchange = () => { state.cper = sel.value; paintPane(); };
+  }
+  // Historial de cambios: todo lo que se hizo sobre la empresa desde este Centro (quién, cuándo, qué) y los trabajos del servidor
+  async function historyTab(c, box, guard) {
+    const [a, j] = await Promise.all([api('GET', `/audit?target=${encodeURIComponent(c.slug)}&limit=200`), api('GET', `/jobs?slug=${encodeURIComponent(c.slug)}&limit=50`)]); if (!guard()) { return; }
+    const kinds = {create: 'Crear empresa', upgrade: 'Actualizar empresa', release: 'Publicar base', suspend: 'Suspender', resume: 'Reactivar'};
+    const ev = [...a.items.map(x => ({at: x.at, who: x.actor, what: x.action.replace(/_/g, ' '), note: x.detail && x.detail.servicios ? Object.entries(x.detail.servicios).map(([k, v]) => k + ': ' + (v == null || v === '' ? '—' : typeof v === 'object' ? JSON.stringify(v) : v)).join(' · ') : ''})),
+      ...j.items.map(x => ({at: x.createdAt, who: x.by, what: 'Trabajo #' + x.id + ': ' + (kinds[x.kind] || x.kind), note: x.status === 'done' ? 'Terminado' : x.status === 'error' ? 'Falló' : x.status}))].sort((p, q) => new Date(q.at) - new Date(p.at));
+    box.innerHTML = ev.length ? `<table><thead><tr><th>Fecha</th><th>Quién</th><th>Qué se hizo</th><th class="hide-m">Detalle</th></tr></thead><tbody>${ev.map(e => `<tr><td class="mut" style="white-space:nowrap">${esc(fmtDate(e.at))}</td><td>${esc(e.who || '—')}</td><td>${esc(e.what)}</td><td class="hide-m mut">${esc(e.note || '')}</td></tr>`).join('')}</tbody></table>`
+      : '<div class="empty">Aún no hay cambios registrados para esta empresa.</div>';
+  }
+
+  async function summaryTab(c, d) {
+    const slug = c.slug;
     const isClient = c.kind === 'client';
-    d.innerHTML = `<header><div style="flex:1"><div class="name" style="font-size:17px">${esc(c.name)}</div><div class="mut">${esc(c.host)}</div></div><button class="x" aria-label="Cerrar">×</button></header><div class="body">
+    d.innerHTML = `<div>
       <div class="acts"><a class="btn" href="https://${esc(c.host)}" target="_blank" rel="noopener">Abrir sitio</a><button class="btn primary" data-a="ro">Ver en modo lectura</button>
         ${isClient ? `<button class="btn" data-a="up">Actualizar a la base actual</button><button class="btn ${c.status === 'active' ? 'danger' : ''}" data-a="pw">${c.status === 'active' ? 'Suspender' : 'Reactivar'}</button>` : ''}
         <button class="btn" data-a="cred">Ver credenciales del admin</button><button class="btn" data-a="wa">WhatsApp (QR)</button><button class="btn" data-a="ren">Cambiar nombre</button><button class="btn" data-a="mail">Enviar correo…</button></div>
       <h4 style="margin:18px 0 6px">Datos</h4><div class="kv"><span>Estado</span><span>${esc(c.status === 'active' ? 'Activa' : 'Suspendida')}</span><span>Plan</span><span>${esc(c.plan)} · hasta ${c.maxUsers} usuarios</span>
         <span>Licencia</span><span>${esc(c.license || 'Sin vencimiento')}</span><span>Versión instalada</span><span>${esc(c.health.version || '—')}</span><span>Base de producción</span><span>${esc(c.kind === 'client' ? (c.release || 'ninguna') : 'Código de desarrollo')}</span>
         ${c.profile && (c.profile.first || c.profile.email) ? `<span>Administrador</span><span>${esc([c.profile.first, c.profile.last].filter(Boolean).join(' ') || '—')}<br><span class="mut">${esc(c.profile.email || '')}${c.profile.phone ? ' · ' + esc(c.profile.phone) : ''}</span></span>` : ''}${c.profile && (c.profile.country || c.profile.city) ? `<span>Ubicación</span><span>${esc([c.profile.city, countryName(c.profile.country)].filter(Boolean).join(', '))}</span>` : ''}<span>Creada</span><span>${esc(fmtDate(c.createdAt))}</span><span>Respuesta</span><span>${c.health.ms == null ? '—' : c.health.ms + ' ms'}</span></div>
-      <h4 style="margin:20px 0 4px">Servicios</h4><div id="sv"><span class="spin"></span></div>
       <h4 style="margin:20px 0 4px">Usuarios</h4><div class="mut" style="margin-bottom:6px">Cambia la contraseña de cualquier usuario de esta empresa.</div><div id="us"><span class="spin"></span></div></div>`;
-    document.body.appendChild(d);
-    const close = () => d.remove(); d.querySelector('.x').onclick = close;
-    d.querySelector('[data-a=ro]').onclick = () => { close(); openViewer(c); };
+    const close = () => { loadCompanies().then(() => { if (state.sel === slug) { paintPane(); } }).catch(() => {}); };
+    d.querySelector('[data-a=ro]').onclick = () => openViewer(c);
     d.querySelector('[data-a=cred]').onclick = async () => {
       if (!await confirmBox('Ver credenciales', 'Se mostrará el usuario y la contraseña del administrador de «' + c.name + '». Queda registrado en la actividad.', 'Mostrar')) { return; }
       try { const r = await api('GET', `/companies/${slug}/admin-credentials`); secretBox('Administrador de ' + c.name, `Usuario: ${r.userName} · Sitio: ${r.url}`, r.password); } catch (e) { toast(e.message); }
@@ -508,7 +595,6 @@
       if (await confirmBox(susp ? 'Suspender empresa' : 'Reactivar empresa', susp ? 'Se detiene el sitio y deja de recibir mensajes. Los datos se conservan.' : 'Se vuelve a encender el sitio.', susp ? 'Suspender' : 'Reactivar', susp)) {
         close(); const r = await api('POST', `/companies/${slug}/power/${susp ? 'suspend' : 'resume'}`); watchJob(r.job, (susp ? 'Suspendiendo «' : 'Reactivando «') + c.name + '»');
       } }; }
-    loadServices(slug, d.querySelector('#sv'));
     try {
       const r = await api('GET', `/companies/${slug}/users`);
       d.querySelector('#us').innerHTML = r.items.length ? r.items.map(u => `<div class="userrow"><div style="flex:1"><b>${esc(u.userName)}</b> <span class="chip">${esc(u.type === 'admin' ? 'Administrador' : u.type === 'api' ? 'Integración' : 'Usuario')}</span>${u.active ? '' : ' <span class="chip warn">Inactivo</span>'}<div class="mut">${esc(u.name || '')} ${esc(u.email || '')}</div></div>${u.type === 'api' ? '' : `<button class="btn sm" data-u="${esc(u.id)}" data-n="${esc(u.userName)}">Cambiar clave</button>`}</div>`).join('') : window.ChEmpty.html({compact: true, kind: 'box', title: 'Sin usuarios', text: 'Esta empresa todavía no tiene usuarios.'});
@@ -519,6 +605,7 @@
       });
     } catch (e) { d.querySelector('#us').innerHTML = `<div class="err">${esc(e.message)}</div>`; }
   }
+
 
 
   // ---------- mi cuenta
@@ -882,7 +969,7 @@
     let me; try { me = await api('GET', '/me'); state.base = me.baseDomain; } catch (e) { renderLogin(); return; }
     shell(); refreshMonBadge(); clearInterval(state.badgeTimer); state.badgeTimer = setInterval(refreshMonBadge, 60000); state.me = me; document.getElementById('who').textContent = me.name || me.user; if (me.name) { store.set('cc-name', me.name); }
     await Promise.all([loadCompanies(), loadSide()]); draw();
-    clearInterval(state.timer); state.timer = setInterval(() => { if (!document.querySelector('.back, .drawer')) { loadCompanies().catch(() => {}); loadSide().catch(() => {}); } }, 20000);
+    clearInterval(state.timer); state.timer = setInterval(() => { if (!document.querySelector('.back')) { loadCompanies().catch(() => {}); loadSide().catch(() => {}); } }, 20000);
   }
   boot();
 })();

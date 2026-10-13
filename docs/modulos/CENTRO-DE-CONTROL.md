@@ -31,6 +31,14 @@ La web **no ejecuta nada**: encola un trabajo en `control_jobs` y `bin/control-w
 
 La pestaña **Monitor WhatsApp** vigila de extremo a extremo cada línea de Evolution de las empresas (envío y recepción) con una línea de pruebas que responde sola, abre alertas (pantalla, correo y WhatsApp), reinicia la instancia y permite **escanear el QR de cualquier empresa desde el Centro**. Detalle en [MONITOR-WHATSAPP](MONITOR-WHATSAPP.md).
 
+## Gestión de una empresa (lista + detalle)
+Al abrir una empresa en la pestaña **Empresas**, la lista queda **a la izquierda** (con buscador) y el detalle **a la derecha**: se cambia de empresa pulsando otra en la lista, sin cerrar nada. **Pantalla completa** oculta la lista para ver todo el detalle; **Cerrar** (o «Lista») vuelve a la lista completa. Pestañas del detalle:
+- **Resumen**: datos, acciones (abrir sitio, modo lectura, actualizar, suspender, credenciales, cambiar nombre, correo) y usuarios.
+- **Servicios y módulos**: proveedores (WhatsApp, SMS, llamadas, correo) y módulos adicionales (cartera, comerciales virtuales, plantillas, mensajes masivos, videollamadas, consultas, IA).
+- **WhatsApp**: líneas de Evolution de la empresa con su estado; QR y prueba de envío.
+- **Consumo y facturación**: costo, precio y margen del periodo por canal y por día (base para facturar; aún no se emiten facturas).
+- **Historial de cambios**: lo hecho sobre la empresa (`GET /api/audit?target=<slug>`) y sus trabajos del servidor (`GET /api/jobs?slug=<slug>`).
+
 ## Líneas de WhatsApp (inventario)
 
 La pestaña **Líneas WhatsApp** (`control-service/app/walines.py`) lista las instancias de Evolution que administramos —las creadas aquí (`control_settings` «wa_pool») y las que ya usan las empresas— con su número, estado y empresa asignada. Acciones: **Nueva línea** (crea la instancia sin webhook activo y muestra su QR), **QR / Reiniciar / cambiar de número**, **Asignar o Mover** (como *principal* —claves planas `wa_provider`/`evolution_*`, reemplaza a la anterior, que queda libre— o *adicional* —`settings.lines`—), **Quitar** y **Eliminar** (solo líneas libres). La empresa recibe la clave **propia** de la instancia y su webhook apunta a `https://<empresa>/hub/evolution`; al quitar/mover la línea el webhook se desactiva. Cuando la línea queda conectada, el diálogo del QR muestra **Probar el envío** (`POST /api/whatsapp/{slug}/test` y `/api/wa-lines/{name}/test`): envía un mensaje al número indicado. Una línea (teléfono) no puede ser a la vez de una empresa y la **línea de pruebas** del [monitor](MONITOR-WHATSAPP.md).

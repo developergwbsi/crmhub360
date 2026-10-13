@@ -353,10 +353,13 @@ MASK = re.compile(r"(Admin:\s+admin / )\S+")
 
 
 @app.get("/api/jobs")
-def jobs(limit: int = 15, actor: str = Depends(me)):
+def jobs(limit: int = 15, slug: str = "", actor: str = Depends(me)):
     """Últimos trabajos de la cola (máx. 50) con estado y quién los pidió. Lo llama la interfaz web del Centro."""
     with db() as c:
-        rows = c.execute("SELECT id, kind, params, status, created_by, created_at, finished_at FROM control_jobs ORDER BY id DESC LIMIT %s", (min(limit, 50),)).fetchall()
+        if slug:   # trabajos de una empresa (crear, actualizar, suspender…)
+            rows = c.execute("SELECT id, kind, params, status, created_by, created_at, finished_at FROM control_jobs WHERE params->>'slug' = %s ORDER BY id DESC LIMIT %s", (slug, min(limit, 50))).fetchall()
+        else:
+            rows = c.execute("SELECT id, kind, params, status, created_by, created_at, finished_at FROM control_jobs ORDER BY id DESC LIMIT %s", (min(limit, 50),)).fetchall()
     return {"items": [{"id": r["id"], "kind": r["kind"], "target": (r["params"] or {}).get("slug") or (r["params"] or {}).get("note"), "status": r["status"], "by": r["created_by"],
                        "createdAt": r["created_at"].isoformat(), "finishedAt": r["finished_at"].isoformat() if r["finished_at"] else None} for r in rows]}
 
@@ -372,10 +375,13 @@ def job(jid: int, actor: str = Depends(me)):
 
 
 @app.get("/api/audit")
-def audit_log(limit: int = 40, actor: str = Depends(me)):
+def audit_log(limit: int = 40, target: str = "", actor: str = Depends(me)):
     """Últimos registros de auditoría (máx. 200) con el nombre legible de la empresa, proveedor o servicio afectado. Lo llama la interfaz web del Centro."""
     with db() as c:
-        rows = c.execute("SELECT at, actor, action, target, detail FROM control_audit ORDER BY id DESC LIMIT %s", (min(limit, 200),)).fetchall()
+        if target:   # historial de una empresa: todo lo que se hizo sobre ella
+            rows = c.execute("SELECT at, actor, action, target, detail FROM control_audit WHERE target = %s ORDER BY id DESC LIMIT %s", (target, min(limit, 200))).fetchall()
+        else:
+            rows = c.execute("SELECT at, actor, action, target, detail FROM control_audit ORDER BY id DESC LIMIT %s", (min(limit, 200),)).fetchall()
         companies = {t["slug"]: t["name"] for t in c.execute("SELECT slug, name FROM tenants").fetchall()}
     providers = {p["id"]: p.get("name") or p["id"] for p in providers_list()}
     with db() as c:   # proveedores ya borrados: se recupera el nombre de cuando se guardaron
