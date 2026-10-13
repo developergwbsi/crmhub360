@@ -4,6 +4,7 @@
 
 ## Sin publicar (después de v1.4.1)
 
+- `0f697f7` 2026-10-13 — Videollamadas: subtítulos en vivo es↔en con IA local (voz a texto faster-whisper + traductor opus-mt), botón CC y servicio crmhub-stt
 - `5dfff70` 2026-10-13 — Videollamadas propias: servidor LiveKit, salas por enlace en el Hub, página del cliente y botón Videollamada en el lead
 
 ## v1.4.1

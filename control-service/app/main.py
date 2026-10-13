@@ -1229,6 +1229,7 @@ class ServicesReq(BaseModel):
     lookups: Optional[list] = None        # servicios de consulta del sistema habilitados para la empresa
     wa_bulk: Optional[dict] = None        # envío masivo por WhatsApp no oficial (Evolution): {max: destinatarios por campaña, every_s: segundos entre mensajes}
     templates: Optional[int] = None       # plantillas personales por usuario y canal (10 incluidas; más es un servicio adicional)
+    meet: Optional[str] = None            # videollamadas propias (servicio adicional): 'off' | 'video' | 'video_subs' (con subtítulos en vivo)
 
 
 async def tenant_mail_state(t: dict) -> dict:
@@ -1336,7 +1337,7 @@ async def get_services(slug: str, actor: str = Depends(me)):
         au = []
     return {"ai": ((t["settings"] or {}).get("ai") or {}).get("mode") or "global", "aiProviders": [{"id": p["id"], "name": p["name"], "engine": p["fields"].get("engine"), "model": p["fields"].get("model")} for p in providers_list() if p["kind"] == "ai"],
             "aiDefault": get_setting("ai_default"), "aiUsage": au,
-            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "agents": int(((t["settings"] or {}).get("limits") or {}).get("agents") or 1), "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
+            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "meet": ((t["settings"] or {}).get("limits") or {}).get("meet") or "off", "agents": int(((t["settings"] or {}).get("limits") or {}).get("agents") or 1), "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
             "lookups": list(((t["settings"] or {}).get("lookups")) or []), "lookupCatalog": [{"id": l["id"], "name": l["name"], "category": l.get("category", "otro")} for l in lookups_list()], "cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10),
             "waBulk": {"max": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("max") or 100), "every_s": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("every_s") or 120)}, "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
             "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
@@ -1401,6 +1402,15 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
             raise HTTPException(400, "Valor no válido para el comercial virtual")
         with db() as c5:
             c5.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps({"agent": req.agent}), slug))
+    if req.meet is not None:
+        if req.meet not in ("off", "video", "video_subs"):
+            raise HTTPException(400, "Valor no válido para las videollamadas")
+        async with espo(t) as c:   # la ficha del CRM lee esta opción para mostrar u ocultar el botón «Videollamada»
+            rm = await c.put("/Settings", json={"crmhubMeet": req.meet})
+        if rm.status_code != 200:
+            raise HTTPException(502, "No se pudo cambiar el servicio de videollamadas en la empresa")
+        with db() as c6:
+            c6.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps({"meet": req.meet}), slug))
     if req.lookups is not None:
         known = {l["id"] for l in lookups_list()}
         ids = [str(i) for i in req.lookups if str(i) in known]
@@ -1426,7 +1436,7 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
             raise HTTPException(502, "No se pudo cambiar el módulo de cartera en la empresa")
         sv["cartera"] = bool(req.cartera)
     put_setting("services:" + slug, sv)
-    audit(actor, "asignar_servicios", slug, {"servicios": {k: (v or {}).get("provider") if isinstance(v, dict) else v for k, v in sv.items()}, "plantillas_por_canal": req.templates})
+    audit(actor, "asignar_servicios", slug, {"servicios": {k: (v or {}).get("provider") if isinstance(v, dict) else v for k, v in sv.items()}, "plantillas_por_canal": req.templates, "videollamadas": req.meet})
     return {"ok": True, "notes": notes}
 
 

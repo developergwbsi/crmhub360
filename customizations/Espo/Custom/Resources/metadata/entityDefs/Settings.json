@@ -1,5 +1,6 @@
 {
     "fields": {
-        "crmhubCartera": {"type": "bool", "default": false}
+        "crmhubCartera": {"type": "bool", "default": false},
+        "crmhubMeet": {"type": "enum", "options": ["off", "video", "video_subs"], "default": "off"}
     }
 }

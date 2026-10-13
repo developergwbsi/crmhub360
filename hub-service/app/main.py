@@ -1595,8 +1595,16 @@ def meet_create(req: MeetCreateReq, tenant: dict = Depends(tenant_auth)):
     """Crea una sala y devuelve el enlace del cliente y el del anfitrión (el del anfitrión no se comparte)."""
     try:
         return meet.create(tenant["slug"], req.leadId, req.title, req.hostName, req.createdBy, req.hostLang, req.guestLang, req.subtitles)
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
     except ValueError as e:
         raise HTTPException(422, str(e))
+
+
+@app.get("/v1/meet/status")
+def meet_status(tenant: dict = Depends(tenant_auth)):
+    """Servicio de videollamadas habilitado a la empresa: off | video | video_subs."""
+    return {"mode": meet.mode(tenant["slug"])}
 
 
 @app.get("/v1/meet/rooms")

@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **106** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **107** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -71,6 +71,7 @@ Total: **106** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/meet/rooms` | `meet_list` | Salas recientes de la empresa (o de un lead). |
 | POST | `/v1/meet/rooms` | `meet_create` | Crea una sala y devuelve el enlace del cliente y el del anfitrión (el del anfitrión no se comparte). |
 | POST | `/v1/meet/rooms/{code}/end` | `meet_end` | Cierra una sala: el enlace deja de servir. |
+| GET | `/v1/meet/status` | `meet_status` | Servicio de videollamadas habilitado a la empresa: off / video / video_subs. |
 | GET | `/v1/process/runs` | `proc_runs` | Historial de ejecuciones de procesos (de un lead o del tenant). |
 | POST | `/v1/process/trigger` | `proc_trigger` | Lo llama el CRM al guardar un lead: ejecuta los procesos (manual en el acto; si no, tras 1,5 s en segundo plano) y, si el lead es nuevo, da de alta al comercial virtual. |
 | GET | `/v1/processes` | `proc_list` | Procesos configurados, campos disponibles, máximo y catálogo. |

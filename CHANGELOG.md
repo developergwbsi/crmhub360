@@ -5,6 +5,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Videollamadas propias (en desarrollo)
+- **Servicio adicional por empresa**: se habilita desde el Centro de control (*Servicios → Videollamadas*: no incluidas / videollamadas / videollamadas + subtítulos). Apagado, el botón «Videollamada» no aparece, el Hub no crea salas y los enlaces existentes dejan de funcionar.
 - **Subtítulos en vivo español↔inglés, sin traducir el audio**: cada frase se transcribe con IA local (faster-whisper) y se traduce con un traductor local liviano; cada quien ve la traducción a su idioma con el original en pequeño y un botón **CC**. El audio y el texto no se guardan. Nuevo servicio `crmhub-stt` (`stt-service/`).
 - Servidor de video propio (LiveKit) y sala por enlace: el asesor crea la videollamada desde el lead (botón **Videollamada**), comparte el enlace por WhatsApp y el cliente entra desde el navegador, sin cuenta. Ver `docs/modulos/VIDEOLLAMADAS.md`. 
 

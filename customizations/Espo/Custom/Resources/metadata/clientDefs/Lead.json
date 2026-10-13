@@ -40,7 +40,8 @@
                     "iconClass": "fas fa-video",
                     "style": "default",
                     "handler": "custom:handlers/lead-contact",
-                    "actionFunction": "actionVideo"
+                    "actionFunction": "actionVideo",
+                    "checkVisibilityFunction": "canVideo"
                 },
                 {
                     "name": "emailLead",

@@ -46,6 +46,9 @@ define('custom:handlers/lead-contact', ['action-handler', 'custom:ui'], function
         }
 
         // Videollamada propia: crea una sala, muestra el enlace del cliente (copiar o enviar por WhatsApp) y deja entrar al asesor
+        // Servicio adicional: lo habilita el Centro de control por empresa (Settings.crmhubMeet)
+        canVideo() { return ['video', 'video_subs'].includes(this.view.getConfig().get('crmhubMeet')); }
+
         actionVideo() {
             const m = this.view.model;
             Espo.Ui.notify('Creando la videollamada…');

@@ -2,6 +2,14 @@
 
 Sala de video por enlace, creada por Crm Hub 360 (sin Meet ni Zoom). El asesor la crea desde el lead (botón **Videollamada**); el cliente entra desde el navegador, sin cuenta.
 
+## Servicio adicional (se habilita por empresa)
+Las videollamadas **no vienen incluidas**: el Centro de control las habilita empresa por empresa (*Empresas → Servicios → Videollamadas*), con tres opciones:
+- **No incluidas** (por defecto): el botón «Videollamada» no aparece y el Hub rechaza crear salas.
+- **Videollamadas con enlace para el cliente**.
+- **Videollamadas + subtítulos en vivo (español ↔ inglés)**: usa IA local del servidor (más recursos).
+
+La opción se guarda en `settings.limits.meet` de la empresa (lo que el Hub consulta con `meet.mode()`) y se refleja en el CRM con el ajuste `crmhubMeet` (lo lee el botón con `canVideo`). Si se apaga, los enlaces existentes dejan de entrar y los subtítulos se detienen.
+
 ## Piezas
 | Pieza | Dónde | Qué hace |
 |---|---|---|

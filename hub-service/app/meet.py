@@ -41,6 +41,13 @@ def ensure_schema() -> None:
         c.execute(SCHEMA)
 
 
+def mode(tenant_slug: str) -> str:
+    """Servicio de videollamadas que el Centro de control habilitó a la empresa: 'off' | 'video' | 'video_subs'."""
+    t = db.get_tenant(tenant_slug) or {}
+    m = (((t.get("settings") or {}).get("limits") or {}).get("meet")) or "off"
+    return m if m in ("video", "video_subs") else "off"
+
+
 def configured() -> bool:
     """True si el Hub tiene las claves y el dominio del servidor de videollamadas."""
     return bool(os.environ.get("LIVEKIT_API_KEY") and os.environ.get("LIVEKIT_API_SECRET") and os.environ.get("MEET_HOST"))
@@ -76,6 +83,10 @@ def create(tenant_slug: str, lead_id: str, title: str, host_name: str, created_b
     """Crea una sala y devuelve su código y los dos enlaces (cliente y anfitrión)."""
     if not configured():
         raise ValueError("Las videollamadas no están configuradas en el servidor.")
+    m = mode(tenant_slug)
+    if m == "off":
+        raise PermissionError("Las videollamadas no están habilitadas para esta empresa. Pídelo a tu proveedor (servicio adicional).")
+    subtitles = subtitles and m == "video_subs"   # los subtítulos solo si el servicio los incluye
     code, key = new_code(), secrets.token_urlsafe(18)
     with db.pool.connection() as c:
         c.execute("INSERT INTO meet_rooms (code, tenant, lead_id, title, host_name, host_key, created_by, expires_at, host_lang, guest_lang, subtitles) VALUES (%s,%s,%s,%s,%s,%s,%s, now() + make_interval(hours => %s),%s,%s,%s)",
@@ -95,7 +106,7 @@ def room(code: str) -> dict | None:
 def join(code: str, name: str, host_key: str = "") -> dict:
     """Credencial de entrada para una persona: el cliente con su nombre, o el anfitrión si trae su clave."""
     r = room(code)
-    if not r:
+    if not r or mode(r["tenant"]) == "off":
         raise LookupError("Esta videollamada ya terminó o el enlace no es válido.")
     is_host = bool(host_key) and hmac.compare_digest(host_key, r["host_key"])
     name = (name or "").strip()[:60] or (r["host_name"] if is_host else "Invitado")
@@ -103,7 +114,7 @@ def join(code: str, name: str, host_key: str = "") -> dict:
     with db.pool.connection() as c:
         c.execute("UPDATE meet_rooms SET first_join_at = COALESCE(first_join_at, now()) WHERE code = %s", (code,))
     return {"token": sign(ident, name, f"{r['tenant']}-{code}", is_host), "url": "wss://" + os.environ["MEET_HOST"], "name": name, "host": is_host,
-            "title": r["title"], "subtitles": bool(r["subtitles"]) and bool(STT_URL), "myLang": r["host_lang"] if is_host else r["guest_lang"], "otherLang": r["guest_lang"] if is_host else r["host_lang"],
+            "title": r["title"], "subtitles": bool(r["subtitles"]) and bool(STT_URL) and mode(r["tenant"]) == "video_subs", "myLang": r["host_lang"] if is_host else r["guest_lang"], "otherLang": r["guest_lang"] if is_host else r["host_lang"],
             "langs": sorted({r["host_lang"], r["guest_lang"]}), "sttKey": stt_key(code, ident)}
 
 
@@ -154,7 +165,7 @@ async def subtitle(code: str, key: str, lang: str, wav: bytes) -> dict:
     """Un enunciado de audio → {text, lang, tr:{idioma: traducción}} para repartir por el canal de datos de la sala."""
     global _waiting
     r = room(code)
-    if not r or not r["subtitles"] or not STT_URL:
+    if not r or not r["subtitles"] or not STT_URL or mode(r["tenant"]) != "video_subs":
         raise LookupError("Los subtítulos no están disponibles en esta sala.")
     if not stt_key_ok(code, key):
         raise PermissionError("Llave inválida.")
