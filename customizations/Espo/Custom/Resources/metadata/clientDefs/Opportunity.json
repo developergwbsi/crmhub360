@@ -54,6 +54,15 @@
                     "actionFunction": "actionTelegram"
                 },
                 {
+                    "name": "videoLead",
+                    "label": "Videollamada",
+                    "iconClass": "fas fa-video",
+                    "style": "default",
+                    "handler": "custom:handlers/lead-contact",
+                    "actionFunction": "actionVideo",
+                    "checkVisibilityFunction": "canVideo"
+                },
+                {
                     "name": "emailLead",
                     "label": "Correo",
                     "iconClass": "fas fa-envelope",
@@ -66,6 +75,11 @@
     },
     "sidePanels": {
         "detail": [
+            {
+                "name": "chVideo",
+                "label": "Videollamadas",
+                "view": "custom:views/panels/video"
+            },
             {
                 "name": "activities",
                 "reference": "activities",

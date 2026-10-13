@@ -1,0 +1,12 @@
+[
+    {
+        "rows": [
+            [{"name": "name"}, {"name": "parent"}],
+            [{"name": "status"}, false],
+            [{"name": "dateStart"}, {"name": "dateEnd"}],
+            [{"name": "duration"}, {"name": "reminders"}],
+            [{"name": "videoCall"}, {"name": "videoLink"}],
+            [{"name": "description"}]
+        ]
+    }
+]

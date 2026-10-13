@@ -326,6 +326,14 @@
         "noAuth": true
     },
     {
+        "route": "/CrmHub/meet/host",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "meetHost"
+        }
+    },
+    {
         "route": "/CrmHub/meet/end",
         "method": "post",
         "params": {

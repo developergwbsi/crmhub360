@@ -81,7 +81,8 @@ def new_code() -> str:
     return f"{pick(3)}-{pick(4)}-{pick(3)}"
 
 
-def create(tenant_slug: str, lead_id: str, title: str, host_name: str, created_by: str, host_lang: str = "es", guest_lang: str = "en", subtitles: bool = False) -> dict:
+def create(tenant_slug: str, lead_id: str, title: str, host_name: str, created_by: str, host_lang: str = "es", guest_lang: str = "en", subtitles: bool = False,
+           valid_hours: int = 0, fresh: bool = False) -> dict:
     """Crea una sala y devuelve su código y los dos enlaces (cliente y anfitrión)."""
     if not configured():
         raise ValueError("Las videollamadas no están configuradas en el servidor.")
@@ -89,17 +90,18 @@ def create(tenant_slug: str, lead_id: str, title: str, host_name: str, created_b
     if m == "off":
         raise PermissionError("Las videollamadas no están habilitadas para esta empresa. Pídelo a tu proveedor (servicio adicional).")
     subtitles = subtitles and m == "video_subs"   # los subtítulos solo si el servicio los incluye
-    if lead_id:   # una sola sala vigente por lead: el asesor puede volver a entrar cuando quiera (aunque cierre la ventana) y el enlace del cliente no cambia
+    if lead_id and not fresh:   # una sola sala vigente por lead: el asesor puede volver a entrar cuando quiera (aunque cierre la ventana) y el enlace del cliente no cambia
         with db.pool.connection() as c:
             ex = c.execute("SELECT code, host_key FROM meet_rooms WHERE tenant = %s AND lead_id = %s AND ended_at IS NULL AND expires_at > now() ORDER BY created_at DESC LIMIT 1", (tenant_slug, lead_id)).fetchone()
         if ex:
             return {"code": ex["code"], "guestUrl": f"{public_base()}/{ex['code']}", "hostUrl": f"{public_base()}/{ex['code']}?h={ex['host_key']}", "expiresInHours": TTL_HOURS, "reused": True}
+    hours = max(1, min(int(valid_hours or TTL_HOURS), 24 * 90))   # una reunión programada para dentro de días necesita que el enlace dure hasta entonces
     code, key = new_code(), secrets.token_urlsafe(18)
     with db.pool.connection() as c:
         c.execute("INSERT INTO meet_rooms (code, tenant, lead_id, title, host_name, host_key, created_by, expires_at, host_lang, guest_lang, subtitles) VALUES (%s,%s,%s,%s,%s,%s,%s, now() + make_interval(hours => %s),%s,%s,%s)",
-                  (code, tenant_slug, lead_id or "", (title or "").strip()[:120], (host_name or "")[:80], key, created_by[:80], TTL_HOURS, host_lang, guest_lang, subtitles))
+                  (code, tenant_slug, lead_id or "", (title or "").strip()[:120], (host_name or "")[:80], key, created_by[:80], hours, host_lang, guest_lang, subtitles))
     base = f"{public_base()}/{code}"
-    return {"code": code, "guestUrl": base, "hostUrl": f"{base}?h={key}", "expiresInHours": TTL_HOURS}
+    return {"code": code, "guestUrl": base, "hostUrl": f"{base}?h={key}", "expiresInHours": hours}
 
 
 def room(code: str) -> dict | None:
@@ -255,6 +257,14 @@ async def subtitle(code: str, key: str, lang: str, wav: bytes) -> dict:
         if t:
             tr[dst] = t
     return {"text": text, "lang": lang, "tr": tr}
+
+
+def host_url(tenant_slug: str, code: str) -> str | None:
+    """Enlace de entrada del anfitrión de una sala vigente de la empresa (solo para usuarios autorizados del CRM)."""
+    r = room(code)
+    if not r or r["tenant"] != tenant_slug:
+        return None
+    return f"{public_base()}/{code}?h={r['host_key']}"
 
 
 def end(tenant_slug: str, code: str) -> bool:

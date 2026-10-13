@@ -593,6 +593,22 @@ class CrmHub
         }
     }
 
+    /** POST /CrmHub/meet/host. Usuario con acceso a la reunión. Hub: GET /v1/meet/rooms/{código}/host. Devuelve el enlace de entrada del anfitrión de la videollamada de una reunión. */
+    public function postActionMeetHost(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $m = $this->em->getEntityById('Meeting', (string) ($d->meetingId ?? ''));
+        if (!$m || !$this->acl->checkEntityRead($m) || !$m->get('videoCode')) {
+            throw new Forbidden();
+        }
+        $code = preg_replace('/[^a-z0-9-]/', '', (string) $m->get('videoCode'));
+        try {
+            return (object) (new HubClient($this->config))->request('GET', '/v1/meet/rooms/' . $code . '/host', null, 20);
+        } catch (\RuntimeException $e) {
+            throw new BadRequest('La sala de esta videollamada ya terminó.');
+        }
+    }
+
     /** POST /CrmHub/meet/end. Usuario con edición del lead. Hub: POST /v1/meet/rooms/{código}/end. Cierra la sala de videollamada del lead. */
     public function postActionMeetEnd(Request $request): \stdClass
     {

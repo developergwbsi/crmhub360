@@ -143,6 +143,11 @@
                 "view": "custom:views/lead/panels/agent"
             },
             {
+                "name": "chVideo",
+                "label": "Videollamadas",
+                "view": "custom:views/panels/video"
+            },
+            {
                 "name": "activities",
                 "reference": "activities"
             },

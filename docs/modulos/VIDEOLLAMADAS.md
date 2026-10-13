@@ -23,6 +23,12 @@ La opción se guarda en `settings.limits.meet` de la empresa (lo que el Hub cons
 - El cliente **no entra directo**: abre el enlace, escribe su nombre y pide acceso (`POST …/knock`); queda en una sala de espera consultando su estado (`GET …/knock/{id}`) hasta que el anfitrión lo admita en la sala (`GET …/pending` y `POST …/decide`, con la clave de anfitrión). Sin clave, `POST …/token` responde 403.
 - Idiomas: cada participante elige en qué idioma **habla** y en cuál **lee** los subtítulos (es / en / sin subtítulos); el servidor traduce siempre al otro idioma.
 
+## Programar videollamadas (reuniones y calendario)
+- Campo **Videollamada** en la reunión (`Meeting.videoCall`, con `videoLink` y `videoCode` de solo lectura). Se ve en el formulario completo, en «Crear reunión» del panel de actividades y en el del **Calendario**; solo aparece si el servicio está habilitado (`handlers/meeting-video-dyn.js`).
+- Al guardar, el hook `Hooks/Meeting/VideoRoom.php` crea una sala nueva (`POST /v1/meet/rooms` con `fresh` y `validHours` = hasta 12 h después del fin) y escribe el enlace en la reunión y su descripción. Con el servicio apagado avisa y no guarda.
+- La reunión muestra **Entrar a la videollamada** (`CrmHub/meet/host` → `GET /v1/meet/rooms/{código}/host`): la clave de anfitrión nunca se guarda en la reunión.
+- Panel **Videollamadas** (`views/panels/video.js`) en lead, cuenta, contacto y oportunidad.
+
 ## Flujo
 1. El asesor pulsa **Videollamada** en el lead → `POST CrmHub/meet/create` → `POST /v1/meet/rooms` del Hub.
 2. Se devuelve `guestUrl` (`https://meet.<dominio>/<código>`) y `hostUrl` (el mismo con `?h=<clave>`; la clave de anfitrión solo la ve quien crea la sala).

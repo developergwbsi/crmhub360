@@ -1588,17 +1588,28 @@ class MeetCreateReq(BaseModel):
     hostLang: str = "es"
     guestLang: str = "en"
     subtitles: bool = False
+    validHours: int = 0
+    fresh: bool = False
 
 
 @app.post("/v1/meet/rooms")
 def meet_create(req: MeetCreateReq, tenant: dict = Depends(tenant_auth)):
     """Crea una sala y devuelve el enlace del cliente y el del anfitrión (el del anfitrión no se comparte)."""
     try:
-        return meet.create(tenant["slug"], req.leadId, req.title, req.hostName, req.createdBy, req.hostLang, req.guestLang, req.subtitles)
+        return meet.create(tenant["slug"], req.leadId, req.title, req.hostName, req.createdBy, req.hostLang, req.guestLang, req.subtitles, req.validHours, req.fresh)
     except PermissionError as e:
         raise HTTPException(403, str(e))
     except ValueError as e:
         raise HTTPException(422, str(e))
+
+
+@app.get("/v1/meet/rooms/{code}/host")
+def meet_host(code: str, tenant: dict = Depends(tenant_auth)):
+    """Enlace de entrada del anfitrión de una sala (para quien tiene acceso a la reunión en el CRM)."""
+    u = meet.host_url(tenant["slug"], code)
+    if not u:
+        raise HTTPException(404, "La sala ya terminó o no existe.")
+    return {"hostUrl": u}
 
 
 @app.get("/v1/meet/status")

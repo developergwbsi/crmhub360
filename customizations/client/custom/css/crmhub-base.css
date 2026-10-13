@@ -1114,3 +1114,10 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
         scrollbar-width: thin; padding-right: 4px;
     }
 }
+
+/* Panel «Videollamadas» */
+.ch-vp-b { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.ch-vp-i { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--ch-line, #e2e6ee); }
+.ch-vp-i > .fas { color: #4f6bff; }
+.ch-vp-i b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-vp-i small { display: block; color: #5d6678; }

@@ -4,6 +4,8 @@
 
 ## Sin publicar (después de v1.4.1)
 
+- `3d13c86` 2026-10-13 — Detalle de registros: las dos columnas (datos y panel lateral) se desplazan por separado
+- `e02b3bf` 2026-10-13 — Enlaces clicables y vistas previas de imágenes, videos, audios y archivos en chats, correos y actividad; los adjuntos del cliente por WhatsApp (Evolution y Meta) se guardan y se muestran
 - `7ade22b` 2026-10-13 — Videollamadas: sala persistente por lead, sala de espera con admisión del anfitrión y selección de idioma de habla y de subtítulos
 - `a00188b` 2026-10-13 — Centro de control: en el detalle de la empresa el encabezado y las pestañas quedan fijos y solo se desplaza el contenido
 - `d5e5ed6` 2026-10-13 — Centro de control: gestión de empresa en panel con la lista siempre visible, pantalla completa y pestañas (resumen, servicios y módulos, WhatsApp, consumo y facturación, historial de cambios)

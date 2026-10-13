@@ -1,0 +1,18 @@
+{
+    "dynamicHandler": "custom:handlers/meeting-video-dyn",
+    "menu": {
+        "detail": {
+            "buttons": [
+                {
+                    "name": "joinVideo",
+                    "label": "Entrar a la videollamada",
+                    "iconClass": "fas fa-video",
+                    "style": "primary",
+                    "handler": "custom:handlers/meeting-video",
+                    "actionFunction": "actionJoin",
+                    "checkVisibilityFunction": "hasVideo"
+                }
+            ]
+        }
+    }
+}

@@ -3,7 +3,7 @@
  * Sirve a leads y también a cuentas, contactos y oportunidades: para estos resuelve el lead de origen con POST CrmHub/thread.
  * Paneles que abre: custom:views/modals/phone, email-thread y whatsapp (este último para WhatsApp, SMS y Telegram). Al cerrar el panel (evento done) se recarga el modelo.
  */
-define('custom:handlers/lead-contact', ['action-handler', 'custom:ui'], function (Dep, ChUi) {
+define('custom:handlers/lead-contact', ['action-handler', 'custom:ui', 'custom:meet-launch'], function (Dep, ChUi, Launch) {
     return class extends Dep {
         // Solo hay un panel de canal abierto; la ficha del registro queda al lado.
         openChannel(view, options, cb) {
@@ -50,32 +50,7 @@ define('custom:handlers/lead-contact', ['action-handler', 'custom:ui'], function
         canVideo() { return ['video', 'video_subs'].includes(this.view.getConfig().get('crmhubMeet')); }
 
         actionVideo() {
-            const m = this.view.model;
-            Espo.Ui.notify('Creando la videollamada…');
-            Espo.Ajax.postRequest('CrmHub/meet/create', {leadId: m.id}).then(r => {
-                Espo.Ui.notify(false);
-                const phone = ((m.get('phoneNumber') || '') + '').trim();
-                ChUi.panel({title: 'Videollamada con ' + (m.get('name') || 'el cliente'), icon: 'fas fa-video', mount: body => {
-                    body.innerHTML = '<p>' + (r.reused ? 'Esta lead ya tiene una sala activa: puedes volver a entrar cuando quieras, aunque cierres la ventana.' : 'La sala está lista.') + ' Comparte este enlace con el cliente: entra desde el navegador, sin instalar nada ni crear una cuenta. <b>Cuando el cliente lo abra, te llegará una solicitud dentro de la sala para que lo admitas.</b></p>' +
-                        '<div class="input-group"><input class="form-control" data-r="url" readonly><span class="input-group-btn"><button class="btn btn-default" data-r="copy"><span class="far fa-copy"></span> Copiar</button></span></div>' +
-                        '<p class="ch-muted" style="margin:8px 0 12px">El enlace del cliente no cambia y sirve ' + Number(r.expiresInHours) + ' horas. Tu entrada (botón «Entrar a la sala») es personal: no la compartas.</p>' +
-                        '<button class="btn btn-primary" data-r="enter"><span class="fas fa-video"></span> Entrar a la sala</button> ' +
-                        (phone ? '<button class="btn btn-default" data-r="wa"><span class="fab fa-whatsapp"></span> Enviar enlace por WhatsApp</button> ' : '') + '<button class="btn btn-link text-danger" data-r="end">Cerrar esta sala</button>';
-                    const q = k => body.querySelector('[data-r="' + k + '"]');
-                    q('url').value = r.guestUrl;
-                    q('copy').onclick = () => { q('url').select(); (navigator.clipboard ? navigator.clipboard.writeText(r.guestUrl) : Promise.reject()).catch(() => document.execCommand('copy')).then(() => Espo.Ui.success('Enlace copiado'), () => {}); };
-                    q('enter').onclick = () => { window.open(r.hostUrl, '_blank', 'noopener'); };
-                    q('end').onclick = () => { Espo.Ajax.postRequest('CrmHub/meet/end', {leadId: m.id, code: r.code}).then(() => { Espo.Ui.success('Sala cerrada: el enlace ya no sirve. La próxima videollamada crea una sala nueva.'); body.closest('.ch-dlg, .modal, body').querySelectorAll('[data-a="ok"]').forEach(b => b.click()); }).catch(() => Espo.Ui.error('No se pudo cerrar la sala')); };
-                    if (phone) {
-                        q('wa').onclick = () => {
-                            q('wa').disabled = true;
-                            Espo.Ajax.postRequest('CrmHub/whatsapp/send', {leadId: m.id, phone, text: 'Hola, te comparto el enlace de nuestra videollamada: ' + r.guestUrl + ' . Ábrelo desde tu celular o computador.'})
-                                .then(() => { Espo.Ui.success('Enlace enviado por WhatsApp'); m.fetch(); })
-                                .catch(xhr => { q('wa').disabled = false; const why = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); Espo.Ui.error(why || 'No se pudo enviar por WhatsApp'); if (xhr) { xhr.errorIsHandled = true; } });
-                        };
-                    }
-                }});
-            }).catch(xhr => { Espo.Ui.notify(false); const why = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); Espo.Ui.error(why || 'No se pudo crear la videollamada'); if (xhr) { xhr.errorIsHandled = true; } });
+            this.withThread(t => { const m = this.view.model; Launch.open(m, t ? t.leadId : m.id, this.phoneOf(t)); });
         }
 
         actionSms() {

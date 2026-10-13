@@ -1,0 +1,7 @@
+{
+    "fields": {
+        "videoCall": {"type": "bool", "default": false, "audited": false},
+        "videoLink": {"type": "url", "readOnly": true, "maxLength": 200},
+        "videoCode": {"type": "varchar", "maxLength": 20, "readOnly": true, "layoutAvailabilityList": [], "customizationDisabled": true}
+    }
+}
