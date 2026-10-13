@@ -12,6 +12,8 @@ networks:
 volumes:
   crmhub_pg:
     name: crmhub_pg
+  crmhub_stt_models:
+    name: crmhub_stt_models
 
 services:
   postgres:
@@ -74,6 +76,18 @@ services:
       - ./livekit/livekit.yaml:/etc/livekit.yaml:ro
     environment:
       LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+
+  # Voz a texto local (faster-whisper en CPU) para los subtítulos de las videollamadas. Solo escucha en 127.0.0.1:8197; el modelo se guarda en el volumen.
+  stt:
+    build: ./stt-service
+    container_name: crmhub-stt
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - crmhub_stt_models:/root/.cache
+    environment:
+      STT_MODEL: ${STT_MODEL:-small}
+      STT_THREADS: ${STT_THREADS:-4}
 
   # Centro de control: crear/vigilar empresas, restablecer claves y entrar en modo lectura.
   # Solo escucha en 127.0.0.1; Apache lo publica con SSL. Los trabajos privilegiados los ejecuta bin/control-worker.

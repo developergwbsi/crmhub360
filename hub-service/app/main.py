@@ -1626,6 +1626,22 @@ def meet_page(code: str):
     return HTMLResponse(meet.page(code), 200 if meet.room(code) else 404, _MEET_HEADERS)
 
 
+@app.post("/v1/public/meet/{code}/stt")
+async def meet_subtitle(code: str, request: Request, lang: str = "es", x_stt_key: str = Header("")):
+    """Subtítulo de un enunciado de audio (WAV 16 kHz mono): lo transcribe y traduce con IA local. No guarda nada."""
+    try:
+        return JSONResponse(await meet.subtitle(code, x_stt_key, lang, await request.body()), headers=_MEET_HEADERS)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        logging.getLogger("hub.meet").warning("subtítulo: %s", str(e)[:150])
+        raise HTTPException(502, "No se pudo generar el subtítulo.")
+
+
 class MeetJoinReq(BaseModel):
     """Cuerpo para entrar a una sala: el nombre y, si es el anfitrión, su clave."""
     name: str = ""

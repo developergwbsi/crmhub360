@@ -5,7 +5,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Videollamadas propias (en desarrollo)
-- Servidor de video propio (LiveKit) y sala por enlace: el asesor crea la videollamada desde el lead (botón **Videollamada**), comparte el enlace por WhatsApp y el cliente entra desde el navegador, sin cuenta. Ver `docs/modulos/VIDEOLLAMADAS.md`. Falta publicar `meet.<dominio>` y abrir los puertos de medios; los subtítulos en vivo son la siguiente fase.
+- **Subtítulos en vivo español↔inglés, sin traducir el audio**: cada frase se transcribe con IA local (faster-whisper) y se traduce con un traductor local liviano; cada quien ve la traducción a su idioma con el original en pequeño y un botón **CC**. El audio y el texto no se guardan. Nuevo servicio `crmhub-stt` (`stt-service/`).
+- Servidor de video propio (LiveKit) y sala por enlace: el asesor crea la videollamada desde el lead (botón **Videollamada**), comparte el enlace por WhatsApp y el cliente entra desde el navegador, sin cuenta. Ver `docs/modulos/VIDEOLLAMADAS.md`. 
 
 ## [1.4.1] - 2026-10-11
 

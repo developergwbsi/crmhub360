@@ -21,5 +21,14 @@ Sala de video por enlace, creada por Crm Hub 360 (sin Meet ni Zoom). El asesor l
 2. `bin/crmhub meet:setup` — crea el vhost y el certificado de `meet.<dominio>`.
 3. **Router/firewall:** reenviar `7881/tcp` y `50000-50100/udp` hacia este servidor (el servidor está detrás de NAT; sin esto el video no llega a clientes externos).
 
-## Pendiente (siguiente fase)
-Subtítulos en vivo (sin traducir el audio): voz a texto local por cada participante y traducción de texto con la IA local (Ollama), enviados por el canal de datos de LiveKit. La tabla de salas ya guarda `host_lang`, `guest_lang` y `subtitles`.
+## Subtítulos en vivo (sin traducir el audio)
+Cada persona oye al otro en su idioma original; lo que se traduce es el **texto**. El audio no se graba ni se guarda, y tampoco las frases.
+
+1. El navegador de cada participante detecta cuándo habla (detector de voz por volumen) y corta frases de 0,4 a 12 s.
+2. Cada frase va al Hub (`POST /v1/public/meet/{código}/stt?lang=…`, con una llave por participante) y de ahí al servicio local `crmhub-stt` (`stt-service/`, **faster-whisper** en CPU, modelo `small`).
+3. El texto se traduce al otro idioma de la sala con un traductor local liviano (**opus-mt / CTranslate2**, servicio `crmhub-stt`, `/translate`). Si ese traductor no está instalado se usa la IA local (Ollama) con instrucciones estrictas, más lenta.
+4. El navegador reparte el subtítulo (original + traducción) a los demás por el canal de datos de LiveKit. Cada quien ve la traducción a su idioma, con el original en pequeño; el botón **CC** los oculta.
+
+- Idiomas: español e inglés (los de la sala: `host_lang` = es del asesor, `guest_lang` = en del cliente).
+- Servicio de voz: `docker compose up -d stt`; modelos de traducción: `stt-service/convert_models.sh` (una vez; quedan en el volumen `crmhub_stt_models`). Variables: `STT_MODEL` (tiny/base/small/medium), `STT_THREADS`.
+- Límites: el Hub procesa como máximo 2 frases a la vez y descarta las que excedan una cola de 4, para no saturar la CPU (el servidor no tiene GPU).

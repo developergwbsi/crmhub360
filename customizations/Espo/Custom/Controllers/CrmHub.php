@@ -585,7 +585,7 @@ class CrmHub
         try {
             return (object) (new HubClient($this->config))->request('POST', '/v1/meet/rooms', [
                 'leadId' => $lead->getId(), 'title' => 'Videollamada con ' . ($lead->get('name') ?: 'cliente'), 'hostName' => (string) $me, 'createdBy' => $this->user->getId(),
-                'hostLang' => 'es', 'guestLang' => 'en', 'subtitles' => false,
+                'hostLang' => 'es', 'guestLang' => 'en', 'subtitles' => true,
             ], 20);
         } catch (\RuntimeException $e) {
             preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);

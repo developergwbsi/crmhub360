@@ -2,6 +2,10 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
+## Sin publicar (después de v1.4.1)
+
+- `5dfff70` 2026-10-13 — Videollamadas propias: servidor LiveKit, salas por enlace en el Hub, página del cliente y botón Videollamada en el lead
+
 ## v1.4.1
 
 - `976cc5e` 2026-10-11 — Versión 1.4.1
