@@ -1650,6 +1650,60 @@ async def meet_subtitle(code: str, request: Request, lang: str = "es", x_stt_key
         raise HTTPException(502, "No se pudo generar el subtítulo.")
 
 
+class KnockReq(BaseModel):
+    """El invitado pide entrar a la sala."""
+    name: str = ""
+
+
+class DecideReq(BaseModel):
+    """El anfitrión admite o rechaza a quien espera."""
+    host: str
+    id: str
+    admit: bool = True
+
+
+@app.post("/v1/public/meet/{code}/knock")
+def meet_knock(code: str, req: KnockReq):
+    """El invitado pide entrar: espera a que el anfitrión lo admita."""
+    try:
+        return JSONResponse(meet.knock(code, req.name), headers=_MEET_HEADERS)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except ValueError as e:
+        raise HTTPException(429, str(e))
+
+
+@app.get("/v1/public/meet/{code}/knock/{kid}")
+def meet_knock_status(code: str, kid: str):
+    """Estado de la solicitud; admitido trae la credencial de entrada."""
+    try:
+        return JSONResponse(meet.knock_status(code, kid), headers=_MEET_HEADERS)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.get("/v1/public/meet/{code}/pending")
+def meet_pending(code: str, h: str = ""):
+    """Solicitudes esperando al anfitrión (requiere su clave)."""
+    try:
+        return JSONResponse({"items": meet.pending(code, h)}, headers=_MEET_HEADERS)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+
+
+@app.post("/v1/public/meet/{code}/decide")
+def meet_decide(code: str, req: DecideReq):
+    """El anfitrión admite o rechaza una solicitud."""
+    try:
+        return JSONResponse({"ok": meet.decide(code, req.host, req.id, req.admit)}, headers=_MEET_HEADERS)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+
+
 class MeetJoinReq(BaseModel):
     """Cuerpo para entrar a una sala: el nombre y, si es el anfitrión, su clave."""
     name: str = ""
@@ -1663,6 +1717,8 @@ def meet_token(code: str, req: MeetJoinReq):
         return JSONResponse(meet.join(code, req.name, req.host), headers=_MEET_HEADERS)
     except LookupError as e:
         raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
 
 
 if __name__ == "__main__":

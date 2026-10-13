@@ -4,6 +4,8 @@
 
 ## Sin publicar (después de v1.4.1)
 
+- `a00188b` 2026-10-13 — Centro de control: en el detalle de la empresa el encabezado y las pestañas quedan fijos y solo se desplaza el contenido
+- `d5e5ed6` 2026-10-13 — Centro de control: gestión de empresa en panel con la lista siempre visible, pantalla completa y pestañas (resumen, servicios y módulos, WhatsApp, consumo y facturación, historial de cambios)
 - `68b06f7` 2026-10-13 — Videollamadas y subtítulos como servicio adicional: se habilitan por empresa desde el Centro de control (el Hub y el botón del CRM lo respetan)
 - `0f697f7` 2026-10-13 — Videollamadas: subtítulos en vivo es↔en con IA local (voz a texto faster-whisper + traductor opus-mt), botón CC y servicio crmhub-stt
 - `5dfff70` 2026-10-13 — Videollamadas propias: servidor LiveKit, salas por enlace en el Hub, página del cliente y botón Videollamada en el lead

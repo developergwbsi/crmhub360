@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **107** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **111** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -79,6 +79,10 @@ Total: **107** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/processes/test` | `proc_test` | Prueba una definición contra un lead real (o datos de ejemplo) sin guardar nada en el lead. |
 | GET | `/v1/public/meet/_/lk.js` | `meet_js` | Cliente de LiveKit para la página de la videollamada. |
 | GET | `/v1/public/meet/{code}` | `meet_page` | Página pública de la videollamada (se publica en https://meet.<dominio>/<código>). |
+| POST | `/v1/public/meet/{code}/decide` | `meet_decide` | El anfitrión admite o rechaza una solicitud. |
+| POST | `/v1/public/meet/{code}/knock` | `meet_knock` | El invitado pide entrar: espera a que el anfitrión lo admita. |
+| GET | `/v1/public/meet/{code}/knock/{kid}` | `meet_knock_status` | Estado de la solicitud; admitido trae la credencial de entrada. |
+| GET | `/v1/public/meet/{code}/pending` | `meet_pending` | Solicitudes esperando al anfitrión (requiere su clave). |
 | POST | `/v1/public/meet/{code}/stt` | `meet_subtitle` | Subtítulo de un enunciado de audio (WAV 16 kHz mono): lo transcribe y traduce con IA local. No guarda nada. |
 | POST | `/v1/public/meet/{code}/token` | `meet_token` | Credencial para entrar a la sala con LiveKit. |
 | GET | `/v1/public/{slug}/forms/{form_slug}` | `form_page` | Página pública HTML de un formulario web (se publica en /f/<slug>); 404 si no existe. |

@@ -18,6 +18,11 @@ La opción se guarda en `settings.limits.meet` de la empresa (lo que el Hub cons
 | Apache | `templates/apache-meet.conf.tpl`, `bin/crmhub meet:setup` | `https://meet.<dominio>`: la página y el token van al Hub; `/rtc` (WebSocket) va a LiveKit. |
 | CRM | `CrmHub/meet/create` (controlador), botón en `Lead.json`, `actionVideo` en `handlers/lead-contact.js` | Crea la sala y muestra el enlace del cliente (copiar o enviar por WhatsApp) y la entrada del asesor. |
 
+## Sala persistente y acceso del cliente
+- Un lead tiene **una sala vigente a la vez**: `POST /v1/meet/rooms` devuelve la existente (con `reused: true`) mientras no esté cerrada ni vencida, así el asesor puede volver con el botón «Videollamada» aunque cierre la ventana. «Cerrar esta sala» (`CrmHub/meet/end`) permite crear otra.
+- El cliente **no entra directo**: abre el enlace, escribe su nombre y pide acceso (`POST …/knock`); queda en una sala de espera consultando su estado (`GET …/knock/{id}`) hasta que el anfitrión lo admita en la sala (`GET …/pending` y `POST …/decide`, con la clave de anfitrión). Sin clave, `POST …/token` responde 403.
+- Idiomas: cada participante elige en qué idioma **habla** y en cuál **lee** los subtítulos (es / en / sin subtítulos); el servidor traduce siempre al otro idioma.
+
 ## Flujo
 1. El asesor pulsa **Videollamada** en el lead → `POST CrmHub/meet/create` → `POST /v1/meet/rooms` del Hub.
 2. Se devuelve `guestUrl` (`https://meet.<dominio>/<código>`) y `hostUrl` (el mismo con `?h=<clave>`; la clave de anfitrión solo la ve quien crea la sala).

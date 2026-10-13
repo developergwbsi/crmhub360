@@ -593,6 +593,22 @@ class CrmHub
         }
     }
 
+    /** POST /CrmHub/meet/end. Usuario con edición del lead. Hub: POST /v1/meet/rooms/{código}/end. Cierra la sala de videollamada del lead. */
+    public function postActionMeetEnd(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->em->getEntityById('Lead', (string) ($d->leadId ?? ''));
+        if (!$lead || !$this->acl->checkEntityEdit($lead)) {
+            throw new Forbidden();
+        }
+        $code = preg_replace('/[^a-z0-9-]/', '', (string) ($d->code ?? ''));
+        try {
+            return (object) (new HubClient($this->config))->request('POST', '/v1/meet/rooms/' . $code . '/end', [], 20);
+        } catch (\RuntimeException $e) {
+            throw new BadRequest('No se pudo cerrar la sala.');
+        }
+    }
+
     /** POST /CrmHub/whatsapp/send. Usuario con edición del lead. Envía por el Hub. */
     public function postActionWhatsappSend(Request $request): \stdClass
     {
