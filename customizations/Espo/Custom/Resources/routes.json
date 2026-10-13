@@ -326,6 +326,14 @@
         "noAuth": true
     },
     {
+        "route": "/CrmHub/meet/create",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "meetCreate"
+        }
+    },
+    {
         "route": "/CrmHub/whatsapp/qr",
         "method": "post",
         "params": {

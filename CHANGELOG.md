@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Videollamadas propias (en desarrollo)
+- Servidor de video propio (LiveKit) y sala por enlace: el asesor crea la videollamada desde el lead (botón **Videollamada**), comparte el enlace por WhatsApp y el cliente entra desde el navegador, sin cuenta. Ver `docs/modulos/VIDEOLLAMADAS.md`. Falta publicar `meet.<dominio>` y abrir los puertos de medios; los subtítulos en vivo son la siguiente fase.
+
 ## [1.4.1] - 2026-10-11
 
 - Líneas de WhatsApp **administradas por Crm Hub 360** (asignadas desde el Centro de control): en las integraciones de la empresa ya no aparecen «Vincular (QR)» ni «Cambiar de número» —el QR solo lo escanea el equipo desde el Centro— y los avisos de salud dicen que nuestro equipo la atiende. El Hub también lo impone (el QR y el cierre de sesión devuelven 403 a esas líneas). Las líneas propias de la empresa conservan todas las opciones.

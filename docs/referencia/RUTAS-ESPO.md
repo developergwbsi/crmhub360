@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **101** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **102** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -65,6 +65,7 @@ Total: **101** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/lineTest` | CrmHub.lineTest | POST /CrmHub/lineTest. Admin. Hub: POST /v1/lines/test. */ |
 | GET | `/CrmHub/lines` | CrmHub.lines | GET /CrmHub/lines. Admin. Hub: GET /v1/lines. */ |
 | GET | `/CrmHub/linesActive` | CrmHub.linesActive | Líneas encendidas por canal: para elegir «enviar desde» (cualquier usuario del CRM). */ |
+| POST | `/CrmHub/meet/create` | CrmHub.meetCreate | POST /CrmHub/meet/create. Usuario con edición del lead. Hub: POST /v1/meet/rooms. Devuelve el enlace del cliente y el del anfitrión. */ |
 | GET | `/CrmHub/metrics` | CrmHub.metrics | GET /CrmHub/metrics. Usuario; datos según su ACL. Hub: GET /v1/agent/attended (comercial virtual). */ |
 | GET | `/CrmHub/myroles` | CrmHub.myroles | Roles del usuario actual: el manual muestra solo lo que le corresponde. */ |
 | POST | `/CrmHub/notifyTeam` | CrmHub.notifyTeam | Solo el usuario API del Hub: avisa en la campana del CRM (p. ej. «Nuevo registro» de un formulario web). */ |

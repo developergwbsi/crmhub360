@@ -2,8 +2,9 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.4.0)
+## v1.4.1
 
+- `976cc5e` 2026-10-11 — Versión 1.4.1
 - `16fa8e2` 2026-10-11 — Changelog 1.4.1
 - `4cfd7b1` 2026-10-11 — Líneas administradas por el Centro de control: la empresa no ve ni puede usar Vincular (QR) ni Cambiar de número; avisos de salud adaptados
 - `10b21ee` 2026-10-11 — Centro de control: «Probar el envío» siempre visible en el diálogo de la línea

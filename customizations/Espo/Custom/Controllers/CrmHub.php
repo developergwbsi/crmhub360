@@ -573,6 +573,26 @@ class CrmHub
         }
     }
 
+    /** POST /CrmHub/meet/create. Usuario con edición del lead. Hub: POST /v1/meet/rooms. Devuelve el enlace del cliente y el del anfitrión. */
+    public function postActionMeetCreate(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->em->getEntityById('Lead', (string) ($d->leadId ?? ''));
+        if (!$lead || !$this->acl->checkEntityEdit($lead)) {
+            throw new Forbidden();
+        }
+        $me = $this->user->get('name') ?: $this->user->get('userName');
+        try {
+            return (object) (new HubClient($this->config))->request('POST', '/v1/meet/rooms', [
+                'leadId' => $lead->getId(), 'title' => 'Videollamada con ' . ($lead->get('name') ?: 'cliente'), 'hostName' => (string) $me, 'createdBy' => $this->user->getId(),
+                'hostLang' => 'es', 'guestLang' => 'en', 'subtitles' => false,
+            ], 20);
+        } catch (\RuntimeException $e) {
+            preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
+            throw new BadRequest($m[1] ?? 'No se pudo crear la videollamada.');
+        }
+    }
+
     /** POST /CrmHub/whatsapp/send. Usuario con edición del lead. Envía por el Hub. */
     public function postActionWhatsappSend(Request $request): \stdClass
     {

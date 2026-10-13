@@ -58,6 +58,22 @@ services:
       GUPSHUP_BASE: ${GUPSHUP_BASE:-https://api.gupshup.io}
       TWILIO_BASE: ${TWILIO_BASE:-https://api.twilio.com}
       ALLOW_LOOPBACK_URLS: ${ALLOW_LOOPBACK_URLS:-0}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
+      MEET_HOST: ${MEET_HOST:-}
+
+  # Videollamadas propias: servidor LiveKit. La señal solo escucha en 127.0.0.1 (Apache la publica con SSL en meet.<dominio>);
+  # los medios usan 7881/tcp y 50000-50100/udp, que hay que abrir y reenviar hacia este servidor.
+  livekit:
+    image: livekit/livekit-server:v1.8.0
+    container_name: crmhub-livekit
+    restart: unless-stopped
+    network_mode: host
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./livekit/livekit.yaml:/etc/livekit.yaml:ro
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
 
   # Centro de control: crear/vigilar empresas, restablecer claves y entrar en modo lectura.
   # Solo escucha en 127.0.0.1; Apache lo publica con SSL. Los trabajos privilegiados los ejecuta bin/control-worker.

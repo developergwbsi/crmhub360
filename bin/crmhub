@@ -20,6 +20,7 @@ Uso: bin/crmhub <comando>
   tenant:upgrade <slug>         reaplica customizaciones y reconstruye
   tenant:delete <slug> --yes    elimina contenedores, volumen y BD
   tenant:ui <slug>              reaplica tema, menú y dashboard
+  meet:setup                    publica las videollamadas (vhost de Apache + SSL en meet.<dominio>)
   release:publish [--note t]    congela el código de desarrollo como «base de producción» (réplica para nuevas empresas)
   release:list | release:current
   control:install               instala el Centro de control (contenedor + Apache + ejecutor); imprime la clave inicial
@@ -243,6 +244,15 @@ cmd_tenant_ui() {
   python3 "$SRC/bin/ui_settings.py" "http://127.0.0.1:$WEB_PORT" admin "$ADMIN_PASSWORD"
 }
 
+cmd_meet_setup() {   # vhost de las videollamadas (meet.<dominio>) + certificado SSL
+  load_env
+  [[ -n "${MEET_HOST:-}" ]] || die "falta MEET_HOST en .env"
+  envsubst '${MEET_HOST} ${HUB_PORT}' < templates/apache-meet.conf.tpl | sed "s|@@LOGDIR@@|\${APACHE_LOG_DIR}|g" > /etc/apache2/sites-available/crmhub-meet.conf
+  a2ensite crmhub-meet >/dev/null && apache2ctl configtest && systemctl reload apache2
+  sudo certbot --apache -d "$MEET_HOST" --non-interactive --agree-tos -m "$CERTBOT_EMAIL" --redirect
+  echo "Videollamadas en https://$MEET_HOST — abre en el router/firewall: 7881/tcp y 50000-50100/udp hacia este servidor."
+}
+
 cmd_tenant_delete() {
   load_env; local slug="${1:?slug}"; [[ "${2:-}" == "--yes" ]] || die "agrega --yes para confirmar la eliminación DEFINITIVA de datos"
   [[ -d "tenants/$slug" ]] || die "tenant inexistente"
@@ -293,6 +303,7 @@ case "${1:-}" in
   tenant:suspend) cmd_tenant_status "${2:?slug}" suspended;;
   tenant:resume) cmd_tenant_status "${2:?slug}" active;;
   tenant:upgrade) shift; cmd_tenant_upgrade "$@";;
+  meet:setup) shift; cmd_meet_setup "$@";;
   tenant:ui) shift; cmd_tenant_ui "$@";;
   release:publish) shift; cmd_release_publish "$@";;
   release:list) cmd_release_list;;

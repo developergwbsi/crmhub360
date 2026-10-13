@@ -17,12 +17,12 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import BackgroundTasks, Body, Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel
 
 import httpx
 
-from . import monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import meet, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +41,7 @@ async def lifespan(_: FastAPI):
     agent.ensure_schema()
     monitor.ensure_schema()
     usage.ensure_schema()
+    meet.ensure_schema()
     templates.ensure_schema()
     bg = asyncio.create_task(broadcast.worker())
     mb = asyncio.create_task(mailbox.worker())
@@ -1575,6 +1576,69 @@ async def agent_menu_test(req: AgentMenuTestReq, tenant: dict = Depends(tenant_a
         raise HTTPException(422, str(e))
     except Exception as e:
         raise HTTPException(502, f"No se pudo enviar el menú de prueba: {str(e)[:200]}")
+
+
+# --- Videollamadas propias (sala por enlace; los medios los maneja LiveKit) ---
+class MeetCreateReq(BaseModel):
+    """Cuerpo para crear una sala de videollamada desde el CRM."""
+    leadId: str = ""
+    title: str = ""
+    hostName: str = ""
+    createdBy: str = ""
+    hostLang: str = "es"
+    guestLang: str = "en"
+    subtitles: bool = False
+
+
+@app.post("/v1/meet/rooms")
+def meet_create(req: MeetCreateReq, tenant: dict = Depends(tenant_auth)):
+    """Crea una sala y devuelve el enlace del cliente y el del anfitrión (el del anfitrión no se comparte)."""
+    try:
+        return meet.create(tenant["slug"], req.leadId, req.title, req.hostName, req.createdBy, req.hostLang, req.guestLang, req.subtitles)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/v1/meet/rooms")
+def meet_list(leadId: str = "", tenant: dict = Depends(tenant_auth)):
+    """Salas recientes de la empresa (o de un lead)."""
+    return {"items": meet.listing(tenant["slug"], leadId)}
+
+
+@app.post("/v1/meet/rooms/{code}/end")
+def meet_end(code: str, tenant: dict = Depends(tenant_auth)):
+    """Cierra una sala: el enlace deja de servir."""
+    return {"ok": meet.end(tenant["slug"], code)}
+
+
+_MEET_HEADERS = {"Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "Permissions-Policy": "camera=(self), microphone=(self), display-capture=(self)"}
+
+
+@app.get("/v1/public/meet/_/lk.js")
+def meet_js():
+    """Cliente de LiveKit para la página de la videollamada."""
+    return Response(meet.client_js(), media_type="text/javascript", headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/v1/public/meet/{code}", response_class=HTMLResponse)
+def meet_page(code: str):
+    """Página pública de la videollamada (se publica en https://meet.<dominio>/<código>)."""
+    return HTMLResponse(meet.page(code), 200 if meet.room(code) else 404, _MEET_HEADERS)
+
+
+class MeetJoinReq(BaseModel):
+    """Cuerpo para entrar a una sala: el nombre y, si es el anfitrión, su clave."""
+    name: str = ""
+    host: str = ""
+
+
+@app.post("/v1/public/meet/{code}/token")
+def meet_token(code: str, req: MeetJoinReq):
+    """Credencial para entrar a la sala con LiveKit."""
+    try:
+        return JSONResponse(meet.join(code, req.name, req.host), headers=_MEET_HEADERS)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
 
 
 if __name__ == "__main__":

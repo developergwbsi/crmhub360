@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **99** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **105** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -68,11 +68,17 @@ Total: **99** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings
 | POST | `/v1/lines/enabled` | `lines_enabled` | Enciende o apaga una línea. |
 | POST | `/v1/lines/send-test` | `lines_send_test` | Envía un mensaje de prueba por una línea. |
 | POST | `/v1/lines/test` | `lines_test` | Prueba la conexión de una línea. |
+| GET | `/v1/meet/rooms` | `meet_list` | Salas recientes de la empresa (o de un lead). |
+| POST | `/v1/meet/rooms` | `meet_create` | Crea una sala y devuelve el enlace del cliente y el del anfitrión (el del anfitrión no se comparte). |
+| POST | `/v1/meet/rooms/{code}/end` | `meet_end` | Cierra una sala: el enlace deja de servir. |
 | GET | `/v1/process/runs` | `proc_runs` | Historial de ejecuciones de procesos (de un lead o del tenant). |
 | POST | `/v1/process/trigger` | `proc_trigger` | Lo llama el CRM al guardar un lead: ejecuta los procesos (manual en el acto; si no, tras 1,5 s en segundo plano) y, si el lead es nuevo, da de alta al comercial virtual. |
 | GET | `/v1/processes` | `proc_list` | Procesos configurados, campos disponibles, máximo y catálogo. |
 | PUT | `/v1/processes` | `proc_save` | Valida y guarda los procesos del tenant (settings.processes). |
 | POST | `/v1/processes/test` | `proc_test` | Prueba una definición contra un lead real (o datos de ejemplo) sin guardar nada en el lead. |
+| GET | `/v1/public/meet/_/lk.js` | `meet_js` | Cliente de LiveKit para la página de la videollamada. |
+| GET | `/v1/public/meet/{code}` | `meet_page` | Página pública de la videollamada (se publica en https://meet.<dominio>/<código>). |
+| POST | `/v1/public/meet/{code}/token` | `meet_token` | Credencial para entrar a la sala con LiveKit. |
 | GET | `/v1/public/{slug}/forms/{form_slug}` | `form_page` | Página pública HTML de un formulario web (se publica en /f/<slug>); 404 si no existe. |
 | POST | `/v1/public/{slug}/forms/{form_slug}` | `form_submit` | Recibe el envío de un formulario público: valida, registra el lead y ejecuta las acciones; redirige o muestra la confirmación. |
 | GET | `/v1/public/{slug}/forms/{form_slug}/img/{action_id}/{n}` | `form_image` | Imagen pública de una acción del formulario (la usan los correos); con caché de un día. |

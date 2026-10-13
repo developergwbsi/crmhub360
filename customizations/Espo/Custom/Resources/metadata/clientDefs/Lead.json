@@ -35,6 +35,14 @@
                     "actionFunction": "actionTelegram"
                 },
                 {
+                    "name": "videoLead",
+                    "label": "Videollamada",
+                    "iconClass": "fas fa-video",
+                    "style": "default",
+                    "handler": "custom:handlers/lead-contact",
+                    "actionFunction": "actionVideo"
+                },
+                {
                     "name": "emailLead",
                     "label": "Correo",
                     "iconClass": "fas fa-envelope",

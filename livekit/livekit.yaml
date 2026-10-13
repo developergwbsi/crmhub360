@@ -1,0 +1,13 @@
+# Servidor de videollamadas de Crm Hub 360 (LiveKit). Las claves llegan por la variable LIVEKIT_KEYS (ver docker-compose.yml).
+port: 7880
+bind_addresses: ["127.0.0.1"]      # la señal sale a internet solo por Apache (wss en meet.<dominio>)
+rtc:
+  tcp_port: 7881                   # respaldo por TCP cuando el UDP está bloqueado
+  port_range_start: 50000          # medios (audio y video) por UDP: reenviar este rango al servidor
+  port_range_end: 50100
+  use_external_ip: true
+room:
+  empty_timeout: 300
+  max_participants: 6
+logging:
+  level: info
