@@ -148,14 +148,15 @@ define('custom:views/modals/email-thread', ['views/modal', 'custom:ui', 'custom:
                 if (d.isHtml && d.body) {
                     const f = document.createElement('iframe');
                     f.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');   // sin scripts: el contenido de un correo nunca se ejecuta
-                    f.srcdoc = '<base target="_blank"><style>body{margin:0;padding:12px 14px;font:14px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;color:#1c2233;overflow-wrap:anywhere}img{max-width:100%;height:auto}table{max-width:100%}a{color:#2f43c4}</style>' + d.body;
+                    f.srcdoc = '<base target="_blank"><style>body{margin:0;padding:12px 14px;font:14px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;color:#1c2233;overflow-wrap:anywhere}img{max-width:100%;height:auto}table{max-width:100%}a{color:#2f43c4}</style>' + ChUi.linkifyHtml(d.body);
                     f.onload = () => { try { f.style.height = (f.contentDocument.documentElement.scrollHeight + 4) + 'px'; } catch (e) { f.style.height = '420px'; } };
                     paper.innerHTML = ''; paper.appendChild(f);
                 } else {
-                    paper.innerHTML = `<div class="ch-em-text">${ChUi.esc(d.bodyPlain || d.body || m.text || '(sin contenido)')}</div>`;
+                    const plain = d.bodyPlain || d.body || m.text || '(sin contenido)';
+                    paper.innerHTML = `<div class="ch-em-text">${ChUi.linkify(plain)}</div>${ChUi.previews(plain)}`;
                 }
                 const names = d.attachmentsNames || {}, att = this.el.querySelector('[data-role="att"]');
-                if (att) { att.innerHTML = Object.keys(names).map(id => `<a href="?entryPoint=download&id=${encodeURIComponent(id)}" target="_blank" rel="noopener"><span class="fas fa-paperclip"></span>${ChUi.esc(names[id].name || names[id])}</a>`).join(''); }
+                if (att) { att.innerHTML = Object.keys(names).map(id => { const nm = names[id].name || names[id], img = /\.(jpe?g|png|gif|webp|bmp)$/i.test(nm); return img ? `<a class="ch-att-img" href="?entryPoint=download&id=${encodeURIComponent(id)}" target="_blank" rel="noopener"><img src="?entryPoint=image&id=${encodeURIComponent(id)}&size=medium" alt="${ChUi.esc(nm)}" loading="lazy"><small>${ChUi.esc(nm)}</small></a>` : `<a href="?entryPoint=download&id=${encodeURIComponent(id)}" target="_blank" rel="noopener"><span class="fas fa-paperclip"></span>${ChUi.esc(nm)}</a>`; }).join(''); }
             }).catch(xhr => {
                 if (xhr) { xhr.errorIsHandled = true; }
                 const paper = this.el.querySelector('[data-role="paper"]'); if (paper) { paper.innerHTML = `<div class="ch-em-text">${ChUi.esc(m.text || '(no se pudo cargar el mensaje)')}</div>`; }

@@ -67,6 +67,19 @@ define('custom:views/chat-pane', ['view', 'custom:ui', 'custom:tpl', 'custom:liv
             }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
         }
 
+        // Adjuntos del mensaje (lo que envió el cliente): imagen, video y audio con reproductor; documentos con icono, nombre y tamaño
+        attHtml(m) {
+            const esc = ChUi.esc, kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+            return (m.attachments || []).map(a => {
+                const dl = '?entryPoint=download&id=' + encodeURIComponent(a.id), t = a.type || '';
+                if (/^image\//.test(t)) { return `<a class="ch-prev ch-prev-img" href="${dl}" target="_blank" rel="noopener"><img src="?entryPoint=image&id=${encodeURIComponent(a.id)}&size=medium" alt="${esc(a.name)}" loading="lazy"></a>`; }
+                if (/^video\//.test(t)) { return `<video class="ch-prev ch-prev-vid" src="${dl}" controls preload="metadata" playsinline></video>`; }
+                if (/^audio\//.test(t)) { return `<audio class="ch-prev ch-prev-aud" src="${dl}" controls preload="none"></audio>`; }
+                const ext = (a.name.split('.').pop() || '').toLowerCase(), ic = /pdf/.test(ext) ? ['far fa-file-pdf', '#e5484d'] : /docx?/.test(ext) ? ['far fa-file-word', '#2b6cb0'] : /xlsx?|csv/.test(ext) ? ['far fa-file-excel', '#1f9d55'] : /pptx?/.test(ext) ? ['far fa-file-powerpoint', '#d9622b'] : /zip|rar/.test(ext) ? ['far fa-file-zipper', '#8a6d3b'] : ['far fa-file', '#5d6678'];
+                return `<a class="ch-prev ch-prev-file" href="${dl}" target="_blank" rel="noopener"><span class="${ic[0]}" style="color:${ic[1]}"></span><span class="ch-pf-n">${esc(a.name)}</span><small>${esc(ext.toUpperCase())}${a.size ? ' · ' + kb(a.size) : ''} · abrir</small></a>`;
+            }).join('');
+        }
+
         paint() {
             const th = this.el.querySelector('.ch-chat-thread');
             if (!th) { return; }
@@ -78,7 +91,7 @@ define('custom:views/chat-pane', ['view', 'custom:ui', 'custom:tpl', 'custom:liv
                 // cada mensaje dice quién lo escribió: la persona que lo envió (no la asignada al lead), el comercial virtual, el sistema o el propio cliente
                 const who = m.who || '', virt = /\(comercial virtual\)$/i.test(who), nm = virt ? who.replace(/\s*\(comercial virtual\)$/i, '') : who;
                 html += `<div class="ch-msg ch-msg-${m.dir}"><div class="ch-bubble">${who ? `<div class="ch-msg-who ${virt ? 'ch-virt' : ''}">${virt ? '<span class="fas fa-robot"></span> ' : ''}${ChUi.esc(nm)}${virt ? ' <small>comercial virtual</small>' : ''}</div>` : ''}` +
-                    `<div class="ch-msg-text">${ChUi.esc(m.text)}</div><div class="ch-msg-time">${ChUi.esc(ChUi.fmt.time(m.at))}</div></div></div>`;
+                    `${this.attHtml(m)}${(m.attachments || []).length && /^\[(Imagen|Video|Audio|Documento|Sticker)\]$/i.test(m.text) ? '' : `<div class="ch-msg-text">${ChUi.linkify(m.text)}</div>`}${ChUi.previews(m.text)}<div class="ch-msg-time">${ChUi.esc(ChUi.fmt.time(m.at))}</div></div></div>`;
             });
             th.innerHTML = html || `<div class="ch-chat-empty"><span class="${this.meta.icon}"></span><p>Aún no hay mensajes por ${this.meta.title}.<br>Escribe el primero abajo.</p></div>`;
             if (near || this.justSent) { th.scrollTop = th.scrollHeight; this.justSent = false; }

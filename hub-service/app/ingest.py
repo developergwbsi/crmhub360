@@ -145,7 +145,8 @@ async def notify_owner(tenant: dict, lead_id: str, name: str | None, text: str) 
 
 
 async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None, text: str, from_me: bool = False,
-                           avatar_payload: dict | None = None, lead_id: str | None = None, lid: str | None = None) -> str | None:
+                           avatar_payload: dict | None = None, lead_id: str | None = None, lid: str | None = None,
+                           media: tuple[bytes, str, str] | None = None) -> str | None:
     """Mensaje de WhatsApp (de cualquier proveedor): busca/crea el lead por teléfono (o por el LID ya conocido) y lo registra en su flujo."""
     from . import whatsapp, routing  # import tardío: whatsapp importa este módulo
     if not lead_id and phone:
@@ -170,7 +171,13 @@ async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None,
             text = await agent.map_menu_reply(tenant, lead_id, text)
         except Exception as e:
             logging.getLogger("crmhub").warning("opción de menú: %s", str(e)[:100])
-    await Espo(tenant).note(lead_id, f"[WhatsApp] {'→ Celular de la línea' if from_me else '← ' + (name or 'Cliente')}: {text}")
+    att = None
+    if media:   # el adjunto del cliente se guarda como archivo del CRM para verlo con vista previa
+        try:
+            att = [await Espo(tenant).upload(media[2], media[1], media[0])]
+        except Exception as e:
+            logging.getLogger("crmhub").warning("no se pudo guardar el adjunto: %s", str(e)[:120])
+    await Espo(tenant).note(lead_id, f"[WhatsApp] {'→ Celular de la línea' if from_me else '← ' + (name or 'Cliente')}: {text}", att)
     if not from_me:
         from . import usage
         usage.record(tenant, "whatsapp", whatsapp.provider(tenant), direction="in")
@@ -231,11 +238,14 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
         text = ((msg.get("listResponseMessage") or {}).get("title") or (msg.get("buttonsResponseMessage") or {}).get("selectedDisplayText")
                 or (msg.get("templateButtonReplyMessage") or {}).get("selectedDisplayText")
                 or (((msg.get("interactiveResponseMessage") or {}).get("nativeFlowResponseMessage") or {}).get("name")))
+    media_kind = media_meta = None
     if not text:   # foto, video o documento con texto, o un adjunto sin texto: se registra para que se vea que el cliente escribió
         for k, label in _MEDIA.items():
             if msg.get(k):
                 cap = (msg[k] or {}).get("caption") or ""
                 text = f"[{label}]" + (f" {cap}" if cap else "")
+                if k in ("imageMessage", "videoMessage", "audioMessage", "documentMessage", "stickerMessage"):
+                    media_kind, media_meta = k, msg[k] or {}
                 break
     if not text:
         if msg and not set(msg) <= _SILENT:
@@ -276,7 +286,11 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
             logging.getLogger("crmhub").warning("WhatsApp sin número resoluble (%s): %s", remote, json.dumps(payload, ensure_ascii=False)[:700])
     if not phone and not lead_id and not lid:
         return None
-    res = await whatsapp_inbound(tenant, phone=phone, name=d.get("pushName"), text=text, from_me=from_me, avatar_payload=payload, lead_id=lead_id, lid=lid)
+    media = None
+    if media_kind:
+        from . import media as media_mod
+        media = await media_mod.from_evolution(tenant, payload.get("instance") or "", key, media_kind, media_meta)
+    res = await whatsapp_inbound(tenant, phone=phone, name=d.get("pushName"), text=text, from_me=from_me, avatar_payload=payload, lead_id=lead_id, lid=lid, media=media)
     try:   # varias líneas de Evolution: se recuerda por cuál escribió el cliente para responderle por la misma
         from . import lines
         ln = lines.line_for_instance(tenant, payload.get("instance"))
@@ -321,8 +335,15 @@ async def from_meta_whatsapp(tenant: dict, payload: dict) -> list[str]:
                 text = (m.get("text") or {}).get("body") if kind == "text" else \
                     ((m.get("button") or {}).get("text") or ((m.get("interactive") or {}).get("button_reply") or {}).get("title")
                      or ((m.get("interactive") or {}).get("list_reply") or {}).get("title") or f"[{_media_label(kind)}]")
+                media = None
+                if kind in ("image", "video", "audio", "document", "sticker") and (m.get(kind) or {}).get("id"):
+                    from . import media as media_mod
+                    media = await media_mod.from_meta(tenant, kind, m[kind])
+                    cap = (m[kind] or {}).get("caption")
+                    if cap:
+                        text = f"[{_media_label(kind).capitalize()}] {cap}"
                 if m.get("from") and text:
-                    ids.append(await whatsapp_inbound(tenant, phone=m["from"], name=names.get(m["from"]), text=text))
+                    ids.append(await whatsapp_inbound(tenant, phone=m["from"], name=names.get(m["from"]), text=text, media=media))
     return ids
 
 

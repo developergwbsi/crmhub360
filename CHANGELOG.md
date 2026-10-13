@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Enlaces y archivos en las conversaciones
+- **Enlaces clicables en todas partes**: en los chats (WhatsApp, SMS, Telegram, Mensajes), correos (texto y HTML), historial de actividad y banco de conocimiento, toda dirección (`https://…`, `www.…`) y correo electrónico se muestra como hipervínculo que abre en una pestaña nueva, sin arrastrar la puntuación final.
+- **Vistas previas**: las direcciones a imágenes se ven como miniatura, las de video y audio con reproductor, las de documentos (PDF, Word, Excel…) como tarjeta con icono y nombre, y los enlaces de videollamada como tarjeta «Videollamada».
+- **Archivos que envía el cliente por WhatsApp** (imagen, video, audio, documento, sticker; por Evolution y Meta): se guardan como archivos del CRM y se ven en el chat con su vista previa; antes solo quedaba la etiqueta «[Imagen]». Las miniaturas de correo adjuntas también se ven en el correo.
+
 ### Centro de control
 - **Gestionar empresas como los leads**: la empresa se abre en un panel a la derecha con la lista siempre visible a la izquierda (se cambia de empresa sin cerrar), botón de **pantalla completa** y pestañas Resumen, Servicios y módulos, WhatsApp, Consumo y facturación e Historial de cambios (quién y cuándo cambió qué, con los trabajos del servidor).
 

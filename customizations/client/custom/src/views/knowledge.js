@@ -54,7 +54,7 @@ define('custom:views/knowledge', ['view', 'custom:ui'], function (Dep, ChUi) {
             const notes = `<div class="ch-sim-card"><h4>Aprendizajes del equipo</h4><p class="ch-muted">Escribe lo que has aprendido (qué funciona con un tipo de cliente, objeciones, mejores momentos para llamar…).</p>
                 <textarea data-f="note" rows="3" placeholder="Ej.: Los clientes de Facebook responden mejor por WhatsApp en la tarde."></textarea>
                 <div class="ch-mail-actions"><button class="btn btn-default btn-sm" data-act="note"><span class="fas fa-plus"></span> Guardar aprendizaje</button></div>
-                ${(k.notes || []).map(n => `<div class="ch-kb-note"><div>${esc(n.text)}</div><small>${esc(n.user_name)} · ${esc(fmt(n.created_at))}</small> <a data-act="delnote" data-id="${n.id}" title="Eliminar"><span class="far fa-trash-can"></span></a></div>`).join('')}</div>`;
+                ${(k.notes || []).map(n => `<div class="ch-kb-note"><div>${ChUi.linkify(n.text)}</div><small>${esc(n.user_name)} · ${esc(fmt(n.created_at))}</small> <a data-act="delnote" data-id="${n.id}" title="Eliminar"><span class="far fa-trash-can"></span></a></div>`).join('')}</div>`;
             root.innerHTML = head + body + gaps + notes;
             root.onclick = e => {
                 const a = e.target.closest('[data-act]'); if (!a) { return; }

@@ -42,7 +42,7 @@ define('custom:views/lead/panels/activity-history', ['views/record/panels/bottom
             const show = this.items.map((it, i) => [it, i]).filter(([it]) => this.filter === 'all' || it.type === this.filter);
             l.innerHTML = show.length ? show.map(([it, i]) => {
                 const t = T[it.type] || T.task, arrow = it.type === 'status' ? '' : (it.dir === 'in' ? '<span class="fas fa-arrow-down ch-ah-in" title="Recibido"></span>' : '<span class="fas fa-arrow-up ch-ah-out" title="Enviado"></span>');
-                const main = it.title ? `<b>${ChUi.esc(it.title)}</b>${it.text ? ' · ' + ChUi.esc(it.text) : ''}` : ChUi.esc(it.text);
+                const main = it.title ? `<b>${ChUi.esc(it.title)}</b>${it.text ? ' · ' + ChUi.linkify(it.text) : ''}` : ChUi.linkify(it.text);
                 return `<div class="ch-ah-row ${it.href || ['whatsapp', 'sms', 'telegram'].includes(it.type) ? 'click' : ''}" data-i="${i}"><span class="ch-ah-ic" style="background:${t[1]}"><span class="${t[0]}"></span></span>` +
                     `<div class="ch-ah-b"><div class="ch-ah-t">${arrow} <span class="ch-ah-k">${t[2]}</span> ${main}</div><div class="ch-tl-meta">${ChUi.esc(it.who || '')}${it.who ? ' · ' : ''}${ChUi.esc(ChUi.fmt.dt(it.at))}</div></div></div>`;
             }).join('') : '<div class="ch-chat-empty"><span class="fas fa-timeline"></span><p>Aún no hay actividad registrada.</p></div>';

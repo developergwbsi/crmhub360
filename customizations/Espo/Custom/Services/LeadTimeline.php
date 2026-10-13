@@ -72,12 +72,26 @@ class LeadTimeline
         $out = [];
         foreach ($this->notes($leadId, ['OR' => $or]) as $n) {
             $post = (string) $n->get('post');
-            $item = ['id' => $n->getId(), 'at' => $n->get('createdAt')];
+            $item = ['id' => $n->getId(), 'at' => $n->get('createdAt'), 'attachments' => $this->attachmentsOf($n)];
             if (preg_match('/^\[(WhatsApp|Telegram|SMS)\]\s*(←|→)?\s*(.*?):\s(.*)$/su', $post, $m)) {
                 $out[] = $item + ['channel' => strtolower($m[1]), 'dir' => ($m[2] === '→' || ($m[2] === '' && $m[3] === 'Asesor')) ? 'out' : 'in', 'who' => $m[3], 'text' => $m[4]];
             } elseif (preg_match('/^\[Difusión: (.*?)\] (WhatsApp|Telegram|SMS): (.*)$/su', $post, $m)) {
                 $out[] = $item + ['channel' => strtolower($m[2]), 'dir' => 'out', 'who' => 'Difusión · ' . $m[1], 'text' => $m[3], 'broadcast' => true];
             }
+        }
+        return $out;
+    }
+
+    /** Archivos adjuntos de una nota del chat (imagen, video, audio, documento) para mostrarlos con vista previa. */
+    private function attachmentsOf($note): array
+    {
+        $out = [];
+        try {
+            foreach ($this->em->getRDBRepository('Note')->getRelation($note, 'attachments')->find() as $a) {
+                $out[] = ['id' => $a->getId(), 'name' => (string) $a->get('name'), 'type' => (string) $a->get('type'), 'size' => (int) $a->get('size')];
+            }
+        } catch (\Throwable $e) {
+            // sin adjuntos legibles: el mensaje se muestra igual
         }
         return $out;
     }

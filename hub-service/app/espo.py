@@ -1,5 +1,7 @@
 """Cliente HTTP de la API REST de EspoCRM de cada empresa (tenant), por el puerto web local con su clave de API.
 Lo usan casi todos los módulos del hub (ingest, qualify, agent, broadcast, forms...) para leer y escribir leads y notas."""
+import base64
+
 import httpx
 
 
@@ -34,6 +36,15 @@ class Espo:
         """POST (creación) con cuerpo JSON, sin la comprobación de duplicados de EspoCRM; devuelve el JSON."""
         return (await self._req("POST", path, json=data, headers={"X-Skip-Duplicate-Check": "true"})).json()
 
-    async def note(self, lead_id: str, text: str) -> None:
-        """Agrega una nota tipo Post al flujo del lead."""
-        await self.post("Note", {"type": "Post", "parentType": "Lead", "parentId": lead_id, "post": text})
+    async def upload(self, name: str, mime: str, data: bytes) -> str:
+        """Sube un archivo como adjunto de nota y devuelve el id del adjunto."""
+        r = await self.post("Attachment", {"name": name, "type": mime, "role": "Attachment", "parentType": "Note", "field": "attachments", "relatedType": "Note",
+                                           "file": f"data:{mime};base64,{base64.b64encode(data).decode()}"})
+        return r["id"]
+
+    async def note(self, lead_id: str, text: str, attachments: list[str] | None = None) -> None:
+        """Agrega una nota tipo Post al flujo del lead (opcionalmente con archivos adjuntos ya subidos)."""
+        body = {"type": "Post", "parentType": "Lead", "parentId": lead_id, "post": text}
+        if attachments:
+            body["attachmentsIds"] = attachments
+        await self.post("Note", body)

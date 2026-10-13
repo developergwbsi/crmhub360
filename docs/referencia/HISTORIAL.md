@@ -4,6 +4,7 @@
 
 ## Sin publicar (después de v1.4.1)
 
+- `7ade22b` 2026-10-13 — Videollamadas: sala persistente por lead, sala de espera con admisión del anfitrión y selección de idioma de habla y de subtítulos
 - `a00188b` 2026-10-13 — Centro de control: en el detalle de la empresa el encabezado y las pestañas quedan fijos y solo se desplaza el contenido
 - `d5e5ed6` 2026-10-13 — Centro de control: gestión de empresa en panel con la lista siempre visible, pantalla completa y pestañas (resumen, servicios y módulos, WhatsApp, consumo y facturación, historial de cambios)
 - `68b06f7` 2026-10-13 — Videollamadas y subtítulos como servicio adicional: se habilitan por empresa desde el Centro de control (el Hub y el botón del CRM lo respetan)
