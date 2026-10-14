@@ -122,7 +122,7 @@ def _payload(r: dict, name: str, is_host: bool) -> dict:
     with db.pool.connection() as c:
         c.execute("UPDATE meet_rooms SET first_join_at = COALESCE(first_join_at, now()) WHERE code = %s", (r["code"],))
     return {"token": sign(ident, name, f"{r['tenant']}-{r['code']}", is_host), "url": "wss://" + os.environ["MEET_HOST"], "name": name, "host": is_host,
-            "title": r["title"], "subtitles": bool(r["subtitles"]) and bool(STT_URL) and mode(r["tenant"]) == "video_subs", "myLang": r["host_lang"] if is_host else r["guest_lang"],
+            "title": r["title"], "subtitles": bool(STT_URL) and mode(r["tenant"]) == "video_subs", "myLang": r["host_lang"] if is_host else r["guest_lang"],
             "langs": ["es", "en"], "sttKey": stt_key(r["code"], ident)}
 
 
@@ -257,7 +257,7 @@ async def subtitle(code: str, key: str, lang: str, wav: bytes) -> dict:
     """Un enunciado de audio → {text, lang, tr:{idioma: traducción}} para repartir por el canal de datos de la sala."""
     global _waiting
     r = room(code)
-    if not r or not r["subtitles"] or not STT_URL or mode(r["tenant"]) != "video_subs":
+    if not r or not STT_URL or mode(r["tenant"]) != "video_subs":
         raise LookupError("Los subtítulos no están disponibles en esta sala.")
     if not stt_key_ok(code, key):
         raise PermissionError("Llave inválida.")
@@ -310,8 +310,44 @@ def listing(tenant_slug: str, lead_id: str = "", limit: int = 20) -> list[dict]:
             with db.pool.connection() as c:
                 names = [x["name"] for x in c.execute("SELECT name FROM meet_knocks WHERE code = %s AND status = 'waiting' AND created_at > now() - interval '15 minutes' ORDER BY created_at", (r["code"],)).fetchall()]
         out.append({**r, "created_at": r["created_at"].isoformat(), "expires_at": r["expires_at"].isoformat(), "ended_at": r["ended_at"].isoformat() if r["ended_at"] else None,
-                    "first_join_at": r["first_join_at"].isoformat() if r["first_join_at"] else None, "active": active, "waiting": names})
+                    "first_join_at": r["first_join_at"].isoformat() if r["first_join_at"] else None, "active": active, "waiting": names,
+                    "live": (live_rooms(tenant_slug).get(r["code"]) if active else None) or {"guests": [], "hosts": 0}})
     return out
+
+
+_LIVE = {"at": 0.0, "rooms": {}}
+
+
+def _livekit(method: str, body: dict, room: str = "") -> dict:
+    """Llamada al API de servidor de LiveKit (Twirp, solo por 127.0.0.1) con una credencial de administrador de corta vida."""
+    tok = sign("hub", "Hub", room or "-", True, ttl=60)
+    if not room:   # listar salas pide el permiso roomList
+        head, body_, _ = tok.split(".")
+        claims = json.loads(base64.urlsafe_b64decode(body_ + "=" * (-len(body_) % 4)))
+        claims["video"] = {"roomList": True}
+        b = _b64(json.dumps(claims, separators=(",", ":")).encode())
+        tok = f"{head}.{b}.{_b64(hmac.new(os.environ['LIVEKIT_API_SECRET'].encode(), f'{head}.{b}'.encode(), hashlib.sha256).digest())}"
+    r = httpx.post(f"http://127.0.0.1:7880/twirp/livekit.RoomService/{method}", json=body, headers={"Authorization": f"Bearer {tok}"}, timeout=4)
+    r.raise_for_status()
+    return r.json()
+
+
+def live_rooms(tenant_slug: str) -> dict[str, dict]:
+    """{código: {guests: [nombres], hosts: n}} de las salas de la empresa que tienen gente dentro ahora mismo (consulta a LiveKit, con caché de 6 s)."""
+    if time.time() - _LIVE["at"] > 6:
+        out = {}
+        try:
+            for rm in _livekit("ListRooms", {}).get("rooms", []):
+                if not int(rm.get("numParticipants") or rm.get("num_participants") or 0):
+                    continue
+                name = rm.get("name", "")
+                ps = _livekit("ListParticipants", {"room": name}, name).get("participants", [])
+                out[name] = {"guests": [p.get("name") or "Invitado" for p in ps if str(p.get("identity", "")).startswith("g-")], "hosts": sum(1 for p in ps if str(p.get("identity", "")).startswith("h-"))}
+        except Exception as e:
+            log.warning("estado en vivo de las salas: %s", str(e)[:100])
+        _LIVE.update(at=time.time(), rooms=out)
+    pre = f"{tenant_slug}-"
+    return {k[len(pre):]: v for k, v in _LIVE["rooms"].items() if k.startswith(pre)}
 
 
 def waiting_all(tenant_slug: str) -> list[dict]:
@@ -320,7 +356,17 @@ def waiting_all(tenant_slug: str) -> list[dict]:
         rows = c.execute("SELECT r.code, r.lead_id, r.created_by, r.title, array_agg(DISTINCT k.name) AS names FROM meet_rooms r JOIN meet_knocks k ON k.code = r.code "
                          "WHERE r.tenant = %s AND r.ended_at IS NULL AND r.expires_at > now() AND k.status = 'waiting' AND k.created_at > now() - interval '15 minutes' GROUP BY r.code, r.lead_id, r.created_by, r.title, r.created_at ORDER BY r.created_at DESC",
                          (tenant_slug,)).fetchall()
-    return [{"code": x["code"], "leadId": x["lead_id"], "createdBy": x["created_by"], "title": x["title"], "names": list(x["names"])} for x in rows]
+    out = [{"code": x["code"], "leadId": x["lead_id"], "createdBy": x["created_by"], "title": x["title"], "names": list(x["names"]), "kind": "waiting"} for x in rows]
+    live = live_rooms(tenant_slug)   # el cliente sigue en la llamada y el asesor no está dentro (p. ej. colgó por error): se le avisa para que vuelva a entrar
+    if live:
+        have = {o["code"] for o in out}
+        with db.pool.connection() as c:
+            rs = c.execute("SELECT code, lead_id, created_by, title FROM meet_rooms WHERE tenant = %s AND code = ANY(%s) AND ended_at IS NULL AND expires_at > now()", (tenant_slug, list(live))).fetchall()
+        for x in rs:
+            lv = live[x["code"]]
+            if lv["guests"] and not lv["hosts"] and x["code"] not in have:
+                out.append({"code": x["code"], "leadId": x["lead_id"], "createdBy": x["created_by"], "title": x["title"], "names": lv["guests"], "kind": "live"})
+    return out
 
 
 def client_js() -> bytes:
@@ -333,7 +379,7 @@ def page(code: str) -> str:
     r = room(code)
     if not r:
         return _PAGE_END
-    subs = bool(r["subtitles"]) and bool(STT_URL) and mode(r["tenant"]) == "video_subs"
+    subs = bool(STT_URL) and mode(r["tenant"]) == "video_subs"
     return _PAGE.replace("__CODE__", code).replace("__TITLE__", (r["title"] or "Videollamada").replace("<", "&lt;")).replace("__SUBS__", "true" if subs else "false").replace("__GUEST__", json.dumps(r.get("guest_name") or "").replace("<", "\\u003c"))
 
 
@@ -364,6 +410,8 @@ input[type=text]{width:100%;padding:12px;border-radius:10px;border:1px solid var
 #subs{position:absolute;left:0;right:0;bottom:84px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 12px;pointer-events:none}
 .sl{background:#000c;border-radius:10px;padding:6px 12px;max-width:min(780px,94vw);font-size:17px;line-height:1.3}.sl b{color:#9db0ff;font-size:13px;display:block}.sl small{display:block;color:var(--mut);font-size:13px;margin-top:2px}
 #bcc.on{background:var(--pri)}#pend{position:absolute;top:44px;right:12px;z-index:5;display:flex;flex-direction:column;gap:8px;max-width:min(360px,92vw)}.pq{background:#1d2650;border:1px solid var(--pri);border-radius:12px;padding:10px 12px;font-size:14px}.pq button{margin:8px 6px 0 0;padding:6px 12px;border-radius:8px;border:0;background:var(--pri);color:#fff;font-weight:600}.pq button.no{background:#3a1d24}
+#langb{border:1px solid var(--line);background:#1d2650;color:var(--tx);border-radius:999px;padding:4px 12px;font:inherit;font-size:13px;margin-right:8px}#lgp h4{margin:0 0 8px;font-size:14px}
+#lobby{overflow:auto}
 #lgp{position:absolute;bottom:84px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;z-index:6;min-width:250px}
 .lg{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mut);margin-bottom:8px}.lg select{padding:9px;border-radius:9px;border:1px solid var(--line);background:#0f1527;color:var(--tx);font:inherit}
 #wr{text-align:center;padding:18px 0}#wr .sp{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--pri);border-radius:50%;display:inline-block;animation:r 1s linear infinite}@keyframes r{to{transform:rotate(360deg)}}
@@ -374,7 +422,7 @@ input[type=text]{width:100%;padding:12px;border-radius:10px;border:1px solid var
 <div id="lf"><p id="hi" class="hide" style="font-size:17px;font-weight:600;margin:0 0 10px"></p><video id="prev" autoplay playsinline muted></video><input id="nm" type="text" placeholder="Tu nombre" maxlength="60" autocomplete="name">
 <div class="row"><button class="tg" id="tm">🎤 Micrófono: activado</button><button class="tg" id="tc">📷 Cámara: activada</button></div>
 <div id="lgs" class="hide"><div class="lg"><span>Yo hablo en</span><select id="sp"><option value="es">Español</option><option value="en">English</option></select></div><div class="lg"><span>Quiero leer los subtítulos en</span><select id="rd"><option value="es">Español</option><option value="en">English</option><option value="off">Sin subtítulos</option></select></div></div><button class="go" id="go">Unirme a la videollamada</button><div id="err"></div><div id="note">Esta sala puede mostrar subtítulos en vivo. El audio no se graba ni se guarda.</div></div><div id="wr" class="hide"><div class="sp"></div><p id="wrt" style="margin:14px 0 4px;font-weight:600"></p><p style="color:var(--mut);font-size:14px;margin:0 0 14px">No cierres esta ventana: entrarás en cuanto te den acceso.</p><button class="tg" id="wrx">Cancelar</button></div></div></div>
-<div id="room" class="hide"><div id="top"><span id="ttl"></span><span id="cnt"></span></div><div id="grid"></div><div id="pend"></div><div id="subs"></div><div id="lgp" class="hide"><div class="lg"><span>Yo hablo en</span><select id="sp2"><option value="es">Español</option><option value="en">English</option></select></div><div class="lg"><span>Leer los subtítulos en</span><select id="rd2"><option value="es">Español</option><option value="en">English</option><option value="off">Sin subtítulos</option></select></div></div><div id="wait">Esperando a la otra persona…</div>
+<div id="room" class="hide"><div id="top"><span id="ttl"></span><span><button id="langb" class="hide" title="Elige el idioma en que hablas y en el que quieres leer los subtítulos">Subtítulos</button> <span id="cnt"></span></span></div><div id="grid"></div><div id="pend"></div><div id="subs"></div><div id="lgp" class="hide"><h4>Subtítulos en vivo</h4><div class="lg"><span>Yo hablo en</span><select id="sp2"><option value="es">Español</option><option value="en">English</option></select></div><div class="lg"><span>Leer los subtítulos en</span><select id="rd2"><option value="es">Español</option><option value="en">English</option><option value="off">Sin subtítulos</option></select></div></div><div id="wait">Esperando a la otra persona…</div>
 <div id="bar"><button class="cb" id="bm" title="Micrófono">🎤</button><button class="cb" id="bc" title="Cámara">📷</button><button class="cb hide on" id="bcc" title="Subtítulos: idioma que hablo y en el que leo">CC</button><button class="cb" id="bs" title="Compartir pantalla">🖥️</button><button class="cb end" id="be" title="Salir">⏻</button></div></div>
 <script src="_/lk.js"></script>
 <script>
@@ -472,7 +520,7 @@ function startRoom(j){
       if(stream){stream.getTracks().forEach(function(t){t.stop()}); stream=null; $('prev').srcObject=null}
       $('lobby').classList.add('hide'); $('room').classList.remove('hide'); $('ttl').textContent=j.title||'Videollamada';
       room.remoteParticipants.forEach(function(p){tileFor(p,false); p.trackPublications.forEach(function(pb){ if(pb.track){attach(pb.track,p,false)} })});
-      tileFor(room.localParticipant,true); count(); if(j.subtitles){ $('bcc').classList.remove('hide'); $('bcc').classList.toggle('on',subsShow); $('sp2').value=j.speak; $('rd2').value=j.read; } if(j.host){ startPending(); }
+      tileFor(room.localParticipant,true); count(); if(j.subtitles){ $('bcc').classList.remove('hide'); $('langb').classList.remove('hide'); $('bcc').classList.toggle('on',subsShow); $('sp2').value=j.speak; $('rd2').value=j.read; langLabel(); var seen=''; try{ seen=localStorage.getItem('meet-lang-seen')||'' }catch(e){} if(!seen){ $('lgp').classList.remove('hide'); try{ localStorage.setItem('meet-lang-seen','1') }catch(e){} } } if(j.host){ startPending(); }
       return room.localParticipant.setMicrophoneEnabled(mic).then(function(){return room.localParticipant.setCameraEnabled(cam)}).catch(function(e){ console.warn('No se pudo publicar el audio o el video', e); err2('No pudimos enviar tu cámara o micrófono: '+(e&&e.message||e)); });
     }).then(function(){ room.localParticipant.trackPublications.forEach(function(pb){ if(pb.track&&pb.track.kind==='video'){attach(pb.track,room.localParticipant,true)} }); });
 }
@@ -500,8 +548,9 @@ $('go').onclick=function(){
 $('bm').onclick=function(){ if(!room){return} var on=!room.localParticipant.isMicrophoneEnabled; room.localParticipant.setMicrophoneEnabled(on).then(function(){$('bm').classList.toggle('off',!on)}) };
 $('bc').onclick=function(){ if(!room){return} var on=!room.localParticipant.isCameraEnabled; room.localParticipant.setCameraEnabled(on).then(function(){ $('bc').classList.toggle('off',!on); var t=$('t-'+room.localParticipant.identity+'-me'); if(t){ if(on){ room.localParticipant.trackPublications.forEach(function(pb){ if(pb.track&&pb.track.kind==='video'&&pb.source==='camera'){attach(pb.track,room.localParticipant,true)} }) } else { var v=t.querySelector('video'); if(v){v.remove()} var av=t.querySelector('.av'); if(av){av.classList.remove('hide')} } } }) };
 $('bs').onclick=function(){ if(!room){return} var on=!room.localParticipant.isScreenShareEnabled; room.localParticipant.setScreenShareEnabled(on).then(function(){ $('bs').classList.toggle('off',false); room.localParticipant.trackPublications.forEach(function(pb){ if(pb.source==='screen_share'&&pb.track){attach(pb.track,room.localParticipant,true)} }); if(!on){var s=$('s-'+room.localParticipant.identity); if(s){s.remove()}} }).catch(function(){}) };
-$('bcc').onclick=function(){ $('lgp').classList.toggle('hide'); };
-function applyLang(){ if(!J){return} J.speak=$('sp2').value; J.read=$('rd2').value; subsShow=J.read!=='off'; $('bcc').classList.toggle('on',subsShow); if(!subsShow){$('subs').innerHTML='';lines=[]} try{ localStorage.setItem('meet-speak',J.speak); localStorage.setItem('meet-read',J.read) }catch(e){} }
+$('bcc').onclick=function(){ $('lgp').classList.toggle('hide'); }; $('langb').onclick=$('bcc').onclick;
+function langLabel(){ if(!J){return} $('langb').textContent='Subtítulos · '+(J.read==='off'?'apagados':'leo en '+(J.read==='es'?'español':'inglés')) }
+function applyLang(){ if(!J){return} J.speak=$('sp2').value; J.read=$('rd2').value; subsShow=J.read!=='off'; $('bcc').classList.toggle('on',subsShow); if(!subsShow){$('subs').innerHTML='';lines=[]} try{ localStorage.setItem('meet-speak',J.speak); localStorage.setItem('meet-read',J.read) }catch(e){} langLabel(); }
 $('sp2').onchange=applyLang; $('rd2').onchange=applyLang;
 $('be').onclick=function(){ if(room){room.disconnect()} try{ parent.postMessage({k:'ch-meet',ev:'left'},'*') }catch(e){} };
 window.addEventListener('beforeunload',function(){ if(room){room.disconnect()} });

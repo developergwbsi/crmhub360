@@ -4,7 +4,7 @@
  * Si hay pantalla mediana recoge el menú lateral y lo restaura al cerrar. También se expone como window.ChSplit. Sin endpoints.
  */
 define('custom:split', [], function () {
-    const open = {lead: 0, ch: 0};
+    const open = {lead: 0, ch: 0, call: 0};
     let minimizedByUs = false;
     const root = document.documentElement;
 
@@ -12,10 +12,11 @@ define('custom:split', [], function () {
 
     // Recalcula anchos y clases según los paneles abiertos
     function apply() {
-        const both = open.lead > 0 && open.ch > 0;
-        const lead = open.lead > 0 ? (both ? 340 : 460) : 0, ch = open.ch > 0 ? 380 : 0, total = lead + ch;
+        const panels = (open.lead > 0) + (open.ch > 0) + (open.call > 0), both = panels > 1;
+        const lead = open.lead > 0 ? (both ? 340 : 460) : 0, ch = open.ch > 0 ? 380 : 0, call = open.call > 0 ? (both ? 360 : 420) : 0, total = lead + ch + call;
         root.style.setProperty('--ch-lead-w', lead + 'px');
         root.style.setProperty('--ch-ch-w', ch + 'px');
+        root.style.setProperty('--ch-call-w', call + 'px');
         root.style.setProperty('--ch-split-w', total + 'px');
         document.body.classList.toggle('ch-split', total > 0);
         // en pantallas medianas se recoge el menú lateral para que sigan cabiendo los estados
@@ -31,9 +32,9 @@ define('custom:split', [], function () {
         close(kind) { open[kind] = Math.max(0, open[kind] - 1); apply(); },
         // Si un panel desapareció sin avisar (cambio de pantalla, recarga parcial), el contenido recupera todo su ancho.
         reconcile() {
-            const lead = document.querySelectorAll('.ch-lead-drawer').length, ch = document.querySelectorAll('.ch-ch-panel').length;
-            if ((open.lead > 0 && !lead) || (open.ch > 0 && !ch) || (document.body.classList.contains('ch-split') && !lead && !ch)) {
-                open.lead = lead ? open.lead : 0; open.ch = ch ? open.ch : 0; apply();
+            const lead = document.querySelectorAll('.ch-lead-drawer').length, ch = document.querySelectorAll('.ch-ch-panel').length, call = document.querySelectorAll('.ch-dock-side').length;
+            if ((open.lead > 0 && !lead) || (open.ch > 0 && !ch) || (open.call > 0 && !call) || (document.body.classList.contains('ch-split') && !lead && !ch && !call)) {
+                open.lead = lead ? open.lead : 0; open.ch = ch ? open.ch : 0; open.call = call ? open.call : 0; apply();
             }
         },
     };

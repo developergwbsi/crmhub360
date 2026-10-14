@@ -1125,19 +1125,25 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-vp-w { display: flex; align-items: center; gap: 10px; background: #fff4d6; border: 1px solid #f0c75e; color: #5a4300; border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
 .ch-vp-w.hide { display: none; }
 
-/* Videollamada dentro del CRM (ventana flotante) y aviso de cliente en espera */
-.ch-dock { position: fixed; z-index: 1190; right: 16px; bottom: 16px; background: #0f1424; border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.45); overflow: hidden; display: flex; flex-direction: column; color: #e9ecf8; }
-.ch-dock-mini { width: 400px; height: 330px; }
-.ch-dock-big { left: 5vw !important; top: 6vh !important; right: auto !important; bottom: auto !important; width: 90vw; height: 86vh; }
-.ch-dock-pill { width: 320px; height: 42px; cursor: pointer; }
-.ch-dock-pill iframe { visibility: hidden; height: 0; flex: none; }
-.ch-dock-h { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #181f36; cursor: move; flex: none; min-height: 42px; }
-.ch-dock-h b { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 190px; }
+/* Videollamada dentro del CRM (panel lateral / pantalla completa / minimizada) y aviso de cliente en espera */
+.ch-dock { position: fixed; z-index: 1190; background: #0f1424; color: #e9ecf8; display: flex; flex-direction: column; overflow: hidden; }
+.ch-dock-side { top: 0; bottom: 0; right: calc(var(--ch-lead-w, 0px) + var(--ch-ch-w, 0px)); width: var(--ch-call-w, 420px); border-radius: 18px 0 0 18px; box-shadow: -12px 0 40px rgba(20, 28, 60, .28); animation: ch-drawer-in .22s ease-out; }
+.ch-dock-full { inset: 0; z-index: 1300; }
+.ch-dock-pill { right: 16px; bottom: 16px; width: 300px; height: 44px; border-radius: 22px; box-shadow: 0 10px 30px rgba(0,0,0,.4); cursor: pointer; }
+.ch-dock-pill .ch-dock-h { display: none; }
+.ch-dock-pill iframe { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+.ch-dock-pill-bar { display: none; align-items: center; gap: 8px; padding: 0 16px; height: 44px; }
+.ch-dock-pill .ch-dock-pill-bar { display: flex; }
+.ch-dock-pill-bar b { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.ch-dock-pill-bar small { color: #aab1cc; }
+.ch-dock-pill-bar .fas { color: #6f86ff; }
+.ch-dock-h { display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 14px; background: #181f36; flex: none; min-height: 46px; }
+.ch-dock-h b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55%; }
 .ch-dock-h small { color: #aab1cc; }
-.ch-dock-h button { border: 0; background: none; color: #cfd5ee; width: 28px; height: 28px; border-radius: 8px; }
+.ch-dock-h button { border: 0; background: none; color: #cfd5ee; width: 30px; height: 30px; border-radius: 8px; }
 .ch-dock-h button:hover { background: #ffffff1f; }
 .ch-dock iframe { flex: 1; width: 100%; border: 0; background: #0f1424; min-height: 0; }
-@media (max-width: 700px) { .ch-dock-mini { left: 0; right: 0; bottom: 0; width: 100%; height: 62vh; border-radius: 14px 14px 0 0; } }
+@media (max-width: 700px) { .ch-dock-side { left: 0; right: 0 !important; width: 100%; border-radius: 0; } }
 #ch-meet-alert { position: fixed; z-index: 1200; top: 64px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; width: min(520px, 94vw); }
 .ch-ma { display: flex; align-items: center; gap: 12px; background: #fff4d6; border: 1px solid #f0c75e; color: #4a3800; border-radius: 12px; padding: 10px 12px; box-shadow: 0 10px 28px rgba(0,0,0,.25); }
 .ch-ma > .fas { font-size: 20px; }

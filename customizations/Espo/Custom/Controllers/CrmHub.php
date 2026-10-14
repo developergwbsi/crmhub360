@@ -610,7 +610,18 @@ class CrmHub
                     throw new Forbidden();
                 }
                 $r = $hub->request('GET', '/v1/meet/rooms?leadId=' . rawurlencode($lead->getId()), null, 8);
-                $rooms = array_map(fn ($x) => ['code' => $x['code'], 'names' => $x['waiting'] ?? [], 'leadId' => $leadId, 'title' => $x['title'] ?? ''], array_filter((array) ($r['items'] ?? []), fn ($x) => !empty($x['active']) && !empty($x['waiting'])));
+                $rooms = [];
+                foreach ((array) ($r['items'] ?? []) as $x) {
+                    if (empty($x['active'])) {
+                        continue;
+                    }
+                    $live = (array) ($x['live'] ?? []);
+                    if (!empty($x['waiting'])) {
+                        $rooms[] = ['code' => $x['code'], 'names' => $x['waiting'], 'leadId' => $leadId, 'title' => $x['title'] ?? '', 'kind' => 'waiting'];
+                    } elseif (!empty($live['guests']) && empty($live['hosts'])) {
+                        $rooms[] = ['code' => $x['code'], 'names' => $live['guests'], 'leadId' => $leadId, 'title' => $x['title'] ?? '', 'kind' => 'live'];
+                    }
+                }
             } else {
                 $r = $hub->request('GET', '/v1/meet/waiting', null, 8);
                 $rooms = [];
@@ -627,7 +638,7 @@ class CrmHub
             }
             foreach ($rooms as $room) {
                 $h = $hub->request('GET', '/v1/meet/rooms/' . preg_replace('/[^a-z0-9-]/', '', (string) $room['code']) . '/host', null, 8);
-                $out[] = ['code' => $room['code'], 'names' => array_values((array) $room['names']), 'leadId' => $room['leadId'] ?? '', 'title' => $room['title'] ?? '', 'hostUrl' => $h['hostUrl'] ?? null];
+                $out[] = ['code' => $room['code'], 'names' => array_values((array) $room['names']), 'leadId' => $room['leadId'] ?? '', 'title' => $room['title'] ?? '', 'kind' => $room['kind'] ?? 'waiting', 'hostUrl' => $h['hostUrl'] ?? null];
             }
         } catch (\RuntimeException $e) {
             // sin datos: no hay aviso

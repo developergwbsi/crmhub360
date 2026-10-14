@@ -1,6 +1,6 @@
 /**
  * Aviso global de videollamadas: mientras el CRM está abierto (en cualquier pantalla) consulta cada 12 s si un cliente espera en la sala de espera de una
- * videollamada del usuario (sala que creó o lead que tiene asignado) y muestra un aviso con sonido y el botón «Entrar y admitir», que abre la sala dentro del CRM.
+ * videollamada del usuario (sala que creó o lead que tiene asignado) y también si un cliente sigue en la llamada y el asesor ya no está dentro (colgó por error): muestra un aviso con sonido y el botón «Entrar y admitir» o «Volver a entrar», que abre la sala dentro del CRM.
  * Endpoint: GET CrmHub/meet/waiting. Solo si el servicio de videollamadas está habilitado (Settings.crmhubMeet).
  */
 define('custom:meet-watch', ['custom:ui', 'custom:call-dock'], function (ChUi, Dock) {
@@ -10,17 +10,17 @@ define('custom:meet-watch', ['custom:ui', 'custom:call-dock'], function (ChUi, D
     function paint(list) {
         let box = document.getElementById('ch-meet-alert');
         list.forEach(w => { w.names = [...new Set(w.names)]; });
-        const items = list.filter(w => w.hostUrl && !dismissed[w.code + '|' + w.names.join(',')]);
+        const items = list.filter(w => w.hostUrl && !dismissed[w.kind + w.code + '|' + w.names.join(',')]);
         if (!items.length) { if (box) { box.remove(); } return; }
         if (!box) { box = document.createElement('div'); box.id = 'ch-meet-alert'; document.body.appendChild(box); }
-        box.innerHTML = items.map(w => `<div class="ch-ma" data-c="${ChUi.esc(w.code)}"><span class="fas fa-user-clock"></span><div class="ch-ma-t"><b>${ChUi.esc(w.names.join(', '))}</b> ${w.names.length > 1 ? 'esperan' : 'espera'} en la videollamada<small>${ChUi.esc(w.title || '')}</small></div>` +
-            `<button class="btn btn-primary btn-sm" data-a="in" data-u="${ChUi.esc(w.hostUrl)}" data-n="${ChUi.esc(w.title || 'Videollamada')}">Entrar y admitir</button><a role="button" data-a="x" data-k="${ChUi.esc(w.code + '|' + w.names.join(','))}" title="Ocultar">×</a></div>`).join('');
+        box.innerHTML = items.map(w => { const live = w.kind === 'live', many = w.names.length > 1; return `<div class="ch-ma" data-c="${ChUi.esc(w.code)}"><span class="fas ${live ? 'fa-video' : 'fa-user-clock'}"></span><div class="ch-ma-t"><b>${ChUi.esc(w.names.join(', '))}</b> ${live ? (many ? 'siguen' : 'sigue') + ' en la videollamada, sin ti' : (many ? 'esperan' : 'espera') + ' en la videollamada'}<small>${ChUi.esc(w.title || '')}</small></div>` +
+            `<button class="btn btn-primary btn-sm" data-a="in" data-u="${ChUi.esc(w.hostUrl)}" data-n="${ChUi.esc(w.title || 'Videollamada')}">${live ? 'Volver a entrar' : 'Entrar y admitir'}</button><a role="button" data-a="x" data-k="${ChUi.esc(w.kind + w.code + '|' + w.names.join(','))}" title="Ocultar">×</a></div>`; }).join('');
         box.onclick = e => {
             const a = e.target.closest('[data-a]'); if (!a) { return; }
             if (a.dataset.a === 'in') { Dock.open(a.dataset.u, a.dataset.n); }
             else { dismissed[a.dataset.k] = 1; a.closest('.ch-ma').remove(); if (!box.children.length) { box.remove(); } }
         };
-        items.forEach(w => { const k = w.code + '|' + w.names.join(','); if (!seen[k]) { seen[k] = 1; beep(); if (document.hidden && 'Notification' in window && Notification.permission === 'granted') { try { new Notification('Un cliente espera en la videollamada', {body: w.names.join(', ') + ' quiere entrar.', tag: 'ch-meet-' + w.code}); } catch (e) { /* sin aviso del navegador */ } } } });
+        items.forEach(w => { const k = w.kind + w.code + '|' + w.names.join(','); if (!seen[k]) { seen[k] = 1; beep(); if (document.hidden && 'Notification' in window && Notification.permission === 'granted') { try { new Notification(w.kind === 'live' ? 'Un cliente sigue en la videollamada' : 'Un cliente espera en la videollamada', {body: w.kind === 'live' ? w.names.join(', ') + ' sigue en la sala.' : w.names.join(', ') + ' quiere entrar.', tag: 'ch-meet-' + w.code}); } catch (e) { /* sin aviso del navegador */ } } } });
     }
 
     function poll() {

@@ -30,8 +30,8 @@ La opción se guarda en `settings.limits.meet` de la empresa (lo que el Hub cons
 - Panel **Videollamadas** (`views/panels/video.js`) en lead, cuenta, contacto y oportunidad.
 
 ## Dentro del CRM (ventana flotante) y avisos
-- `custom:call-dock` abre la sala (`meet.<dominio>`) en un iframe fijo a la pantalla (CSP `frame-ancestors` de la página de la sala limitado a `*.<dominio base>`); no se destruye al navegar por el CRM. La sala avisa al salir con `postMessage` y la ventana se cierra.
-- `custom:meet-watch` (arranca desde `crmhub-boot.js`) consulta cada 12 s `GET CrmHub/meet/waiting` → Hub `GET /v1/meet/waiting`: clientes en la sala de espera de salas que el usuario creó o de leads que tiene asignados; muestra el aviso con «Entrar y admitir». Si la empresa no tiene el servicio responde vacío sin llamar al Hub.
+- `custom:call-dock` abre la sala (`meet.<dominio>`) como **panel lateral** (acoplado con `custom:split`, tipo `call`) en un iframe (CSP `frame-ancestors` de la página de la sala limitado a `*.<dominio base>`); no se destruye al navegar por el CRM. Modos: lateral, pantalla completa y minimizada. La sala avisa al salir con `postMessage` y la ventana se cierra.
+- `custom:meet-watch` (arranca desde `crmhub-boot.js`) consulta cada 12 s `GET CrmHub/meet/waiting` → Hub `GET /v1/meet/waiting`: clientes en la sala de espera de salas que el usuario creó o de leads que tiene asignados; muestra el aviso con «Entrar y admitir». Si la empresa no tiene el servicio responde vacío sin llamar al Hub. También avisa (`kind: live`) cuando un cliente sigue en la sala sin el anfitrión: el Hub consulta a LiveKit (`ListRooms`/`ListParticipants`, `meet.live_rooms`).
 
 ## Flujo
 1. El asesor pulsa **Videollamada** en el lead → `POST CrmHub/meet/create` → `POST /v1/meet/rooms` del Hub.

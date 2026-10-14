@@ -31,7 +31,7 @@ define('custom:views/panels/video', ['views/record/panels/bottom', 'custom:ui', 
             this.leadId().then(l => Espo.Ajax.getRequest('CrmHub/meet/waiting', {leadId: l.id})).then(r => {
                 const w = (r.waiting || []).filter(x => x.hostUrl); if (!box) { return; }
                 box.classList.toggle('hide', !w.length);
-                box.innerHTML = w.map(x => `<span class="fas fa-user-clock"></span><div style="flex:1;min-width:0"><b>${ChUi.esc((x.names || []).join(', '))}</b> ${x.names.length > 1 ? 'esperan' : 'espera'} en la videollamada</div><button class="btn btn-primary btn-xs" data-act="admit" data-url="${ChUi.esc(x.hostUrl)}">Entrar y admitir</button>`).join('');
+                box.innerHTML = w.map(x => { const live = x.kind === 'live', many = x.names.length > 1; return `<span class="fas ${live ? 'fa-video' : 'fa-user-clock'}"></span><div style="flex:1;min-width:0"><b>${ChUi.esc((x.names || []).join(', '))}</b> ${live ? (many ? 'siguen' : 'sigue') + ' en la videollamada' : (many ? 'esperan' : 'espera') + ' en la videollamada'}</div><button class="btn btn-primary btn-xs" data-act="admit" data-url="${ChUi.esc(x.hostUrl)}">${live ? 'Volver a entrar' : 'Entrar y admitir'}</button>`; }).join('');
                 if (w.length && !this._alerted) { this._alerted = true; Espo.Ui.warning('Un cliente espera en la videollamada.'); } else if (!w.length) { this._alerted = false; }
             }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } }).then(() => { this._wt = setTimeout(() => this.watchWaiting(), 8000); });
         }

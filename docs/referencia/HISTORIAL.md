@@ -2,8 +2,9 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.5.1)
+## v1.5.2
 
+- `3b5220e` 2026-10-13 — Versión 1.5.2
 - `b532a60` 2026-10-13 — Changelog 1.5.2
 - `94c939c` 2026-10-13 — Videollamadas dentro del CRM: ventana flotante que persiste al navegar, aviso global cuando el cliente llega primero y botón en el cajón lateral del lead
 - `2e3f548` 2026-10-13 — Videollamadas: el cliente entra con su nombre del CRM (no se le pide escribirlo)

@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Videollamadas
+- **Panel lateral en vez de ventana flotante**: la llamada se abre a la derecha como la ficha del lead (el contenido se achica y deja su espacio). El asesor elige: **pantalla completa**, **minimizada** (queda una barrita con el nombre y el cronómetro; la llamada sigue) o pestaña nueva; la X es la única que sale de la llamada (pide confirmación).
+- **Volver a entrar si se cuelga por error**: si el cliente sigue en la sala y el asesor ya no está, aparece un aviso en cualquier pantalla del CRM («María sigue en la videollamada, sin ti · Volver a entrar») y en el panel «Videollamadas» de la ficha. El Hub lo sabe consultando a LiveKit quién está dentro.
+- **Subtítulos: idioma visible**: botón «Subtítulos · leo en español» arriba de la sala (se abre solo la primera vez) para elegir en qué idioma habla cada quien y en cuál quiere leer; los subtítulos ya no dependen de cómo se creó la sala, sino de que el servicio esté habilitado a la empresa.
+
 ## [1.5.2] - 2026-10-13
 
 ### Videollamadas dentro del CRM
