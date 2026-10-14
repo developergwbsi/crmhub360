@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS meet_rooms (
     created_by TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), expires_at TIMESTAMPTZ NOT NULL, ended_at TIMESTAMPTZ,
     first_join_at TIMESTAMPTZ, host_lang TEXT NOT NULL DEFAULT 'es', guest_lang TEXT NOT NULL DEFAULT 'en', subtitles BOOLEAN NOT NULL DEFAULT false);
 CREATE INDEX IF NOT EXISTS meet_rooms_tenant ON meet_rooms (tenant, created_at DESC);
+ALTER TABLE meet_rooms ADD COLUMN IF NOT EXISTS guest_name TEXT NOT NULL DEFAULT '';
 CREATE TABLE IF NOT EXISTS meet_knocks (id TEXT PRIMARY KEY, code TEXT NOT NULL, name TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'waiting', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), decided_at TIMESTAMPTZ);
 CREATE INDEX IF NOT EXISTS meet_knocks_code ON meet_knocks (code, status);
 """
@@ -82,7 +83,7 @@ def new_code() -> str:
 
 
 def create(tenant_slug: str, lead_id: str, title: str, host_name: str, created_by: str, host_lang: str = "es", guest_lang: str = "en", subtitles: bool = False,
-           valid_hours: int = 0, fresh: bool = False) -> dict:
+           valid_hours: int = 0, fresh: bool = False, guest_name: str = "") -> dict:
     """Crea una sala y devuelve su código y los dos enlaces (cliente y anfitrión)."""
     if not configured():
         raise ValueError("Las videollamadas no están configuradas en el servidor.")
@@ -93,13 +94,15 @@ def create(tenant_slug: str, lead_id: str, title: str, host_name: str, created_b
     if lead_id and not fresh:   # una sola sala vigente por lead: el asesor puede volver a entrar cuando quiera (aunque cierre la ventana) y el enlace del cliente no cambia
         with db.pool.connection() as c:
             ex = c.execute("SELECT code, host_key FROM meet_rooms WHERE tenant = %s AND lead_id = %s AND ended_at IS NULL AND expires_at > now() ORDER BY created_at DESC LIMIT 1", (tenant_slug, lead_id)).fetchone()
+            if ex and guest_name:   # salas anteriores sin nombre del cliente: se completa
+                c.execute("UPDATE meet_rooms SET guest_name = %s WHERE code = %s AND guest_name = ''", (guest_name[:60], ex["code"]))
         if ex:
             return {"code": ex["code"], "guestUrl": f"{public_base()}/{ex['code']}", "hostUrl": f"{public_base()}/{ex['code']}?h={ex['host_key']}", "expiresInHours": TTL_HOURS, "reused": True}
     hours = max(1, min(int(valid_hours or TTL_HOURS), 24 * 90))   # una reunión programada para dentro de días necesita que el enlace dure hasta entonces
     code, key = new_code(), secrets.token_urlsafe(18)
     with db.pool.connection() as c:
-        c.execute("INSERT INTO meet_rooms (code, tenant, lead_id, title, host_name, host_key, created_by, expires_at, host_lang, guest_lang, subtitles) VALUES (%s,%s,%s,%s,%s,%s,%s, now() + make_interval(hours => %s),%s,%s,%s)",
-                  (code, tenant_slug, lead_id or "", (title or "").strip()[:120], (host_name or "")[:80], key, created_by[:80], hours, host_lang, guest_lang, subtitles))
+        c.execute("INSERT INTO meet_rooms (code, tenant, lead_id, title, host_name, host_key, created_by, expires_at, host_lang, guest_lang, subtitles, guest_name) VALUES (%s,%s,%s,%s,%s,%s,%s, now() + make_interval(hours => %s),%s,%s,%s,%s)",
+                  (code, tenant_slug, lead_id or "", (title or "").strip()[:120], (host_name or "")[:80], key, created_by[:80], hours, host_lang, guest_lang, subtitles, (guest_name or "")[:60]))
     base = f"{public_base()}/{code}"
     return {"code": code, "guestUrl": base, "hostUrl": f"{base}?h={key}", "expiresInHours": hours}
 
@@ -145,7 +148,7 @@ def join(code: str, name: str, host_key: str = "") -> dict:
 def knock(code: str, name: str) -> dict:
     """El invitado pide entrar: queda esperando hasta que el anfitrión lo admita o lo rechace."""
     r = _live(code)
-    name = (name or "").strip()[:60] or "Invitado"
+    name = (r.get("guest_name") or name or "").strip()[:60] or "Invitado"   # si la sala es de un cliente conocido, se usa su nombre del CRM
     kid = secrets.token_hex(6)
     with db.pool.connection() as c:
         c.execute("DELETE FROM meet_knocks WHERE created_at < now() - interval '1 day'")
@@ -322,7 +325,7 @@ def page(code: str) -> str:
     if not r:
         return _PAGE_END
     subs = bool(r["subtitles"]) and bool(STT_URL) and mode(r["tenant"]) == "video_subs"
-    return _PAGE.replace("__CODE__", code).replace("__TITLE__", (r["title"] or "Videollamada").replace("<", "&lt;")).replace("__SUBS__", "true" if subs else "false")
+    return _PAGE.replace("__CODE__", code).replace("__TITLE__", (r["title"] or "Videollamada").replace("<", "&lt;")).replace("__SUBS__", "true" if subs else "false").replace("__GUEST__", json.dumps(r.get("guest_name") or "").replace("<", "\\u003c"))
 
 
 _PAGE_END = """<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Videollamada</title>
@@ -359,7 +362,7 @@ input[type=text]{width:100%;padding:12px;border-radius:10px;border:1px solid var
 #wait{position:absolute;inset:0;display:grid;place-items:center;color:var(--mut);text-align:center;pointer-events:none;padding:30px}
 </style></head><body>
 <div id="lobby"><div class="card"><h1>__TITLE__</h1><p>Revisa tu cámara y tu micrófono antes de entrar.</p>
-<div id="lf"><video id="prev" autoplay playsinline muted></video><input id="nm" type="text" placeholder="Tu nombre" maxlength="60" autocomplete="name">
+<div id="lf"><p id="hi" class="hide" style="font-size:17px;font-weight:600;margin:0 0 10px"></p><video id="prev" autoplay playsinline muted></video><input id="nm" type="text" placeholder="Tu nombre" maxlength="60" autocomplete="name">
 <div class="row"><button class="tg" id="tm">🎤 Micrófono: activado</button><button class="tg" id="tc">📷 Cámara: activada</button></div>
 <div id="lgs" class="hide"><div class="lg"><span>Yo hablo en</span><select id="sp"><option value="es">Español</option><option value="en">English</option></select></div><div class="lg"><span>Quiero leer los subtítulos en</span><select id="rd"><option value="es">Español</option><option value="en">English</option><option value="off">Sin subtítulos</option></select></div></div><button class="go" id="go">Unirme a la videollamada</button><div id="err"></div><div id="note">Esta sala puede mostrar subtítulos en vivo. El audio no se graba ni se guarda.</div></div><div id="wr" class="hide"><div class="sp"></div><p id="wrt" style="margin:14px 0 4px;font-weight:600"></p><p style="color:var(--mut);font-size:14px;margin:0 0 14px">No cierres esta ventana: entrarás en cuanto te den acceso.</p><button class="tg" id="wrx">Cancelar</button></div></div></div>
 <div id="room" class="hide"><div id="top"><span id="ttl"></span><span id="cnt"></span></div><div id="grid"></div><div id="pend"></div><div id="subs"></div><div id="lgp" class="hide"><div class="lg"><span>Yo hablo en</span><select id="sp2"><option value="es">Español</option><option value="en">English</option></select></div><div class="lg"><span>Leer los subtítulos en</span><select id="rd2"><option value="es">Español</option><option value="en">English</option><option value="off">Sin subtítulos</option></select></div></div><div id="wait">Esperando a la otra persona…</div>
@@ -367,7 +370,7 @@ input[type=text]{width:100%;padding:12px;border-radius:10px;border:1px solid var
 <script src="_/lk.js"></script>
 <script>
 (function(){
-var SUBS=__SUBS__, CODE="__CODE__", HK=new URLSearchParams(location.search).get('h')||'', $=function(i){return document.getElementById(i)};
+var GUEST=__GUEST__, SUBS=__SUBS__, CODE="__CODE__", HK=new URLSearchParams(location.search).get('h')||'', $=function(i){return document.getElementById(i)};
 var mic=true, cam=true, stream=null, room=null, L=window.LivekitClient;
 try{ $('nm').value=localStorage.getItem('meet-name')||''; }catch(e){}
 function err(t){ $('err').textContent=t||''; }
@@ -437,6 +440,7 @@ function hookMic(mt){
 }
 function sels(){ return {sp:$('sp'),rd:$('rd')}; }
 if(SUBS){ $('lgs').classList.remove('hide'); }
+if(GUEST&&!HK){ $('nm').classList.add('hide'); $('nm').value=GUEST; $('hi').textContent='Hola, '+GUEST.split(' ')[0]; $('hi').classList.remove('hide'); }
 (function(){ var sp='', rd=''; try{ sp=localStorage.getItem('meet-speak')||''; rd=localStorage.getItem('meet-read')||'' }catch(e){} sp=sp||(HK?'es':'en'); rd=rd||sp; $('sp').value=sp; $('rd').value=rd; })();
 $('sp').onchange=function(){ if($('rd').dataset.t!=='1'){ $('rd').value=$('sp').value } }; $('rd').onchange=function(){ $('rd').dataset.t='1' };
 function beep(){ try{ var c=new (window.AudioContext||window.webkitAudioContext)(), o=c.createOscillator(), g=c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value=880; g.gain.value=0.08; o.start(); setTimeout(function(){o.stop();c.close()},180) }catch(e){} }

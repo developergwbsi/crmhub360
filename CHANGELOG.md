@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Videollamadas
+- **El cliente ya no escribe su nombre**: la sala conoce al cliente (lead, o el registro de la reunión), así que el enlace lo saluda («Hola, María») y entra directo con su nombre del CRM; el asesor lo ve con ese nombre al admitirlo.
+
 ## [1.5.1] - 2026-10-13
 
 ### Videollamadas

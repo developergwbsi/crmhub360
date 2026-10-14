@@ -1590,13 +1590,14 @@ class MeetCreateReq(BaseModel):
     subtitles: bool = False
     validHours: int = 0
     fresh: bool = False
+    guestName: str = ""
 
 
 @app.post("/v1/meet/rooms")
 def meet_create(req: MeetCreateReq, tenant: dict = Depends(tenant_auth)):
     """Crea una sala y devuelve el enlace del cliente y el del anfitrión (el del anfitrión no se comparte)."""
     try:
-        return meet.create(tenant["slug"], req.leadId, req.title, req.hostName, req.createdBy, req.hostLang, req.guestLang, req.subtitles, req.validHours, req.fresh)
+        return meet.create(tenant["slug"], req.leadId, req.title, req.hostName, req.createdBy, req.hostLang, req.guestLang, req.subtitles, req.validHours, req.fresh, req.guestName)
     except PermissionError as e:
         raise HTTPException(403, str(e))
     except ValueError as e:
