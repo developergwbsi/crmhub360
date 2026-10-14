@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.4.1)
+## Sin publicar (después de v1.5.0)
 
+- `495bf3f` 2026-10-13 — Changelog 1.5.1
+- `d3e5d68` 2026-10-13 — Videollamadas: aviso al asesor cuando el cliente llega primero (push, nota en el lead y aviso en el panel)
+
+## v1.5.0
+
+- `fad6739` 2026-10-13 — Versión 1.5.0
 - `f504f8d` 2026-10-13 — Changelog 1.5.0
 - `a761d2a` 2026-10-13 — Videollamadas programables: panel Videollamadas en la ficha, opción Videollamada en las reuniones (formulario, actividades y calendario) y botón en cuenta, contacto y oportunidad
 - `3d13c86` 2026-10-13 — Detalle de registros: las dos columnas (datos y panel lateral) se desplazan por separado

@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **104** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **105** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -68,6 +68,7 @@ Total: **104** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/meet/create` | CrmHub.meetCreate | POST /CrmHub/meet/create. Usuario con edición del lead. Hub: POST /v1/meet/rooms. Devuelve el enlace del cliente y el del anfitrión. */ |
 | POST | `/CrmHub/meet/end` | CrmHub.meetEnd | POST /CrmHub/meet/end. Usuario con edición del lead. Hub: POST /v1/meet/rooms/{código}/end. Cierra la sala de videollamada del lead. */ |
 | POST | `/CrmHub/meet/host` | CrmHub.meetHost | POST /CrmHub/meet/host. Usuario con acceso a la reunión. Hub: GET /v1/meet/rooms/{código}/host. Devuelve el enlace de entrada del anfitrión de la videollamada de una reunión. */ |
+| GET | `/CrmHub/meet/waiting` | CrmHub.meetWaiting | GET /CrmHub/meet/waiting?leadId=. Usuario con acceso al lead. Hub: GET /v1/meet/rooms. Clientes que esperan en la sala de espera de las videollamadas del lead, con el enlace para entrar a admitirlos. */ |
 | GET | `/CrmHub/metrics` | CrmHub.metrics | GET /CrmHub/metrics. Usuario; datos según su ACL. Hub: GET /v1/agent/attended (comercial virtual). */ |
 | GET | `/CrmHub/myroles` | CrmHub.myroles | Roles del usuario actual: el manual muestra solo lo que le corresponde. */ |
 | POST | `/CrmHub/notifyTeam` | CrmHub.notifyTeam | Solo el usuario API del Hub: avisa en la campana del CRM (p. ej. «Nuevo registro» de un formulario web). */ |
