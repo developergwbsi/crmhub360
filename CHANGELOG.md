@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.5.2] - 2026-10-13
+
 ### Videollamadas dentro del CRM
 - **La videollamada se abre dentro del CRM**, en una ventana flotante que **no se cierra al cambiar de ficha, de lista o de página**: el asesor conserva la información del cliente a la vista, puede abrir otros clientes, enviar información o hacer otras actividades sin colgar. Se puede mover, ampliar, minimizar (la llamada sigue) o abrir en una pestaña nueva; al salir de la sala se cierra sola.
 - **Aviso cuando el cliente llega primero, en cualquier pantalla del CRM**: un aviso amarillo con sonido («María espera en la videollamada · Entrar y admitir») para el asesor que creó la sala o que tiene asignado el lead, además del push y de la nota en el lead. «Entrar y admitir» abre la sala en la ventana flotante.
