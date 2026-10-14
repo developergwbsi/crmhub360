@@ -41,11 +41,11 @@ define('custom:views/panels/video', ['views/record/panels/bottom', 'custom:ui', 
         // lead al que pertenece la conversación: el propio registro si es un lead; para cuentas, contactos y oportunidades lo resuelve el servidor
         leadId() {
             const m = this.model;
-            if (m.entityType === 'Lead') { return Promise.resolve({id: m.id, phone: (m.get('phoneNumber') || '').trim()}); }
-            return Espo.Ajax.postRequest('CrmHub/thread', {scope: m.entityType, id: m.id}).then(t => ({id: t.leadId, phone: (t.phone || m.get('phoneNumber') || '').trim()}));
+            if (m.entityType === 'Lead') { return Promise.resolve({id: m.id, phone: (m.get('phoneNumber') || '').trim(), email: ((m.get('emailAddress') || '') + '').trim(), telegram: !!m.get('telegramChatId')}); }
+            return Espo.Ajax.postRequest('CrmHub/thread', {scope: m.entityType, id: m.id}).then(t => ({id: t.leadId, phone: (t.phone || m.get('phoneNumber') || '').trim(), email: (t.email || m.get('emailAddress') || '').trim(), telegram: !!t.telegramChatId}));
         }
 
-        now() { this.leadId().then(l => Launch.open(this.model, l.id, l.phone)).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('Este registro no tiene una conversación con la que abrir la videollamada.'); }); }
+        now() { this.leadId().then(l => Launch.open(this.model, l.id, l)).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('Este registro no tiene una conversación con la que abrir la videollamada.'); }); }
 
         plan() {
             const m = this.model, u = this.getUser();

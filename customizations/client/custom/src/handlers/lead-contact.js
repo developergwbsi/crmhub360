@@ -50,7 +50,7 @@ define('custom:handlers/lead-contact', ['action-handler', 'custom:ui', 'custom:m
         canVideo() { return ['video', 'video_subs'].includes(this.view.getConfig().get('crmhubMeet')); }
 
         actionVideo() {
-            this.withThread(t => { const m = this.view.model; Launch.open(m, t ? t.leadId : m.id, this.phoneOf(t)); });
+            this.withThread(t => { const m = this.view.model; Launch.open(m, t ? t.leadId : m.id, {phone: this.phoneOf(t), email: ((m.get('emailAddress') || '') + '').trim() || (t && t.email || ''), telegram: !!(m.get('telegramChatId') || (t && t.telegramChatId))}); });
         }
 
         actionSms() {

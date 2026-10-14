@@ -1149,3 +1149,5 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-ma > .fas { font-size: 20px; }
 .ch-ma-t { flex: 1; min-width: 0; } .ch-ma-t small { display: block; opacity: .7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ch-ma a { cursor: pointer; font-size: 20px; line-height: 1; color: #4a3800; opacity: .6; }
+
+.ch-ml-send { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; }
