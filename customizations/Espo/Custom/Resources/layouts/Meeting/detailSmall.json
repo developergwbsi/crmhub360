@@ -8,6 +8,7 @@
             [{"name": "dateEnd"}],
             [{"name": "parent"}],
             [{"name": "videoCall"}],
+            [{"name": "videoInvite"}],
             [{"name": "videoLink"}],
             [{"name": "reminders"}],
             [{"name": "description"}]

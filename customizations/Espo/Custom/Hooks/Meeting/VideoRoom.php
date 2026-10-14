@@ -5,6 +5,7 @@ namespace Espo\Custom\Hooks\Meeting;
 use Espo\Core\Exceptions\BadRequest;
 use Espo\Core\Utils\Config;
 use Espo\Custom\Services\HubClient;
+use Espo\Custom\Services\MeetInvite;
 use Espo\Entities\User;
 use Espo\ORM\Entity;
 use Espo\ORM\EntityManager;
@@ -16,6 +17,9 @@ use Espo\ORM\EntityManager;
 class VideoRoom
 {
     public static int $order = 9;
+
+    /** Reuniones nuevas con videollamada que deben invitar al cliente por correo al terminar de guardarse (clave: id del objeto en memoria). */
+    private static array $invite = [];
 
     public function __construct(private Config $config, private User $user, private EntityManager $em) {}
 
@@ -47,10 +51,34 @@ class VideoRoom
             throw new BadRequest($m[1] ?? 'No se pudo crear la videollamada.');
         }
         $entity->set('videoCode', (string) $r['code']);
+        if ($entity->get('videoInvite') !== false && $entity->get('status') === 'Planned') {
+            self::$invite[spl_object_id($entity)] = true;
+        }
+        if (!$entity->get('reminders')) {   // recordatorios por defecto para el asesor: aviso en el CRM 5 minutos antes y correo 15 minutos antes
+            $entity->set('reminders', [(object) ['type' => 'Popup', 'seconds' => 300], (object) ['type' => 'Email', 'seconds' => 900]]);
+        }
         $entity->set('videoLink', (string) $r['guestUrl']);
         $desc = (string) $entity->get('description');
         if (strpos($desc, (string) $r['guestUrl']) === false) {
             $entity->set('description', trim($desc . "\n\nVideollamada: " . $r['guestUrl']));
+        }
+    }
+
+    /** Evento afterSave de Meeting: con la reunión ya guardada envía la invitación por correo al cliente (si tiene correo). */
+    public function afterSave(Entity $entity, array $options): void
+    {
+        $k = spl_object_id($entity);
+        if (empty(self::$invite[$k])) {
+            return;
+        }
+        unset(self::$invite[$k]);
+        try {
+            $svc = new MeetInvite($this->config, $this->em, $this->user);
+            if ($svc->recipient($entity)) {
+                $svc->send($entity);
+            }
+        } catch (\Throwable $e) {
+            // la reunión ya quedó guardada; la invitación se puede reenviar con el botón de la reunión
         }
     }
 }

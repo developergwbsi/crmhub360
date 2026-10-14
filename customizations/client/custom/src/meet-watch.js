@@ -10,21 +10,21 @@ define('custom:meet-watch', ['custom:ui', 'custom:call-dock'], function (ChUi, D
     function paint(list) {
         let box = document.getElementById('ch-meet-alert');
         list.forEach(w => { w.names = [...new Set(w.names)]; });
-        const items = list.filter(w => w.hostUrl && !dismissed[w.kind + w.code + '|' + w.names.join(',')]);
+        const items = list.filter(w => w.hostUrl && !dismissed[w.kind + w.code + (w.kind === 'soon' ? '' : '|' + w.names.join(','))]);
         if (!items.length) { if (box) { box.remove(); } return; }
         if (!box) { box = document.createElement('div'); box.id = 'ch-meet-alert'; document.body.appendChild(box); }
-        box.innerHTML = items.map(w => { const live = w.kind === 'live', many = w.names.length > 1; return `<div class="ch-ma" data-c="${ChUi.esc(w.code)}"><span class="fas ${live ? 'fa-video' : 'fa-user-clock'}"></span><div class="ch-ma-t"><b>${ChUi.esc(w.names.join(', '))}</b> ${live ? (many ? 'siguen' : 'sigue') + ' en la videollamada, sin ti' : (many ? 'esperan' : 'espera') + ' en la videollamada'}<small>${ChUi.esc(w.title || '')}</small></div>` +
+        box.innerHTML = items.map(w => { const live = w.kind === 'live', soon = w.kind === 'soon', many = w.names.length > 1; if (soon) { return `<div class="ch-ma ch-ma-soon" data-c="${ChUi.esc(w.code)}"><span class="far fa-calendar-check"></span><div class="ch-ma-t"><b>${w.minutes > 0 ? 'Tu videollamada empieza en ' + w.minutes + ' min' : w.minutes === 0 ? 'Tu videollamada empieza ahora' : 'Tu videollamada empezó hace ' + (-w.minutes) + ' min'}</b><small>${ChUi.esc(w.title || '')}</small></div><button class="btn btn-primary btn-sm" data-a="in" data-u="${ChUi.esc(w.hostUrl)}" data-n="${ChUi.esc(w.title || 'Videollamada')}">Entrar a la sala</button><a role="button" data-a="x" data-k="${ChUi.esc(w.kind + w.code)}" title="Ocultar">×</a></div>`; } return `<div class="ch-ma" data-c="${ChUi.esc(w.code)}"><span class="fas ${live ? 'fa-video' : 'fa-user-clock'}"></span><div class="ch-ma-t"><b>${ChUi.esc(w.names.join(', '))}</b> ${live ? (many ? 'siguen' : 'sigue') + ' en la videollamada, sin ti' : (many ? 'esperan' : 'espera') + ' en la videollamada'}<small>${ChUi.esc(w.title || '')}</small></div>` +
             `<button class="btn btn-primary btn-sm" data-a="in" data-u="${ChUi.esc(w.hostUrl)}" data-n="${ChUi.esc(w.title || 'Videollamada')}">${live ? 'Volver a entrar' : 'Entrar y admitir'}</button><a role="button" data-a="x" data-k="${ChUi.esc(w.kind + w.code + '|' + w.names.join(','))}" title="Ocultar">×</a></div>`; }).join('');
         box.onclick = e => {
             const a = e.target.closest('[data-a]'); if (!a) { return; }
             if (a.dataset.a === 'in') { Dock.open(a.dataset.u, a.dataset.n); }
             else { dismissed[a.dataset.k] = 1; a.closest('.ch-ma').remove(); if (!box.children.length) { box.remove(); } }
         };
-        items.forEach(w => { const k = w.kind + w.code + '|' + w.names.join(','); if (!seen[k]) { seen[k] = 1; beep(); if (document.hidden && 'Notification' in window && Notification.permission === 'granted') { try { new Notification(w.kind === 'live' ? 'Un cliente sigue en la videollamada' : 'Un cliente espera en la videollamada', {body: w.kind === 'live' ? w.names.join(', ') + ' sigue en la sala.' : w.names.join(', ') + ' quiere entrar.', tag: 'ch-meet-' + w.code}); } catch (e) { /* sin aviso del navegador */ } } } });
+        items.forEach(w => { if (w.kind === 'soon' && w.minutes > 5) { return; } const k = w.kind + w.code + '|' + w.names.join(','); if (!seen[k]) { seen[k] = 1; beep(); if (document.hidden && 'Notification' in window && Notification.permission === 'granted') { try { new Notification(w.kind === 'live' ? 'Un cliente sigue en la videollamada' : 'Un cliente espera en la videollamada', {body: w.kind === 'live' ? w.names.join(', ') + ' sigue en la sala.' : w.names.join(', ') + ' quiere entrar.', tag: 'ch-meet-' + w.code}); } catch (e) { /* sin aviso del navegador */ } } } });
     }
 
     function poll() {
-        Espo.Ajax.getRequest('CrmHub/meet/waiting').then(r => paint(r.waiting || [])).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
+        Espo.Ajax.getRequest('CrmHub/meet/waiting').then(r => paint([...(r.upcoming || []).map(u => ({kind: 'soon', code: 'm' + u.id, names: [u.parentName || 'Cliente'], title: u.name, minutes: u.minutes, hostUrl: u.hostUrl})), ...(r.waiting || [])])).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
     }
 
     return {

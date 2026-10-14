@@ -1605,6 +1605,60 @@ def meet_create(req: MeetCreateReq, tenant: dict = Depends(tenant_auth)):
         raise HTTPException(422, str(e))
 
 
+class MeetRestoreReq(BaseModel):
+    """Datos para reabrir la sala de una reunión programada con su mismo código."""
+    code: str
+    title: str = ""
+    leadId: str = ""
+    hostName: str = ""
+    guestName: str = ""
+    validHours: int = 24
+    createdBy: str = ""
+
+
+@app.post("/v1/meet/rooms/restore")
+def meet_restore(req: MeetRestoreReq, tenant: dict = Depends(tenant_auth)):
+    """Reabre (o recrea) la sala de una reunión con el mismo código: el enlace ya enviado al cliente sigue valiendo."""
+    if meet.mode(tenant["slug"]) == "off":
+        raise HTTPException(403, "Las videollamadas no están habilitadas para esta empresa.")
+    try:
+        return meet.restore(tenant["slug"], req.code, req.title, req.leadId, req.hostName, req.guestName, req.validHours, req.createdBy)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+class MeetInviteReq(BaseModel):
+    """Datos de una videollamada programada para invitar al cliente por correo."""
+    to: str
+    toName: str = ""
+    title: str = ""
+    startUtc: str
+    endUtc: str
+    url: str
+    organizerName: str = ""
+    organizerEmail: str = ""
+    userId: str
+    tz: str = "America/Bogota"
+    uid: str = ""
+    parentType: str = ""
+    parentId: str = ""
+
+
+@app.post("/v1/meet/invite")
+async def meet_invite(req: MeetInviteReq, tenant: dict = Depends(tenant_auth)):
+    """Envía la invitación por correo (con «Agregar al calendario» y .ics) de una videollamada programada."""
+    if meet.mode(tenant["slug"]) == "off":
+        raise HTTPException(403, "Las videollamadas no están habilitadas para esta empresa.")
+    try:
+        return await meet.invite(tenant, req.model_dump())
+    except LookupError as e:
+        raise HTTPException(409, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo enviar la invitación: {str(e)[:200]}")
+
+
 @app.get("/v1/meet/waiting")
 def meet_waiting(tenant: dict = Depends(tenant_auth)):
     """Salas con clientes esperando (de toda la empresa); el CRM filtra las del usuario."""

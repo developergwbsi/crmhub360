@@ -1151,3 +1151,6 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-ma a { cursor: pointer; font-size: 20px; line-height: 1; color: #4a3800; opacity: .6; }
 
 .ch-ml-send { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; }
+
+.ch-ma-soon { background: #e8efff; border-color: #9db4ff; color: #1c2f6b; }
+.ch-ma-soon a { color: #1c2f6b; }

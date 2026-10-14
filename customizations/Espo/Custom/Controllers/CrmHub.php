@@ -600,7 +600,7 @@ class CrmHub
         $leadId = (string) $request->getQueryParam('leadId');
         $out = [];
         if (!in_array((string) $this->config->get('crmhubMeet'), ['video', 'video_subs'], true)) {
-            return (object) ['waiting' => []];   // servicio no habilitado: el aviso global no consulta al Hub
+            return (object) ['waiting' => [], 'upcoming' => []];   // servicio no habilitado: el aviso global no consulta al Hub
         }
         try {
             $hub = new HubClient($this->config);
@@ -643,7 +643,55 @@ class CrmHub
         } catch (\RuntimeException $e) {
             // sin datos: no hay aviso
         }
-        return (object) ['waiting' => $out];
+        return (object) ['waiting' => $out, 'upcoming' => $leadId === '' ? $this->upcomingMeets() : []];
+    }
+
+    /** Enlace de entrada del anfitrión de la sala de una reunión; si la sala ya no existe en el Hub la reabre con el mismo código (el enlace del cliente sigue valiendo). */
+    private function meetingHostUrl(HubClient $hub, $m): ?string
+    {
+        $code = preg_replace('/[^a-z0-9-]/', '', (string) $m->get('videoCode'));
+        try {
+            return $hub->request('GET', '/v1/meet/rooms/' . $code . '/host', null, 8)['hostUrl'] ?? null;
+        } catch (\RuntimeException $e) {
+            $end = $m->get('dateEnd') ? strtotime($m->get('dateEnd') . ' UTC') : time() + 3600;
+            $parentLead = $m->get('parentType') === 'Lead' ? (string) $m->get('parentId') : '';
+            $r = $hub->request('POST', '/v1/meet/rooms/restore', [
+                'code' => $code, 'title' => (string) $m->get('name'), 'leadId' => $parentLead, 'hostName' => (string) ($this->user->get('name') ?: $this->user->get('userName')),
+                'guestName' => (string) $m->get('parentName'), 'validHours' => (int) max(24, min(24 * 90, ceil(($end - time()) / 3600) + 12)), 'createdBy' => $this->user->getId(),
+            ], 15);
+            return $r['hostUrl'] ?? null;
+        }
+    }
+
+    /** Videollamadas programadas del usuario que empiezan en los próximos 15 minutos (o empezaron hace menos de 20): el aviso global le recuerda entrar. */
+    private function upcomingMeets(): array
+    {
+        $out = [];
+        try {
+            $hub = new HubClient($this->config);
+            $list = $this->em->getRDBRepository('Meeting')->where([
+                'assignedUserId' => $this->user->getId(), 'status' => 'Planned', 'videoCode!=' => '',
+                'dateStart>=' => gmdate('Y-m-d H:i:s', time() - 1200), 'dateStart<=' => gmdate('Y-m-d H:i:s', time() + 900),
+            ])->order('dateStart')->limit(0, 5)->find();
+            foreach ($list as $m) {
+                $out[] = ['id' => $m->getId(), 'name' => (string) $m->get('name'), 'minutes' => (int) round((strtotime($m->get('dateStart') . ' UTC') - time()) / 60), 'parentName' => (string) $m->get('parentName'), 'hostUrl' => $this->meetingHostUrl($hub, $m)];
+            }
+        } catch (\Throwable $e) {
+            // sin recordatorio de videollamadas
+        }
+        return $out;
+    }
+
+    /** POST /CrmHub/meet/invite. Usuario con edición de la reunión. Envía (o reenvía) al cliente la invitación por correo con «Agregar al calendario». */
+    public function postActionMeetInvite(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $m = $this->em->getEntityById('Meeting', (string) ($d->meetingId ?? ''));
+        if (!$m || !$this->acl->checkEntityEdit($m)) {
+            throw new Forbidden();
+        }
+        (new \Espo\Custom\Services\MeetInvite($this->config, $this->em, $this->user))->send($m);
+        return (object) ['ok' => true];
     }
 
     /** POST /CrmHub/meet/host. Usuario con acceso a la reunión. Hub: GET /v1/meet/rooms/{código}/host. Devuelve el enlace de entrada del anfitrión de la videollamada de una reunión. */
@@ -654,12 +702,12 @@ class CrmHub
         if (!$m || !$this->acl->checkEntityRead($m) || !$m->get('videoCode')) {
             throw new Forbidden();
         }
-        $code = preg_replace('/[^a-z0-9-]/', '', (string) $m->get('videoCode'));
         try {
-            return (object) (new HubClient($this->config))->request('GET', '/v1/meet/rooms/' . $code . '/host', null, 20);
+            $u = $this->meetingHostUrl(new HubClient($this->config), $m);
         } catch (\RuntimeException $e) {
-            throw new BadRequest('La sala de esta videollamada ya terminó.');
+            throw new BadRequest('No se pudo abrir la sala de esta videollamada.');
         }
+        return (object) ['hostUrl' => $u];
     }
 
     /** POST /CrmHub/meet/end. Usuario con edición del lead. Hub: POST /v1/meet/rooms/{código}/end. Cierra la sala de videollamada del lead. */

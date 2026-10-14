@@ -15,6 +15,9 @@ import re
 import secrets
 import time
 import asyncio
+import html as _html
+from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 
 import httpx
 from pathlib import Path
@@ -283,6 +286,26 @@ async def subtitle(code: str, key: str, lang: str, wav: bytes) -> dict:
     return {"text": text, "lang": lang, "tr": tr}
 
 
+def restore(tenant_slug: str, code: str, title: str, lead_id: str, host_name: str, guest_name: str, valid_hours: int, created_by: str) -> dict:
+    """Vuelve a abrir (o recrea) la sala de una reunión programada con el MISMO código, para que el enlace que ya recibió el cliente siga funcionando."""
+    if not CODE_RE.match(code or ""):
+        raise ValueError("Código de sala no válido.")
+    hours = max(1, min(int(valid_hours or TTL_HOURS), 24 * 90))
+    with db.pool.connection() as c:
+        r = c.execute("SELECT tenant, host_key FROM meet_rooms WHERE code = %s", (code,)).fetchone()
+        if r and r["tenant"] != tenant_slug:
+            raise ValueError("Ese código pertenece a otra empresa.")
+        if r:
+            c.execute("UPDATE meet_rooms SET ended_at = NULL, expires_at = GREATEST(expires_at, now() + make_interval(hours => %s)) WHERE code = %s", (hours, code))
+            key = r["host_key"]
+        else:
+            key = secrets.token_urlsafe(18)
+            c.execute("INSERT INTO meet_rooms (code, tenant, lead_id, title, host_name, host_key, created_by, expires_at, host_lang, guest_lang, subtitles, guest_name) VALUES (%s,%s,%s,%s,%s,%s,%s, now() + make_interval(hours => %s),'es','en',true,%s)",
+                      (code, tenant_slug, lead_id or "", (title or "")[:120], (host_name or "")[:80], key, (created_by or "")[:80], hours, (guest_name or "")[:60]))
+    base = f"{public_base()}/{code}"
+    return {"code": code, "guestUrl": base, "hostUrl": f"{base}?h={key}"}
+
+
 def host_url(tenant_slug: str, code: str) -> str | None:
     """Enlace de entrada del anfitrión de una sala vigente de la empresa (solo para usuarios autorizados del CRM)."""
     r = room(code)
@@ -367,6 +390,92 @@ def waiting_all(tenant_slug: str) -> list[dict]:
             if lv["guests"] and not lv["hosts"] and x["code"] not in have:
                 out.append({"code": x["code"], "leadId": x["lead_id"], "createdBy": x["created_by"], "title": x["title"], "names": lv["guests"], "kind": "live"})
     return out
+
+
+# ---------------- invitación por correo de una videollamada programada (con «Agregar al calendario» y recordatorios)
+TZ_NAMES = {"America/Bogota": "hora de Bogotá", "America/Mexico_City": "hora de Ciudad de México", "America/Lima": "hora de Lima", "America/Santiago": "hora de Santiago", "America/Argentina/Buenos_Aires": "hora de Buenos Aires",
+            "America/Guayaquil": "hora de Ecuador", "America/Panama": "hora de Panamá", "America/Caracas": "hora de Caracas", "Europe/Madrid": "hora de Madrid", "America/New_York": "hora del Este de EE. UU.", "UTC": "UTC"}
+
+
+def _tzname(tz: str | None) -> str:
+    tz = tz or "America/Bogota"
+    return TZ_NAMES.get(tz) or ("hora de " + tz.split("/")[-1].replace("_", " "))
+
+
+def _utc(s: str) -> datetime:
+    return datetime.strptime(s[:19].replace("T", " "), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+
+
+def _ics_text(v: str) -> str:
+    return (v or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\r", "").replace("\n", "\\n")
+
+
+def build_ics(uid: str, title: str, start: datetime, end: datetime, url: str, org_name: str, org_email: str, to_name: str, to_email: str, details: str) -> str:
+    """Archivo de calendario (iCalendar, METHOD:REQUEST) con la sala como lugar y dos recordatorios (15 y 5 minutos antes) para quien lo agregue."""
+    f = lambda d: d.strftime("%Y%m%dT%H%M%SZ")
+    lines = ["BEGIN:VCALENDAR", "PRODID:-//Crm Hub 360//Videollamadas//ES", "VERSION:2.0", "CALSCALE:GREGORIAN", "METHOD:REQUEST", "BEGIN:VEVENT", f"UID:{uid}", f"DTSTAMP:{f(datetime.now(timezone.utc))}",
+             f"DTSTART:{f(start)}", f"DTEND:{f(end)}", f"SUMMARY:{_ics_text(title)}", f"LOCATION:{_ics_text(url)}", f"URL:{url}", f"DESCRIPTION:{_ics_text(details)}", "STATUS:CONFIRMED", "SEQUENCE:0",
+             f"ORGANIZER;CN={_ics_text(org_name)}:mailto:{org_email}", f"ATTENDEE;CN={_ics_text(to_name)};ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:{to_email}",
+             "BEGIN:VALARM", "TRIGGER:-PT15M", "ACTION:DISPLAY", f"DESCRIPTION:{_ics_text('Videollamada en 15 minutos')}", "END:VALARM",
+             "BEGIN:VALARM", "TRIGGER:-PT5M", "ACTION:DISPLAY", f"DESCRIPTION:{_ics_text('Videollamada en 5 minutos')}", "END:VALARM", "END:VEVENT", "END:VCALENDAR"]
+    out = []
+    for ln in lines:   # líneas de máximo 75 caracteres (plegado del estándar)
+        while len(ln.encode("utf-8")) > 75:
+            cut = 74
+            while len(ln[:cut].encode("utf-8")) > 74:
+                cut -= 1
+            out.append(ln[:cut]); ln = " " + ln[cut:]
+        out.append(ln)
+    return "\r\n".join(out) + "\r\n"
+
+
+def invite_html(first: str, org: str, title: str, when: str, minutes: int, url: str, google: str, outlook: str) -> str:
+    e = _html.escape
+    btn = "display:inline-block;padding:12px 22px;border-radius:10px;font-weight:600;text-decoration:none;font-family:Arial,sans-serif;font-size:15px"
+    return (f'<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#1c2233;line-height:1.5">'
+            f'<p style="font-size:16px">Hola{" " + e(first) if first else ""},</p>'
+            f'<p><b>{e(org)}</b> te invita a una videollamada.</p>'
+            f'<table role="presentation" style="width:100%;border:1px solid #dfe3ee;border-radius:12px;background:#f6f8fd;margin:14px 0"><tr><td style="padding:16px 18px">'
+            f'<div style="font-size:17px;font-weight:700">{e(title)}</div>'
+            f'<div style="margin-top:6px">📅 {e(when)}</div><div>⏱ Duración: {minutes} minutos</div></td></tr></table>'
+            f'<p style="margin:18px 0"><a href="{e(url)}" style="{btn};background:#3a52e0;color:#ffffff">Unirme a la videollamada</a></p>'
+            f'<p style="margin:0 0 6px;font-weight:600">Agregar a mi calendario (con recordatorio)</p>'
+            f'<p style="margin:0 0 14px"><a href="{e(google)}" style="{btn};background:#ffffff;color:#3a52e0;border:1px solid #c9d0e6;padding:9px 16px;font-size:14px">Google Calendar</a> '
+            f'<a href="{e(outlook)}" style="{btn};background:#ffffff;color:#3a52e0;border:1px solid #c9d0e6;padding:9px 16px;font-size:14px">Outlook</a></p>'
+            f'<p style="color:#5d6678;font-size:13px">También puedes abrir el archivo adjunto <b>invitacion.ics</b> (Apple Calendar y otros). Tu calendario te recordará 15 y 5 minutos antes.</p>'
+            f'<p style="color:#5d6678;font-size:13px">No necesitas instalar nada ni crear una cuenta: abre el enlace desde tu celular o computador y, al entrar, te daremos acceso en unos segundos.</p>'
+            f'<p style="color:#8a93a8;font-size:12px;word-break:break-all">Si el botón no funciona, copia este enlace: {e(url)}</p></div>')
+
+
+async def invite(tenant: dict, d: dict) -> dict:
+    """Envía al cliente la invitación a una videollamada programada: correo con botón para unirse, enlaces para agregarla a Google Calendar y Outlook, y archivo .ics con recordatorios."""
+    from . import mailout
+    start, end = _utc(d["startUtc"]), _utc(d["endUtc"])
+    if end <= start:
+        end = start + timedelta(hours=1)
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(d.get("tz") or "America/Bogota")
+    except Exception:
+        tz = timezone.utc
+    local = start.astimezone(tz)
+    days = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+    months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+    h12 = local.hour % 12 or 12
+    when = f"{days[local.weekday()]} {local.day} de {months[local.month - 1]} de {local.year}, {h12}:{local.minute:02d} {'a. m.' if local.hour < 12 else 'p. m.'} ({_tzname(d.get('tz'))})"
+    mins = max(5, int((end - start).total_seconds() // 60))
+    title, url = (d.get("title") or "Videollamada")[:120], d["url"]
+    fmt = lambda x: x.strftime("%Y%m%dT%H%M%SZ")
+    details = f"Videollamada con {d.get('organizerName') or 'tu asesor'}. Entra con este enlace: {url}"
+    google = f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={quote(title)}&dates={fmt(start)}/{fmt(end)}&details={quote(details)}&location={quote(url)}"
+    outlook = f"https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject={quote(title)}&startdt={start.strftime('%Y-%m-%dT%H:%M:%SZ')}&enddt={end.strftime('%Y-%m-%dT%H:%M:%SZ')}&body={quote(details)}&location={quote(url)}"
+    cfg = (tenant.get("settings") or {}).get("mailout") or {}
+    org_email = d.get("organizerEmail") or cfg.get("from_address") or ""
+    ics = build_ics(f"{d.get('uid') or secrets.token_hex(8)}@crmhub360", title, start, end, url, d.get("organizerName") or "Asesor", org_email, d.get("toName") or d["to"], d["to"], details)
+    first = (d.get("toName") or "").split(" ")[0]
+    html = invite_html(first, d.get("organizerName") or "Tu asesor", title, when, mins, url, google, outlook)
+    return await mailout.send(tenant, {"userId": d["userId"], "userName": d.get("organizerName") or "", "to": d["to"], "subject": f"Invitación: {title} · {local.day} de {months[local.month - 1]}, {h12}:{local.minute:02d} {'a. m.' if local.hour < 12 else 'p. m.'}",
+                                       "html": html, "ics": ics, "parentType": d.get("parentType") or None, "parentId": d.get("parentId") or None})
 
 
 def client_js() -> bytes:

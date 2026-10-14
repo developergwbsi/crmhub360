@@ -84,6 +84,9 @@ async def send(tenant: dict, req: dict) -> dict:
     html = req.get("html") or ""
     msg.set_content(plain_of(html))
     msg.add_alternative(html, subtype="html")
+    if req.get("ics"):   # invitación de calendario: parte «text/calendar» (Gmail y Outlook muestran Sí/No/Quizás y «Agregar al calendario») y el archivo .ics adjunto (Apple, otros)
+        msg.add_alternative(req["ics"], subtype="calendar", params={"method": "REQUEST", "charset": "utf-8"})
+        msg.add_attachment(req["ics"].encode("utf-8"), maintype="text", subtype="calendar", filename="invitacion.ics", params={"method": "REQUEST", "charset": "utf-8"})
     for f in req.get("attachments") or []:
         msg.add_attachment(f["bytes"], maintype="application", subtype="pdf", filename=f["name"])
     await asyncio.to_thread(_smtp_send, cfg, msg, to + cc)

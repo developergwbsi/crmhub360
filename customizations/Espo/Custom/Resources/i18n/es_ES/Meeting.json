@@ -2,9 +2,11 @@
     "fields": {
         "videoCall": "Videollamada",
         "videoLink": "Enlace de la videollamada",
-        "videoCode": "Código de la sala"
+        "videoCode": "Código de la sala",
+        "videoInvite": "Enviar invitación al cliente por correo"
     },
     "tooltips": {
-        "videoCall": "Crea una sala de videollamada propia para esta reunión: el cliente entra con el enlace, sin cuenta, y tú lo admites."
+        "videoCall": "Crea una sala de videollamada propia para esta reunión: el cliente entra con el enlace, sin cuenta, y tú lo admites.",
+        "videoInvite": "El cliente recibe un correo con el botón para unirse, «Agregar a mi calendario» (Google, Outlook y archivo .ics) y recordatorios 15 y 5 minutos antes."
     }
 }

@@ -11,6 +11,15 @@
                     "handler": "custom:handlers/meeting-video",
                     "actionFunction": "actionJoin",
                     "checkVisibilityFunction": "hasVideo"
+                },
+                {
+                    "name": "inviteVideo",
+                    "label": "Enviar invitación al cliente",
+                    "iconClass": "fas fa-envelope",
+                    "style": "default",
+                    "handler": "custom:handlers/meeting-video",
+                    "actionFunction": "actionInvite",
+                    "checkVisibilityFunction": "hasVideo"
                 }
             ]
         }
