@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Agenda y recordatorios
+- **La agenda va primero en la ficha del cliente** (lead, cuenta, contacto y oportunidad; detalle completo y panel lateral): bajo el encabezado, las citas, videollamadas, llamadas y tareas pendientes («Hoy 20:00», «Mañana 9:00», «En 5 min», lo vencido en rojo), con **Entrar** a la sala en las videollamadas y los botones **Agendar: Cita · Videollamada · Llamada · Tarea** para programar lo siguiente sin salir de la ficha.
+
+### Videollamadas programadas
+- **Invitación por correo al cliente** al programar una videollamada (casilla «Enviar invitación al cliente por correo», marcada por defecto) y con el botón **Enviar invitación al cliente** en la reunión: correo con el botón «Unirme a la videollamada», la fecha y hora en su zona, los enlaces **Agregar a Google Calendar / Outlook** y el archivo **.ics** (parte de calendario para Gmail/Outlook) con recordatorios 15 y 5 minutos antes.
+- **Recordatorios del asesor**: toda reunión con videollamada nace con aviso en el CRM 5 minutos antes y correo 15 minutos antes (se pueden cambiar en la reunión), y el aviso global del CRM muestra «Tu videollamada empieza en N min · Entrar a la sala» desde 15 minutos antes.
+- Las salas de las reuniones programadas **se reabren con el mismo código** si faltan, así el enlace que ya recibió el cliente nunca queda inválido.
+
 ## [1.5.4] - 2026-10-14
 
 ### Videollamadas

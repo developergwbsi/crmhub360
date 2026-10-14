@@ -710,6 +710,38 @@ class CrmHub
         return (object) ['hostUrl' => $u];
     }
 
+    /** GET /CrmHub/agenda?scope=&id=. Usuario con acceso al registro. Citas (reuniones y videollamadas), llamadas y tareas pendientes del registro, ordenadas: primero lo vencido y luego lo próximo. */
+    public function getActionAgenda(Request $request): \stdClass
+    {
+        $scope = (string) $request->getQueryParam('scope');
+        if (!in_array($scope, ['Lead', 'Account', 'Contact', 'Opportunity'], true)) {
+            throw new BadRequest();
+        }
+        $rec = $this->em->getEntityById($scope, (string) $request->getQueryParam('id'));
+        if (!$rec || !$this->acl->checkEntityRead($rec)) {
+            throw new Forbidden();
+        }
+        $now = time();
+        $base = ['parentType' => $scope, 'parentId' => $rec->getId()];
+        $items = [];
+        $add = function (string $type, $e, ?string $at, ?string $end) use (&$items, $now) {
+            $ts = $at ? strtotime($at . ' UTC') : 0;
+            $items[] = ['type' => $type, 'id' => $e->getId(), 'name' => (string) $e->get('name'), 'at' => $at, 'end' => $end, 'status' => (string) $e->get('status'),
+                'overdue' => $ts && $ts < $now - 900, 'video' => $type === 'Meeting' && (bool) $e->get('videoCode'), 'ts' => $ts];
+        };
+        foreach ($this->em->getRDBRepository('Meeting')->where($base + ['status' => 'Planned', 'dateEnd>=' => gmdate('Y-m-d H:i:s', $now - 7 * 86400)])->order('dateStart')->limit(0, 20)->find() as $m) {
+            $add('Meeting', $m, (string) $m->get('dateStart'), (string) $m->get('dateEnd'));
+        }
+        foreach ($this->em->getRDBRepository('Call')->where($base + ['status' => 'Planned', 'dateEnd>=' => gmdate('Y-m-d H:i:s', $now - 7 * 86400)])->order('dateStart')->limit(0, 20)->find() as $c) {
+            $add('Call', $c, (string) $c->get('dateStart'), (string) $c->get('dateEnd'));
+        }
+        foreach ($this->em->getRDBRepository('Task')->where($base + ['status!=' => ['Completed', 'Canceled', 'Deferred']])->order('dateEnd')->limit(0, 20)->find() as $t) {
+            $add('Task', $t, (string) ($t->get('dateEnd') ?: $t->get('dateEndDate') ?: ''), null);
+        }
+        usort($items, fn ($a, $b) => (($a['ts'] ?: PHP_INT_MAX) <=> ($b['ts'] ?: PHP_INT_MAX)));
+        return (object) ['items' => array_slice($items, 0, 20), 'videoEnabled' => in_array((string) $this->config->get('crmhubMeet'), ['video', 'video_subs'], true)];
+    }
+
     /** POST /CrmHub/meet/end. Usuario con edición del lead. Hub: POST /v1/meet/rooms/{código}/end. Cierra la sala de videollamada del lead. */
     public function postActionMeetEnd(Request $request): \stdClass
     {

@@ -1154,3 +1154,21 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 
 .ch-ma-soon { background: #e8efff; border-color: #9db4ff; color: #1c2f6b; }
 .ch-ma-soon a { color: #1c2f6b; }
+
+/* Agenda de la ficha: lo primero bajo el encabezado */
+.ch-agenda { background: var(--ch-surface, #fff); border: 1px solid var(--ch-line, #e2e6ee); border-radius: 14px; padding: 10px 14px; margin: 10px 0 14px; }
+.ch-ag-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ch-ag-h > .far { color: #4f6bff; }
+.ch-ag-add { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; color: #5d6678; font-size: 12.5px; }
+.ch-ag-l { margin-top: 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.ch-agenda .ch-ag-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--ch-line, #e2e6ee); border-radius: 10px; cursor: pointer; background: #f7f9fe; }
+.ch-agenda .ch-ag-row:hover { background: #eef2ff; }
+.ch-agenda .ch-ag-row.late { background: #fff1f1; border-color: #f2b8b8; }
+.ch-agenda .ch-ag-row.late small { color: #b42318; font-weight: 600; }
+.ch-ag-n { flex: 1; min-width: 0; }
+.ch-ag-n b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
+.ch-ag-n small { display: block; color: #5d6678; }
+.ch-ag-empty { margin-top: 6px; color: #5d6678; font-size: 13px; }
+.ch-ag-more { display: inline-block; margin-top: 6px; font-size: 12.5px; cursor: pointer; }
+.ch-drawer .ch-agenda { margin: 8px 14px; }
+.ch-drawer .ch-ag-l { grid-template-columns: 1fr; }

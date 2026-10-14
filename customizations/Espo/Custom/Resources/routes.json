@@ -334,6 +334,14 @@
         }
     },
     {
+        "route": "/CrmHub/agenda",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "agenda"
+        }
+    },
+    {
         "route": "/CrmHub/meet/invite",
         "method": "post",
         "params": {

@@ -2,7 +2,7 @@
  * Encabezado visual del lead (avatar, estado, contacto y cifras clave). Lo usan la vista completa y el panel lateral.
  * html(view) arma el bloque (también para correos: remitente, asunto y de/para/fecha); mount(view) lo inserta al inicio del registro y lo refresca cuando el modelo cambia. Sin endpoints.
  */
-define('custom:lead-hero', [], function () {
+define('custom:lead-hero', ['custom:agenda'], function (Agenda) {
     const COLORS = ['#4f63e8', '#8b5cf6', '#0ea5e9', '#2fa36b', '#f59e0b', '#ef5b5b', '#14b8a6', '#d4729b'];
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const money = n => (n === null || n === undefined || n === '') ? '—' : new Intl.NumberFormat('es-CO', {style: 'currency', currency: 'COP', maximumFractionDigits: 0}).format(n);
@@ -74,6 +74,7 @@ define('custom:lead-hero', [], function () {
                 view.el.insertBefore(el, view.el.firstChild);
             }
             el.innerHTML = html(view);
+            try { Agenda.mount(view, el); } catch (e) { /* sin agenda */ }
             // dentro del panel lateral el que se desplaza es el cuerpo del modal
             const body = view.el.closest('.modal-body');
             if (body && !el._chScroll) {

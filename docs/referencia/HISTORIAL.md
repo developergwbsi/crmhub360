@@ -2,8 +2,13 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.5.3)
+## Sin publicar (después de v1.5.4)
 
+- `63a9e83` 2026-10-13 — Invitación por correo de videollamadas programadas (botón para unirse, agregar a Google/Outlook y .ics con recordatorios), recordatorios por defecto y aviso en el CRM antes de la reunión; las salas de reuniones se reabren con el mismo código
+
+## v1.5.4
+
+- `38574ee` 2026-10-13 — Versión 1.5.4
 - `27f991e` 2026-10-13 — Changelog 1.5.4
 - `15ffc9c` 2026-10-13 — Videollamada: enviar el enlace al cliente por WhatsApp, SMS, correo o Telegram
 

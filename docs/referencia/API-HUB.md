@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **113** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **115** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -68,8 +68,10 @@ Total: **113** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/lines/enabled` | `lines_enabled` | Enciende o apaga una línea. |
 | POST | `/v1/lines/send-test` | `lines_send_test` | Envía un mensaje de prueba por una línea. |
 | POST | `/v1/lines/test` | `lines_test` | Prueba la conexión de una línea. |
+| POST | `/v1/meet/invite` | `meet_invite` | Envía la invitación por correo (con «Agregar al calendario» y .ics) de una videollamada programada. |
 | GET | `/v1/meet/rooms` | `meet_list` | Salas recientes de la empresa (o de un lead). |
 | POST | `/v1/meet/rooms` | `meet_create` | Crea una sala y devuelve el enlace del cliente y el del anfitrión (el del anfitrión no se comparte). |
+| POST | `/v1/meet/rooms/restore` | `meet_restore` | Reabre (o recrea) la sala de una reunión con el mismo código: el enlace ya enviado al cliente sigue valiendo. |
 | POST | `/v1/meet/rooms/{code}/end` | `meet_end` | Cierra una sala: el enlace deja de servir. |
 | GET | `/v1/meet/rooms/{code}/host` | `meet_host` | Enlace de entrada del anfitrión de una sala (para quien tiene acceso a la reunión en el CRM). |
 | GET | `/v1/meet/status` | `meet_status` | Servicio de videollamadas habilitado a la empresa: off / video / video_subs. |

@@ -33,6 +33,12 @@ La opción se guarda en `settings.limits.meet` de la empresa (lo que el Hub cons
 - `custom:call-dock` abre la sala (`meet.<dominio>`) como **panel lateral** (acoplado con `custom:split`, tipo `call`) en un iframe (CSP `frame-ancestors` de la página de la sala limitado a `*.<dominio base>`); no se destruye al navegar por el CRM. Modos: lateral, pantalla completa y minimizada. La sala avisa al salir con `postMessage` y la ventana se cierra.
 - `custom:meet-watch` (arranca desde `crmhub-boot.js`) consulta cada 12 s `GET CrmHub/meet/waiting` → Hub `GET /v1/meet/waiting`: clientes en la sala de espera de salas que el usuario creó o de leads que tiene asignados; muestra el aviso con «Entrar y admitir». Si la empresa no tiene el servicio responde vacío sin llamar al Hub. También avisa (`kind: live`) cuando un cliente sigue en la sala sin el anfitrión: el Hub consulta a LiveKit (`ListRooms`/`ListParticipants`, `meet.live_rooms`).
 
+## Invitación por correo, recordatorios y agenda
+- Al guardar una reunión nueva con videollamada y `videoInvite` marcado, el hook `VideoRoom` llama a `MeetInvite` → Hub `POST /v1/meet/invite` (`meet.invite`): correo HTML con botón para unirse, hora en la zona de la empresa, enlaces de Google Calendar y Outlook, parte `text/calendar; method=REQUEST` y adjunto `invitacion.ics` (con `VALARM` de 15 y 5 min). El botón **Enviar invitación al cliente** (`CrmHub/meet/invite`) la reenvía.
+- Recordatorios por defecto del asesor (Espo `reminders`): ventana emergente 5 min antes y correo 15 min antes (los envía el proceso `daemon` de la empresa). Además `custom:meet-watch` muestra «Tu videollamada empieza en N min» (`CrmHub/meet/waiting` → `upcoming`, 15 min antes y hasta 20 min después).
+- `restore` (`POST /v1/meet/rooms/restore`): si la sala de una reunión no existe en el Hub, `CrmHub/meet/host` y el aviso la reabren con el mismo código.
+- La ficha abre con la **agenda** (`custom:agenda`, `GET CrmHub/agenda`): citas, llamadas y tareas pendientes del registro y botones para agendar.
+
 ## Flujo
 1. El asesor pulsa **Videollamada** en el lead → `POST CrmHub/meet/create` → `POST /v1/meet/rooms` del Hub.
 2. Se devuelve `guestUrl` (`https://meet.<dominio>/<código>`) y `hostUrl` (el mismo con `?h=<clave>`; la clave de anfitrión solo la ve quien crea la sala).

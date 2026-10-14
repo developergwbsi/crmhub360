@@ -1,9 +1,10 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **105** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **107** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
+| GET | `/CrmHub/agenda` | CrmHub.agenda | GET /CrmHub/agenda?scope=&id=. Usuario con acceso al registro. Citas (reuniones y videollamadas), llamadas y tareas pendientes del registro, ordenadas: primero lo vencido y luego lo próximo. */ |
 | POST | `/CrmHub/agentAction` | CrmHub.agentAction | POST /CrmHub/agentAction. Edición del lead. Hub: POST /v1/agent/lead/action (pause, resume, manual, auto, switch). */ |
 | POST | `/CrmHub/agentApproval` | CrmHub.agentApproval | POST /CrmHub/agentApproval. Hub: POST /v1/agent/approval (aprobar o editar un mensaje pendiente). */ |
 | GET | `/CrmHub/agentConfig` | CrmHub.agentConfig | GET /CrmHub/agentConfig. Admin. Hub: GET /v1/agent/config. */ |
@@ -68,6 +69,7 @@ Total: **105** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/meet/create` | CrmHub.meetCreate | POST /CrmHub/meet/create. Usuario con edición del lead. Hub: POST /v1/meet/rooms. Devuelve el enlace del cliente y el del anfitrión. */ |
 | POST | `/CrmHub/meet/end` | CrmHub.meetEnd | POST /CrmHub/meet/end. Usuario con edición del lead. Hub: POST /v1/meet/rooms/{código}/end. Cierra la sala de videollamada del lead. */ |
 | POST | `/CrmHub/meet/host` | CrmHub.meetHost | POST /CrmHub/meet/host. Usuario con acceso a la reunión. Hub: GET /v1/meet/rooms/{código}/host. Devuelve el enlace de entrada del anfitrión de la videollamada de una reunión. */ |
+| POST | `/CrmHub/meet/invite` | CrmHub.meetInvite | POST /CrmHub/meet/invite. Usuario con edición de la reunión. Envía (o reenvía) al cliente la invitación por correo con «Agregar al calendario». */ |
 | GET | `/CrmHub/meet/waiting` | CrmHub.meetWaiting | GET /CrmHub/meet/waiting[?leadId=]. Clientes que esperan en la sala de espera de las videollamadas, con el enlace para entrar a admitirlos. Con leadId: las del lead (usuario con acceso a él). Sin leadId: las del usuario actual (las salas que creó o de leads que tiene asignados), para avisarle en cualquier pantalla. Hub: GET /v1/meet/rooms y /v1/meet/waiting. */ |
 | GET | `/CrmHub/metrics` | CrmHub.metrics | GET /CrmHub/metrics. Usuario; datos según su ACL. Hub: GET /v1/agent/attended (comercial virtual). */ |
 | GET | `/CrmHub/myroles` | CrmHub.myroles | Roles del usuario actual: el manual muestra solo lo que le corresponde. */ |
