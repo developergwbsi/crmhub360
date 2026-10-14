@@ -155,6 +155,27 @@ def knock(code: str, name: str) -> dict:
     return {"id": kid, "status": "waiting", "host": r["host_name"]}
 
 
+async def notify_knock(code: str, name: str) -> None:
+    """El cliente llegó a la sala y el anfitrión puede no estar dentro: se le avisa por notificación push y queda una nota en el lead."""
+    from . import push
+    from .espo import Espo
+    with db.pool.connection() as c:
+        r = c.execute("SELECT tenant, lead_id, created_by, title FROM meet_rooms WHERE code = %s", (code,)).fetchone()
+    if not r:
+        return
+    t = db.get_tenant(r["tenant"])
+    try:
+        await push.send(r["tenant"], title="Un cliente espera en la videollamada", body=f"{name} quiere entrar. Entra a la sala para admitirlo."[:140], url=(f"/#Lead/view/{r['lead_id']}" if r["lead_id"] else "/"),
+                        tag=f"crmhub-meet-{code}", kind="meet", user_id=r["created_by"] or None)
+    except Exception as e:
+        log.warning("aviso de videollamada: %s", str(e)[:120])
+    if t and r["lead_id"]:
+        try:
+            await Espo(t).note(r["lead_id"], f"[Videollamada] {name} entró al enlace y está esperando en la sala. Entra desde el panel «Videollamadas» para admitirlo.")
+        except Exception as e:
+            log.warning("nota de videollamada: %s", str(e)[:120])
+
+
 def knock_status(code: str, kid: str) -> dict:
     """Estado de la solicitud del invitado; si ya lo admitieron devuelve su credencial de entrada."""
     r = _live(code)
@@ -278,8 +299,16 @@ def listing(tenant_slug: str, lead_id: str = "", limit: int = 20) -> list[dict]:
     with db.pool.connection() as c:
         rows = c.execute("SELECT code, lead_id, title, created_by, created_at, expires_at, ended_at, first_join_at FROM meet_rooms WHERE tenant = %s AND (%s = '' OR lead_id = %s) ORDER BY created_at DESC LIMIT %s",
                          (tenant_slug, lead_id, lead_id, limit)).fetchall()
-    return [{**r, "created_at": r["created_at"].isoformat(), "expires_at": r["expires_at"].isoformat(), "ended_at": r["ended_at"].isoformat() if r["ended_at"] else None,
-             "first_join_at": r["first_join_at"].isoformat() if r["first_join_at"] else None, "active": r["ended_at"] is None and r["expires_at"].timestamp() > time.time()} for r in rows]
+    out = []
+    for r in rows:
+        active = r["ended_at"] is None and r["expires_at"].timestamp() > time.time()
+        names = []
+        if active:   # quién espera en la sala de espera (para avisar al asesor aunque no haya entrado)
+            with db.pool.connection() as c:
+                names = [x["name"] for x in c.execute("SELECT name FROM meet_knocks WHERE code = %s AND status = 'waiting' AND created_at > now() - interval '15 minutes' ORDER BY created_at", (r["code"],)).fetchall()]
+        out.append({**r, "created_at": r["created_at"].isoformat(), "expires_at": r["expires_at"].isoformat(), "ended_at": r["ended_at"].isoformat() if r["ended_at"] else None,
+                    "first_join_at": r["first_join_at"].isoformat() if r["first_join_at"] else None, "active": active, "waiting": names})
+    return out
 
 
 def client_js() -> bytes:
@@ -435,7 +464,7 @@ function startRoom(j){
     }).then(function(){ room.localParticipant.trackPublications.forEach(function(pb){ if(pb.track&&pb.track.kind==='video'){attach(pb.track,room.localParticipant,true)} }); });
 }
 function waitAdmit(id,host){
-  $('lf').classList.add('hide'); $('wr').classList.remove('hide'); $('wrt').textContent='Esperando a que '+(host||'tu asesor')+' te dé acceso…';
+  $('lf').classList.add('hide'); $('wr').classList.remove('hide'); $('wrt').textContent='Esperando a que '+(host||'tu asesor')+' te dé acceso…'; setTimeout(function(){ if(!stop){ $('wrt').textContent=(host||'Tu asesor')+' aún no entra a la sala. Ya le avisamos; no cierres esta ventana.' } },45000);
   var stop=false; $('wrx').onclick=function(){ stop=true; $('wr').classList.add('hide'); $('lf').classList.remove('hide'); $('go').disabled=false };
   (function poll(){ if(stop){return}
     fetch(CODE+'/knock/'+id).then(function(r){ if(r.status===404){throw new Error('x')} return r.json() }).then(function(j){

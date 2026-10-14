@@ -326,6 +326,14 @@
         "noAuth": true
     },
     {
+        "route": "/CrmHub/meet/waiting",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "meetWaiting"
+        }
+    },
+    {
         "route": "/CrmHub/meet/host",
         "method": "post",
         "params": {

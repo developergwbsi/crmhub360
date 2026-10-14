@@ -1121,3 +1121,6 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-vp-i > .fas { color: #4f6bff; }
 .ch-vp-i b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ch-vp-i small { display: block; color: #5d6678; }
+
+.ch-vp-w { display: flex; align-items: center; gap: 10px; background: #fff4d6; border: 1px solid #f0c75e; color: #5a4300; border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
+.ch-vp-w.hide { display: none; }

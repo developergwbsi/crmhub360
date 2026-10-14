@@ -5,7 +5,7 @@
  */
 define('custom:views/panels/video', ['views/record/panels/bottom', 'custom:ui', 'custom:meet-launch'], function (Dep, ChUi, Launch) {
     return class extends Dep {
-        templateContent = '<div class="ch-vp"><div class="ch-vp-b"><button class="btn btn-primary btn-sm" data-act="now"><span class="fas fa-video"></span> Iniciar ahora</button> <button class="btn btn-default btn-sm" data-act="plan"><span class="far fa-calendar-plus"></span> Programar videollamada</button></div><div class="ch-vp-l" data-role="l"></div></div>'
+        templateContent = '<div class="ch-vp"><div class="ch-vp-w hide" data-role="w"></div><div class="ch-vp-b"><button class="btn btn-primary btn-sm" data-act="now"><span class="fas fa-video"></span> Iniciar ahora</button> <button class="btn btn-default btn-sm" data-act="plan"><span class="far fa-calendar-plus"></span> Programar videollamada</button></div><div class="ch-vp-l" data-role="l"></div></div>'
 
         afterRender() {
             super.afterRender();
@@ -13,10 +13,27 @@ define('custom:views/panels/video', ['views/record/panels/bottom', 'custom:ui', 
                 const a = e.target.closest('[data-act]'); if (!a) { return; }
                 if (a.dataset.act === 'now') { this.now(); }
                 else if (a.dataset.act === 'plan') { this.plan(); }
+                else if (a.dataset.act === 'admit') { window.open(a.dataset.url, '_blank', 'noopener'); }
                 else if (a.dataset.act === 'enter') { Espo.Ajax.postRequest('CrmHub/meet/host', {meetingId: a.dataset.id}).then(r => window.open(r.hostUrl, '_blank', 'noopener')).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('La sala de esta videollamada ya terminó.'); }); }
                 else if (a.dataset.act === 'copy') { const u = a.dataset.url; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => Espo.Ui.success('Enlace copiado'), () => Espo.Ui.warning(u)); }
             };
             this.load();
+            this.watchWaiting();
+        }
+
+        onRemove() { clearTimeout(this._wt); this._gone = true; }
+
+        // si un cliente abre el enlace y el asesor aún no está en la sala, aquí se ve («esperando») con el botón para entrar y admitirlo
+        watchWaiting() {
+            clearTimeout(this._wt);
+            if (this._gone || !this.isOn() || !this.el) { return; }
+            const box = this.el.querySelector('[data-role="w"]');
+            this.leadId().then(l => Espo.Ajax.getRequest('CrmHub/meet/waiting', {leadId: l.id})).then(r => {
+                const w = (r.waiting || []).filter(x => x.hostUrl); if (!box) { return; }
+                box.classList.toggle('hide', !w.length);
+                box.innerHTML = w.map(x => `<span class="fas fa-user-clock"></span><div style="flex:1;min-width:0"><b>${ChUi.esc((x.names || []).join(', '))}</b> ${x.names.length > 1 ? 'esperan' : 'espera'} en la videollamada</div><button class="btn btn-primary btn-xs" data-act="admit" data-url="${ChUi.esc(x.hostUrl)}">Entrar y admitir</button>`).join('');
+                if (w.length && !this._alerted) { this._alerted = true; Espo.Ui.warning('Un cliente espera en la videollamada.'); } else if (!w.length) { this._alerted = false; }
+            }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } }).then(() => { this._wt = setTimeout(() => this.watchWaiting(), 8000); });
         }
 
         isOn() { return ['video', 'video_subs'].includes(this.getConfig().get('crmhubMeet')); }

@@ -1674,10 +1674,12 @@ class DecideReq(BaseModel):
 
 
 @app.post("/v1/public/meet/{code}/knock")
-def meet_knock(code: str, req: KnockReq):
-    """El invitado pide entrar: espera a que el anfitrión lo admita."""
+def meet_knock(code: str, req: KnockReq, bg: BackgroundTasks):
+    """El invitado pide entrar: espera a que el anfitrión lo admita (y se le avisa al anfitrión aunque no esté dentro)."""
     try:
-        return JSONResponse(meet.knock(code, req.name), headers=_MEET_HEADERS)
+        res = meet.knock(code, req.name)
+        bg.add_task(meet.notify_knock, code, (req.name or "Un cliente").strip()[:60] or "Un cliente")
+        return JSONResponse(res, headers=_MEET_HEADERS)
     except LookupError as e:
         raise HTTPException(404, str(e))
     except ValueError as e:

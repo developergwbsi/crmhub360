@@ -593,6 +593,29 @@ class CrmHub
         }
     }
 
+    /** GET /CrmHub/meet/waiting?leadId=. Usuario con acceso al lead. Hub: GET /v1/meet/rooms. Clientes que esperan en la sala de espera de las videollamadas del lead, con el enlace para entrar a admitirlos. */
+    public function getActionMeetWaiting(Request $request): \stdClass
+    {
+        $lead = $this->em->getEntityById('Lead', (string) $request->getQueryParam('leadId'));
+        if (!$lead || !$this->acl->checkEntityRead($lead)) {
+            throw new Forbidden();
+        }
+        $out = [];
+        try {
+            $hub = new HubClient($this->config);
+            $r = $hub->request('GET', '/v1/meet/rooms?leadId=' . rawurlencode($lead->getId()), null, 8);
+            foreach ((array) ($r['items'] ?? []) as $room) {
+                if (!empty($room['active']) && !empty($room['waiting'])) {
+                    $h = $hub->request('GET', '/v1/meet/rooms/' . preg_replace('/[^a-z0-9-]/', '', (string) $room['code']) . '/host', null, 8);
+                    $out[] = ['code' => $room['code'], 'names' => $room['waiting'], 'hostUrl' => $h['hostUrl'] ?? null];
+                }
+            }
+        } catch (\RuntimeException $e) {
+            // sin datos: el panel no muestra aviso
+        }
+        return (object) ['waiting' => $out];
+    }
+
     /** POST /CrmHub/meet/host. Usuario con acceso a la reunión. Hub: GET /v1/meet/rooms/{código}/host. Devuelve el enlace de entrada del anfitrión de la videollamada de una reunión. */
     public function postActionMeetHost(Request $request): \stdClass
     {

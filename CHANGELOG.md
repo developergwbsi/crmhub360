@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Videollamadas
+- **Si el cliente llega primero**: espera en la sala de espera (el mensaje le avisa que ya se le notificó al asesor) y al asesor le llega una **notificación push**, una nota en el lead y un aviso amarillo en el panel «Videollamadas» («María espera en la videollamada · Entrar y admitir»). La sala sigue viva hasta que el asesor entre.
+
 ## [1.5.0] - 2026-10-13
 
 ### Detalle de registros
