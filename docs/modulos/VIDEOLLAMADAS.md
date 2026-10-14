@@ -29,6 +29,10 @@ La opción se guarda en `settings.limits.meet` de la empresa (lo que el Hub cons
 - La reunión muestra **Entrar a la videollamada** (`CrmHub/meet/host` → `GET /v1/meet/rooms/{código}/host`): la clave de anfitrión nunca se guarda en la reunión.
 - Panel **Videollamadas** (`views/panels/video.js`) en lead, cuenta, contacto y oportunidad.
 
+## Dentro del CRM (ventana flotante) y avisos
+- `custom:call-dock` abre la sala (`meet.<dominio>`) en un iframe fijo a la pantalla (CSP `frame-ancestors` de la página de la sala limitado a `*.<dominio base>`); no se destruye al navegar por el CRM. La sala avisa al salir con `postMessage` y la ventana se cierra.
+- `custom:meet-watch` (arranca desde `crmhub-boot.js`) consulta cada 12 s `GET CrmHub/meet/waiting` → Hub `GET /v1/meet/waiting`: clientes en la sala de espera de salas que el usuario creó o de leads que tiene asignados; muestra el aviso con «Entrar y admitir». Si la empresa no tiene el servicio responde vacío sin llamar al Hub.
+
 ## Flujo
 1. El asesor pulsa **Videollamada** en el lead → `POST CrmHub/meet/create` → `POST /v1/meet/rooms` del Hub.
 2. Se devuelve `guestUrl` (`https://meet.<dominio>/<código>`) y `hostUrl` (el mismo con `?h=<clave>`; la clave de anfitrión solo la ve quien crea la sala).

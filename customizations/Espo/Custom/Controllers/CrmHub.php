@@ -593,25 +593,44 @@ class CrmHub
         }
     }
 
-    /** GET /CrmHub/meet/waiting?leadId=. Usuario con acceso al lead. Hub: GET /v1/meet/rooms. Clientes que esperan en la sala de espera de las videollamadas del lead, con el enlace para entrar a admitirlos. */
+    /** GET /CrmHub/meet/waiting[?leadId=]. Clientes que esperan en la sala de espera de las videollamadas, con el enlace para entrar a admitirlos.
+     *  Con leadId: las del lead (usuario con acceso a él). Sin leadId: las del usuario actual (las salas que creó o de leads que tiene asignados), para avisarle en cualquier pantalla. Hub: GET /v1/meet/rooms y /v1/meet/waiting. */
     public function getActionMeetWaiting(Request $request): \stdClass
     {
-        $lead = $this->em->getEntityById('Lead', (string) $request->getQueryParam('leadId'));
-        if (!$lead || !$this->acl->checkEntityRead($lead)) {
-            throw new Forbidden();
-        }
+        $leadId = (string) $request->getQueryParam('leadId');
         $out = [];
+        if (!in_array((string) $this->config->get('crmhubMeet'), ['video', 'video_subs'], true)) {
+            return (object) ['waiting' => []];   // servicio no habilitado: el aviso global no consulta al Hub
+        }
         try {
             $hub = new HubClient($this->config);
-            $r = $hub->request('GET', '/v1/meet/rooms?leadId=' . rawurlencode($lead->getId()), null, 8);
-            foreach ((array) ($r['items'] ?? []) as $room) {
-                if (!empty($room['active']) && !empty($room['waiting'])) {
-                    $h = $hub->request('GET', '/v1/meet/rooms/' . preg_replace('/[^a-z0-9-]/', '', (string) $room['code']) . '/host', null, 8);
-                    $out[] = ['code' => $room['code'], 'names' => $room['waiting'], 'hostUrl' => $h['hostUrl'] ?? null];
+            if ($leadId !== '') {
+                $lead = $this->em->getEntityById('Lead', $leadId);
+                if (!$lead || !$this->acl->checkEntityRead($lead)) {
+                    throw new Forbidden();
+                }
+                $r = $hub->request('GET', '/v1/meet/rooms?leadId=' . rawurlencode($lead->getId()), null, 8);
+                $rooms = array_map(fn ($x) => ['code' => $x['code'], 'names' => $x['waiting'] ?? [], 'leadId' => $leadId, 'title' => $x['title'] ?? ''], array_filter((array) ($r['items'] ?? []), fn ($x) => !empty($x['active']) && !empty($x['waiting'])));
+            } else {
+                $r = $hub->request('GET', '/v1/meet/waiting', null, 8);
+                $rooms = [];
+                foreach ((array) ($r['items'] ?? []) as $x) {
+                    $mine = ($x['createdBy'] ?? '') === $this->user->getId();
+                    if (!$mine && !empty($x['leadId'])) {
+                        $l = $this->em->getEntityById('Lead', (string) $x['leadId']);
+                        $mine = $l && $l->get('assignedUserId') === $this->user->getId();
+                    }
+                    if ($mine) {
+                        $rooms[] = $x;
+                    }
                 }
             }
+            foreach ($rooms as $room) {
+                $h = $hub->request('GET', '/v1/meet/rooms/' . preg_replace('/[^a-z0-9-]/', '', (string) $room['code']) . '/host', null, 8);
+                $out[] = ['code' => $room['code'], 'names' => array_values((array) $room['names']), 'leadId' => $room['leadId'] ?? '', 'title' => $room['title'] ?? '', 'hostUrl' => $h['hostUrl'] ?? null];
+            }
         } catch (\RuntimeException $e) {
-            // sin datos: el panel no muestra aviso
+            // sin datos: no hay aviso
         }
         return (object) ['waiting' => $out];
     }

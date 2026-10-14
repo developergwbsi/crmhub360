@@ -1,0 +1,37 @@
+/**
+ * Aviso global de videollamadas: mientras el CRM está abierto (en cualquier pantalla) consulta cada 12 s si un cliente espera en la sala de espera de una
+ * videollamada del usuario (sala que creó o lead que tiene asignado) y muestra un aviso con sonido y el botón «Entrar y admitir», que abre la sala dentro del CRM.
+ * Endpoint: GET CrmHub/meet/waiting. Solo si el servicio de videollamadas está habilitado (Settings.crmhubMeet).
+ */
+define('custom:meet-watch', ['custom:ui', 'custom:call-dock'], function (ChUi, Dock) {
+    let started = false, seen = {}, dismissed = {};
+    function beep() { try { const c = new (window.AudioContext || window.webkitAudioContext)(), o = c.createOscillator(), g = c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value = 880; g.gain.value = 0.08; o.start(); setTimeout(() => { o.stop(); c.close(); }, 220); } catch (e) { /* sin sonido */ } }
+
+    function paint(list) {
+        let box = document.getElementById('ch-meet-alert');
+        list.forEach(w => { w.names = [...new Set(w.names)]; });
+        const items = list.filter(w => w.hostUrl && !dismissed[w.code + '|' + w.names.join(',')]);
+        if (!items.length) { if (box) { box.remove(); } return; }
+        if (!box) { box = document.createElement('div'); box.id = 'ch-meet-alert'; document.body.appendChild(box); }
+        box.innerHTML = items.map(w => `<div class="ch-ma" data-c="${ChUi.esc(w.code)}"><span class="fas fa-user-clock"></span><div class="ch-ma-t"><b>${ChUi.esc(w.names.join(', '))}</b> ${w.names.length > 1 ? 'esperan' : 'espera'} en la videollamada<small>${ChUi.esc(w.title || '')}</small></div>` +
+            `<button class="btn btn-primary btn-sm" data-a="in" data-u="${ChUi.esc(w.hostUrl)}" data-n="${ChUi.esc(w.title || 'Videollamada')}">Entrar y admitir</button><a role="button" data-a="x" data-k="${ChUi.esc(w.code + '|' + w.names.join(','))}" title="Ocultar">×</a></div>`).join('');
+        box.onclick = e => {
+            const a = e.target.closest('[data-a]'); if (!a) { return; }
+            if (a.dataset.a === 'in') { Dock.open(a.dataset.u, a.dataset.n); }
+            else { dismissed[a.dataset.k] = 1; a.closest('.ch-ma').remove(); if (!box.children.length) { box.remove(); } }
+        };
+        items.forEach(w => { const k = w.code + '|' + w.names.join(','); if (!seen[k]) { seen[k] = 1; beep(); if (document.hidden && 'Notification' in window && Notification.permission === 'granted') { try { new Notification('Un cliente espera en la videollamada', {body: w.names.join(', ') + ' quiere entrar.', tag: 'ch-meet-' + w.code}); } catch (e) { /* sin aviso del navegador */ } } } });
+    }
+
+    function poll() {
+        Espo.Ajax.getRequest('CrmHub/meet/waiting').then(r => paint(r.waiting || [])).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
+    }
+
+    return {
+        start() {
+            if (started) { return; }   // el servidor responde vacío (sin llamar al Hub) si la empresa no tiene el servicio
+            started = true; poll(); setInterval(() => { if (!document.hidden) { poll(); } }, 12000);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) { poll(); } });
+        },
+    };
+});

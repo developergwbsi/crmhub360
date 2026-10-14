@@ -12,6 +12,7 @@ import asyncio
 import hmac
 import json
 import logging
+import os
 import secrets
 from contextlib import asynccontextmanager
 
@@ -1604,6 +1605,12 @@ def meet_create(req: MeetCreateReq, tenant: dict = Depends(tenant_auth)):
         raise HTTPException(422, str(e))
 
 
+@app.get("/v1/meet/waiting")
+def meet_waiting(tenant: dict = Depends(tenant_auth)):
+    """Salas con clientes esperando (de toda la empresa); el CRM filtra las del usuario."""
+    return {"items": meet.waiting_all(tenant["slug"])}
+
+
 @app.get("/v1/meet/rooms/{code}/host")
 def meet_host(code: str, tenant: dict = Depends(tenant_auth)):
     """Enlace de entrada del anfitrión de una sala (para quien tiene acceso a la reunión en el CRM)."""
@@ -1642,8 +1649,10 @@ def meet_js():
 
 @app.get("/v1/public/meet/{code}", response_class=HTMLResponse)
 def meet_page(code: str):
-    """Página pública de la videollamada (se publica en https://meet.<dominio>/<código>)."""
-    return HTMLResponse(meet.page(code), 200 if meet.room(code) else 404, _MEET_HEADERS)
+    """Página pública de la videollamada (se publica en https://meet.<dominio>/<código>). Puede incrustarse en el CRM de la empresa (el asesor la ve sin salir de la ficha)."""
+    base = (os.environ.get("MEET_HOST") or "").split(".", 1)[-1]
+    h = {**_MEET_HEADERS, "Content-Security-Policy": f"frame-ancestors 'self' https://*.{base}" if base else "frame-ancestors 'self'"}
+    return HTMLResponse(meet.page(code), 200 if meet.room(code) else 404, h)
 
 
 @app.post("/v1/public/meet/{code}/stt")

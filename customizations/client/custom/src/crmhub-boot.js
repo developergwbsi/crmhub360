@@ -87,6 +87,10 @@
             docWatchStarted = true;
             try { Espo.loader.require('custom:doc-watch', function (m) { m.init(); }); } catch (e) { /* sin indicador de lecturas */ }
         }
+        if (!meetWatchStarted && window.Espo && Espo.Ajax && Espo.loader && document.querySelector('#navbar .navbar-right')) {
+            meetWatchStarted = true;
+            try { Espo.loader.require('custom:call-dock', function () { Espo.loader.require('custom:meet-watch', function (m) { m.start(); }); }); } catch (e) { /* sin aviso de videollamadas */ }
+        }
         applyTheme();
     }
 
@@ -117,7 +121,7 @@
     }
 
     /* ---------------- Notificaciones push (llegan con la app cerrada) ---------------- */
-    var pushOn = false, pushSynced = false, docWatchStarted = false;
+    var pushOn = false, pushSynced = false, docWatchStarted = false, meetWatchStarted = false;
     function pushSupported() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext; }
     // Llamada a la API de Espo (usa Espo.Ajax) para los endpoints CrmHub/push/*
     function api(method, url, data) {

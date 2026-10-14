@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **112** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **113** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -73,13 +73,14 @@ Total: **112** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/meet/rooms/{code}/end` | `meet_end` | Cierra una sala: el enlace deja de servir. |
 | GET | `/v1/meet/rooms/{code}/host` | `meet_host` | Enlace de entrada del anfitrión de una sala (para quien tiene acceso a la reunión en el CRM). |
 | GET | `/v1/meet/status` | `meet_status` | Servicio de videollamadas habilitado a la empresa: off / video / video_subs. |
+| GET | `/v1/meet/waiting` | `meet_waiting` | Salas con clientes esperando (de toda la empresa); el CRM filtra las del usuario. |
 | GET | `/v1/process/runs` | `proc_runs` | Historial de ejecuciones de procesos (de un lead o del tenant). |
 | POST | `/v1/process/trigger` | `proc_trigger` | Lo llama el CRM al guardar un lead: ejecuta los procesos (manual en el acto; si no, tras 1,5 s en segundo plano) y, si el lead es nuevo, da de alta al comercial virtual. |
 | GET | `/v1/processes` | `proc_list` | Procesos configurados, campos disponibles, máximo y catálogo. |
 | PUT | `/v1/processes` | `proc_save` | Valida y guarda los procesos del tenant (settings.processes). |
 | POST | `/v1/processes/test` | `proc_test` | Prueba una definición contra un lead real (o datos de ejemplo) sin guardar nada en el lead. |
 | GET | `/v1/public/meet/_/lk.js` | `meet_js` | Cliente de LiveKit para la página de la videollamada. |
-| GET | `/v1/public/meet/{code}` | `meet_page` | Página pública de la videollamada (se publica en https://meet.<dominio>/<código>). |
+| GET | `/v1/public/meet/{code}` | `meet_page` | Página pública de la videollamada (se publica en https://meet.<dominio>/<código>). Puede incrustarse en el CRM de la empresa (el asesor la ve sin salir de la ficha). |
 | POST | `/v1/public/meet/{code}/decide` | `meet_decide` | El anfitrión admite o rechaza una solicitud. |
 | POST | `/v1/public/meet/{code}/knock` | `meet_knock` | El invitado pide entrar: espera a que el anfitrión lo admita (y se le avisa al anfitrión aunque no esté dentro). |
 | GET | `/v1/public/meet/{code}/knock/{kid}` | `meet_knock_status` | Estado de la solicitud; admitido trae la credencial de entrada. |

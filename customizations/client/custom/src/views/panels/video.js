@@ -3,7 +3,7 @@
  * (Meeting con «Videollamada» marcada, que crea la sala propia y deja el enlace). Lista las reuniones con videollamada del registro y deja entrar o copiar el enlace.
  * Servicio adicional: solo se muestra si el Centro de control lo habilitó (Settings.crmhubMeet). Endpoints: GET Meeting (filtrado), POST CrmHub/meet/host.
  */
-define('custom:views/panels/video', ['views/record/panels/bottom', 'custom:ui', 'custom:meet-launch'], function (Dep, ChUi, Launch) {
+define('custom:views/panels/video', ['views/record/panels/bottom', 'custom:ui', 'custom:meet-launch', 'custom:call-dock'], function (Dep, ChUi, Launch, Dock) {
     return class extends Dep {
         templateContent = '<div class="ch-vp"><div class="ch-vp-w hide" data-role="w"></div><div class="ch-vp-b"><button class="btn btn-primary btn-sm" data-act="now"><span class="fas fa-video"></span> Iniciar ahora</button> <button class="btn btn-default btn-sm" data-act="plan"><span class="far fa-calendar-plus"></span> Programar videollamada</button></div><div class="ch-vp-l" data-role="l"></div></div>'
 
@@ -13,8 +13,8 @@ define('custom:views/panels/video', ['views/record/panels/bottom', 'custom:ui', 
                 const a = e.target.closest('[data-act]'); if (!a) { return; }
                 if (a.dataset.act === 'now') { this.now(); }
                 else if (a.dataset.act === 'plan') { this.plan(); }
-                else if (a.dataset.act === 'admit') { window.open(a.dataset.url, '_blank', 'noopener'); }
-                else if (a.dataset.act === 'enter') { Espo.Ajax.postRequest('CrmHub/meet/host', {meetingId: a.dataset.id}).then(r => window.open(r.hostUrl, '_blank', 'noopener')).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('La sala de esta videollamada ya terminó.'); }); }
+                else if (a.dataset.act === 'admit') { Dock.open(a.dataset.url, 'Videollamada con ' + (this.model.get('name') || 'el cliente')); }
+                else if (a.dataset.act === 'enter') { Espo.Ajax.postRequest('CrmHub/meet/host', {meetingId: a.dataset.id}).then(r => Dock.open(r.hostUrl, this.model.get('name') || 'Videollamada')).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('La sala de esta videollamada ya terminó.'); }); }
                 else if (a.dataset.act === 'copy') { const u = a.dataset.url; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => Espo.Ui.success('Enlace copiado'), () => Espo.Ui.warning(u)); }
             };
             this.load();

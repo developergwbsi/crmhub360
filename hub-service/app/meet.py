@@ -314,6 +314,15 @@ def listing(tenant_slug: str, lead_id: str = "", limit: int = 20) -> list[dict]:
     return out
 
 
+def waiting_all(tenant_slug: str) -> list[dict]:
+    """Salas vigentes de la empresa con clientes en la sala de espera (para avisar al asesor en cualquier pantalla del CRM)."""
+    with db.pool.connection() as c:
+        rows = c.execute("SELECT r.code, r.lead_id, r.created_by, r.title, array_agg(DISTINCT k.name) AS names FROM meet_rooms r JOIN meet_knocks k ON k.code = r.code "
+                         "WHERE r.tenant = %s AND r.ended_at IS NULL AND r.expires_at > now() AND k.status = 'waiting' AND k.created_at > now() - interval '15 minutes' GROUP BY r.code, r.lead_id, r.created_by, r.title, r.created_at ORDER BY r.created_at DESC",
+                         (tenant_slug,)).fetchall()
+    return [{"code": x["code"], "leadId": x["lead_id"], "createdBy": x["created_by"], "title": x["title"], "names": list(x["names"])} for x in rows]
+
+
 def client_js() -> bytes:
     """Cliente de LiveKit para el navegador (incluido en el repositorio)."""
     return (ASSETS / "livekit-client.umd.min.js").read_bytes()
@@ -458,7 +467,7 @@ function startRoom(j){
     room.on('localTrackPublished',function(pub){ if(pub.source==='microphone'&&pub.track){ hookMic(pub.track.mediaStreamTrack) } });
     room.on('trackSubscribed',function(t,pub,p){attach(t,p,false);count()}).on('trackUnsubscribed',function(t,pub,p){detach(t,p)})
         .on('participantConnected',function(p){tileFor(p,false);count()}).on('participantDisconnected',function(p){var t=$('t-'+p.identity);if(t){t.remove()};count()})
-        .on('disconnected',function(){ $('room').classList.add('hide'); $('lobby').classList.remove('hide'); $('lf').classList.remove('hide'); $('wr').classList.add('hide'); $('go').disabled=false; err('Saliste de la videollamada.'); if(stream){stream.getTracks().forEach(function(t){t.stop()}); stream=null} });
+        .on('disconnected',function(){ $('room').classList.add('hide'); $('lobby').classList.remove('hide'); $('lf').classList.remove('hide'); $('wr').classList.add('hide'); $('go').disabled=false; err('Saliste de la videollamada.'); try{ parent.postMessage({k:'ch-meet',ev:'left'},'*') }catch(e){} if(stream){stream.getTracks().forEach(function(t){t.stop()}); stream=null} });
     return room.connect(j.url,j.token).then(function(){
       if(stream){stream.getTracks().forEach(function(t){t.stop()}); stream=null; $('prev').srcObject=null}
       $('lobby').classList.add('hide'); $('room').classList.remove('hide'); $('ttl').textContent=j.title||'Videollamada';
@@ -494,7 +503,7 @@ $('bs').onclick=function(){ if(!room){return} var on=!room.localParticipant.isSc
 $('bcc').onclick=function(){ $('lgp').classList.toggle('hide'); };
 function applyLang(){ if(!J){return} J.speak=$('sp2').value; J.read=$('rd2').value; subsShow=J.read!=='off'; $('bcc').classList.toggle('on',subsShow); if(!subsShow){$('subs').innerHTML='';lines=[]} try{ localStorage.setItem('meet-speak',J.speak); localStorage.setItem('meet-read',J.read) }catch(e){} }
 $('sp2').onchange=applyLang; $('rd2').onchange=applyLang;
-$('be').onclick=function(){ if(room){room.disconnect()} };
+$('be').onclick=function(){ if(room){room.disconnect()} try{ parent.postMessage({k:'ch-meet',ev:'left'},'*') }catch(e){} };
 window.addEventListener('beforeunload',function(){ if(room){room.disconnect()} });
 })();
 </script></body></html>"""

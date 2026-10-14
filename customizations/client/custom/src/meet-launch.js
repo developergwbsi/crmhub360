@@ -3,7 +3,7 @@
  * Lo usan el botón «Videollamada» de la ficha (custom:handlers/lead-contact) y el panel «Videollamadas» (custom:views/panels/video).
  * Endpoints: POST CrmHub/meet/create, meet/end y whatsapp/send.
  */
-define('custom:meet-launch', ['custom:ui'], function (ChUi) {
+define('custom:meet-launch', ['custom:ui', 'custom:call-dock'], function (ChUi, Dock) {
     return {
         // leadId: el lead al que pertenece la conversación; model: el registro abierto (solo para el nombre y refrescar); phone: teléfono para enviar el enlace por WhatsApp
         open(model, leadId, phone) {
@@ -20,7 +20,7 @@ define('custom:meet-launch', ['custom:ui'], function (ChUi) {
                     const q = k => body.querySelector('[data-r="' + k + '"]');
                     q('url').value = r.guestUrl;
                     q('copy').onclick = () => { q('url').select(); (navigator.clipboard ? navigator.clipboard.writeText(r.guestUrl) : Promise.reject()).catch(() => document.execCommand('copy')).then(() => Espo.Ui.success('Enlace copiado'), () => {}); };
-                    q('enter').onclick = () => { window.open(r.hostUrl, '_blank', 'noopener'); };
+                    q('enter').onclick = () => { Dock.open(r.hostUrl, 'Videollamada con ' + (m.get('name') || 'el cliente')); body.closest('.ch-dlg, .modal, body').querySelectorAll('[data-a="ok"]').forEach(b => b.click()); };
                     q('end').onclick = () => { Espo.Ajax.postRequest('CrmHub/meet/end', {leadId: leadId, code: r.code}).then(() => { Espo.Ui.success('Sala cerrada: el enlace ya no sirve. La próxima videollamada crea una sala nueva.'); body.closest('.ch-dlg, .modal, body').querySelectorAll('[data-a="ok"]').forEach(b => b.click()); }).catch(() => Espo.Ui.error('No se pudo cerrar la sala')); };
                     if (phone) {
                         q('wa').onclick = () => {

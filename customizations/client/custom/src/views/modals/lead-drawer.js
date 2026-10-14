@@ -20,8 +20,8 @@ define('custom:views/modals/lead-drawer', ['views/modals/detail', 'custom:handle
             const scope = this.scope || this.options.scope || 'Lead';
             const all = [
                 ['callLead', 'fas fa-phone', 'Llamar', 'actionCall'], ['whatsappLead', 'fab fa-whatsapp', 'WhatsApp', 'actionWhatsapp'],
-                ['smsLead', 'fas fa-comment-sms', 'SMS', 'actionSms'], ['telegramLead', 'fab fa-telegram', 'Telegram', 'actionTelegram'], ['emailLead', 'fas fa-envelope', 'Correo', 'actionEmail'],
-            ];
+                ['smsLead', 'fas fa-comment-sms', 'SMS', 'actionSms'], ['telegramLead', 'fab fa-telegram', 'Telegram', 'actionTelegram'], ['videoLead', 'fas fa-video', 'Videollamada', 'actionVideo'], ['emailLead', 'fas fa-envelope', 'Correo', 'actionEmail'],
+            ].filter(b => b[0] !== 'videoLead' || ['video', 'video_subs'].includes(this.getConfig().get('crmhubMeet')));
             const contact = all;   // todos los canales sirven para lead, cuenta, contacto y oportunidad (la conversación sigue en el lead de origen)
             contact.slice().reverse().forEach(([name, icon, label, fn]) => {
                 this.buttonList.unshift({name, html: `<span class="${icon}"></span>`, title: label, className: 'ch-contact-btn ch-contact-' + name, onClick: () => new ContactHandler(this)[fn]()});

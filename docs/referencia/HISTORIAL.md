@@ -2,8 +2,13 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.5.0)
+## Sin publicar (después de v1.5.1)
 
+- `2e3f548` 2026-10-13 — Videollamadas: el cliente entra con su nombre del CRM (no se le pide escribirlo)
+
+## v1.5.1
+
+- `9b1a0be` 2026-10-13 — Versión 1.5.1
 - `495bf3f` 2026-10-13 — Changelog 1.5.1
 - `d3e5d68` 2026-10-13 — Videollamadas: aviso al asesor cuando el cliente llega primero (push, nota en el lead y aviso en el panel)
 
