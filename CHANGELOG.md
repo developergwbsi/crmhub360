@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.5.4] - 2026-10-14
+
 ### Videollamadas
 - **Enviar el enlace por el canal que prefieras, de inmediato**: además de WhatsApp, el diálogo de la videollamada ofrece **SMS**, **correo** (con tu firma) y **Telegram**, según los datos que tenga el cliente.
 
