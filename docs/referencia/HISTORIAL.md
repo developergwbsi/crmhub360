@@ -4,6 +4,8 @@
 
 ## Sin publicar (después de v1.5.1)
 
+- `b532a60` 2026-10-13 — Changelog 1.5.2
+- `94c939c` 2026-10-13 — Videollamadas dentro del CRM: ventana flotante que persiste al navegar, aviso global cuando el cliente llega primero y botón en el cajón lateral del lead
 - `2e3f548` 2026-10-13 — Videollamadas: el cliente entra con su nombre del CRM (no se le pide escribirlo)
 
 ## v1.5.1
