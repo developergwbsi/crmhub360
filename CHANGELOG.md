@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.5.0] - 2026-10-13
+
 ### Detalle de registros
 - En el detalle a pantalla completa (lead, cuenta, contacto, oportunidad) la columna izquierda (general, detalles, historia) y la derecha (asignado, documentos, comercial virtual, actividad…) **se desplazan por separado**. Con la rueda sobre una columna primero sube la cabecera del registro y, ya fija, se mueve solo esa columna.
 
