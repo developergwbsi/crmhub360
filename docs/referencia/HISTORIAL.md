@@ -2,6 +2,11 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
+## Sin publicar (después de v1.5.2)
+
+- `ad012ac` 2026-10-13 — Changelog 1.5.3
+- `e95929c` 2026-10-13 — Videollamada como panel lateral (completa, minimizada o cerrada), aviso para volver a entrar si el asesor cuelga con el cliente dentro y selector de idioma de subtítulos visible
+
 ## v1.5.2
 
 - `3b5220e` 2026-10-13 — Versión 1.5.2
