@@ -4,6 +4,8 @@
 
 ## Sin publicar (después de v1.4.1)
 
+- `f504f8d` 2026-10-13 — Changelog 1.5.0
+- `a761d2a` 2026-10-13 — Videollamadas programables: panel Videollamadas en la ficha, opción Videollamada en las reuniones (formulario, actividades y calendario) y botón en cuenta, contacto y oportunidad
 - `3d13c86` 2026-10-13 — Detalle de registros: las dos columnas (datos y panel lateral) se desplazan por separado
 - `e02b3bf` 2026-10-13 — Enlaces clicables y vistas previas de imágenes, videos, audios y archivos en chats, correos y actividad; los adjuntos del cliente por WhatsApp (Evolution y Meta) se guardan y se muestran
 - `7ade22b` 2026-10-13 — Videollamadas: sala persistente por lead, sala de espera con admisión del anfitrión y selección de idioma de habla y de subtítulos
