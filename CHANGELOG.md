@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.5.5] - 2026-10-14
+
 ### Agenda y recordatorios
 - **La agenda va primero en la ficha del cliente** (lead, cuenta, contacto y oportunidad; detalle completo y panel lateral): bajo el encabezado, las citas, videollamadas, llamadas y tareas pendientes («Hoy 20:00», «Mañana 9:00», «En 5 min», lo vencido en rojo), con **Entrar** a la sala en las videollamadas y los botones **Agendar: Cita · Videollamada · Llamada · Tarea** para programar lo siguiente sin salir de la ficha.
 
