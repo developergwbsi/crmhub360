@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.5.2)
+## Sin publicar (después de v1.5.3)
 
+- `27f991e` 2026-10-13 — Changelog 1.5.4
+- `15ffc9c` 2026-10-13 — Videollamada: enviar el enlace al cliente por WhatsApp, SMS, correo o Telegram
+
+## v1.5.3
+
+- `39ccc9e` 2026-10-13 — Versión 1.5.3
 - `ad012ac` 2026-10-13 — Changelog 1.5.3
 - `e95929c` 2026-10-13 — Videollamada como panel lateral (completa, minimizada o cerrada), aviso para volver a entrar si el asesor cuelga con el cliente dentro y selector de idioma de subtítulos visible
 
