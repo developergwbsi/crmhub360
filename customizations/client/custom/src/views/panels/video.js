@@ -13,8 +13,8 @@ define('custom:views/panels/video', ['views/record/panels/bottom', 'custom:ui', 
                 const a = e.target.closest('[data-act]'); if (!a) { return; }
                 if (a.dataset.act === 'now') { this.now(); }
                 else if (a.dataset.act === 'plan') { this.plan(); }
-                else if (a.dataset.act === 'admit') { Dock.open(a.dataset.url, 'Videollamada con ' + (this.model.get('name') || 'el cliente')); }
-                else if (a.dataset.act === 'enter') { Espo.Ajax.postRequest('CrmHub/meet/host', {meetingId: a.dataset.id}).then(r => Dock.open(r.hostUrl, this.model.get('name') || 'Videollamada')).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('La sala de esta videollamada ya terminó.'); }); }
+                else if (a.dataset.act === 'admit') { Dock.open(a.dataset.url, 'Videollamada con ' + (this.model.get('name') || 'el cliente'), {s: this.model.entityType, l: this.model.id}, this.model.get('name')); }
+                else if (a.dataset.act === 'enter') { Espo.Ajax.postRequest('CrmHub/meet/host', {meetingId: a.dataset.id}).then(r => Dock.open(r.hostUrl, this.model.get('name') || 'Videollamada', {s: this.model.entityType, l: this.model.id}, this.model.get('name'))).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('La sala de esta videollamada ya terminó.'); }); }
                 else if (a.dataset.act === 'copy') { const u = a.dataset.url; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => Espo.Ui.success('Enlace copiado'), () => Espo.Ui.warning(u)); }
             };
             this.load();

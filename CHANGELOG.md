@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Videollamada: pantalla compartida y ficha del cliente
+- **La pantalla compartida ya se ve** (antes quedaba «negra»): al ponerla en grande la ficha se estiraba a una altura enorme y el video quedaba centrado fuera de lo visible. Ahora ocupa el área de la sala y los participantes van en la columna lateral. En el panel angosto del CRM va arriba y los participantes debajo.
+- **La ficha del cliente a un clic desde que se abre la llamada**: la franja del panel muestra «Cliente: <nombre>» aunque aún no haya entrado (tarjeta con estado, teléfono, correo y «Abrir la ficha» sin cortar la llamada), además de los participantes que ya están dentro.
+- Las ventanitas de la sala (idioma, fondos, dispositivos) ya no tapan los botones en el panel angosto.
+
 ### WhatsApp
 - Al enviar a un número que **no tiene WhatsApp** (o está mal escrito) el CRM ahora lo dice con claridad —«Ese número no tiene WhatsApp o está mal escrito (revisa que lleve el código de país)»— en vez de «Evolution API rechazó el mensaje: Bad Request». Además los celulares colombianos de 10 dígitos sin prefijo se envían con el 57.
 

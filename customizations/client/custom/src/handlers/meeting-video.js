@@ -13,7 +13,7 @@ define('custom:handlers/meeting-video', ['action-handler', 'custom:call-dock'], 
         }
 
         actionJoin() {
-            Espo.Ajax.postRequest('CrmHub/meet/host', {meetingId: this.view.model.id}).then(r => Dock.open(r.hostUrl, this.view.model.get('name') || 'Videollamada'))
+            Espo.Ajax.postRequest('CrmHub/meet/host', {meetingId: this.view.model.id}).then(r => { const m = this.view.model; Dock.open(r.hostUrl, m.get('name') || 'Videollamada', m.get('parentId') ? {s: m.get('parentType'), l: m.get('parentId')} : null, m.get('parentName')); })
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('La sala de esta videollamada ya terminó.'); });
         }
     };

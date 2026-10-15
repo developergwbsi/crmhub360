@@ -674,7 +674,7 @@ class CrmHub
                 'dateStart>=' => gmdate('Y-m-d H:i:s', time() - 1200), 'dateStart<=' => gmdate('Y-m-d H:i:s', time() + 900),
             ])->order('dateStart')->limit(0, 5)->find();
             foreach ($list as $m) {
-                $out[] = ['id' => $m->getId(), 'name' => (string) $m->get('name'), 'minutes' => (int) round((strtotime($m->get('dateStart') . ' UTC') - time()) / 60), 'parentName' => (string) $m->get('parentName'), 'hostUrl' => $this->meetingHostUrl($hub, $m)];
+                $out[] = ['id' => $m->getId(), 'name' => (string) $m->get('name'), 'minutes' => (int) round((strtotime($m->get('dateStart') . ' UTC') - time()) / 60), 'parentName' => (string) $m->get('parentName'), 'parentType' => (string) $m->get('parentType'), 'parentId' => (string) $m->get('parentId'), 'hostUrl' => $this->meetingHostUrl($hub, $m)];
             }
         } catch (\Throwable $e) {
             // sin recordatorio de videollamadas

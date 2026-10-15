@@ -5,7 +5,7 @@
  * Se acopla con custom:split (tipo 'call') para que el contenido deje su espacio. La sala avisa al salir (postMessage) y el panel se cierra.
  */
 define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi) {
-    let el = null, mode = 'side', url = '', timer = null, t0 = 0, title = '', counted = false, people = [], links = {}, card = null, popTimer = null;
+    let el = null, mode = 'side', url = '', timer = null, t0 = 0, title = '', counted = false, people = [], links = {}, card = null, popTimer = null, roomRef = null, roomName = '';
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const roomOf = u => { try { return new URL(u).pathname; } catch (e) { return u; } };
 
@@ -30,9 +30,10 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
 
     function paintPeople() {
         const box = el && el.querySelector('.ch-dock-people'); if (!box) { return; }
-        const others = people.filter(p => !p.me);
-        box.classList.toggle('hide', !others.length);
-        box.innerHTML = '<span class="ch-dp-t">En la llamada:</span>' + others.map(p => {
+        const others = people.filter(p => !p.me), seenRef = others.some(p => { const r = refOf(p); return r && roomRef && r.l === roomRef.l; });
+        box.classList.remove('hide');
+        const first = roomRef && !seenRef ? `<button class="ch-dp lk" data-p="__room" title="Ver la información del cliente de esta llamada"><span class="fas fa-address-card"></span> ${ChUi.esc(roomName || 'Ficha del cliente')}</button>` : '';
+        box.innerHTML = '<span class="ch-dp-t">Cliente:</span>' + first + (others.length ? '<span class="ch-dp-t">· En la llamada:</span>' : (first ? '' : '<span class="ch-dp-t">(aún no hay nadie más)</span>')) + others.map(p => {
             const r = refOf(p), ic = p.host ? 'fa-user-tie' : r ? 'fa-address-card' : 'fa-user';
             return `<button class="ch-dp ${r ? 'lk' : ''}" data-p="${ChUi.esc(p.id)}" title="${r ? 'Ver la información del CRM' : 'Sin ficha: pulsa para vincularlo con un lead'}"><span class="fas ${ic}"></span> ${ChUi.esc(p.name)}${p.hand ? ' ✋' : ''}</button>`;
         }).join('');
@@ -48,17 +49,17 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
     // tarjeta con los datos del cliente (o buscador para vincular a quien no tiene ficha); se abre sobre el panel de la llamada
     function openCard(pid, anchor) {
         closeCard();
-        const p = people.find(x => x.id === pid); if (!p) { return; }
+        const p = pid === '__room' ? {id: '__room', name: roomName || 'Cliente', room: true} : people.find(x => x.id === pid); if (!p) { return; }
         card = document.createElement('div'); card.className = 'ch-dock-card';
         el.appendChild(card);
-        const r = refOf(p);
+        const r = p.room ? roomRef : refOf(p);
         if (!r) { return linkSearch(p); }
         card.innerHTML = '<span class="spin">Cargando…</span>';
-        Espo.Ajax.getRequest(r.s + '/' + r.l, {select: 'name,phoneNumber,emailAddress,status,stage,assignedUserName,source,accountName'}).then(d => {
+        Espo.Ajax.getRequest(r.s + '/' + r.l).then(d => {
             if (!card) { return; }
             const row = (ic, v) => v ? `<div class="ch-dc-r"><span class="${ic}"></span>${ChUi.esc(v)}</div>` : '';
             card.innerHTML = `<div class="ch-dc-h"><b>${ChUi.esc(d.name || p.name)}</b><button data-x title="Cerrar">✕</button></div>` + row('fas fa-flag', d.status || d.stage) + row('fas fa-phone', d.phoneNumber) + row('fas fa-envelope', d.emailAddress) + row('fas fa-building', d.accountName) + row('fas fa-user', d.assignedUserName ? 'Asignado a ' + d.assignedUserName : '') + row('fas fa-tag', d.source) +
-                `<div class="ch-dc-a"><button class="btn btn-primary btn-xs" data-open>Abrir la ficha</button> <button class="btn btn-default btn-xs" data-unlink>Cambiar</button></div>` + ctl(p);
+                `<div class="ch-dc-a"><button class="btn btn-primary btn-xs" data-open>Abrir la ficha</button> ${p.room ? '' : '<button class="btn btn-default btn-xs" data-unlink>Cambiar</button>'}</div>` + (p.room ? '' : ctl(p));
             wireCtl(p);
             card.onclick = e => {
                 if (e.target.closest('[data-x]')) { closeCard(); }
@@ -121,11 +122,12 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
         active: () => !!el,
         mode: () => mode,
         // entra a la sala dentro del CRM; si ya hay una videollamada abierta en otra sala, pregunta antes de cambiarla
-        open(u, name) {
+        // ref: la ficha del cliente de la llamada ({s: 'Lead', l: id}); así su información está a un clic aunque aún no haya entrado
+        open(u, name, ref, refName) {
             if (el && roomOf(u) === roomOf(url)) { setMode('side'); return; }
             if (el && !window.confirm('Ya estás en una videollamada. ¿Salir de ella y entrar a esta?')) { return; }
             API.close();
-            url = u; title = name || 'Videollamada'; t0 = Date.now(); people = []; links = {};
+            url = u; title = name || 'Videollamada'; t0 = Date.now(); people = []; links = {}; roomRef = ref && ref.l ? ref : null; roomName = refName || '';
             el = document.createElement('div'); el.id = 'ch-dock';
             el.innerHTML = `<div class="ch-dock-h"><span class="fas fa-video"></span><b>${esc(title)}</b><small data-d="time">0:00</small><span style="flex:1"></span>` +
                 '<button type="button" data-d="inv" title="Invitar a la llamada a alguien del CRM"><span class="fas fa-user-plus"></span></button>' +
@@ -136,7 +138,7 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
                 '<div class="ch-dock-people hide"></div>' +
                 `<iframe title="Videollamada" allow="camera; microphone; display-capture; autoplay; fullscreen; clipboard-write" src="${esc(u)}"></iframe>` +
                 `<div class="ch-dock-pill-bar"><span class="fas fa-video"></span><b>${esc(title)}</b><small data-d="time">0:00</small></div>`;
-            document.body.appendChild(el); counted = false; setMode('side');
+            document.body.appendChild(el); counted = false; setMode('side'); paintPeople();
             el.addEventListener('click', e => {
                 const pp = e.target.closest('[data-p]'); if (pp) { openCard(pp.dataset.p, pp); return; }
                 const b = e.target.closest('[data-d]');

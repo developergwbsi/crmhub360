@@ -64,7 +64,7 @@ define('custom:agenda', ['custom:ui', 'custom:call-dock'], function (ChUi, Dock)
                 else if (k === 'Call') { create('Call', {name: 'Llamar a ' + nm}); }
                 else { create('Task', {name: 'Seguimiento a ' + nm}); }
             } else if (go) {
-                Espo.Ajax.postRequest('CrmHub/meet/host', {meetingId: go.dataset.go}).then(r => Dock.open(r.hostUrl, 'Videollamada con ' + nm)).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo abrir la sala.'); });
+                Espo.Ajax.postRequest('CrmHub/meet/host', {meetingId: go.dataset.go}).then(r => Dock.open(r.hostUrl, 'Videollamada con ' + nm, {s: model.entityType, l: model.id}, nm)).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo abrir la sala.'); });
             } else if (more) { state.all = !state.all; paint(); }
             else if (row) { open({id: row.dataset.id, type: row.dataset.t}); }
         });

@@ -2,8 +2,13 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.5.5)
+## Sin publicar (después de v1.6.0)
 
+- `e6cfe47` 2026-10-14 — WhatsApp: mensaje claro cuando el número no tiene WhatsApp y número con código de país
+
+## v1.6.0
+
+- `8e0f529` 2026-10-14 — Versión 1.6.0
 - `4adad8d` 2026-10-14 — Changelog 1.6.0
 - `ef4606d` 2026-10-14 — Videollamada: reloj con el tiempo real de la llamada y botones de silenciar y sacar participantes en el video y en el panel del CRM
 - `71c0e4a` 2026-10-14 — Videollamada: pasar a otra ventana sin cortarla, participantes con su ficha del CRM e invitar a personas del CRM

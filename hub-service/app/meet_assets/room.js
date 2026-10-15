@@ -68,7 +68,7 @@ function relayout() {
   if (!big && pinned && $(pinned)) { big = $(pinned); }
   if (!big && layoutMode === 'speaker' && speakerId && $(speakerId)) { big = $(speakerId); }
   all.forEach(function (t) { t.classList.remove('big'); });
-  if (big && all.length > 1) { g.classList.add('spot'); big.classList.add('big'); } else { g.classList.remove('spot'); }
+  if (big && all.length > 1) { g.classList.add('spot'); big.classList.add('big'); g.style.setProperty('--span', Math.max(1, all.length - 1)); } else { g.classList.remove('spot'); g.style.removeProperty('--span'); }
   g.querySelectorAll('.pin').forEach(function (b) { b.textContent = '📌'; });
 }
 function micState(p, local) {
@@ -401,4 +401,6 @@ $('bs').onclick = function () {
 };
 $('be').onclick = function () { leave(); };
 window.addEventListener('beforeunload', function () { if (room) { room.disconnect(); } });
+// las ventanitas se abren por encima de la barra de controles aunque esta ocupe varias filas (panel angosto)
+try { new ResizeObserver(function () { document.documentElement.style.setProperty('--barh', $('bar').offsetHeight + 'px'); }).observe($('bar')); } catch (e) { /* navegador sin ResizeObserver */ }
 })();
