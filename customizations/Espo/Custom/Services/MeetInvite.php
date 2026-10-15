@@ -30,9 +30,9 @@ class MeetInvite
     }
 
     /** Envía la invitación; lanza BadRequest con un motivo entendible si no se puede. */
-    public function send(Entity $meeting, string $kind = 'invite'): array
+    public function send(Entity $meeting, string $kind = 'invite', ?array $to = null): array
     {
-        $to = $this->recipient($meeting);
+        $to = $to ?: $this->recipient($meeting);
         if (!$to) {
             throw new BadRequest('El cliente no tiene correo: agrégalo en su ficha o envía el enlace por otro canal.');
         }
@@ -45,7 +45,7 @@ class MeetInvite
                 'to' => $to['email'], 'toName' => $to['name'], 'title' => (string) $meeting->get('name'), 'startUtc' => (string) $meeting->get('dateStart'), 'endUtc' => (string) $end,
                 'url' => (string) $meeting->get('videoLink'), 'organizerName' => (string) ($this->user->get('name') ?: $this->user->get('userName')), 'organizerEmail' => (string) $this->user->get('emailAddress'),
                 'userId' => $this->user->getId(), 'tz' => (string) ($this->config->get('timeZone') ?: 'America/Bogota'), 'uid' => $meeting->getId() ?: '',
-                'parentType' => (string) $meeting->get('parentType'), 'parentId' => (string) $meeting->get('parentId'), 'kind' => $kind === 'update' ? 'update' : 'invite',
+                'parentType' => (string) ($to['scope'] ?? $meeting->get('parentType')), 'parentId' => (string) ($to['id'] ?? $meeting->get('parentId')), 'kind' => $kind === 'update' ? 'update' : 'invite',
             ], 30);
         } catch (\RuntimeException $e) {
             preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
@@ -53,16 +53,45 @@ class MeetInvite
         }
     }
 
-    /** Datos de a quién se puede avisar y por qué canales: correo (si tiene), y WhatsApp, SMS y Telegram cuando el registro es un lead con teléfono. */
-    public function channels(Entity $meeting): array
+    /** A quién se avisa: el registro al que está ligada la reunión y los leads y contactos invitados a ella. Cada uno con los canales disponibles (correo si tiene; WhatsApp, SMS y Telegram si es un lead con teléfono). */
+    public function recipients(Entity $meeting): array
     {
+        $found = [];
+        $add = function (?Entity $p, string $scope) use (&$found) {
+            if ($p && !isset($found[$scope . ':' . $p->getId()])) {
+                $found[$scope . ':' . $p->getId()] = ['key' => $scope . ':' . $p->getId(), 'scope' => $scope, 'id' => $p->getId(), 'name' => (string) $p->get('name'),
+                    'email' => trim((string) $p->get('emailAddress')), 'phone' => trim((string) $p->get('phoneNumber'))];
+            }
+        };
         $type = (string) $meeting->get('parentType');
-        $p = $type && $meeting->get('parentId') ? $this->em->getEntityById($type, (string) $meeting->get('parentId')) : null;
-        $email = $p ? trim((string) $p->get('emailAddress')) : '';
-        $phone = $p ? trim((string) $p->get('phoneNumber')) : '';
-        $lead = $type === 'Lead' && $p;
-        return ['name' => $p ? (string) $p->get('name') : '', 'email' => $email, 'phone' => $phone,
-            'channels' => ['email' => $email !== '' && in_array($type, ['Lead', 'Contact', 'Account'], true), 'whatsapp' => $lead && $phone !== '', 'sms' => $lead && $phone !== '', 'telegram' => $lead]];
+        if (in_array($type, ['Lead', 'Contact', 'Account'], true) && $meeting->get('parentId')) {
+            $add($this->em->getEntityById($type, (string) $meeting->get('parentId')), $type);
+        }
+        foreach (['leads' => 'Lead', 'contacts' => 'Contact'] as $link => $scope) {
+            try {
+                foreach ($this->em->getRDBRepository('Meeting')->getRelation($meeting, $link)->find() as $p) {
+                    $add($p, $scope);
+                }
+            } catch (\Throwable $e) {
+                // sin ese vínculo
+            }
+        }
+        foreach ($found as &$r) {
+            $lead = $r['scope'] === 'Lead';
+            $r['channels'] = ['email' => $r['email'] !== '', 'whatsapp' => $lead && $r['phone'] !== '', 'sms' => $lead && $r['phone'] !== '', 'telegram' => $lead];
+        }
+        return array_values($found);
+    }
+
+    /** Un destinatario de recipients() por su clave «Scope:id». */
+    public function recipientByKey(Entity $meeting, string $key): ?array
+    {
+        foreach ($this->recipients($meeting) as $r) {
+            if ($r['key'] === $key) {
+                return $r;
+            }
+        }
+        return null;
     }
 
     /** Fecha y hora legibles en la zona de la empresa, p. ej. «jueves 15 de octubre, 3:00 p. m.». */
@@ -102,25 +131,23 @@ class MeetInvite
         return implode("\n", $lines);
     }
 
-    /** Envía por un canal la invitación (kind=invite) o el aviso de actualización (kind=update). Devuelve ['ok'=>bool,'error'=>?string]. */
-    public function sendVia(Entity $meeting, string $channel, string $kind): array
+    /** Envía por un canal la invitación (kind=invite) o el aviso de actualización (kind=update) a un destinatario de recipients(). Devuelve ['ok'=>bool,'error'=>?string]. */
+    public function sendVia(Entity $meeting, string $channel, string $kind, array $r): array
     {
         try {
-            if ($channel === 'email') {
-                $this->send($meeting, $kind);
-                return ['ok' => true];
-            }
-            $info = $this->channels($meeting);
-            if (empty($info['channels'][$channel]) || $meeting->get('parentType') !== 'Lead') {
-                return ['ok' => false, 'error' => 'No disponible para este cliente (necesita ser un lead con teléfono).'];
+            if (empty($r['channels'][$channel])) {
+                return ['ok' => false, 'error' => $channel === 'email' ? 'No tiene correo en su ficha.' : 'No disponible (necesita ser un lead con teléfono).'];
             }
             if (!$meeting->get('videoLink')) {
                 return ['ok' => false, 'error' => 'La reunión necesita una videollamada creada.'];
             }
-            $first = explode(' ', trim($info['name']))[0] ?? '';
-            $text = $this->text($meeting, $channel, $kind, $first);
+            if ($channel === 'email') {
+                $this->send($meeting, $kind, ['email' => $r['email'], 'name' => $r['name'], 'scope' => $r['scope'], 'id' => $r['id']]);
+                return ['ok' => true];
+            }
+            $text = $this->text($meeting, $channel, $kind, explode(' ', trim($r['name']))[0] ?? '');
             $me = (string) ($this->user->get('name') ?: $this->user->get('userName'));
-            $body = ['leadId' => (string) $meeting->get('parentId'), 'text' => $text, 'agent' => $me];
+            $body = ['leadId' => $r['id'], 'text' => $text, 'agent' => $me];
             if ($channel !== 'telegram') {
                 $body += ['userId' => $this->user->getId(), 'phone' => null, 'lineId' => null];
             }

@@ -1219,3 +1219,7 @@ body.minimized #ch-topbrand { display: flex; flex-direction: column; justify-con
 .ch-mn-opt > span { font-size: 20px; width: 26px; text-align: center; color: var(--ch-primary); }
 .ch-mn-opt b { display: block; } .ch-mn-opt small { color: var(--ch-muted); }
 .ch-mn-res { margin: 8px 0; min-height: 18px; } .ch-mn-act { text-align: right; }
+.ch-mn-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ch-muted); margin: 12px 0 6px; }
+.ch-mn-chs { display: flex; flex-wrap: wrap; gap: 8px; }
+.ch-mn-ch { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid var(--ch-line); border-radius: 999px; cursor: pointer; font-weight: 500; margin: 0; }
+.ch-mn-ch.off { opacity: .45; cursor: not-allowed; }

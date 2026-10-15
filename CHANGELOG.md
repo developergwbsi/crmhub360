@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Avisar a todas las personas de la reunión
+- Corrección: al reenviar la invitación (o avisar de una actualización) el CRM decía «El cliente no tiene correo ni teléfono» aunque los invitados sí los tenían, porque solo miraba el registro principal de la reunión. Ahora la ventana lista **todas las personas de la reunión** (el registro ligado y los leads y contactos invitados), cada una con su correo y teléfono; eliges a quiénes y por qué canales, y ves el resultado de cada envío.
+
 ## [1.6.3] - 2026-10-15
 
 ### Reenviar la invitación por el canal que quieras y avisar cuando cambia la agenda
