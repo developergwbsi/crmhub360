@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### WhatsApp
+- Al enviar a un número que **no tiene WhatsApp** (o está mal escrito) el CRM ahora lo dice con claridad —«Ese número no tiene WhatsApp o está mal escrito (revisa que lleve el código de país)»— en vez de «Evolution API rechazó el mensaje: Bad Request». Además los celulares colombianos de 10 dígitos sin prefijo se envían con el 57.
+
 ## [1.6.0] - 2026-10-14
 
 ### Videollamada con la información del CRM

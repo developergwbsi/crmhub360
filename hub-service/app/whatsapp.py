@@ -114,9 +114,18 @@ async def unlink(tenant: dict) -> dict:
     return {"ok": True}
 
 
+def wa_number(phone: str) -> str:
+    """Número para el proveedor: solo dígitos y con código de país (un celular colombiano de 10 dígitos sin prefijo recibe 57)."""
+    d = "".join(ch for ch in (phone or "") if ch.isdigit())
+    return "57" + d if len(d) == 10 else d
+
+
 def _err(r: httpx.Response) -> str:
     try:
         j = r.json()
+        msg = (j.get("response") or {}).get("message") if isinstance(j, dict) else None
+        if isinstance(msg, list) and msg and isinstance(msg[0], dict) and msg[0].get("exists") is False:   # Evolution: el número no está en WhatsApp
+            return "ese número no tiene WhatsApp o está mal escrito (revisa que lleve el código de país, p. ej. +57)."
         e = j.get("error") or j
         return (e.get("message") if isinstance(e, dict) else str(e))[:240]
     except Exception:
@@ -128,7 +137,7 @@ async def send_text(tenant: dict, phone: str, text: str, *, kind: str = "text") 
     """Envía un texto por el proveedor configurado, sin dejar nota; ValueError si el proveedor lo rechaza o no hay configuración."""
     tenant = lines.effective(tenant, "whatsapp")
     p = provider(tenant)
-    number = phone.lstrip("+")
+    number = wa_number(phone)
     ext = ""
     async with httpx.AsyncClient(timeout=25) as c:
         if p == "evolution":
@@ -170,7 +179,10 @@ async def send_text(tenant: dict, phone: str, text: str, *, kind: str = "text") 
                 raise
             except Exception:
                 pass
-        raise ValueError(f"{PROVIDERS[p]} rechazó el mensaje ({r.status_code}): {_err(r)}")
+        why = _err(r)
+        if why.startswith("ese número"):
+            raise ValueError(why[0].upper() + why[1:])   # no es un fallo del proveedor: el número del cliente no sirve
+        raise ValueError(f"{PROVIDERS[p]} rechazó el mensaje ({r.status_code}): {why}")
     usage.record(tenant, "whatsapp", p, kind=kind, ext_id=ext)   # consumo medido (empresa, proveedor y línea)
 
 
@@ -208,7 +220,7 @@ async def send_menu_phone(tenant: dict, phone: str, menu: dict, intro: str = "",
     """Envía un mensaje con opciones. Nativo (lista/botones) con Meta Cloud API —y con Evolution si se pidió, aunque WhatsApp puede no mostrarlo—;
     en cualquier otro caso, o si el nativo falla, como texto numerado. Devuelve {text, native}."""
     tenant = lines.effective(tenant, "whatsapp")
-    p, number = provider(tenant), phone.lstrip("+")
+    p, number = provider(tenant), wa_number(phone)
     body = (intro or menu["body"]).strip()[:1024]
     opts = menu["options"]
     async with httpx.AsyncClient(timeout=25) as c:
