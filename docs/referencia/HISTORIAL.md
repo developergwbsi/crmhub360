@@ -4,6 +4,8 @@
 
 ## Sin publicar (después de v1.5.5)
 
+- `4adad8d` 2026-10-14 — Changelog 1.6.0
+- `ef4606d` 2026-10-14 — Videollamada: reloj con el tiempo real de la llamada y botones de silenciar y sacar participantes en el video y en el panel del CRM
 - `71c0e4a` 2026-10-14 — Videollamada: pasar a otra ventana sin cortarla, participantes con su ficha del CRM e invitar a personas del CRM
 - `5dffab6` 2026-10-14 — Sala de videollamada tipo Meet: invitar a más personas, pantalla compartida centrada, panel lateral de personas con solicitudes, chat con imágenes y archivos, fondos virtuales, mano levantada, reacciones, dispositivos y controles del anfitrión
 
