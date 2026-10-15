@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### WhatsApp (Evolution)
+- **Respuestas que llegan sin número** (WhatsApp ahora identifica a algunos contactos con un código interno «LID»): para ligarlas al lead al que se le escribió, el Hub busca primero en los últimos 45 minutos y, si no hay a nadie, en las **últimas 24 horas** (antes se creaba un lead aparte «sin número»).
+- Al asignar una línea que **ya existe** en Evolution desde *Servicios* del Centro de control, ahora se le **enciende el aviso** de mensajes hacia el CRM de la empresa (antes quedaba apagado y no llegaba nada).
+- Con el menú recogido, el nombre de la empresa y «Crm Hub 360» pasan a la esquina superior izquierda de la cabecera.
+
 ### Subtítulos en más idiomas y motor de IA de la empresa
 - **Subtítulos en 6 idiomas**: español, inglés, **portugués, francés, alemán e italiano** (cada persona elige el que habla y el que quiere leer; la voz a texto local ya era multilingüe). Cada quien publica su idioma de lectura y quien habla traduce solo a los idiomas que hay en la sala.
 - **Los subtítulos traducidos y el resumen de la reunión usan el motor de IA de la empresa** (el que asigna el Centro de control en *Empresas → Servicios y módulos → Motor de IA*: Claude, OpenAI, Ollama…). Con un motor en la nube la traducción es mejor y sirve para todos los idiomas; con el motor local se usa el traductor liviano es↔en y la IA local para el resto. El consumo queda en «Este mes» del panel de IA. Antes el resumen y el respaldo de traducción llamaban a Ollama directo.

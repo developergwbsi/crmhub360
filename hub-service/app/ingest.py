@@ -268,7 +268,7 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
         lid = remote
         lead_id = routing.lid_get(slug, lid)
         if not lead_id and not from_me:
-            cands = routing.recent_out(slug)
+            cands = routing.recent_out(slug) or routing.recent_out(slug, 24 * 60)   # si hace rato que no se le escribe a nadie, se amplía a las últimas 24 horas
             if len(cands) == 1:
                 lead_id = cands[0]
             elif cands:   # varios a quienes se les escribió hace poco: se elige el que coincide con el nombre del contacto

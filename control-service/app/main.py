@@ -1216,7 +1216,18 @@ async def evolution_instance(t: dict, prov: dict, instance: str) -> str:
         if r.status_code in (200, 201):
             return "Instancia creada: la empresa escanea el código QR en Integraciones."
         if r.status_code in (403, 409) or "already" in r.text.lower():
-            return "La instancia ya existía."
+            # la instancia ya estaba (p. ej. una línea libre del inventario con el aviso apagado): se le enciende el aviso hacia el Hub de la empresa
+            try:
+                wh = body["webhook"]
+                async with httpx.AsyncClient(timeout=20) as c2:
+                    w = await c2.post(f["url"].rstrip("/") + f"/webhook/set/{instance}", headers={"apikey": f.get("apikey", "")}, json={"webhook": {**wh, "enabled": True}})
+                    if w.status_code >= 400:
+                        w = await c2.post(f["url"].rstrip("/") + f"/webhook/set/{instance}", headers={"apikey": f.get("apikey", "")}, json={**wh, "enabled": True})
+                if w.status_code < 400:
+                    return "La instancia ya existía: se activó el aviso de mensajes hacia el CRM de la empresa."
+                return f"La instancia ya existía, pero no se pudo activar el aviso de mensajes ({w.status_code}): asígnala desde «Líneas WhatsApp»."
+            except Exception as e:
+                return "La instancia ya existía, pero no se pudo activar el aviso de mensajes: " + str(e)[:80]
         return f"Evolution respondió {r.status_code}: crea la instancia a mano."
     except Exception as e:
         return "No se pudo contactar a Evolution: " + str(e)[:100]

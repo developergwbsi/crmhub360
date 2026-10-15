@@ -1196,3 +1196,11 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-sum-pill a { cursor: pointer; opacity: .7; font-size: 18px; line-height: 1; color: inherit; }
 .ch-sm-h { font-weight: 700; margin-bottom: 6px; } .ch-sm-r { font-size: 15px; line-height: 1.5; } .ch-sm h5 { margin: 12px 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #5d6678; }
 .ch-sm ul { margin: 0 0 6px 18px; padding: 0; } .ch-sm li { margin: 2px 0; } .ch-sm-a { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Menú recogido: el nombre de la empresa y «Crm Hub 360» van en la esquina superior izquierda de la cabecera */
+#ch-topbrand { display: none; }
+body.minimized #ch-topbrand { display: flex; flex-direction: column; justify-content: center; position: fixed; z-index: 1040; left: 66px; top: 0; height: 52px; line-height: 1.15; pointer-events: none; max-width: 38vw; }
+.ch-tb-co { color: var(--ch-ink, #161b2e); font-size: 15px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ch-tb-sys { color: var(--ch-muted, #5d6678); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.ch-tb-sys::before { content: "◆ "; color: var(--ch-primary, #4a63e7); font-size: 9px; }
+@media (max-width: 767px) { body.minimized #ch-topbrand { display: none; } }

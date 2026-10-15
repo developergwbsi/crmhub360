@@ -365,6 +365,12 @@
             if (cur.textContent !== name) { cur.textContent = name; }
             a.title = name + ' · ' + SYSTEM;
         }
+        // con el menú recogido el nombre de la empresa y el del sistema pasan a la esquina superior izquierda de la cabecera
+        if (name) {
+            var tb = document.getElementById('ch-topbrand');
+            if (!tb && document.body.classList.contains('has-navbar')) { tb = document.createElement('div'); tb.id = 'ch-topbrand'; tb.innerHTML = '<b class="ch-tb-co"></b><small class="ch-tb-sys">' + SYSTEM + '</small>'; document.body.appendChild(tb); }
+            if (tb && tb.querySelector('.ch-tb-co').textContent !== name) { tb.querySelector('.ch-tb-co').textContent = name; }
+        }
         if (name && document.title.indexOf(SYSTEM) === -1) { document.title = (document.title || name) + ' · ' + SYSTEM; }
     }
     function checkReadOnly() {
