@@ -366,6 +366,14 @@
         }
     },
     {
+        "route": "/CrmHub/meet/inviteMail",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "meetInviteMail"
+        }
+    },
+    {
         "route": "/CrmHub/metricsLeads",
         "method": "get",
         "params": {

@@ -1753,6 +1753,8 @@ class MeetInviteReq(BaseModel):
     uid: str = ""
     parentType: str = ""
     parentId: str = ""
+    note: str = ""
+    record: bool = True
 
 
 @app.post("/v1/meet/invite")

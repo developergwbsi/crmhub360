@@ -111,7 +111,7 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
                         if (k === 'copy') { (navigator.clipboard ? navigator.clipboard.writeText(r.url) : Promise.reject()).then(() => say('Enlace copiado.'), () => say(r.url)); }
                         else if (k === 'wa') { Espo.Ajax.postRequest('CrmHub/whatsapp/send', {leadId: x.l, phone: x.phone, text}).then(ok).catch(bad); }
                         else if (k === 'sms') { Espo.Ajax.postRequest('CrmHub/sms/send', {leadId: x.l, phone: x.phone, text}).then(ok).catch(bad); }
-                        else { Espo.loader.require('custom:mail-send', Mail => { const u = ChUi.esc(r.url); Mail.send({to: [x.email], subject: 'Invitación a nuestra videollamada', body: `<p>Hola ${ChUi.esc(x.name.split(' ')[0] || '')},</p><p>Te invito a nuestra videollamada:</p><p><a href="${u}">${u}</a></p><p>Ábrelo desde tu celular o computador; no necesitas instalar nada.</p>`, parentType: x.s, parentId: x.l}).then(ok).catch(bad); }); }
+                        else { Espo.Ajax.postRequest('CrmHub/meet/inviteMail', {scope: x.s, recId: x.l, url: r.url}).then(ok).catch(bad); }
                     };
                 }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } say('No se pudo crear el enlace.'); });
             }

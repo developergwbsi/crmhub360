@@ -759,6 +759,38 @@ class CrmHub
         return (object) ['ok' => true];
     }
 
+    /** POST /CrmHub/meet/inviteMail. Usuario con acceso al registro. {scope, recId, url, name?}: envía por correo, con la plantilla de invitación (botón para unirse y agregar al calendario + .ics), el enlace personal de una videollamada en curso a un lead, contacto o cuenta. Hub: POST /v1/meet/invite. */
+    public function postActionMeetInviteMail(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $scope = (string) ($d->scope ?? '');
+        $rec = in_array($scope, ['Lead', 'Contact', 'Account'], true) ? $this->em->getEntityById($scope, (string) ($d->recId ?? '')) : null;
+        if (!$rec || !$this->acl->checkEntityRead($rec)) {
+            throw new Forbidden();
+        }
+        $to = trim((string) $rec->get('emailAddress'));
+        $url = (string) ($d->url ?? '');
+        if (!$to) {
+            throw new BadRequest('Esa persona no tiene correo en su ficha.');
+        }
+        if (!preg_match('#^https://[^\s]+$#', $url)) {
+            throw new BadRequest();
+        }
+        $me = (string) ($this->user->get('name') ?: $this->user->get('userName'));
+        $now = time();
+        try {
+            return (object) (new HubClient($this->config))->request('POST', '/v1/meet/invite', [
+                'to' => $to, 'toName' => (string) $rec->get('name'), 'title' => 'Videollamada con ' . $me, 'startUtc' => gmdate('Y-m-d H:i:s', $now), 'endUtc' => gmdate('Y-m-d H:i:s', $now + 3600),
+                'url' => $url, 'organizerName' => $me, 'organizerEmail' => (string) $this->user->get('emailAddress'), 'userId' => $this->user->getId(),
+                'tz' => (string) ($this->config->get('timeZone') ?: 'America/Bogota'), 'uid' => 'live-' . bin2hex(random_bytes(6)), 'parentType' => $scope, 'parentId' => $rec->getId(),
+                'note' => 'La videollamada ya está en curso: entra cuando quieras y te daremos acceso en unos segundos.',
+            ], 30);
+        } catch (\RuntimeException $e) {
+            preg_match('/"detail":"([^"]+)"/u', $e->getMessage(), $m);
+            throw new BadRequest($m[1] ?? 'No se pudo enviar la invitación.');
+        }
+    }
+
     /** POST /CrmHub/meet/host. Usuario con acceso a la reunión. Hub: GET /v1/meet/rooms/{código}/host. Devuelve el enlace de entrada del anfitrión de la videollamada de una reunión. */
     public function postActionMeetHost(Request $request): \stdClass
     {

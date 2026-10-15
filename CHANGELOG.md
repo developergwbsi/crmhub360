@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Invitaciones por correo con plantilla profesional
+- **Todas las invitaciones a videollamadas por correo usan ahora la misma plantilla por defecto**, con diseño (cabecera con el nombre de la empresa, tarjeta con fecha, hora, duración y organizador, botón grande «Unirme a la videollamada») en vez del mensaje plano.
+- **Siempre traen la opción de agregarla al calendario**: botones *Google Calendar* y *Outlook*, el archivo **invitacion.ics** adjunto (Apple y otros) y la parte de calendario que Gmail y Outlook muestran con «Aceptar / Quizás / No» directamente en el correo; con recordatorios 15 y 5 minutos antes.
+- Aplica a la invitación de una reunión programada, a **«Invitar desde el CRM → Correo»** (antes solo mandaba el enlace) y a la invitación por correo que el anfitrión envía desde dentro de la sala.
+
 ## [1.6.1] - 2026-10-15
 
 ### Tablero con cifras que se pueden abrir

@@ -507,22 +507,35 @@ def invite_name(code: str, p: str) -> str:
     return iv["name"] if iv else ""
 
 
-def invite_html(first: str, org: str, title: str, when: str, minutes: int, url: str, google: str, outlook: str) -> str:
+def invite_html(first: str, org: str, title: str, when: str, minutes: int, url: str, google: str, outlook: str, company: str = "", note: str = "") -> str:
+    """Plantilla por defecto de la invitación a una videollamada (correo con tablas y estilos en línea, para que se vea bien en Gmail, Outlook y celulares).
+    Cabecera con la empresa, tarjeta con la cita, botón para unirse y botones para agregarla al calendario (Google, Outlook y el .ics adjunto para Apple)."""
     e = _html.escape
-    btn = "display:inline-block;padding:12px 22px;border-radius:10px;font-weight:600;text-decoration:none;font-family:Arial,sans-serif;font-size:15px"
-    return (f'<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#1c2233;line-height:1.5">'
-            f'<p style="font-size:16px">Hola{" " + e(first) if first else ""},</p>'
-            f'<p><b>{e(org)}</b> te invita a una videollamada.</p>'
-            f'<table role="presentation" style="width:100%;border:1px solid #dfe3ee;border-radius:12px;background:#f6f8fd;margin:14px 0"><tr><td style="padding:16px 18px">'
-            f'<div style="font-size:17px;font-weight:700">{e(title)}</div>'
-            f'<div style="margin-top:6px">📅 {e(when)}</div><div>⏱ Duración: {minutes} minutos</div></td></tr></table>'
-            f'<p style="margin:18px 0"><a href="{e(url)}" style="{btn};background:#3a52e0;color:#ffffff">Unirme a la videollamada</a></p>'
-            f'<p style="margin:0 0 6px;font-weight:600">Agregar a mi calendario (con recordatorio)</p>'
-            f'<p style="margin:0 0 14px"><a href="{e(google)}" style="{btn};background:#ffffff;color:#3a52e0;border:1px solid #c9d0e6;padding:9px 16px;font-size:14px">Google Calendar</a> '
-            f'<a href="{e(outlook)}" style="{btn};background:#ffffff;color:#3a52e0;border:1px solid #c9d0e6;padding:9px 16px;font-size:14px">Outlook</a></p>'
-            f'<p style="color:#5d6678;font-size:13px">También puedes abrir el archivo adjunto <b>invitacion.ics</b> (Apple Calendar y otros). Tu calendario te recordará 15 y 5 minutos antes.</p>'
-            f'<p style="color:#5d6678;font-size:13px">No necesitas instalar nada ni crear una cuenta: abre el enlace desde tu celular o computador y, al entrar, te daremos acceso en unos segundos.</p>'
-            f'<p style="color:#8a93a8;font-size:12px;word-break:break-all">Si el botón no funciona, copia este enlace: {e(url)}</p></div>')
+    company = company or org
+    ini = e((org.strip()[:1] or "•").upper())
+    font = "font-family:'Segoe UI',Helvetica,Arial,sans-serif"
+    btn = f"display:inline-block;border-radius:10px;font-weight:600;text-decoration:none;{font}"
+    row = lambda ic, k, v: (f'<tr><td style="padding:7px 0;width:34px;font-size:18px;vertical-align:top">{ic}</td><td style="padding:7px 0;{font};font-size:14px;color:#5d6678;vertical-align:top">{k}'
+                            f'<div style="font-size:15px;color:#1c2233;font-weight:600;margin-top:1px">{v}</div></td></tr>')
+    return (f'<div style="background:#eef1f8;padding:24px 12px;{font}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #dfe3ee">'
+            f'<tr><td style="background:#3a52e0;background-image:linear-gradient(135deg,#3a52e0,#6d4be8);padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.85">Invitación a videollamada</div>'
+            f'<div style="font-size:22px;font-weight:700;margin-top:4px">{e(company)}</div></td></tr>'
+            f'<tr><td style="padding:26px 28px 6px;color:#1c2233;font-size:16px;line-height:1.55">Hola{" " + e(first) if first else ""},<br><b>{e(org)}</b> te invita a una videollamada.'
+            + (f'<div style="margin-top:10px;font-size:14px;color:#5d6678">{e(note)}</div>' if note else '') +
+            f'</td></tr>'
+            f'<tr><td style="padding:12px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f8fd;border:1px solid #e1e6f3;border-radius:12px"><tr><td style="padding:14px 20px">'
+            f'<div style="font-size:18px;font-weight:700;color:#1c2233;padding-bottom:6px;border-bottom:1px solid #e1e6f3">{e(title)}</div>'
+            f'<table role="presentation" cellpadding="0" cellspacing="0" width="100%">' + row("📅", "Fecha y hora", e(when)) + row("⏱", "Duración", f"{minutes} minutos") + row("👤", "Organiza", e(org)) +
+            f'</table></td></tr></table></td></tr>'
+            f'<tr><td align="center" style="padding:14px 28px 8px"><a href="{e(url)}" style="{btn};background:#3a52e0;color:#ffffff;padding:15px 34px;font-size:16px">🎥&nbsp; Unirme a la videollamada</a>'
+            f'<div style="margin-top:8px;font-size:12px;color:#8a93a8">Entra desde tu celular o computador. No necesitas instalar nada ni crear una cuenta.</div></td></tr>'
+            f'<tr><td style="padding:18px 28px 6px"><div style="border-top:1px solid #e6e9f2;padding-top:16px;font-size:14px;font-weight:700;color:#1c2233">📆 Agrégala a tu calendario</div>'
+            f'<div style="margin-top:10px"><a href="{e(google)}" style="{btn};background:#ffffff;color:#3a52e0;border:1px solid #c9d0e6;padding:10px 18px;font-size:14px;margin:0 6px 8px 0">Google Calendar</a>'
+            f'<a href="{e(outlook)}" style="{btn};background:#ffffff;color:#3a52e0;border:1px solid #c9d0e6;padding:10px 18px;font-size:14px;margin:0 6px 8px 0">Outlook</a>'
+            f'<span style="{btn};background:#ffffff;color:#3a52e0;border:1px solid #c9d0e6;padding:10px 18px;font-size:14px;margin:0 0 8px">Apple / otros: abre el adjunto <b>invitacion.ics</b></span></div>'
+            f'<div style="font-size:12px;color:#8a93a8">Tu calendario te recordará 15 y 5 minutos antes. En Gmail y Outlook también puedes aceptar la invitación directamente desde este correo.</div></td></tr>'
+            f'<tr><td style="padding:16px 28px 24px"><div style="background:#f6f8fd;border-radius:10px;padding:10px 14px;font-size:12px;color:#5d6678;word-break:break-all">¿El botón no funciona? Copia este enlace en tu navegador:<br><a href="{e(url)}" style="color:#3a52e0">{e(url)}</a></div></td></tr>'
+            f'</table><div style="max-width:600px;margin:12px auto 0;text-align:center;font-size:11px;color:#8a93a8">Enviado por {e(company)} · Crm Hub 360</div></div>')
 
 
 async def invite(tenant: dict, d: dict) -> dict:
@@ -551,9 +564,9 @@ async def invite(tenant: dict, d: dict) -> dict:
     org_email = d.get("organizerEmail") or cfg.get("from_address") or ""
     ics = build_ics(f"{d.get('uid') or secrets.token_hex(8)}@crmhub360", title, start, end, url, d.get("organizerName") or "Asesor", org_email, d.get("toName") or d["to"], d["to"], details)
     first = (d.get("toName") or "").split(" ")[0]
-    html = invite_html(first, d.get("organizerName") or "Tu asesor", title, when, mins, url, google, outlook)
+    html = invite_html(first, d.get("organizerName") or "Tu asesor", title, when, mins, url, google, outlook, tenant.get("name") or "", d.get("note") or "")
     return await mailout.send(tenant, {"userId": d["userId"], "userName": d.get("organizerName") or "", "to": d["to"], "subject": f"Invitación: {title} · {local.day} de {months[local.month - 1]}, {h12}:{local.minute:02d} {'a. m.' if local.hour < 12 else 'p. m.'}",
-                                       "html": html, "ics": ics, "parentType": d.get("parentType") or None, "parentId": d.get("parentId") or None})
+                                       "html": html, "ics": ics, "parentType": d.get("parentType") or None, "parentId": d.get("parentId") or None, **({"record": False} if d.get("record") is False else {})})
 
 
 def client_js() -> bytes:
@@ -664,11 +677,11 @@ async def invite_more(tenant: dict, code: str, host_key: str, to: str) -> dict:
     if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", to or ""):
         raise ValueError("Escribe un correo válido.")
     url = f"{public_base()}/{code}?i=1"
-    e = _html.escape
-    html = (f'<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#1c2233;line-height:1.5"><p>Hola,</p><p><b>{e(r["host_name"] or "Tu anfitrión")}</b> te invita a unirte a la videollamada <b>{e(r["title"] or "")}</b>.</p>'
-            f'<p style="margin:18px 0"><a href="{e(url)}" style="display:inline-block;padding:12px 22px;border-radius:10px;background:#3a52e0;color:#fff;font-weight:600;text-decoration:none">Unirme a la videollamada</a></p>'
-            f'<p style="color:#5d6678;font-size:13px">No necesitas instalar nada ni crear una cuenta. Escribe tu nombre al entrar y el anfitrión te dará acceso en unos segundos.</p></div>')
-    await mailout.send(tenant, {"userId": r["created_by"] or "", "userName": r["host_name"] or "", "to": to, "subject": f"Invitación a la videollamada: {r['title'] or 'Videollamada'}", "html": html, "record": False})
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    f = lambda x: x.strftime("%Y-%m-%d %H:%M:%S")
+    await invite(tenant, {"to": to, "toName": "", "title": r["title"] or "Videollamada", "startUtc": f(now), "endUtc": f(now + timedelta(hours=1)), "url": url, "organizerName": r["host_name"] or "Tu anfitrión",
+                          "userId": r["created_by"] or "", "uid": f"{code}-{secrets.token_hex(3)}", "record": False,
+                          "note": "La videollamada ya está en curso: entra cuando quieras y el anfitrión te dará acceso en unos segundos."})
     return {"ok": True}
 
 
