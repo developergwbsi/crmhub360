@@ -4,6 +4,10 @@
 
 ## Sin publicar (después de v1.6.0)
 
+- `ecff7fd` 2026-10-15 — Versión 1.6.1
+- `6db7d52` 2026-10-15 — Tablero: las cifras abren la lista de esos leads; en «Sin asesor» se pueden repartir automáticamente
+- `60037d4` 2026-10-15 — WhatsApp: las respuestas con LID se ligan al lead contactado en las últimas 24 horas; aviso encendido al asignar una instancia existente; nombre de la empresa en la cabecera con el menú recogido
+- `3e4c12f` 2026-10-15 — Subtítulos en 6 idiomas; traducción y resumen de reuniones con el motor de IA de la empresa (Claude u otro) en vez de Ollama directo
 - `2fb382c` 2026-10-14 — Resumen automático de la reunión al terminar la llamada: se guarda en la ficha (lead, contacto y cuenta) y en la reunión, y se muestra al asesor con acciones
 - `b6214b8` 2026-10-14 — Videollamada: la pantalla compartida se ve completa, ficha del cliente visible desde que se abre la llamada y ventanitas que no tapan los controles
 - `e6cfe47` 2026-10-14 — WhatsApp: mensaje claro cuando el número no tiene WhatsApp y número con código de país

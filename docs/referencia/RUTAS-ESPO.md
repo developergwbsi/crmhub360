@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **109** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **111** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -24,6 +24,7 @@ Total: **109** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/assignees` | CrmHub.assignees | GET /CrmHub/assignees. Usuarios con permiso de asignación. Lista a quién se puede reasignar. */ |
 | GET | `/CrmHub/assignment` | CrmHub.assignment | GET /CrmHub/assignment. Admin. Configuración de asignación automática. */ |
 | PUT | `/CrmHub/assignment` | CrmHub.assignment | PUT /CrmHub/assignment. Admin. Guarda la configuración de asignación automática. */ |
+| POST | `/CrmHub/autoAssign` | CrmHub.autoAssign | POST /CrmHub/autoAssign. Quien tiene permiso de asignación. {ids}: reparte esos leads sin asesor con el mismo balanceo del reparto automático (por campaña o grupo general). */ |
 | POST | `/CrmHub/broadcast` | CrmHub.broadcastCreate | POST /CrmHub/broadcast. Usuario con permiso de masivos. Hub: POST /v1/broadcasts. */ |
 | POST | `/CrmHub/broadcast/audience` | CrmHub.broadcastAudience | POST /CrmHub/broadcast/audience. Usuario con permiso de masivos. Calcula la audiencia. */ |
 | GET | `/CrmHub/broadcasts` | CrmHub.broadcasts | GET /CrmHub/broadcasts. Usuario con permiso de masivos. Hub: GET /v1/broadcasts. */ |
@@ -74,6 +75,7 @@ Total: **109** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/meet/summary` | CrmHub.meetSummary | GET /CrmHub/meet/summary?code=&since=. Resumen de la reunión de una sala (generado al terminar la llamada), posterior a `since` (ms). Hub: GET /v1/meet/rooms/{código}/summary. */ |
 | GET | `/CrmHub/meet/waiting` | CrmHub.meetWaiting | GET /CrmHub/meet/waiting[?leadId=]. Clientes que esperan en la sala de espera de las videollamadas, con el enlace para entrar a admitirlos. Con leadId: las del lead (usuario con acceso a él). Sin leadId: las del usuario actual (las salas que creó o de leads que tiene asignados), para avisarle en cualquier pantalla. Hub: GET /v1/meet/rooms y /v1/meet/waiting. */ |
 | GET | `/CrmHub/metrics` | CrmHub.metrics | GET /CrmHub/metrics. Usuario; datos según su ACL. Hub: GET /v1/agent/attended (comercial virtual). */ |
+| GET | `/CrmHub/metricsLeads` | CrmHub.metricsLeads | GET /CrmHub/metricsLeads?days=&seg=. Ids de los leads que suman en una cifra del tablero (con las mismas reglas), para abrirlos en una lista. seg: leads, sinAsesor, conVirtual, califican, cierres, deuda, mora, estado:<estado>, servicio:<nombre>, origen:<nombre>, campana:<nombre>, asesor:<nombre>, dia:<AAAA-MM-DD>. */ |
 | GET | `/CrmHub/myroles` | CrmHub.myroles | Roles del usuario actual: el manual muestra solo lo que le corresponde. */ |
 | POST | `/CrmHub/notifyTeam` | CrmHub.notifyTeam | Solo el usuario API del Hub: avisa en la campana del CRM (p. ej. «Nuevo registro» de un formulario web). */ |
 | GET | `/CrmHub/orgchart` | CrmHub.orgchart | GET /CrmHub/orgchart. Usuarios con permiso de asignación. Organigrama por roles y equipos. */ |
