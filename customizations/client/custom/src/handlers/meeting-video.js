@@ -1,15 +1,13 @@
 /**
- * Botón «Entrar a la videollamada» de una reunión que tiene sala propia. Endpoint: POST CrmHub/meet/host (devuelve el enlace de anfitrión).
+ * Botón «Entrar a la videollamada» de una reunión que tiene sala propia. Endpoints: POST CrmHub/meet/host (devuelve el enlace de anfitrión) y, vía custom:meet-notify, la invitación por canal.
  */
 define('custom:handlers/meeting-video', ['action-handler', 'custom:call-dock'], function (Dep, Dock) {
     return class extends Dep {
         hasVideo() { return !!this.view.model.get('videoCode') && ['video', 'video_subs'].includes(this.view.getConfig().get('crmhubMeet')); }
 
-        // reenvía (o envía por primera vez) la invitación por correo con «Agregar al calendario»
+        // reenvía (o envía por primera vez) la invitación: se elige el canal (correo, WhatsApp, SMS, Telegram), cada uno con su plantilla
         actionInvite() {
-            Espo.Ui.notify('Enviando la invitación…');
-            Espo.Ajax.postRequest('CrmHub/meet/invite', {meetingId: this.view.model.id}).then(() => { Espo.Ui.notify(false); Espo.Ui.success('Invitación enviada al cliente por correo'); this.view.model.fetch(); })
-                .catch(xhr => { Espo.Ui.notify(false); const why = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); Espo.Ui.error(why || 'No se pudo enviar la invitación'); if (xhr) { xhr.errorIsHandled = true; } });
+            Espo.loader.require('custom:meet-notify', N => N.ask({meetingId: this.view.model.id, kind: 'invite'}));
         }
 
         actionJoin() {

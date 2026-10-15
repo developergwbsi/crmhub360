@@ -466,11 +466,11 @@ def _ics_text(v: str) -> str:
     return (v or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\r", "").replace("\n", "\\n")
 
 
-def build_ics(uid: str, title: str, start: datetime, end: datetime, url: str, org_name: str, org_email: str, to_name: str, to_email: str, details: str) -> str:
+def build_ics(uid: str, title: str, start: datetime, end: datetime, url: str, org_name: str, org_email: str, to_name: str, to_email: str, details: str, seq: int = 0) -> str:
     """Archivo de calendario (iCalendar, METHOD:REQUEST) con la sala como lugar y dos recordatorios (15 y 5 minutos antes) para quien lo agregue."""
     f = lambda d: d.strftime("%Y%m%dT%H%M%SZ")
     lines = ["BEGIN:VCALENDAR", "PRODID:-//Crm Hub 360//Videollamadas//ES", "VERSION:2.0", "CALSCALE:GREGORIAN", "METHOD:REQUEST", "BEGIN:VEVENT", f"UID:{uid}", f"DTSTAMP:{f(datetime.now(timezone.utc))}",
-             f"DTSTART:{f(start)}", f"DTEND:{f(end)}", f"SUMMARY:{_ics_text(title)}", f"LOCATION:{_ics_text(url)}", f"URL:{url}", f"DESCRIPTION:{_ics_text(details)}", "STATUS:CONFIRMED", "SEQUENCE:0",
+             f"DTSTART:{f(start)}", f"DTEND:{f(end)}", f"SUMMARY:{_ics_text(title)}", f"LOCATION:{_ics_text(url)}", f"URL:{url}", f"DESCRIPTION:{_ics_text(details)}", "STATUS:CONFIRMED", f"SEQUENCE:{seq}",
              f"ORGANIZER;CN={_ics_text(org_name)}:mailto:{org_email}", f"ATTENDEE;CN={_ics_text(to_name)};ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:{to_email}",
              "BEGIN:VALARM", "TRIGGER:-PT15M", "ACTION:DISPLAY", f"DESCRIPTION:{_ics_text('Videollamada en 15 minutos')}", "END:VALARM",
              "BEGIN:VALARM", "TRIGGER:-PT5M", "ACTION:DISPLAY", f"DESCRIPTION:{_ics_text('Videollamada en 5 minutos')}", "END:VALARM", "END:VEVENT", "END:VCALENDAR"]
@@ -507,7 +507,7 @@ def invite_name(code: str, p: str) -> str:
     return iv["name"] if iv else ""
 
 
-def invite_html(first: str, org: str, title: str, when: str, minutes: int, url: str, google: str, outlook: str, company: str = "", note: str = "") -> str:
+def invite_html(first: str, org: str, title: str, when: str, minutes: int, url: str, google: str, outlook: str, company: str = "", note: str = "", update: bool = False) -> str:
     """Plantilla por defecto de la invitación a una videollamada (correo con tablas y estilos en línea, para que se vea bien en Gmail, Outlook y celulares).
     Cabecera con la empresa, tarjeta con la cita, botón para unirse y botones para agregarla al calendario (Google, Outlook y el .ics adjunto para Apple)."""
     e = _html.escape
@@ -518,9 +518,9 @@ def invite_html(first: str, org: str, title: str, when: str, minutes: int, url: 
     row = lambda ic, k, v: (f'<tr><td style="padding:7px 0;width:34px;font-size:18px;vertical-align:top">{ic}</td><td style="padding:7px 0;{font};font-size:14px;color:#5d6678;vertical-align:top">{k}'
                             f'<div style="font-size:15px;color:#1c2233;font-weight:600;margin-top:1px">{v}</div></td></tr>')
     return (f'<div style="background:#eef1f8;padding:24px 12px;{font}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #dfe3ee">'
-            f'<tr><td style="background:#3a52e0;background-image:linear-gradient(135deg,#3a52e0,#6d4be8);padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.85">Invitación a videollamada</div>'
+            f'<tr><td style="background:#3a52e0;background-image:linear-gradient(135deg,#3a52e0,#6d4be8);padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.85">{"Videollamada actualizada" if update else "Invitación a videollamada"}</div>'
             f'<div style="font-size:22px;font-weight:700;margin-top:4px">{e(company)}</div></td></tr>'
-            f'<tr><td style="padding:26px 28px 6px;color:#1c2233;font-size:16px;line-height:1.55">Hola{" " + e(first) if first else ""},<br><b>{e(org)}</b> te invita a una videollamada.'
+            f'<tr><td style="padding:26px 28px 6px;color:#1c2233;font-size:16px;line-height:1.55">Hola{" " + e(first) if first else ""},<br><b>{e(org)}</b> {"actualizó la videollamada: revisa la nueva fecha y hora y vuelve a agregarla a tu calendario." if update else "te invita a una videollamada."}'
             + (f'<div style="margin-top:10px;font-size:14px;color:#5d6678">{e(note)}</div>' if note else '') +
             f'</td></tr>'
             f'<tr><td style="padding:12px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f8fd;border:1px solid #e1e6f3;border-radius:12px"><tr><td style="padding:14px 20px">'
@@ -556,16 +556,17 @@ async def invite(tenant: dict, d: dict) -> dict:
     when = f"{days[local.weekday()]} {local.day} de {months[local.month - 1]} de {local.year}, {h12}:{local.minute:02d} {'a. m.' if local.hour < 12 else 'p. m.'} ({_tzname(d.get('tz'))})"
     mins = max(5, int((end - start).total_seconds() // 60))
     title, url = (d.get("title") or "Videollamada")[:120], d["url"]
+    upd = d.get("kind") == "update"
     fmt = lambda x: x.strftime("%Y%m%dT%H%M%SZ")
     details = f"Videollamada con {d.get('organizerName') or 'tu asesor'}. Entra con este enlace: {url}"
     google = f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={quote(title)}&dates={fmt(start)}/{fmt(end)}&details={quote(details)}&location={quote(url)}"
     outlook = f"https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject={quote(title)}&startdt={start.strftime('%Y-%m-%dT%H:%M:%SZ')}&enddt={end.strftime('%Y-%m-%dT%H:%M:%SZ')}&body={quote(details)}&location={quote(url)}"
     cfg = (tenant.get("settings") or {}).get("mailout") or {}
     org_email = d.get("organizerEmail") or cfg.get("from_address") or ""
-    ics = build_ics(f"{d.get('uid') or secrets.token_hex(8)}@crmhub360", title, start, end, url, d.get("organizerName") or "Asesor", org_email, d.get("toName") or d["to"], d["to"], details)
+    ics = build_ics(f"{d.get('uid') or secrets.token_hex(8)}@crmhub360", title, start, end, url, d.get("organizerName") or "Asesor", org_email, d.get("toName") or d["to"], d["to"], details, int(datetime.now(timezone.utc).timestamp()) if upd else 0)
     first = (d.get("toName") or "").split(" ")[0]
-    html = invite_html(first, d.get("organizerName") or "Tu asesor", title, when, mins, url, google, outlook, tenant.get("name") or "", d.get("note") or "")
-    return await mailout.send(tenant, {"userId": d["userId"], "userName": d.get("organizerName") or "", "to": d["to"], "subject": f"Invitación: {title} · {local.day} de {months[local.month - 1]}, {h12}:{local.minute:02d} {'a. m.' if local.hour < 12 else 'p. m.'}",
+    html = invite_html(first, d.get("organizerName") or "Tu asesor", title, when, mins, url, google, outlook, tenant.get("name") or "", d.get("note") or "", upd)
+    return await mailout.send(tenant, {"userId": d["userId"], "userName": d.get("organizerName") or "", "to": d["to"], "subject": f"{'Actualización' if upd else 'Invitación'}: {title} · {local.day} de {months[local.month - 1]}, {h12}:{local.minute:02d} {'a. m.' if local.hour < 12 else 'p. m.'}",
                                        "html": html, "ics": ics, "parentType": d.get("parentType") or None, "parentId": d.get("parentId") or None, **({"record": False} if d.get("record") is False else {})})
 
 

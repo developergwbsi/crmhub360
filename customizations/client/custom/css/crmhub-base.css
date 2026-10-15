@@ -1212,3 +1212,10 @@ body.minimized #ch-topbrand { display: flex; flex-direction: column; justify-con
 .ch-ls-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .ch-ls-head h3 { margin: 0; }
 .ch-ls-tools { margin-left: auto; }
+/* Avisar al cliente de una reunión: elección de canales */
+.ch-mn-opt { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin: 0 0 8px; border: 1px solid var(--ch-line); border-radius: 12px; cursor: pointer; font-weight: 400; }
+.ch-mn-opt:hover:not(.off) { border-color: var(--ch-primary); }
+.ch-mn-opt.off { opacity: .5; cursor: not-allowed; }
+.ch-mn-opt > span { font-size: 20px; width: 26px; text-align: center; color: var(--ch-primary); }
+.ch-mn-opt b { display: block; } .ch-mn-opt small { color: var(--ch-muted); }
+.ch-mn-res { margin: 8px 0; min-height: 18px; } .ch-mn-act { text-align: right; }

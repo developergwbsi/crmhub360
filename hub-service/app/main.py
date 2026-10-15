@@ -1755,6 +1755,7 @@ class MeetInviteReq(BaseModel):
     parentId: str = ""
     note: str = ""
     record: bool = True
+    kind: str = "invite"
 
 
 @app.post("/v1/meet/invite")

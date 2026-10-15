@@ -755,8 +755,24 @@ class CrmHub
         if (!$m || !$this->acl->checkEntityEdit($m)) {
             throw new Forbidden();
         }
-        (new \Espo\Custom\Services\MeetInvite($this->config, $this->em, $this->user))->send($m);
-        return (object) ['ok' => true];
+        $svc = new \Espo\Custom\Services\MeetInvite($this->config, $this->em, $this->user);
+        $kind = ($d->kind ?? '') === 'update' ? 'update' : 'invite';
+        $channels = array_values(array_intersect((array) ($d->channels ?? ['email']), ['email', 'whatsapp', 'sms', 'telegram']));
+        $results = [];
+        foreach ($channels as $c) {
+            $results[$c] = $svc->sendVia($m, $c, $kind);
+        }
+        return (object) ['ok' => true, 'results' => $results];
+    }
+
+    /** GET /CrmHub/meet/inviteInfo?meetingId=. Usuario con edición de la reunión. A quién se invita y por qué canales se puede (email, whatsapp, sms, telegram). */
+    public function getActionMeetInviteInfo(Request $request): \stdClass
+    {
+        $m = $this->em->getEntityById('Meeting', (string) $request->getQueryParam('meetingId'));
+        if (!$m || !$this->acl->checkEntityEdit($m)) {
+            throw new Forbidden();
+        }
+        return (object) (new \Espo\Custom\Services\MeetInvite($this->config, $this->em, $this->user))->channels($m);
     }
 
     /** POST /CrmHub/meet/inviteMail. Usuario con acceso al registro. {scope, recId, url, name?}: envía por correo, con la plantilla de invitación (botón para unirse y agregar al calendario + .ics), el enlace personal de una videollamada en curso a un lead, contacto o cuenta. Hub: POST /v1/meet/invite. */

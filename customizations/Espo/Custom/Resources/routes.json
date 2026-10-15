@@ -358,6 +358,14 @@
         }
     },
     {
+        "route": "/CrmHub/meet/inviteInfo",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "meetInviteInfo"
+        }
+    },
+    {
         "route": "/CrmHub/meet/invitee",
         "method": "post",
         "params": {

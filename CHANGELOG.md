@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Reenviar la invitación por el canal que quieras y avisar cuando cambia la agenda
+- **Desde la reunión, «Enviar invitación al cliente» ahora te deja elegir el canal**: correo, **WhatsApp, SMS o Telegram** (uno o varios a la vez). Cada canal tiene su propia plantilla por defecto: el correo con diseño y botones de calendario; WhatsApp con los datos, el enlace y el enlace para agregarla a Google Calendar; SMS corto con fecha y enlace; Telegram con los datos y el enlace. Los canales que el cliente no tiene (sin correo o sin teléfono) salen deshabilitados y, tras enviar, ves el resultado de cada uno.
+- **Al editar una reunión con videollamada** (nombre, fecha u hora), después de guardar el CRM **te pregunta si quieres avisarle al cliente de la actualización** y por qué canal. El correo de actualización lleva el encabezado «Videollamada actualizada», el asunto «Actualización: …» y un .ics con la misma cita ya corregida, para que su calendario la reemplace en vez de duplicarla.
+
 ## [1.6.2] - 2026-10-15
 
 ### Invitaciones por correo con plantilla profesional
