@@ -1,0 +1,45 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex"><title>__TITLE__</title>
+<link rel="stylesheet" href="_/assets/room.css?v=__V__"></head><body>
+<div id="lobby"><div class="card"><h1>__TITLE__</h1><p>Revisa tu cámara y tu micrófono antes de entrar.</p>
+<div id="lf"><p id="hi" class="hide" style="font-size:17px;font-weight:600;margin:0 0 10px"></p><video id="prev" autoplay playsinline muted></video><input id="nm" type="text" placeholder="Tu nombre" maxlength="60" autocomplete="name">
+<div class="row"><button class="tg" id="tm">🎤 Micrófono: activado</button><button class="tg" id="tc">📷 Cámara: activada</button></div>
+<div id="lgs" class="hide"><div class="lg"><span>Yo hablo en</span><select id="sp"><option value="es">Español</option><option value="en">English</option></select></div><div class="lg"><span>Quiero leer los subtítulos en</span><select id="rd"><option value="es">Español</option><option value="en">English</option><option value="off">Sin subtítulos</option></select></div></div>
+<button class="go" id="go">Unirme a la videollamada</button><div id="err"></div><div id="note">Esta sala puede mostrar subtítulos en vivo. El audio no se graba ni se guarda.</div></div>
+<div id="wr" class="hide"><div class="sp"></div><p id="wrt" style="margin:14px 0 4px;font-weight:600"></p><p style="color:var(--mut);font-size:14px;margin:0 0 14px">No cierres esta ventana: entrarás en cuanto te den acceso.</p><button class="tg" id="wrx">Cancelar</button></div></div></div>
+
+<div id="room" class="hide">
+  <div id="top"><span id="ttl"></span><span class="tr"><button id="langb" class="pill hide" title="Idioma en que hablas y en el que lees los subtítulos">Subtítulos</button><span id="cnt"></span></span></div>
+  <div id="main">
+    <div id="stage"><div id="grid"></div><div id="subs"></div><div id="wait">Esperando a la otra persona…</div><div id="rx"></div><div id="toast"></div></div>
+    <aside id="side" class="hide">
+      <div class="stabs"><button data-t="people" class="on">Personas <b id="pbadge" class="hide">0</b></button><button data-t="chat">Chat <b id="cbadge" class="hide">0</b></button><button id="sx" title="Cerrar">✕</button></div>
+      <div id="p-people" class="pane">
+        <div id="reqs" class="hide"><h5>Solicitudes de ingreso <button id="admitall" class="mini">Admitir a todos</button></h5><div id="reqlist"></div></div>
+        <div class="inv"><button id="invb" class="mini big">➕ Invitar a más personas</button></div>
+        <h5>En la llamada</h5><div id="plist"></div>
+      </div>
+      <div id="p-chat" class="pane hide"><div id="msgs"><div class="ch-empty">Los mensajes, imágenes y archivos que compartas aquí los ven solo quienes están en la llamada.</div></div>
+        <div id="cform"><button id="attb" class="ib" title="Adjuntar un archivo o imagen">📎</button><input id="cin" type="text" placeholder="Escribe un mensaje" maxlength="2000" autocomplete="off"><button id="csend" class="ib pri" title="Enviar">➤</button><input id="cfile" type="file" class="hide"></div></div>
+    </aside>
+  </div>
+  <div id="bar">
+    <button class="cb" id="bm" title="Micrófono">🎤</button><button class="cb" id="bc" title="Cámara">📷</button><button class="cb" id="bs" title="Compartir pantalla">🖥️</button>
+    <button class="cb" id="bh" title="Levantar la mano">✋</button><button class="cb" id="br" title="Reacciones">😀</button>
+    <button class="cb hide on" id="bcc" title="Subtítulos">CC</button>
+    <button class="cb" id="bmore" title="Más opciones">⋮</button>
+    <button class="cb" id="bp" title="Personas">👥<b id="pcount">1</b></button><button class="cb" id="bch" title="Chat de la llamada">💬<b id="cdot" class="hide"></b></button>
+    <button class="cb end" id="be" title="Salir de la llamada">📞</button>
+  </div>
+  <div id="rxp" class="pop hide"><button>👍</button><button>👏</button><button>❤️</button><button>😂</button><button>😮</button><button>🎉</button></div>
+  <div id="lgp" class="pop hide"><h4>Subtítulos en vivo</h4><div class="lg"><span>Yo hablo en</span><select id="sp2"><option value="es">Español</option><option value="en">English</option></select></div><div class="lg"><span>Leer los subtítulos en</span><select id="rd2"><option value="es">Español</option><option value="en">English</option><option value="off">Sin subtítulos</option></select></div></div>
+  <div id="more" class="pop hide"></div>
+  <div id="bgp" class="pop wide hide"><h4>Fondos y efectos</h4><div id="bgl"></div><div id="bgm" class="mut"></div></div>
+  <div id="devp" class="pop wide hide"><h4>Audio y video</h4><div class="lg"><span>Micrófono</span><select id="d-mic"></select></div><div class="lg"><span>Cámara</span><select id="d-cam"></select></div><div class="lg"><span>Altavoces</span><select id="d-spk"></select></div></div>
+  <div id="invp" class="pop wide hide"><h4>Invitar a más personas</h4><p class="mut">Cada persona que entre con este enlace te pedirá acceso y tú decides si la admites.</p>
+    <div class="lg"><span>Enlace para invitados</span><div class="irow"><input id="invurl" type="text" readonly><button id="invcopy" class="mini">Copiar</button></div></div>
+    <div class="lg"><span>O enviarlo por correo</span><div class="irow"><input id="invto" type="text" placeholder="correo@ejemplo.com"><button id="invsend" class="mini">Enviar</button></div></div><div id="invmsg" class="mut"></div></div>
+</div>
+<script>window.__ROOM={code:"__CODE__",guest:__GUEST__,subs:__SUBS__,v:"__V__"};</script>
+<script src="_/lk.js"></script><script src="_/assets/room.js?v=__V__"></script>
+</body></html>

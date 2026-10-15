@@ -2,8 +2,9 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.5.4)
+## v1.5.5
 
+- `9aeedd6` 2026-10-13 — Versión 1.5.5
 - `98f50e8` 2026-10-13 — Changelog 1.5.5
 - `b73b1a3` 2026-10-13 — Agenda y recordatorios arriba en la ficha del cliente (citas, videollamadas, llamadas y tareas pendientes con botones para agendar)
 - `63a9e83` 2026-10-13 — Invitación por correo de videollamadas programadas (botón para unirse, agregar a Google/Outlook y .ics con recordatorios), recordatorios por defecto y aviso en el CRM antes de la reunión; las salas de reuniones se reabren con el mismo código

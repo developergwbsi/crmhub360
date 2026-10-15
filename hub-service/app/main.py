@@ -1627,6 +1627,114 @@ def meet_restore(req: MeetRestoreReq, tenant: dict = Depends(tenant_auth)):
         raise HTTPException(422, str(e))
 
 
+def _pkey(x_stt_key: str) -> str:
+    return x_stt_key
+
+
+class ChatPostReq(BaseModel):
+    """Mensaje del chat de la sala (texto y/o un archivo ya subido)."""
+    id: str
+    name: str = ""
+    text: str = ""
+    file: dict | None = None
+
+
+class MeetAdminReq(BaseModel):
+    """Acción del anfitrión sobre la sala o sobre un participante."""
+    host: str
+    action: str
+    identity: str = ""
+
+
+class MeetInviteMoreReq(BaseModel):
+    """Correo de otra persona a la que el anfitrión invita a la videollamada en curso."""
+    host: str
+    to: str
+
+
+@app.get("/v1/public/meet/{code}/chat")
+def meet_chat_get(code: str, x_stt_key: str = Header("")):
+    """Historial reciente del chat de la sala (para quien entra tarde)."""
+    try:
+        return JSONResponse({"items": meet.chat_history(code, x_stt_key)}, headers=_MEET_HEADERS)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+
+
+@app.post("/v1/public/meet/{code}/chat")
+def meet_chat_post(code: str, req: ChatPostReq, x_stt_key: str = Header("")):
+    """Guarda un mensaje del chat (el reparto en vivo va por el canal de datos de la sala)."""
+    try:
+        return JSONResponse({"ok": meet.chat_post(code, x_stt_key, req.id, req.name, req.text, req.file)}, headers=_MEET_HEADERS)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/public/meet/{code}/file")
+async def meet_file_post(code: str, request: Request, name: str = "archivo", type: str = "", x_stt_key: str = Header("")):
+    """Sube un archivo para compartirlo en el chat de la sala (hasta 10 MB)."""
+    try:
+        return JSONResponse(meet.file_save(code, x_stt_key, name, type or request.headers.get("content-type", ""), await request.body()), headers=_MEET_HEADERS)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/v1/public/meet/{code}/file/{fid}")
+def meet_file_get(code: str, fid: str):
+    """Descarga o muestra un archivo compartido (las imágenes se ven en línea; lo demás se descarga)."""
+    f = meet.file_get(code, fid)
+    if not f:
+        raise HTTPException(404, "El archivo ya no está disponible.")
+    data, mime, name = f
+    inline = mime.startswith("image/")
+    from urllib.parse import quote
+    return Response(data, media_type=mime, headers={"Content-Disposition": f"{'inline' if inline else 'attachment'}; filename*=UTF-8''{quote(name)}", "X-Content-Type-Options": "nosniff",
+                                                    "Content-Security-Policy": "sandbox; default-src 'none'", "Cache-Control": "private, max-age=3600"})
+
+
+@app.post("/v1/public/meet/{code}/admin")
+def meet_admin(code: str, req: MeetAdminReq):
+    """Controles del anfitrión: silenciar, quitar, bloquear la sala o terminar la llamada."""
+    try:
+        return JSONResponse(meet.admin(code, req.host, req.action, req.identity), headers=_MEET_HEADERS)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, "No se pudo completar la acción.")
+
+
+@app.post("/v1/public/meet/{code}/invite")
+async def meet_invite_more(code: str, req: MeetInviteMoreReq):
+    """El anfitrión invita por correo a otra persona a la videollamada en curso."""
+    r = meet.room(code)
+    if not r:
+        raise HTTPException(404, "Esta videollamada ya terminó.")
+    try:
+        return JSONResponse(await meet.invite_more(db.get_tenant(r["tenant"]), code, req.host, req.to), headers=_MEET_HEADERS)
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except LookupError as e:
+        raise HTTPException(409, str(e))
+    except Exception as e:
+        raise HTTPException(502, "No se pudo enviar el correo.")
+
+
 class MeetInviteReq(BaseModel):
     """Datos de una videollamada programada para invitar al cliente por correo."""
     to: str
@@ -1695,6 +1803,15 @@ def meet_end(code: str, tenant: dict = Depends(tenant_auth)):
 _MEET_HEADERS = {"Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "Permissions-Policy": "camera=(self), microphone=(self), display-capture=(self)"}
 
 
+@app.get("/v1/public/meet/_/assets/{name:path}")
+def meet_asset(name: str):
+    """Archivos estáticos de la sala: página (js y css), fondos virtuales y segmentación de persona (alojados aquí, sin servicios de terceros)."""
+    a = meet.asset(name)
+    if not a:
+        raise HTTPException(404, "No existe.")
+    return Response(a[0], media_type=a[1], headers={"Cache-Control": "public, max-age=3600"})
+
+
 @app.get("/v1/public/meet/_/lk.js")
 def meet_js():
     """Cliente de LiveKit para la página de la videollamada."""
@@ -1726,8 +1843,9 @@ async def meet_subtitle(code: str, request: Request, lang: str = "es", x_stt_key
 
 
 class KnockReq(BaseModel):
-    """El invitado pide entrar a la sala."""
+    """El invitado pide entrar a la sala (extra: entra por una invitación adicional y escribió su propio nombre)."""
     name: str = ""
+    extra: bool = False
 
 
 class DecideReq(BaseModel):
@@ -1741,11 +1859,13 @@ class DecideReq(BaseModel):
 def meet_knock(code: str, req: KnockReq, bg: BackgroundTasks):
     """El invitado pide entrar: espera a que el anfitrión lo admita (y se le avisa al anfitrión aunque no esté dentro)."""
     try:
-        res = meet.knock(code, req.name)
+        res = meet.knock(code, req.name, req.extra)
         bg.add_task(meet.notify_knock, code, (req.name or "Un cliente").strip()[:60] or "Un cliente")
         return JSONResponse(res, headers=_MEET_HEADERS)
     except LookupError as e:
         raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(423, str(e))
     except ValueError as e:
         raise HTTPException(429, str(e))
 

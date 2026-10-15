@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Sala de videollamada al nivel de Meet o Zoom
+- **Más personas en una llamada ya iniciada**: «Invitar a más personas» (enlace para copiar o envío por correo); cada invitado escribe su nombre y espera la admisión del anfitrión. Capacidad de la sala: 12 personas (aplica al reiniciar el servidor de video).
+- **Pantalla compartida en grande y centrada**, con los participantes en una columna lateral (también al fijar a alguien con 📌, o con la «vista de orador»).
+- **Panel lateral con Personas y Chat**: las **solicitudes de ingreso** aparecen en el panel (y como aviso con «Admitir / Rechazar» y sonido), con «Admitir a todos»; la lista de participantes muestra quién tiene el micrófono apagado o la mano levantada.
+- **Chat interno** con mensajes, **enlaces clicables**, **imágenes con vista previa** y **archivos** (hasta 10 MB; sin ejecutables; se pegan con Ctrl+V o se arrastran), con historial para quien entra tarde.
+- **Fondos virtuales** (desenfoque suave o fuerte, 6 fondos predefinidos o tu propia imagen) con segmentación de persona que corre en el navegador: nada sale de tu equipo.
+- Además: **levantar la mano**, **reacciones**, resaltado de quien habla, **selección de micrófono, cámara y altavoces**, cancelación de ruido, pantalla completa, y controles del anfitrión (silenciar a uno o a todos, quitar a alguien, **bloquear la sala**, terminar para todos).
+
 ## [1.5.5] - 2026-10-14
 
 ### Agenda y recordatorios

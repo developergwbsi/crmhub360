@@ -8,6 +8,6 @@ rtc:
   use_external_ip: true
 room:
   empty_timeout: 300
-  max_participants: 6
+  max_participants: 12
 logging:
   level: info

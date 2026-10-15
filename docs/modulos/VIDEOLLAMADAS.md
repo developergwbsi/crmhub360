@@ -39,6 +39,13 @@ La opción se guarda en `settings.limits.meet` de la empresa (lo que el Hub cons
 - `restore` (`POST /v1/meet/rooms/restore`): si la sala de una reunión no existe en el Hub, `CrmHub/meet/host` y el aviso la reabren con el mismo código.
 - La ficha abre con la **agenda** (`custom:agenda`, `GET CrmHub/agenda`): citas, llamadas y tareas pendientes del registro y botones para agendar.
 
+## La sala (`hub-service/app/meet_assets/`)
+La página es `room.html` + `room.css` + `room.js` (se sirven en `https://meet.<dominio>/_/assets/…`), con el cliente de LiveKit (`livekit-client.umd.min.js`) y la segmentación de persona de MediaPipe (`mp/`, alojada aquí) para los fondos virtuales (`bg/*.svg` son los predefinidos).
+- **Personas y solicitudes**: panel lateral; las solicitudes se consultan con `GET …/pending` y se resuelven con `POST …/decide`.
+- **Chat**: mensajes por el canal de datos de LiveKit (`k:'chat'`) y guardados en `meet_chat` (`GET/POST …/chat`, llave del participante) para el historial; archivos en `meet_files` (`POST …/file`, `GET …/file/{id}`, 10 MB, sin ejecutables ni HTML/SVG; se borran a los 3 días).
+- **Anfitrión** (`POST …/admin` con la clave de anfitrión): `mute`, `mute_all`, `remove`, `lock`/`unlock`, `end` (usa el API de servidor de LiveKit). Invitar a más personas: `POST …/invite` (correo) y enlace `?i=1` (el invitado escribe su nombre).
+- Mano levantada: atributos del participante; reacciones: mensajes de datos; fondos: procesador de pista local (`BgProcessor`).
+
 ## Flujo
 1. El asesor pulsa **Videollamada** en el lead → `POST CrmHub/meet/create` → `POST /v1/meet/rooms` del Hub.
 2. Se devuelve `guestUrl` (`https://meet.<dominio>/<código>`) y `hostUrl` (el mismo con `?h=<clave>`; la clave de anfitrión solo la ve quien crea la sala).

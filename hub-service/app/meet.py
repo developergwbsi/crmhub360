@@ -33,6 +33,11 @@ CREATE TABLE IF NOT EXISTS meet_rooms (
     first_join_at TIMESTAMPTZ, host_lang TEXT NOT NULL DEFAULT 'es', guest_lang TEXT NOT NULL DEFAULT 'en', subtitles BOOLEAN NOT NULL DEFAULT false);
 CREATE INDEX IF NOT EXISTS meet_rooms_tenant ON meet_rooms (tenant, created_at DESC);
 ALTER TABLE meet_rooms ADD COLUMN IF NOT EXISTS guest_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE meet_rooms ADD COLUMN IF NOT EXISTS locked BOOLEAN NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS meet_chat (id TEXT PRIMARY KEY, code TEXT NOT NULL, ident TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '', text TEXT NOT NULL DEFAULT '', file JSONB, at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS meet_chat_code ON meet_chat (code, at);
+CREATE TABLE IF NOT EXISTS meet_files (id TEXT PRIMARY KEY, code TEXT NOT NULL, name TEXT NOT NULL, mime TEXT NOT NULL, size INT NOT NULL, data BYTEA NOT NULL, at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS meet_files_code ON meet_files (code);
 CREATE TABLE IF NOT EXISTS meet_knocks (id TEXT PRIMARY KEY, code TEXT NOT NULL, name TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'waiting', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), decided_at TIMESTAMPTZ);
 CREATE INDEX IF NOT EXISTS meet_knocks_code ON meet_knocks (code, status);
 """
@@ -72,7 +77,7 @@ def sign(identity: str, name: str, room: str, host: bool, ttl: int = 4 * 3600) -
     """JWT de acceso a una sala de LiveKit (HS256). El anfitrión además puede administrar la sala (expulsar, cerrar)."""
     now = int(time.time())
     claims = {"iss": os.environ["LIVEKIT_API_KEY"], "sub": identity, "name": name, "nbf": now - 10, "exp": now + ttl,
-              "video": {"room": room, "roomJoin": True, "canPublish": True, "canSubscribe": True, "canPublishData": True, **({"roomAdmin": True} if host else {})}}
+              "video": {"room": room, "roomJoin": True, "canPublish": True, "canSubscribe": True, "canPublishData": True, "canUpdateOwnMetadata": True, **({"roomAdmin": True} if host else {})}}
     head = _b64(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
     body = _b64(json.dumps(claims, separators=(",", ":")).encode())
     sig = hmac.new(os.environ["LIVEKIT_API_SECRET"].encode(), f"{head}.{body}".encode(), hashlib.sha256).digest()
@@ -126,7 +131,7 @@ def _payload(r: dict, name: str, is_host: bool) -> dict:
         c.execute("UPDATE meet_rooms SET first_join_at = COALESCE(first_join_at, now()) WHERE code = %s", (r["code"],))
     return {"token": sign(ident, name, f"{r['tenant']}-{r['code']}", is_host), "url": "wss://" + os.environ["MEET_HOST"], "name": name, "host": is_host,
             "title": r["title"], "subtitles": bool(STT_URL) and mode(r["tenant"]) == "video_subs", "myLang": r["host_lang"] if is_host else r["guest_lang"],
-            "langs": ["es", "en"], "sttKey": stt_key(r["code"], ident)}
+            "langs": ["es", "en"], "locked": bool(r.get("locked")), "sttKey": stt_key(r["code"], ident)}
 
 
 def _live(code: str) -> dict:
@@ -148,10 +153,12 @@ def join(code: str, name: str, host_key: str = "") -> dict:
     return _payload(r, name, True)
 
 
-def knock(code: str, name: str) -> dict:
+def knock(code: str, name: str, extra: bool = False) -> dict:
     """El invitado pide entrar: queda esperando hasta que el anfitrión lo admita o lo rechace."""
     r = _live(code)
-    name = (r.get("guest_name") or name or "").strip()[:60] or "Invitado"   # si la sala es de un cliente conocido, se usa su nombre del CRM
+    if r.get("locked"):
+        raise PermissionError("El anfitrión bloqueó la sala: no admite más personas por ahora.")
+    name = ((name if extra else (r.get("guest_name") or name)) or "").strip()[:60] or "Invitado"   # si la sala es de un cliente conocido, se usa su nombre del CRM (salvo quien entra por una invitación adicional)
     kid = secrets.token_hex(6)
     with db.pool.connection() as c:
         c.execute("DELETE FROM meet_knocks WHERE created_at < now() - interval '1 day'")
@@ -483,185 +490,140 @@ def client_js() -> bytes:
     return (ASSETS / "livekit-client.umd.min.js").read_bytes()
 
 
+# ---------------- chat, archivos y controles del anfitrión de la sala
+FILE_OK = re.compile(r"^(image/(png|jpe?g|gif|webp)|application/pdf|text/plain|text/csv|application/(zip|x-zip-compressed|msword|vnd\.[\w.+-]+)|audio/[\w.+-]+|video/(mp4|webm|quicktime))$", re.I)
+FILE_BAD = re.compile(r"\.(exe|bat|cmd|com|scr|msi|js|jse|vbs|ps1|sh|jar|html?|svg|php)$", re.I)
+MAX_FILE = 10 * 1024 * 1024
+
+
+def _ident(code: str, key: str) -> str:
+    if not stt_key_ok(code, key):
+        raise PermissionError("Llave inválida.")
+    return key.split(".")[0]
+
+
+def chat_history(code: str, key: str) -> list[dict]:
+    """Últimos mensajes del chat de la sala (para quien entra tarde)."""
+    _live(code); _ident(code, key)
+    with db.pool.connection() as c:
+        rows = c.execute("SELECT id, ident, name, text, file, at FROM meet_chat WHERE code = %s ORDER BY at DESC LIMIT 100", (code,)).fetchall()
+    return [{"id": x["id"], "i": x["ident"], "n": x["name"], "t": x["text"], "f": x["file"], "at": x["at"].isoformat()} for x in reversed(rows)]
+
+
+def chat_post(code: str, key: str, mid: str, name: str, text: str, file: dict | None) -> bool:
+    """Guarda un mensaje del chat (el reparto en vivo lo hace el canal de datos de LiveKit)."""
+    _live(code); ident = _ident(code, key)
+    if not re.match(r"^[A-Za-z0-9_-]{6,40}$", mid or "") or not ((text or "").strip() or file):
+        raise ValueError("Mensaje no válido.")
+    with db.pool.connection() as c:
+        if c.execute("SELECT count(*) n FROM meet_chat WHERE code = %s", (code,)).fetchone()["n"] >= 1000:
+            raise ValueError("El chat de esta sala llegó a su límite.")
+        c.execute("INSERT INTO meet_chat (id, code, ident, name, text, file) VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (id) DO NOTHING", (mid, code, ident, (name or "")[:60], (text or "")[:4000], json.dumps(file) if file else None))
+    return True
+
+
+def file_save(code: str, key: str, name: str, mime: str, data: bytes) -> dict:
+    """Guarda un archivo compartido en el chat (hasta 10 MB, sin ejecutables) y devuelve su dirección."""
+    _live(code); _ident(code, key)
+    name = re.sub(r"[\r\n\\/]", "_", (name or "archivo"))[:120]
+    mime = (mime or "application/octet-stream").split(";")[0].strip().lower()
+    if not data or len(data) > MAX_FILE:
+        raise ValueError("El archivo está vacío o pesa más de 10 MB.")
+    if FILE_BAD.search(name) or not FILE_OK.match(mime):
+        raise ValueError("Ese tipo de archivo no se puede compartir (imágenes, PDF, documentos, audio, video y comprimidos sí).")
+    fid = secrets.token_urlsafe(14)
+    with db.pool.connection() as c:
+        c.execute("DELETE FROM meet_files WHERE at < now() - interval '3 days'")
+        c.execute("DELETE FROM meet_chat WHERE at < now() - interval '3 days'")
+        if c.execute("SELECT count(*) n FROM meet_files WHERE code = %s", (code,)).fetchone()["n"] >= 40:
+            raise ValueError("Esta sala llegó al máximo de archivos compartidos.")
+        c.execute("INSERT INTO meet_files (id, code, name, mime, size, data) VALUES (%s,%s,%s,%s,%s,%s)", (fid, code, name, mime, len(data), data))
+    return {"id": fid, "name": name, "type": mime, "size": len(data), "url": f"file/{fid}"}
+
+
+def file_get(code: str, fid: str) -> tuple[bytes, str, str] | None:
+    """(contenido, tipo, nombre) de un archivo compartido de una sala vigente."""
+    if not room(code):
+        return None
+    with db.pool.connection() as c:
+        r = c.execute("SELECT name, mime, data FROM meet_files WHERE id = %s AND code = %s", (fid, code)).fetchone()
+    return (bytes(r["data"]), r["mime"], r["name"]) if r else None
+
+
+def admin(code: str, host_key: str, action: str, identity: str = "") -> dict:
+    """Controles del anfitrión: silenciar a alguien o a todos, quitar a alguien, bloquear o desbloquear la sala, terminarla para todos."""
+    r = _live(code)
+    if not _is_host(r, host_key):
+        raise PermissionError("Solo el anfitrión.")
+    name = f"{r['tenant']}-{code}"
+    if action in ("mute", "mute_all"):
+        ps = _livekit("ListParticipants", {"room": name}, name).get("participants", [])
+        n = 0
+        for p in ps:
+            if str(p.get("identity", "")).startswith("h-") or (action == "mute" and p.get("identity") != identity):
+                continue
+            for t in p.get("tracks", []):
+                if str(t.get("type", "")).upper() in ("AUDIO", "0") and not t.get("muted"):
+                    _livekit("MutePublishedTrack", {"room": name, "identity": p["identity"], "trackSid": t["sid"], "muted": True}, name); n += 1
+        return {"muted": n}
+    if action == "remove" and identity:
+        _livekit("RemoveParticipant", {"room": name, "identity": identity}, name)
+        return {"ok": True}
+    if action in ("lock", "unlock"):
+        with db.pool.connection() as c:
+            c.execute("UPDATE meet_rooms SET locked = %s WHERE code = %s", (action == "lock", code))
+        return {"locked": action == "lock"}
+    if action == "end":
+        with db.pool.connection() as c:
+            c.execute("UPDATE meet_rooms SET ended_at = now() WHERE code = %s", (code,))
+        try:
+            _livekit("DeleteRoom", {"room": name}, name)
+        except Exception as e:
+            log.warning("cerrar sala en LiveKit: %s", str(e)[:100])
+        return {"ended": True}
+    raise ValueError("Acción no válida.")
+
+
+async def invite_more(tenant: dict, code: str, host_key: str, to: str) -> dict:
+    """El anfitrión invita por correo a otra persona a la videollamada en curso (entra por el enlace y espera a que la admitan)."""
+    from . import mailout
+    r = _live(code)
+    if not _is_host(r, host_key):
+        raise PermissionError("Solo el anfitrión.")
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", to or ""):
+        raise ValueError("Escribe un correo válido.")
+    url = f"{public_base()}/{code}?i=1"
+    e = _html.escape
+    html = (f'<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#1c2233;line-height:1.5"><p>Hola,</p><p><b>{e(r["host_name"] or "Tu anfitrión")}</b> te invita a unirte a la videollamada <b>{e(r["title"] or "")}</b>.</p>'
+            f'<p style="margin:18px 0"><a href="{e(url)}" style="display:inline-block;padding:12px 22px;border-radius:10px;background:#3a52e0;color:#fff;font-weight:600;text-decoration:none">Unirme a la videollamada</a></p>'
+            f'<p style="color:#5d6678;font-size:13px">No necesitas instalar nada ni crear una cuenta. Escribe tu nombre al entrar y el anfitrión te dará acceso en unos segundos.</p></div>')
+    await mailout.send(tenant, {"userId": r["created_by"] or "", "userName": r["host_name"] or "", "to": to, "subject": f"Invitación a la videollamada: {r['title'] or 'Videollamada'}", "html": html, "record": False})
+    return {"ok": True}
+
+
+ASSETS_OK = {"room.js": "text/javascript", "room.css": "text/css"}
+
+
+def asset(name: str) -> tuple[bytes, str] | None:
+    """Archivo estático de la sala (js, css, fondos y la segmentación de persona para fondos virtuales)."""
+    types = {".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".wasm": "application/wasm", ".tflite": "application/octet-stream", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg"}
+    p = (ASSETS / name).resolve()
+    if not str(p).startswith(str(ASSETS.resolve())) or not p.is_file() or p.suffix not in types:
+        return None
+    return p.read_bytes(), types[p.suffix]
+
+
 def page(code: str) -> str:
-    """Página de la videollamada: entrada (nombre, cámara y micrófono), sala con video y controles."""
+    """Página de la videollamada: entrada (nombre, cámara y micrófono), sala con video, chat, personas y controles."""
     r = room(code)
     if not r:
         return _PAGE_END
     subs = bool(STT_URL) and mode(r["tenant"]) == "video_subs"
-    return _PAGE.replace("__CODE__", code).replace("__TITLE__", (r["title"] or "Videollamada").replace("<", "&lt;")).replace("__SUBS__", "true" if subs else "false").replace("__GUEST__", json.dumps(r.get("guest_name") or "").replace("<", "\\u003c"))
+    html = (ASSETS / "room.html").read_text(encoding="utf-8")
+    return (html.replace("__CODE__", code).replace("__TITLE__", (r["title"] or "Videollamada").replace("<", "&lt;")).replace("__SUBS__", "true" if subs else "false")
+            .replace("__GUEST__", json.dumps(r.get("guest_name") or "").replace("<", "\\u003c")).replace("__V__", str(int(ASSETS.joinpath("room.js").stat().st_mtime)) if ASSETS.joinpath("room.js").exists() else "0"))
 
 
 _PAGE_END = """<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Videollamada</title>
 <style>body{font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f1424;color:#e9ecf8}.c{text-align:center;padding:24px;max-width:380px}h1{font-size:20px}p{color:#aab1cc}</style></head>
 <body><div class="c"><h1>Esta videollamada ya terminó</h1><p>El enlace venció o la sala se cerró. Pide a tu asesor un enlace nuevo.</p></div></body></html>"""
-
-_PAGE = r"""<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex"><title>__TITLE__</title>
-<style>
-:root{--bg:#0f1424;--panel:#181f36;--line:#2a3354;--tx:#e9ecf8;--mut:#aab1cc;--pri:#4f6bff;--bad:#e5484d;--ok:#30a46c}
-*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--bg);color:var(--tx);font:16px system-ui,-apple-system,Segoe UI,sans-serif}
-button{font:inherit;cursor:pointer}.hide{display:none!important}
-#lobby{min-height:100%;display:grid;place-items:center;padding:20px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;width:100%;max-width:440px}
-.card h1{font-size:20px;margin:0 0 4px}.card p{margin:0 0 14px;color:var(--mut);font-size:14px}
-#prev{width:100%;aspect-ratio:4/3;border-radius:12px;background:#0a0e1c;object-fit:cover;transform:scaleX(-1)}
-input[type=text]{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0f1527;color:var(--tx);font:inherit;margin:12px 0}
-.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.tg{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:#0f1527;color:var(--tx)}.tg.off{background:#3a1d24;border-color:#6b2a35}
-.go{width:100%;padding:13px;border:0;border-radius:10px;background:var(--pri);color:#fff;font-weight:600}.go:disabled{opacity:.5}
-#err{color:#ff9aa0;font-size:14px;margin-top:10px}
-#room{position:fixed;inset:0;display:flex;flex-direction:column}#top{padding:10px 14px;color:var(--mut);font-size:14px;display:flex;justify-content:space-between}
-#grid{flex:1;display:grid;gap:8px;padding:8px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));grid-auto-rows:1fr;min-height:0}
-.tile{position:relative;background:#0a0e1c;border-radius:12px;overflow:hidden;min-height:140px}.tile video{width:100%;height:100%;object-fit:cover}.tile.me video{transform:scaleX(-1)}
-.tile.share video{object-fit:contain}.nm{position:absolute;left:8px;bottom:8px;background:#000a;padding:3px 8px;border-radius:8px;font-size:13px}
-.av{position:absolute;inset:0;display:grid;place-items:center;font-size:42px;color:var(--mut);background:#10162a}
-#bar{display:flex;justify-content:center;gap:10px;padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
-.cb{width:52px;height:52px;border-radius:50%;border:0;background:#26304f;color:#fff;font-size:20px}.cb.off{background:#5a2330}.cb.end{background:var(--bad)}
-#subs{position:absolute;left:0;right:0;bottom:84px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 12px;pointer-events:none}
-.sl{background:#000c;border-radius:10px;padding:6px 12px;max-width:min(780px,94vw);font-size:17px;line-height:1.3}.sl b{color:#9db0ff;font-size:13px;display:block}.sl small{display:block;color:var(--mut);font-size:13px;margin-top:2px}
-#bcc.on{background:var(--pri)}#pend{position:absolute;top:44px;right:12px;z-index:5;display:flex;flex-direction:column;gap:8px;max-width:min(360px,92vw)}.pq{background:#1d2650;border:1px solid var(--pri);border-radius:12px;padding:10px 12px;font-size:14px}.pq button{margin:8px 6px 0 0;padding:6px 12px;border-radius:8px;border:0;background:var(--pri);color:#fff;font-weight:600}.pq button.no{background:#3a1d24}
-#langb{border:1px solid var(--line);background:#1d2650;color:var(--tx);border-radius:999px;padding:4px 12px;font:inherit;font-size:13px;margin-right:8px}#lgp h4{margin:0 0 8px;font-size:14px}
-#lobby{overflow:auto}
-#lgp{position:absolute;bottom:84px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;z-index:6;min-width:250px}
-.lg{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mut);margin-bottom:8px}.lg select{padding:9px;border-radius:9px;border:1px solid var(--line);background:#0f1527;color:var(--tx);font:inherit}
-#wr{text-align:center;padding:18px 0}#wr .sp{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--pri);border-radius:50%;display:inline-block;animation:r 1s linear infinite}@keyframes r{to{transform:rotate(360deg)}}
-#note{color:var(--mut);font-size:12px;margin-top:10px}
-#wait{position:absolute;inset:0;display:grid;place-items:center;color:var(--mut);text-align:center;pointer-events:none;padding:30px}
-</style></head><body>
-<div id="lobby"><div class="card"><h1>__TITLE__</h1><p>Revisa tu cámara y tu micrófono antes de entrar.</p>
-<div id="lf"><p id="hi" class="hide" style="font-size:17px;font-weight:600;margin:0 0 10px"></p><video id="prev" autoplay playsinline muted></video><input id="nm" type="text" placeholder="Tu nombre" maxlength="60" autocomplete="name">
-<div class="row"><button class="tg" id="tm">🎤 Micrófono: activado</button><button class="tg" id="tc">📷 Cámara: activada</button></div>
-<div id="lgs" class="hide"><div class="lg"><span>Yo hablo en</span><select id="sp"><option value="es">Español</option><option value="en">English</option></select></div><div class="lg"><span>Quiero leer los subtítulos en</span><select id="rd"><option value="es">Español</option><option value="en">English</option><option value="off">Sin subtítulos</option></select></div></div><button class="go" id="go">Unirme a la videollamada</button><div id="err"></div><div id="note">Esta sala puede mostrar subtítulos en vivo. El audio no se graba ni se guarda.</div></div><div id="wr" class="hide"><div class="sp"></div><p id="wrt" style="margin:14px 0 4px;font-weight:600"></p><p style="color:var(--mut);font-size:14px;margin:0 0 14px">No cierres esta ventana: entrarás en cuanto te den acceso.</p><button class="tg" id="wrx">Cancelar</button></div></div></div>
-<div id="room" class="hide"><div id="top"><span id="ttl"></span><span><button id="langb" class="hide" title="Elige el idioma en que hablas y en el que quieres leer los subtítulos">Subtítulos</button> <span id="cnt"></span></span></div><div id="grid"></div><div id="pend"></div><div id="subs"></div><div id="lgp" class="hide"><h4>Subtítulos en vivo</h4><div class="lg"><span>Yo hablo en</span><select id="sp2"><option value="es">Español</option><option value="en">English</option></select></div><div class="lg"><span>Leer los subtítulos en</span><select id="rd2"><option value="es">Español</option><option value="en">English</option><option value="off">Sin subtítulos</option></select></div></div><div id="wait">Esperando a la otra persona…</div>
-<div id="bar"><button class="cb" id="bm" title="Micrófono">🎤</button><button class="cb" id="bc" title="Cámara">📷</button><button class="cb hide on" id="bcc" title="Subtítulos: idioma que hablo y en el que leo">CC</button><button class="cb" id="bs" title="Compartir pantalla">🖥️</button><button class="cb end" id="be" title="Salir">⏻</button></div></div>
-<script src="_/lk.js"></script>
-<script>
-(function(){
-var GUEST=__GUEST__, SUBS=__SUBS__, CODE="__CODE__", HK=new URLSearchParams(location.search).get('h')||'', $=function(i){return document.getElementById(i)};
-var mic=true, cam=true, stream=null, room=null, L=window.LivekitClient;
-try{ $('nm').value=localStorage.getItem('meet-name')||''; }catch(e){}
-function err(t){ $('err').textContent=t||''; }
-function paint(){ $('tm').textContent='🎤 Micrófono: '+(mic?'activado':'apagado'); $('tm').classList.toggle('off',!mic); $('tc').textContent='📷 Cámara: '+(cam?'activada':'apagada'); $('tc').classList.toggle('off',!cam); }
-$('tm').onclick=function(){mic=!mic;paint()}; $('tc').onclick=function(){cam=!cam;paint(); if(stream){stream.getVideoTracks().forEach(function(t){t.enabled=cam})}};
-if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
-  navigator.mediaDevices.getUserMedia({video:true,audio:true}).then(function(s){stream=s;$('prev').srcObject=s}).catch(function(){ err('No pudimos usar la cámara o el micrófono. Revisa los permisos del navegador; igual puedes entrar a escuchar.'); });
-} else { err('Tu navegador no permite videollamadas. Abre el enlace en Chrome, Safari o Edge actualizados.'); }
-paint();
-function initials(n){return (n||'?').trim().charAt(0).toUpperCase()}
-function tileFor(p,local){
-  var id='t-'+p.identity+(local?'-me':''); var t=$(id); if(t){return t}
-  t=document.createElement('div'); t.className='tile'+(local?' me':''); t.id=id;
-  t.innerHTML='<div class="av">'+initials(p.name)+'</div><div class="nm"></div>'; t.querySelector('.nm').textContent=(p.name||'Invitado')+(local?' (tú)':'');
-  $('grid').appendChild(t); return t;
-}
-function attach(track,p,local){
-  if(track.kind==='video'){ var t=tileFor(p,local), share=track.source==='screen_share'; if(share){t=document.createElement('div');t.className='tile share';t.id='s-'+p.identity;t.innerHTML='<div class="nm"></div>';t.querySelector('.nm').textContent='Pantalla de '+(p.name||'');$('grid').appendChild(t)}
-    var v=t.querySelector('video'); if(!v){v=document.createElement('video');v.autoplay=true;v.playsInline=true;if(local){v.muted=true}t.insertBefore(v,t.firstChild)} track.attach(v); var av=t.querySelector('.av'); if(av){av.classList.add('hide')} }
-  else if(!local){ var a=track.attach(); a.id='a-'+track.sid; document.body.appendChild(a); }
-}
-function detach(track,p){
-  track.detach().forEach(function(e){ if(e.tagName==='AUDIO'){e.remove()} });
-  if(track.kind==='video'){ if(track.source==='screen_share'){var s=$('s-'+p.identity);if(s){s.remove()}} else {var t=$('t-'+p.identity); if(t){var av=t.querySelector('.av'); if(av){av.classList.remove('hide')} var v=t.querySelector('video'); if(v){v.remove()}}} }
-}
-function err2(t){ var w=$('wait'); w.textContent=t; w.classList.remove('hide'); }
-function count(){ var n=room?room.remoteParticipants.size+1:0; $('cnt').textContent=n+(n===1?' persona':' personas'); $('wait').classList.toggle('hide', n>1); }
-
-// ---- subtítulos en vivo: cada persona detecta cuándo habla, manda la frase al servidor (voz a texto + traducción locales) y la reparte por el canal de datos
-var J=null, subsShow=true, capCtx=null, lines=[];
-function showLine(name,m,mine){
-  if(J.read==='off'){return}
-  var txt=mine?m.t:(m.l===J.read?m.t:(m.tr&&m.tr[J.read])||m.t), orig=(!mine&&txt!==m.t)?m.t:'';
-  var el=document.createElement('div'); el.className='sl'; var b=document.createElement('b'); b.textContent=name; var d=document.createElement('span'); d.textContent=txt; el.appendChild(b); el.appendChild(d);
-  if(orig){ var o=document.createElement('small'); o.textContent=orig; el.appendChild(o); }
-  $('subs').appendChild(el); lines.push(el); while(lines.length>3){ var x=lines.shift(); if(x.parentNode){x.parentNode.removeChild(x)} }
-  setTimeout(function(){ if(el.parentNode){el.parentNode.removeChild(el)} lines=lines.filter(function(q){return q!==el}) }, 4000+txt.length*60);
-}
-function wavOf(chunks,rate){
-  var n=0; chunks.forEach(function(c){n+=c.length}); var all=new Float32Array(n), o=0; chunks.forEach(function(c){all.set(c,o);o+=c.length});
-  var ratio=rate/16000, len=Math.floor(n/ratio), pcm=new Int16Array(len);
-  for(var i=0;i<len;i++){ var a=Math.floor(i*ratio), b=Math.min(n,Math.floor((i+1)*ratio)), sum=0, k=0; for(var j=a;j<b;j++){sum+=all[j];k++} var v=k?sum/k:0; v=Math.max(-1,Math.min(1,v)); pcm[i]=v<0?v*32768:v*32767; }
-  var buf=new ArrayBuffer(44+len*2), dv=new DataView(buf); function w(off,str){for(var q=0;q<str.length;q++){dv.setUint8(off+q,str.charCodeAt(q))}}
-  w(0,'RIFF');dv.setUint32(4,36+len*2,true);w(8,'WAVE');w(12,'fmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);dv.setUint32(24,16000,true);dv.setUint32(28,32000,true);dv.setUint16(32,2,true);dv.setUint16(34,16,true);w(36,'data');dv.setUint32(40,len*2,true);
-  for(var m=0;m<len;m++){dv.setInt16(44+m*2,pcm[m],true)} return new Blob([buf],{type:'audio/wav'});
-}
-function sendSub(blob){
-  fetch(CODE+'/stt?lang='+J.speak,{method:'POST',headers:{'X-Stt-Key':J.sttKey},body:blob}).then(function(r){return r.ok?r.json():null}).then(function(r){
-    if(!r||!r.text){return}
-    if(subsShow){ showLine('Tú',{t:r.text,l:r.lang},true) }
-    try{ room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({k:'sub',n:J.name,l:r.lang,t:r.text,tr:r.tr||{}})),{reliable:true}); }catch(e){}
-  }).catch(function(){});
-}
-function hookMic(mt){
-  if(!J||!J.subtitles||capCtx||!mt){return}
-  var AC=window.AudioContext||window.webkitAudioContext; if(!AC){return}
-  capCtx=new AC(); var rate=capCtx.sampleRate, src=capCtx.createMediaStreamSource(new MediaStream([mt])), proc=capCtx.createScriptProcessor(4096,1,1); src.connect(proc); proc.connect(capCtx.destination);
-  var pre=[], cur=[], speaking=false, voiced=0, silent=0, seg=0;
-  function flush(){ var ok=voiced>=400; var c=cur; cur=[]; speaking=false; voiced=0; silent=0; seg=0; if(ok){ sendSub(wavOf(c,rate)); } }
-  proc.onaudioprocess=function(e){
-    var d=e.inputBuffer.getChannelData(0), s=0; for(var i=0;i<d.length;i++){s+=d[i]*d[i]} var rms=Math.sqrt(s/d.length), ms=d.length/rate*1000, copy=new Float32Array(d);
-    var loud=rms>0.012;
-    if(!speaking){ pre.push(copy); if(pre.length>2){pre.shift()} if(loud){ voiced+=ms; if(voiced>=120){ speaking=true; cur=pre.slice(); pre=[]; seg=cur.length*ms; silent=0; } } else { voiced=0 } return; }
-    cur.push(copy); seg+=ms; if(loud){ voiced+=ms; silent=0 } else { silent+=ms }
-    if(silent>=700||seg>=12000){ flush() }
-  };
-}
-function sels(){ return {sp:$('sp'),rd:$('rd')}; }
-if(SUBS){ $('lgs').classList.remove('hide'); }
-if(GUEST&&!HK){ $('nm').classList.add('hide'); $('nm').value=GUEST; $('hi').textContent='Hola, '+GUEST.split(' ')[0]; $('hi').classList.remove('hide'); }
-(function(){ var sp='', rd=''; try{ sp=localStorage.getItem('meet-speak')||''; rd=localStorage.getItem('meet-read')||'' }catch(e){} sp=sp||(HK?'es':'en'); rd=rd||sp; $('sp').value=sp; $('rd').value=rd; })();
-$('sp').onchange=function(){ if($('rd').dataset.t!=='1'){ $('rd').value=$('sp').value } }; $('rd').onchange=function(){ $('rd').dataset.t='1' };
-function beep(){ try{ var c=new (window.AudioContext||window.webkitAudioContext)(), o=c.createOscillator(), g=c.createGain(); o.connect(g); g.connect(c.destination); o.frequency.value=880; g.gain.value=0.08; o.start(); setTimeout(function(){o.stop();c.close()},180) }catch(e){} }
-var seenKnock={};
-function startPending(){
-  setInterval(function(){ fetch(CODE+'/pending?h='+encodeURIComponent(HK)).then(function(r){return r.ok?r.json():null}).then(function(r){ if(!r){return} var box=$('pend'); box.innerHTML='';
-    r.items.forEach(function(k){ if(!seenKnock[k.id]){ seenKnock[k.id]=1; beep() }
-      var d=document.createElement('div'); d.className='pq'; var b=document.createElement('b'); b.textContent=k.name; d.appendChild(b); d.appendChild(document.createTextNode(' quiere entrar a la videollamada'));
-      d.appendChild(document.createElement('br')); [['Admitir',true,''],['Rechazar',false,'no']].forEach(function(x){ var bt=document.createElement('button'); bt.textContent=x[0]; if(x[2]){bt.className=x[2]} bt.onclick=function(){ d.remove(); fetch(CODE+'/decide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({host:HK,id:k.id,admit:x[1]})}) }; d.appendChild(bt) });
-      box.appendChild(d); }); }).catch(function(){}); },2000);
-}
-function startRoom(j){
-    j.speak=$('sp').value; j.read=$('rd').value; J=j; subsShow=j.read!=='off'; room=new L.Room({adaptiveStream:true,dynacast:true});
-    room.on('dataReceived',function(payload,p){ try{ var m=JSON.parse(new TextDecoder().decode(payload)); if(m&&m.k==='sub'&&subsShow){ showLine(m.n||(p&&p.name)||'',m,false) } }catch(e){} });
-    room.on('localTrackPublished',function(pub){ if(pub.source==='microphone'&&pub.track){ hookMic(pub.track.mediaStreamTrack) } });
-    room.on('trackSubscribed',function(t,pub,p){attach(t,p,false);count()}).on('trackUnsubscribed',function(t,pub,p){detach(t,p)})
-        .on('participantConnected',function(p){tileFor(p,false);count()}).on('participantDisconnected',function(p){var t=$('t-'+p.identity);if(t){t.remove()};count()})
-        .on('disconnected',function(){ $('room').classList.add('hide'); $('lobby').classList.remove('hide'); $('lf').classList.remove('hide'); $('wr').classList.add('hide'); $('go').disabled=false; err('Saliste de la videollamada.'); try{ parent.postMessage({k:'ch-meet',ev:'left'},'*') }catch(e){} if(stream){stream.getTracks().forEach(function(t){t.stop()}); stream=null} });
-    return room.connect(j.url,j.token).then(function(){
-      if(stream){stream.getTracks().forEach(function(t){t.stop()}); stream=null; $('prev').srcObject=null}
-      $('lobby').classList.add('hide'); $('room').classList.remove('hide'); $('ttl').textContent=j.title||'Videollamada';
-      room.remoteParticipants.forEach(function(p){tileFor(p,false); p.trackPublications.forEach(function(pb){ if(pb.track){attach(pb.track,p,false)} })});
-      tileFor(room.localParticipant,true); count(); if(j.subtitles){ $('bcc').classList.remove('hide'); $('langb').classList.remove('hide'); $('bcc').classList.toggle('on',subsShow); $('sp2').value=j.speak; $('rd2').value=j.read; langLabel(); var seen=''; try{ seen=localStorage.getItem('meet-lang-seen')||'' }catch(e){} if(!seen){ $('lgp').classList.remove('hide'); try{ localStorage.setItem('meet-lang-seen','1') }catch(e){} } } if(j.host){ startPending(); }
-      return room.localParticipant.setMicrophoneEnabled(mic).then(function(){return room.localParticipant.setCameraEnabled(cam)}).catch(function(e){ console.warn('No se pudo publicar el audio o el video', e); err2('No pudimos enviar tu cámara o micrófono: '+(e&&e.message||e)); });
-    }).then(function(){ room.localParticipant.trackPublications.forEach(function(pb){ if(pb.track&&pb.track.kind==='video'){attach(pb.track,room.localParticipant,true)} }); });
-}
-function waitAdmit(id,host){
-  $('lf').classList.add('hide'); $('wr').classList.remove('hide'); $('wrt').textContent='Esperando a que '+(host||'tu asesor')+' te dé acceso…'; setTimeout(function(){ if(!stop){ $('wrt').textContent=(host||'Tu asesor')+' aún no entra a la sala. Ya le avisamos; no cierres esta ventana.' } },45000);
-  var stop=false; $('wrx').onclick=function(){ stop=true; $('wr').classList.add('hide'); $('lf').classList.remove('hide'); $('go').disabled=false };
-  (function poll(){ if(stop){return}
-    fetch(CODE+'/knock/'+id).then(function(r){ if(r.status===404){throw new Error('x')} return r.json() }).then(function(j){
-      if(stop){return}
-      if(j.status==='admitted'){ stop=true; $('wr').classList.add('hide'); return startRoom(j).catch(function(e){ $('lf').classList.remove('hide'); $('go').disabled=false; err(e.message||'No se pudo entrar.') }) }
-      if(j.status==='denied'){ stop=true; $('wr').classList.add('hide'); $('lf').classList.remove('hide'); $('go').disabled=false; err('El anfitrión no pudo admitirte ahora. Pídele que te vuelva a enviar el enlace.'); return }
-      setTimeout(poll,2000);
-    }).catch(function(e){ if(e&&e.message==='x'){ stop=true; $('wr').classList.add('hide'); $('lf').classList.remove('hide'); $('go').disabled=false; err('Esta videollamada ya terminó.'); return } setTimeout(poll,3000) }); })();
-}
-$('go').onclick=function(){
-  var name=$('nm').value.trim(); if(!name&&!HK){ err('Escribe tu nombre para entrar.'); return; }
-  try{ localStorage.setItem('meet-name',name); localStorage.setItem('meet-speak',$('sp').value); localStorage.setItem('meet-read',$('rd').value) }catch(e){}
-  $('go').disabled=true; err('');
-  if(HK){
-    fetch(CODE+'/token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,host:HK})}).then(function(r){ if(!r.ok){throw new Error(r.status===404?'Esta videollamada ya terminó.':'No se pudo entrar. Intenta de nuevo.')} return r.json(); }).then(startRoom).catch(function(e){ $('go').disabled=false; err(e.message||'No se pudo entrar.'); });
-    return;
-  }
-  fetch(CODE+'/knock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name})}).then(function(r){ if(!r.ok){throw new Error(r.status===404?'Esta videollamada ya terminó.':'No se pudo pedir acceso. Intenta de nuevo.')} return r.json(); }).then(function(k){ waitAdmit(k.id,k.host) }).catch(function(e){ $('go').disabled=false; err(e.message||'No se pudo entrar.'); });
-};
-$('bm').onclick=function(){ if(!room){return} var on=!room.localParticipant.isMicrophoneEnabled; room.localParticipant.setMicrophoneEnabled(on).then(function(){$('bm').classList.toggle('off',!on)}) };
-$('bc').onclick=function(){ if(!room){return} var on=!room.localParticipant.isCameraEnabled; room.localParticipant.setCameraEnabled(on).then(function(){ $('bc').classList.toggle('off',!on); var t=$('t-'+room.localParticipant.identity+'-me'); if(t){ if(on){ room.localParticipant.trackPublications.forEach(function(pb){ if(pb.track&&pb.track.kind==='video'&&pb.source==='camera'){attach(pb.track,room.localParticipant,true)} }) } else { var v=t.querySelector('video'); if(v){v.remove()} var av=t.querySelector('.av'); if(av){av.classList.remove('hide')} } } }) };
-$('bs').onclick=function(){ if(!room){return} var on=!room.localParticipant.isScreenShareEnabled; room.localParticipant.setScreenShareEnabled(on).then(function(){ $('bs').classList.toggle('off',false); room.localParticipant.trackPublications.forEach(function(pb){ if(pb.source==='screen_share'&&pb.track){attach(pb.track,room.localParticipant,true)} }); if(!on){var s=$('s-'+room.localParticipant.identity); if(s){s.remove()}} }).catch(function(){}) };
-$('bcc').onclick=function(){ $('lgp').classList.toggle('hide'); }; $('langb').onclick=$('bcc').onclick;
-function langLabel(){ if(!J){return} $('langb').textContent='Subtítulos · '+(J.read==='off'?'apagados':'leo en '+(J.read==='es'?'español':'inglés')) }
-function applyLang(){ if(!J){return} J.speak=$('sp2').value; J.read=$('rd2').value; subsShow=J.read!=='off'; $('bcc').classList.toggle('on',subsShow); if(!subsShow){$('subs').innerHTML='';lines=[]} try{ localStorage.setItem('meet-speak',J.speak); localStorage.setItem('meet-read',J.read) }catch(e){} langLabel(); }
-$('sp2').onchange=applyLang; $('rd2').onchange=applyLang;
-$('be').onclick=function(){ if(room){room.disconnect()} try{ parent.postMessage({k:'ch-meet',ev:'left'},'*') }catch(e){} };
-window.addEventListener('beforeunload',function(){ if(room){room.disconnect()} });
-})();
-</script></body></html>"""
