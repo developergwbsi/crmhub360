@@ -38,6 +38,11 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
         }).join('');
     }
 
+    const isHost = () => /[?&]h=/.test(url);
+    const ctl = p => isHost() ? `<div class="ch-dc-a ch-dc-ctl"><button class="btn btn-default btn-xs" data-cmd="mute"><span class="fas fa-microphone-slash"></span> Silenciar</button> <button class="btn btn-danger btn-xs" data-cmd="remove"><span class="fas fa-user-slash"></span> Sacar de la llamada</button></div>` : '';
+    function sendCmd(cmd, p) { const f = el && el.querySelector('iframe'); if (f && f.contentWindow) { f.contentWindow.postMessage({k: 'ch-cmd', cmd, id: p.id, name: p.name}, '*'); } }
+    function wireCtl(p) { card.querySelectorAll('[data-cmd]').forEach(b => { b.onclick = e => { e.stopPropagation(); sendCmd(b.dataset.cmd, p); if (b.dataset.cmd === 'remove') { closeCard(); } }; }); }
+
     function closeCard() { if (card) { card.remove(); card = null; } }
 
     // tarjeta con los datos del cliente (o buscador para vincular a quien no tiene ficha); se abre sobre el panel de la llamada
@@ -53,7 +58,8 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
             if (!card) { return; }
             const row = (ic, v) => v ? `<div class="ch-dc-r"><span class="${ic}"></span>${ChUi.esc(v)}</div>` : '';
             card.innerHTML = `<div class="ch-dc-h"><b>${ChUi.esc(d.name || p.name)}</b><button data-x title="Cerrar">✕</button></div>` + row('fas fa-flag', d.status || d.stage) + row('fas fa-phone', d.phoneNumber) + row('fas fa-envelope', d.emailAddress) + row('fas fa-building', d.accountName) + row('fas fa-user', d.assignedUserName ? 'Asignado a ' + d.assignedUserName : '') + row('fas fa-tag', d.source) +
-                `<div class="ch-dc-a"><button class="btn btn-primary btn-xs" data-open>Abrir la ficha</button> <button class="btn btn-default btn-xs" data-unlink>Cambiar</button></div>`;
+                `<div class="ch-dc-a"><button class="btn btn-primary btn-xs" data-open>Abrir la ficha</button> <button class="btn btn-default btn-xs" data-unlink>Cambiar</button></div>` + ctl(p);
+            wireCtl(p);
             card.onclick = e => {
                 if (e.target.closest('[data-x]')) { closeCard(); }
                 else if (e.target.closest('[data-open]')) { window.location.hash = '#' + r.s + '/view/' + r.l; closeCard(); }   // la llamada sigue: el panel no se destruye al navegar
@@ -64,7 +70,8 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
 
     function linkSearch(p) {
         if (!card) { return; }
-        card.innerHTML = `<div class="ch-dc-h"><b>${ChUi.esc(p.name)}</b><button data-x>✕</button></div><div class="ch-dc-r">Sin ficha del CRM. Búscalo para ver su información:</div><input class="form-control input-sm" data-q placeholder="Nombre, teléfono o correo" autocomplete="off"><div data-res></div>`;
+        card.innerHTML = `<div class="ch-dc-h"><b>${ChUi.esc(p.name)}</b><button data-x>✕</button></div><div class="ch-dc-r">Sin ficha del CRM. Búscalo para ver su información:</div><input class="form-control input-sm" data-q placeholder="Nombre, teléfono o correo" autocomplete="off"><div data-res></div>` + ctl(p);
+        wireCtl(p);
         const inp = card.querySelector('[data-q]'), res = card.querySelector('[data-res]'); inp.focus();
         let tm = null;
         inp.oninput = () => { clearTimeout(tm); tm = setTimeout(() => search(inp.value.trim(), res, hit => { links[p.id] = hit; paintPeople(); openCard(p.id); }), 300); };
@@ -161,7 +168,7 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
     window.addEventListener('message', e => {
         const d = e.data; if (!el || !d || d.k !== 'ch-meet') { return; }
         if (d.ev === 'left') { setTimeout(() => API.close(), 1200); }
-        else if (d.ev === 'people') { people = d.people || []; paintPeople(); }
+        else if (d.ev === 'people') { people = d.people || []; if (d.started) { t0 = d.started; tick(); } paintPeople(); }
         else if (d.ev === 'popout-ready') { clearTimeout(popTimer); Espo.Ui.notify(false); Espo.Ui.success('La llamada continúa en la otra ventana.'); API.close(); }   // la otra ventana ya está conectada
     });
     window.ChCallDock = API;

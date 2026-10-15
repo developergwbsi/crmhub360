@@ -126,6 +126,17 @@ def room(code: str) -> dict | None:
         return c.execute("SELECT * FROM meet_rooms WHERE code = %s AND ended_at IS NULL AND expires_at > now()", (code,)).fetchone()
 
 
+def call_started(room_name: str) -> float:
+    """Momento (segundos Unix) en que empezó la llamada: cuando la sala de LiveKit se creó al entrar la primera persona; si aún no existe, ahora."""
+    try:
+        for rm in _livekit("ListRooms", {"names": [room_name]}).get("rooms", []):
+            if rm.get("name") == room_name and (rm.get("creation_time") or rm.get("creationTime")):
+                return float(rm.get("creation_time") or rm.get("creationTime"))
+    except Exception as e:
+        log.warning("inicio de la llamada: %s", str(e)[:100])
+    return time.time()
+
+
 def _payload(r: dict, name: str, is_host: bool, ref: str = "") -> dict:
     """Credencial de entrada y ajustes de la sala para una persona (anfitrión o invitado admitido)."""
     name = (name or "").strip()[:60] or (r["host_name"] if is_host else "Invitado")
@@ -134,7 +145,8 @@ def _payload(r: dict, name: str, is_host: bool, ref: str = "") -> dict:
         c.execute("UPDATE meet_rooms SET first_join_at = COALESCE(first_join_at, now()) WHERE code = %s", (r["code"],))
     return {"token": sign(ident, name, f"{r['tenant']}-{r['code']}", is_host, meta=ref), "url": "wss://" + os.environ["MEET_HOST"], "name": name, "host": is_host,
             "title": r["title"], "subtitles": bool(STT_URL) and mode(r["tenant"]) == "video_subs", "myLang": r["host_lang"] if is_host else r["guest_lang"],
-            "langs": ["es", "en"], "locked": bool(r.get("locked")), "sttKey": stt_key(r["code"], ident)}
+            "langs": ["es", "en"], "locked": bool(r.get("locked")), "sttKey": stt_key(r["code"], ident),
+            "startedAt": int(call_started(f"{r['tenant']}-{r['code']}") * 1000), "now": int(time.time() * 1000)}
 
 
 def _live(code: str) -> dict:

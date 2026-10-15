@@ -39,7 +39,8 @@ function initial(n) { return (n || '?').trim().charAt(0).toUpperCase(); }
 function tileFor(p, local) {
   var id = 't-' + (local ? 'me' : p.identity), t = $(id); if (t) { return t; }
   t = document.createElement('div'); t.className = 'tile' + (local ? ' me' : ''); t.id = id; t.dataset.who = local ? 'me' : p.identity;
-  t.innerHTML = '<div class="av">' + esc(initial(p.name)) + '</div><div class="nm"><span class="hnd">✋</span><span class="mi">🔇</span><span class="tn"></span></div><div class="tb"><button class="pin" title="Fijar en grande">📌</button></div>';
+  t.innerHTML = '<div class="av">' + esc(initial(p.name)) + '</div><div class="nm"><span class="hnd">✋</span><span class="mi">🔇</span><span class="tn"></span></div><div class="tb"><button class="pin" title="Fijar en grande">📌</button>' + (J && J.host && !local ? '<button class="tmute" title="Silenciar a esta persona">🔇</button><button class="trm" title="Sacar de la llamada">⛔</button>' : '') + '</div>';
+  if (J && J.host && !local) { t.querySelector('.tmute').onclick = function () { hostCmd('mute', p.identity); }; t.querySelector('.trm').onclick = function () { hostCmd('remove', p.identity, p.name); }; }
   t.querySelector('.tn').textContent = (p.name || 'Invitado') + (local ? ' (tú)' : '');
   t.querySelector('.pin').onclick = function () { pinned = pinned === id ? '' : id; relayout(); };
   $('grid').appendChild(t); tiles[id] = t; micState(p, local); relayout(); return t;
@@ -74,6 +75,9 @@ function micState(p, local) {
   var t = $('t-' + (local ? 'me' : p.identity)); if (!t) { return; }
   var on = local ? room && room.localParticipant.isMicrophoneEnabled : p.isMicrophoneEnabled; t.classList.toggle('mm', !on);
 }
+var clockT = null, startLocal = 0;
+function fmtClock(ms) { var t = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), sec = t % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(sec).padStart(2, '0'); }
+function startClock() { startLocal = J.startedAt - (J.now - Date.now()); clearInterval(clockT); var tick = function () { $('clock').textContent = '⏱ ' + fmtClock(Date.now() - startLocal); }; tick(); clockT = setInterval(tick, 1000); }
 function count() { var n = room ? room.remoteParticipants.size + 1 : 0; $('cnt').textContent = n + (n === 1 ? ' persona' : ' personas'); $('pcount').textContent = n; $('wait').classList.toggle('hide', n > 1); renderPeople(); }
 
 /* ---------------- personas y solicitudes de ingreso ---------------- */
@@ -82,7 +86,7 @@ function who(p) { return {id: p.identity, name: p.name || 'Invitado', mic: p.isM
 // el CRM (ventana de la llamada) recibe quién está en la sala y a qué ficha corresponde, para mostrar su información sin salir de la llamada
 function emitPeople(list) {
   var out = list.map(function (x) { var p = x.me ? room.localParticipant : room.remoteParticipants.get(x.id), ref = null; try { ref = p && p.metadata ? JSON.parse(p.metadata) : null; } catch (e) { /* sin ficha */ } return {id: x.id, name: x.name, me: !!x.me, host: String(x.id).indexOf('h-') === 0 || (x.me && !!J.host), hand: x.hand, mic: x.mic, ref: ref}; });
-  try { parent.postMessage({k: 'ch-meet', ev: 'people', people: out}, '*'); } catch (e) { /* sin CRM */ }
+  try { parent.postMessage({k: 'ch-meet', ev: 'people', people: out, started: startLocal}, '*'); } catch (e) { /* sin CRM */ }
 }
 function renderPeople() {
   if (!room) { return; }
@@ -97,11 +101,17 @@ function renderPeople() {
   var b = $('pbadge'); b.textContent = pend.length; b.classList.toggle('hide', !pend.length);
   $('bp').classList.toggle('act', pend.length > 0);
 }
+function hostCmd(action, id, name) {
+  if (action === 'remove' && !confirm('¿Sacar a ' + (name || 'esta persona') + ' de la llamada?')) { return; }
+  post('admin', {host: HK, action: action, identity: id}).then(function () { toast(action === 'mute' ? 'Silenciado' : 'Sacado de la llamada', 2500); }).catch(function () { toast('No se pudo completar la acción.'); });
+}
+// el CRM (panel de la llamada) también puede silenciar o sacar a un participante
+window.addEventListener('message', function (e) { var d = e.data; if (e.source !== parent || !d || d.k !== 'ch-cmd' || !J || !J.host) { return; } if (d.cmd === 'mute' || d.cmd === 'remove') { hostCmd(d.cmd, d.id, d.name); } });
 $('p-people').onclick = function (e) {
   var a = e.target.closest('button'); if (!a) { return; }
   if (a.dataset.ad || a.dataset.dn) { decide(a.dataset.ad || a.dataset.dn, !!a.dataset.ad); }
-  else if (a.dataset.mute) { post('admin', {host: HK, action: 'mute', identity: a.dataset.mute}).then(function () { toast('Silenciado'); }); }
-  else if (a.dataset.rm) { if (confirm('¿Quitar a esta persona de la llamada?')) { post('admin', {host: HK, action: 'remove', identity: a.dataset.rm}); } }
+  else if (a.dataset.mute) { hostCmd('mute', a.dataset.mute); }
+  else if (a.dataset.rm) { hostCmd('remove', a.dataset.rm); }
 };
 $('admitall').onclick = function () { pend.slice().forEach(function (k) { decide(k.id, true); }); };
 function decide(id, ok) { pend = pend.filter(function (k) { return k.id !== id; }); renderPeople(); post('decide', {host: HK, id: id, admit: ok}); }
@@ -337,7 +347,7 @@ function startRoom(j) {
       .on(E.Disconnected, function (reason) { $('room').classList.add('hide'); $('lobby').classList.remove('hide'); $('lf').classList.remove('hide'); $('wr').classList.add('hide'); $('go').disabled = false; err(reason === L.DisconnectReason.PARTICIPANT_REMOVED ? 'El anfitrión te quitó de la llamada.' : 'Saliste de la videollamada.'); try { parent.postMessage({k: 'ch-meet', ev: 'left'}, '*'); } catch (e) { /* nada */ } if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; } });
   return room.connect(j.url, j.token).then(function () {
     if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; $('prev').srcObject = null; }
-    $('lobby').classList.add('hide'); $('room').classList.remove('hide'); $('ttl').textContent = j.title || 'Videollamada';
+    $('lobby').classList.add('hide'); $('room').classList.remove('hide'); $('ttl').textContent = j.title || 'Videollamada'; startClock();
     if (AUTO) { try { window.opener && window.opener.postMessage({k: 'ch-meet', ev: 'popout-ready'}, '*'); } catch (e) { /* sin ventana de origen */ } }
     room.remoteParticipants.forEach(function (p) { tileFor(p, false); p.trackPublications.forEach(function (pb) { if (pb.track) { attach(pb.track, p, false); } }); });
     tileFor(room.localParticipant, true); count();

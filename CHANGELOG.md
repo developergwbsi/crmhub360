@@ -5,6 +5,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Videollamada con la información del CRM
+- **Tiempo de la llamada siempre visible**: reloj «⏱ 12:34» arriba de la sala (y en el panel del CRM), medido desde que la llamada empezó de verdad (no desde que entraste), igual para todos.
+- **Controles del anfitrión más a mano**: sobre el video de cada participante (al pasar el cursor) los botones **Silenciar** y **Sacar de la llamada**, y lo mismo desde la tarjeta del participante en el panel del CRM; además de la lista de Personas y «Silenciar a todos». A quien sacan le sale «El anfitrión te quitó de la llamada».
 - **Pasar la llamada a otra ventana sin cortarla**: el botón ahora abre una ventana nueva que **entra sola** a la misma sala y, ya conectada, el panel del CRM se cierra (antes cerraba y había que volver a iniciar).
 - **Participantes con su ficha**: bajo el título del panel de la llamada aparecen los participantes («En la llamada: Uno Dock · Dos Dock»); al pulsar uno se ve su tarjeta del CRM (estado, teléfono, correo, asignado, origen) y **Abrir la ficha** lleva a ella **sin cortar la llamada**. A quien no tiene ficha se le puede buscar y vincular.
 - **Invitar a la llamada a personas del CRM** (botón 👤+ del panel): se busca un lead o contacto y se le envía su **enlace personal** (WhatsApp, SMS, correo o copiar); entra ya identificado (no escribe su nombre) y queda ligado a su ficha. Sirve para reuniones grupales.

@@ -58,3 +58,5 @@ input[type=text],select{width:100%;padding:11px;border-radius:10px;border:1px so
 #more{padding:6px;min-width:260px}#more button{display:flex;width:100%;gap:10px;align-items:center;text-align:left;border:0;background:none;padding:10px 12px;border-radius:8px;font-size:14.5px}#more button:hover{background:#232c4d}#more hr{border:0;border-top:1px solid var(--line);margin:4px 0}#more .hl{font-size:11.5px;color:var(--mut);padding:6px 12px 2px;text-transform:uppercase;letter-spacing:.05em}
 #bgl{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.bgo{aspect-ratio:16/10;border-radius:10px;border:2px solid var(--line);background:#0f1527 center/cover;color:var(--tx);font-size:11.5px;display:grid;place-items:center;text-align:center;padding:2px}.bgo.on{border-color:var(--pri)}
 .irow{display:flex;gap:6px}.irow input{flex:1}
+#clock{font-variant-numeric:tabular-nums;background:#1d2650;border-radius:999px;padding:3px 10px;font-size:13px;color:var(--tx)}
+.tb .tmute,.tb .trm{background:#5a2330}
