@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.6.2)
+## Sin publicar (después de v1.6.3)
 
+- `8fe7be4` 2026-10-15 — Versión 1.6.4
+- `31010ef` 2026-10-15 — Reuniones: avisar a todas las personas invitadas (leads y contactos), no solo al registro principal
+
+## v1.6.3
+
+- `e74120e` 2026-10-15 — Versión 1.6.3
 - `b45ad32` 2026-10-15 — Versión 1.6.3
 - `187baf7` 2026-10-15 — Reuniones: reenviar invitación por correo/WhatsApp/SMS/Telegram con plantilla por canal y aviso de actualización al editar la agenda
 
