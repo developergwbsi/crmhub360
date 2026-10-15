@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.6.1] - 2026-10-15
+
 ### Tablero con cifras que se pueden abrir
 - **Cada cifra del tablero ahora es un enlace**: al hacer clic en «Leads captados», «Sin asesor», «Tasa de calificación», «Cierres exitosos», «Deuda en cartera / en mora», en cada barra (embudo, servicio, origen, campaña), en cada barra de la tendencia o en la fila de un asesor, se abre la **lista de esos mismos leads** (los que suman en esa cifra, con las mismas reglas y el mismo periodo), con la ficha lateral y las acciones masivas de siempre. Un botón «Volver al tablero» regresa.
 - En **«Sin asesor»** hay además **«Repartir automáticamente»**: asigna esos leads con el mismo balanceo del reparto automático (por campaña o grupo general). Solo con permiso de asignación; también se pueden marcar y reasignar a mano.
