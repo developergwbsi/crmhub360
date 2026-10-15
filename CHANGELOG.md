@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.6.0] - 2026-10-14
+
 ### Videollamada con la información del CRM
 - **Tiempo de la llamada siempre visible**: reloj «⏱ 12:34» arriba de la sala (y en el panel del CRM), medido desde que la llamada empezó de verdad (no desde que entraste), igual para todos.
 - **Controles del anfitrión más a mano**: sobre el video de cada participante (al pasar el cursor) los botones **Silenciar** y **Sacar de la llamada**, y lo mismo desde la tarjeta del participante en el panel del CRM; además de la lista de Personas y «Silenciar a todos». A quien sacan le sale «El anfitrión te quitó de la llamada».
