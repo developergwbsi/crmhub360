@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.6.1)
+## Sin publicar (después de v1.6.2)
 
+- `b45ad32` 2026-10-15 — Versión 1.6.3
+- `187baf7` 2026-10-15 — Reuniones: reenviar invitación por correo/WhatsApp/SMS/Telegram con plantilla por canal y aviso de actualización al editar la agenda
+
+## v1.6.2
+
+- `6f3afb3` 2026-10-15 — Versión 1.6.2
 - `c3eddd5` 2026-10-15 — Versión 1.6.2
 - `45828a5` 2026-10-15 — Invitaciones por correo: plantilla profesional por defecto con agregar al calendario en todos los envíos
 

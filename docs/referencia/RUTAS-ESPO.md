@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **112** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **113** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -71,6 +71,7 @@ Total: **112** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/meet/end` | CrmHub.meetEnd | POST /CrmHub/meet/end. Usuario con edición del lead. Hub: POST /v1/meet/rooms/{código}/end. Cierra la sala de videollamada del lead. */ |
 | POST | `/CrmHub/meet/host` | CrmHub.meetHost | POST /CrmHub/meet/host. Usuario con acceso a la reunión. Hub: GET /v1/meet/rooms/{código}/host. Devuelve el enlace de entrada del anfitrión de la videollamada de una reunión. */ |
 | POST | `/CrmHub/meet/invite` | CrmHub.meetInvite | POST /CrmHub/meet/invite. Usuario con edición de la reunión. Envía (o reenvía) al cliente la invitación por correo con «Agregar al calendario». */ |
+| GET | `/CrmHub/meet/inviteInfo` | CrmHub.meetInviteInfo | GET /CrmHub/meet/inviteInfo?meetingId=. Usuario con edición de la reunión. A quién se invita y por qué canales se puede (email, whatsapp, sms, telegram). */ |
 | POST | `/CrmHub/meet/inviteMail` | CrmHub.meetInviteMail | POST /CrmHub/meet/inviteMail. Usuario con acceso al registro. {scope, recId, url, name?}: envía por correo, con la plantilla de invitación (botón para unirse y agregar al calendario + .ics), el enlace personal de una videollamada en curso a un lead, contacto o cuenta. Hub: POST /v1/meet/invite. */ |
 | POST | `/CrmHub/meet/invitee` | CrmHub.meetInvitee | POST /CrmHub/meet/invitee. Usuario con acceso al registro. Hub: POST /v1/meet/rooms/{código}/invitee. Enlace de invitación nominal a una persona del CRM para una videollamada en curso. */ |
 | GET | `/CrmHub/meet/summary` | CrmHub.meetSummary | GET /CrmHub/meet/summary?code=&since=. Resumen de la reunión de una sala (generado al terminar la llamada), posterior a `since` (ms). Hub: GET /v1/meet/rooms/{código}/summary. */ |
