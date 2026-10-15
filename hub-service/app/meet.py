@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS meet_rooms (
 CREATE INDEX IF NOT EXISTS meet_rooms_tenant ON meet_rooms (tenant, created_at DESC);
 ALTER TABLE meet_rooms ADD COLUMN IF NOT EXISTS guest_name TEXT NOT NULL DEFAULT '';
 ALTER TABLE meet_rooms ADD COLUMN IF NOT EXISTS locked BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE meet_knocks ADD COLUMN IF NOT EXISTS ref TEXT NOT NULL DEFAULT '';
+CREATE TABLE IF NOT EXISTS meet_invites (code TEXT PRIMARY KEY, room TEXT NOT NULL, scope TEXT NOT NULL DEFAULT 'Lead', rec_id TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS meet_invites_room ON meet_invites (room);
 CREATE TABLE IF NOT EXISTS meet_chat (id TEXT PRIMARY KEY, code TEXT NOT NULL, ident TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '', text TEXT NOT NULL DEFAULT '', file JSONB, at TIMESTAMPTZ NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS meet_chat_code ON meet_chat (code, at);
 CREATE TABLE IF NOT EXISTS meet_files (id TEXT PRIMARY KEY, code TEXT NOT NULL, name TEXT NOT NULL, mime TEXT NOT NULL, size INT NOT NULL, data BYTEA NOT NULL, at TIMESTAMPTZ NOT NULL DEFAULT now());
@@ -73,10 +76,10 @@ def _b64(b: bytes) -> str:
     return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
 
 
-def sign(identity: str, name: str, room: str, host: bool, ttl: int = 4 * 3600) -> str:
+def sign(identity: str, name: str, room: str, host: bool, ttl: int = 4 * 3600, meta: str = "") -> str:
     """JWT de acceso a una sala de LiveKit (HS256). El anfitrión además puede administrar la sala (expulsar, cerrar)."""
     now = int(time.time())
-    claims = {"iss": os.environ["LIVEKIT_API_KEY"], "sub": identity, "name": name, "nbf": now - 10, "exp": now + ttl,
+    claims = {"iss": os.environ["LIVEKIT_API_KEY"], "sub": identity, "name": name, "nbf": now - 10, "exp": now + ttl, **({"metadata": meta} if meta else {}),
               "video": {"room": room, "roomJoin": True, "canPublish": True, "canSubscribe": True, "canPublishData": True, "canUpdateOwnMetadata": True, **({"roomAdmin": True} if host else {})}}
     head = _b64(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
     body = _b64(json.dumps(claims, separators=(",", ":")).encode())
@@ -123,13 +126,13 @@ def room(code: str) -> dict | None:
         return c.execute("SELECT * FROM meet_rooms WHERE code = %s AND ended_at IS NULL AND expires_at > now()", (code,)).fetchone()
 
 
-def _payload(r: dict, name: str, is_host: bool) -> dict:
+def _payload(r: dict, name: str, is_host: bool, ref: str = "") -> dict:
     """Credencial de entrada y ajustes de la sala para una persona (anfitrión o invitado admitido)."""
     name = (name or "").strip()[:60] or (r["host_name"] if is_host else "Invitado")
     ident = ("h-" if is_host else "g-") + secrets.token_hex(5)
     with db.pool.connection() as c:
         c.execute("UPDATE meet_rooms SET first_join_at = COALESCE(first_join_at, now()) WHERE code = %s", (r["code"],))
-    return {"token": sign(ident, name, f"{r['tenant']}-{r['code']}", is_host), "url": "wss://" + os.environ["MEET_HOST"], "name": name, "host": is_host,
+    return {"token": sign(ident, name, f"{r['tenant']}-{r['code']}", is_host, meta=ref), "url": "wss://" + os.environ["MEET_HOST"], "name": name, "host": is_host,
             "title": r["title"], "subtitles": bool(STT_URL) and mode(r["tenant"]) == "video_subs", "myLang": r["host_lang"] if is_host else r["guest_lang"],
             "langs": ["es", "en"], "locked": bool(r.get("locked")), "sttKey": stt_key(r["code"], ident)}
 
@@ -153,18 +156,26 @@ def join(code: str, name: str, host_key: str = "") -> dict:
     return _payload(r, name, True)
 
 
-def knock(code: str, name: str, extra: bool = False) -> dict:
+def knock(code: str, name: str, extra: bool = False, invite: str = "") -> dict:
     """El invitado pide entrar: queda esperando hasta que el anfitrión lo admita o lo rechace."""
     r = _live(code)
     if r.get("locked"):
         raise PermissionError("El anfitrión bloqueó la sala: no admite más personas por ahora.")
-    name = ((name if extra else (r.get("guest_name") or name)) or "").strip()[:60] or "Invitado"   # si la sala es de un cliente conocido, se usa su nombre del CRM (salvo quien entra por una invitación adicional)
+    ref = ""
+    if invite:   # invitación nominal creada desde el CRM: ya se sabe quién es (nombre y registro)
+        with db.pool.connection() as c:
+            iv = c.execute("SELECT scope, rec_id, name FROM meet_invites WHERE code = %s AND room = %s", (invite, code)).fetchone()
+        if iv:
+            name, ref = iv["name"], json.dumps({"s": iv["scope"], "l": iv["rec_id"]})
+    elif not extra and r.get("lead_id"):
+        ref = json.dumps({"s": "Lead", "l": r["lead_id"]})   # el cliente de la sala es el lead de la ficha desde la que se creó
+    name = ((name if (extra or invite) else (r.get("guest_name") or name)) or "").strip()[:60] or "Invitado"   # si la sala es de un cliente conocido, se usa su nombre del CRM (salvo quien entra por una invitación adicional)
     kid = secrets.token_hex(6)
     with db.pool.connection() as c:
         c.execute("DELETE FROM meet_knocks WHERE created_at < now() - interval '1 day'")
         if c.execute("SELECT count(*) n FROM meet_knocks WHERE code = %s AND status = 'waiting' AND created_at > now() - interval '15 minutes'", (code,)).fetchone()["n"] >= 20:
             raise ValueError("Hay demasiadas solicitudes esperando. Intenta más tarde.")
-        c.execute("INSERT INTO meet_knocks (id, code, name) VALUES (%s,%s,%s)", (kid, code, name))
+        c.execute("INSERT INTO meet_knocks (id, code, name, ref) VALUES (%s,%s,%s,%s)", (kid, code, name, ref))
     return {"id": kid, "status": "waiting", "host": r["host_name"]}
 
 
@@ -197,7 +208,7 @@ def knock_status(code: str, kid: str) -> dict:
     if not k:
         raise LookupError("Solicitud no encontrada.")
     if k["status"] == "admitted" and k["decided_at"] and (time.time() - k["decided_at"].timestamp()) < 300:
-        return {"status": "admitted", **_payload(r, k["name"], False)}
+        return {"status": "admitted", **_payload(r, k["name"], False, k.get("ref") or "")}
     return {"status": "waiting" if k["status"] == "waiting" else "denied"}
 
 
@@ -434,6 +445,28 @@ def build_ics(uid: str, title: str, start: datetime, end: datetime, url: str, or
             out.append(ln[:cut]); ln = " " + ln[cut:]
         out.append(ln)
     return "\r\n".join(out) + "\r\n"
+
+
+def invitee(tenant_slug: str, code: str, scope: str, rec_id: str, name: str) -> dict:
+    """Invitación nominal a una persona del CRM (lead, contacto o cuenta): un enlace propio que ya sabe quién es y la liga a su ficha dentro de la llamada."""
+    r = room(code)
+    if not r or r["tenant"] != tenant_slug:
+        raise LookupError("La sala ya terminó o no existe.")
+    if scope not in ("Lead", "Contact", "Account", "Opportunity") or not re.match(r"^[A-Za-z0-9]{6,32}$", rec_id or ""):
+        raise ValueError("Registro no válido.")
+    with db.pool.connection() as c:
+        iv = c.execute("SELECT code FROM meet_invites WHERE room = %s AND scope = %s AND rec_id = %s", (code, scope, rec_id)).fetchone()
+        ic = iv["code"] if iv else secrets.token_urlsafe(8)
+        if not iv:
+            c.execute("INSERT INTO meet_invites (code, room, scope, rec_id, name) VALUES (%s,%s,%s,%s,%s)", (ic, code, scope, rec_id, (name or "")[:60]))
+    return {"url": f"{public_base()}/{code}?i=1&p={ic}", "code": ic}
+
+
+def invite_name(code: str, p: str) -> str:
+    """Nombre de quien fue invitado con un enlace nominal."""
+    with db.pool.connection() as c:
+        iv = c.execute("SELECT name FROM meet_invites WHERE code = %s AND room = %s", (p, code)).fetchone()
+    return iv["name"] if iv else ""
 
 
 def invite_html(first: str, org: str, title: str, when: str, minutes: int, url: str, google: str, outlook: str) -> str:

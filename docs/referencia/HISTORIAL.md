@@ -2,6 +2,10 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
+## Sin publicar (después de v1.5.5)
+
+- `5dffab6` 2026-10-14 — Sala de videollamada tipo Meet: invitar a más personas, pantalla compartida centrada, panel lateral de personas con solicitudes, chat con imágenes y archivos, fondos virtuales, mano levantada, reacciones, dispositivos y controles del anfitrión
+
 ## v1.5.5
 
 - `9aeedd6` 2026-10-13 — Versión 1.5.5

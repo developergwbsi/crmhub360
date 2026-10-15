@@ -1172,3 +1172,21 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-ag-more { display: inline-block; margin-top: 6px; font-size: 12.5px; cursor: pointer; }
 .ch-drawer .ch-agenda { margin: 8px 14px; }
 .ch-drawer .ch-ag-l { grid-template-columns: 1fr; }
+
+/* Participantes de la llamada con su ficha del CRM */
+.ch-dock-people { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 12px; background: #131a2f; border-bottom: 1px solid #2a3354; flex: none; }
+.ch-dock-people.hide { display: none; }
+.ch-dp-t { font-size: 12px; color: #aab1cc; }
+.ch-dp { border: 1px solid #3a4470; background: #1d2650; color: #e9ecf8; border-radius: 999px; padding: 3px 10px; font-size: 12.5px; }
+.ch-dp.lk { border-color: #4f6bff; }
+.ch-dp:hover { background: #2a3566; }
+.ch-dock-card { position: absolute; z-index: 5; left: 10px; right: 10px; top: 92px; background: #fff; color: #1c2233; border-radius: 12px; padding: 12px 14px; box-shadow: 0 14px 40px rgba(0,0,0,.5); max-height: 70%; overflow: auto; }
+.ch-dc-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; font-size: 15px; }
+.ch-dc-h button { border: 0; background: none; font-size: 15px; color: #5d6678; }
+.ch-dc-r { display: flex; gap: 8px; align-items: center; font-size: 13.5px; padding: 2px 0; }
+.ch-dc-a { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.ch-dc-hit { display: flex; gap: 10px; align-items: center; padding: 7px 8px; border-radius: 8px; cursor: pointer; }
+.ch-dc-hit:hover { background: #eef2ff; }
+.ch-dc-hit small { display: block; color: #5d6678; }
+
+.ch-dock-pill .ch-dock-people { display: none; }

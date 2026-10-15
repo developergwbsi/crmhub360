@@ -46,6 +46,10 @@ La página es `room.html` + `room.css` + `room.js` (se sirven en `https://meet.<
 - **Anfitrión** (`POST …/admin` con la clave de anfitrión): `mute`, `mute_all`, `remove`, `lock`/`unlock`, `end` (usa el API de servidor de LiveKit). Invitar a más personas: `POST …/invite` (correo) y enlace `?i=1` (el invitado escribe su nombre).
 - Mano levantada: atributos del participante; reacciones: mensajes de datos; fondos: procesador de pista local (`BgProcessor`).
 
+## Participantes con su ficha del CRM
+- Cada participante lleva en su credencial un `metadata` `{"s":"Lead","l":"<id>"}` cuando se sabe quién es: el cliente de la sala es el lead de la ficha (`meet_rooms.lead_id`) y las personas invitadas desde el CRM entran con un enlace nominal (`meet_invites`, `POST /v1/meet/rooms/{código}/invitee`, `?i=1&p=<código>`).
+- La sala informa al CRM (postMessage `people`) quién está dentro; `custom:call-dock` muestra las fichas, la tarjeta del registro y el invitar desde el CRM (`CrmHub/meet/invitee`). «Pasar a otra ventana» abre la sala con `auto=1` (entra sola) y el panel se cierra al recibir `popout-ready`.
+
 ## Flujo
 1. El asesor pulsa **Videollamada** en el lead → `POST CrmHub/meet/create` → `POST /v1/meet/rooms` del Hub.
 2. Se devuelve `guestUrl` (`https://meet.<dominio>/<código>`) y `hostUrl` (el mismo con `?h=<clave>`; la clave de anfitrión solo la ve quien crea la sala).

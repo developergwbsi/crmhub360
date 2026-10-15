@@ -742,6 +742,26 @@ class CrmHub
         return (object) ['items' => array_slice($items, 0, 20), 'videoEnabled' => in_array((string) $this->config->get('crmhubMeet'), ['video', 'video_subs'], true)];
     }
 
+    /** POST /CrmHub/meet/invitee. Usuario con acceso al registro. Hub: POST /v1/meet/rooms/{código}/invitee. Enlace de invitación nominal a una persona del CRM para una videollamada en curso. */
+    public function postActionMeetInvitee(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $scope = (string) ($d->scope ?? 'Lead');
+        if (!in_array($scope, ['Lead', 'Contact', 'Account', 'Opportunity'], true)) {
+            throw new BadRequest();
+        }
+        $rec = $this->em->getEntityById($scope, (string) ($d->recId ?? ''));
+        if (!$rec || !$this->acl->checkEntityRead($rec)) {
+            throw new Forbidden();
+        }
+        $code = preg_replace('/[^a-z0-9-]/', '', (string) ($d->code ?? ''));
+        try {
+            return (object) (new HubClient($this->config))->request('POST', '/v1/meet/rooms/' . $code . '/invitee', ['scope' => $scope, 'recId' => $rec->getId(), 'name' => (string) $rec->get('name')], 15);
+        } catch (\RuntimeException $e) {
+            throw new BadRequest('No se pudo crear la invitación.');
+        }
+    }
+
     /** POST /CrmHub/meet/end. Usuario con edición del lead. Hub: POST /v1/meet/rooms/{código}/end. Cierra la sala de videollamada del lead. */
     public function postActionMeetEnd(Request $request): \stdClass
     {

@@ -1767,6 +1767,30 @@ async def meet_invite(req: MeetInviteReq, tenant: dict = Depends(tenant_auth)):
         raise HTTPException(502, f"No se pudo enviar la invitación: {str(e)[:200]}")
 
 
+class InviteeReq(BaseModel):
+    """Invitación nominal a una persona del CRM."""
+    scope: str = "Lead"
+    recId: str
+    name: str = ""
+
+
+@app.post("/v1/meet/rooms/{code}/invitee")
+def meet_invitee(code: str, req: InviteeReq, tenant: dict = Depends(tenant_auth)):
+    """Enlace de invitación nominal para una persona del CRM (la llamada la liga a su ficha)."""
+    try:
+        return meet.invitee(tenant["slug"], code, req.scope, req.recId, req.name)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/v1/public/meet/{code}/invitee/{p}")
+def meet_invitee_name(code: str, p: str):
+    """Nombre de quien fue invitado con un enlace nominal (para saludarlo sin pedirle el nombre)."""
+    return JSONResponse({"name": meet.invite_name(code, p)}, headers=_MEET_HEADERS)
+
+
 @app.get("/v1/meet/waiting")
 def meet_waiting(tenant: dict = Depends(tenant_auth)):
     """Salas con clientes esperando (de toda la empresa); el CRM filtra las del usuario."""
@@ -1846,6 +1870,7 @@ class KnockReq(BaseModel):
     """El invitado pide entrar a la sala (extra: entra por una invitación adicional y escribió su propio nombre)."""
     name: str = ""
     extra: bool = False
+    p: str = ""
 
 
 class DecideReq(BaseModel):
@@ -1859,7 +1884,7 @@ class DecideReq(BaseModel):
 def meet_knock(code: str, req: KnockReq, bg: BackgroundTasks):
     """El invitado pide entrar: espera a que el anfitrión lo admita (y se le avisa al anfitrión aunque no esté dentro)."""
     try:
-        res = meet.knock(code, req.name, req.extra)
+        res = meet.knock(code, req.name, req.extra, req.p)
         bg.add_task(meet.notify_knock, code, (req.name or "Un cliente").strip()[:60] or "Un cliente")
         return JSONResponse(res, headers=_MEET_HEADERS)
     except LookupError as e:

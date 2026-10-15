@@ -3,7 +3,7 @@
 (function () {
 'use strict';
 var R = window.__ROOM, CODE = R.code, GUEST = R.guest, SUBS = R.subs, L = window.LivekitClient;
-var Q = new URLSearchParams(location.search), HK = Q.get('h') || '', EXTRA = Q.get('i') === '1';
+var Q = new URLSearchParams(location.search), HK = Q.get('h') || '', EXTRA = Q.get('i') === '1', INV = Q.get('p') || '', AUTO = Q.get('auto') === '1' && !!HK;
 var $ = function (i) { return document.getElementById(i); };
 var mic = true, cam = true, stream = null, room = null, J = null;
 var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); };
@@ -26,7 +26,9 @@ if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
   navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(function (s) { stream = s; $('prev').srcObject = s; }).catch(function () { err('No pudimos usar la cámara o el micrófono. Revisa los permisos del navegador; igual puedes entrar a escuchar.'); });
 } else { err('Tu navegador no permite videollamadas. Abre el enlace en Chrome, Safari o Edge actualizados.'); }
 lobbyPaint();
+if (AUTO) { setTimeout(function () { var go = $('go'); if (go && !go.disabled) { go.click(); } }, 1200); }
 if (SUBS) { $('lgs').classList.remove('hide'); }
+if (INV && !HK) { fetch(CODE + '/invitee/' + encodeURIComponent(INV)).then(function (r) { return r.json(); }).then(function (j) { if (j.name) { $('nm').classList.add('hide'); $('nm').value = j.name; $('hi').textContent = 'Hola, ' + j.name.split(' ')[0]; $('hi').classList.remove('hide'); } }).catch(function () { /* escribe su nombre */ }); }
 if (GUEST && !HK && !EXTRA) { $('nm').classList.add('hide'); $('nm').value = GUEST; $('hi').textContent = 'Hola, ' + GUEST.split(' ')[0]; $('hi').classList.remove('hide'); }
 (function () { var sp = '', rd = ''; try { sp = localStorage.getItem('meet-speak') || ''; rd = localStorage.getItem('meet-read') || ''; } catch (e) { /* nada */ } sp = sp || (HK ? 'es' : 'en'); rd = rd || sp; $('sp').value = sp; $('rd').value = rd; })();
 $('sp').onchange = function () { if ($('rd').dataset.t !== '1') { $('rd').value = $('sp').value; } }; $('rd').onchange = function () { $('rd').dataset.t = '1'; };
@@ -77,13 +79,19 @@ function count() { var n = room ? room.remoteParticipants.size + 1 : 0; $('cnt')
 /* ---------------- personas y solicitudes de ingreso ---------------- */
 var pend = [];
 function who(p) { return {id: p.identity, name: p.name || 'Invitado', mic: p.isMicrophoneEnabled, hand: (p.attributes || {}).hand === '1'}; }
+// el CRM (ventana de la llamada) recibe quién está en la sala y a qué ficha corresponde, para mostrar su información sin salir de la llamada
+function emitPeople(list) {
+  var out = list.map(function (x) { var p = x.me ? room.localParticipant : room.remoteParticipants.get(x.id), ref = null; try { ref = p && p.metadata ? JSON.parse(p.metadata) : null; } catch (e) { /* sin ficha */ } return {id: x.id, name: x.name, me: !!x.me, host: String(x.id).indexOf('h-') === 0 || (x.me && !!J.host), hand: x.hand, mic: x.mic, ref: ref}; });
+  try { parent.postMessage({k: 'ch-meet', ev: 'people', people: out}, '*'); } catch (e) { /* sin CRM */ }
+}
 function renderPeople() {
   if (!room) { return; }
-  var me = room.localParticipant, list = [Object.assign(who(me), {me: true})].concat([].slice.call(room.remoteParticipants.values()).map(who));
+  var me = room.localParticipant, list = [Object.assign(who(me), {me: true})].concat(Array.from(room.remoteParticipants.values()).map(who));
   $('plist').innerHTML = list.map(function (x) {
     return '<div class="pr"><span class="av2">' + esc(initial(x.name)) + '</span><span class="n">' + esc(x.name) + (x.me ? ' (tú)' : '') + '</span>' + (x.hand ? '<span class="st">✋</span>' : '') + '<span class="st">' + (x.mic ? '🎤' : '🔇') + '</span>' +
       (J.host && !x.me ? '<button data-mute="' + esc(x.id) + '" title="Silenciar">🔇</button><button data-rm="' + esc(x.id) + '" title="Quitar de la llamada">⛔</button>' : '') + '</div>';
   }).join('');
+  emitPeople(list);
   var rq = $('reqlist'); $('reqs').classList.toggle('hide', !pend.length);
   rq.innerHTML = pend.map(function (k) { return '<div class="rq"><b>' + esc(k.name) + '</b><button data-ad="' + esc(k.id) + '">Admitir</button><button class="no" data-dn="' + esc(k.id) + '">Rechazar</button></div>'; }).join('');
   var b = $('pbadge'); b.textContent = pend.length; b.classList.toggle('hide', !pend.length);
@@ -330,6 +338,7 @@ function startRoom(j) {
   return room.connect(j.url, j.token).then(function () {
     if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; $('prev').srcObject = null; }
     $('lobby').classList.add('hide'); $('room').classList.remove('hide'); $('ttl').textContent = j.title || 'Videollamada';
+    if (AUTO) { try { window.opener && window.opener.postMessage({k: 'ch-meet', ev: 'popout-ready'}, '*'); } catch (e) { /* sin ventana de origen */ } }
     room.remoteParticipants.forEach(function (p) { tileFor(p, false); p.trackPublications.forEach(function (pb) { if (pb.track) { attach(pb.track, p, false); } }); });
     tileFor(room.localParticipant, true); count();
     if (j.subtitles) { $('bcc').classList.remove('hide'); $('langb').classList.remove('hide'); $('bcc').classList.toggle('on', subsShow); $('sp2').value = j.speak; $('rd2').value = j.read; langLabel(); var seenL = ''; try { seenL = localStorage.getItem('meet-lang-seen') || ''; } catch (e) { /* nada */ } if (!seenL) { $('lgp').classList.remove('hide'); try { localStorage.setItem('meet-lang-seen', '1'); } catch (e) { /* nada */ } } }
@@ -360,7 +369,7 @@ $('go').onclick = function () {
     post('token', {name: name, host: HK}).then(function (r) { if (!r.ok) { throw new Error(r.status === 404 ? 'Esta videollamada ya terminó.' : 'No se pudo entrar. Intenta de nuevo.'); } return r.json(); }).then(startRoom).catch(function (e) { $('go').disabled = false; err(e.message || 'No se pudo entrar.'); });
     return;
   }
-  post('knock', {name: name, extra: EXTRA}).then(function (r) { if (!r.ok) { throw new Error(r.status === 404 ? 'Esta videollamada ya terminó.' : r.status === 423 ? 'El anfitrión bloqueó la sala: no admite más personas por ahora.' : 'No se pudo pedir acceso. Intenta de nuevo.'); } return r.json(); }).then(function (k) { waitAdmit(k.id, k.host); }).catch(function (e) { $('go').disabled = false; err(e.message || 'No se pudo entrar.'); });
+  post('knock', {name: name, extra: EXTRA, p: INV}).then(function (r) { if (!r.ok) { throw new Error(r.status === 404 ? 'Esta videollamada ya terminó.' : r.status === 423 ? 'El anfitrión bloqueó la sala: no admite más personas por ahora.' : 'No se pudo pedir acceso. Intenta de nuevo.'); } return r.json(); }).then(function (k) { waitAdmit(k.id, k.host); }).catch(function (e) { $('go').disabled = false; err(e.message || 'No se pudo entrar.'); });
 };
 
 /* ---------------- barra de controles ---------------- */

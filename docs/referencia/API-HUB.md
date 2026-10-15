@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **122** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **124** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -74,6 +74,7 @@ Total: **122** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/meet/rooms/restore` | `meet_restore` | Reabre (o recrea) la sala de una reunión con el mismo código: el enlace ya enviado al cliente sigue valiendo. |
 | POST | `/v1/meet/rooms/{code}/end` | `meet_end` | Cierra una sala: el enlace deja de servir. |
 | GET | `/v1/meet/rooms/{code}/host` | `meet_host` | Enlace de entrada del anfitrión de una sala (para quien tiene acceso a la reunión en el CRM). |
+| POST | `/v1/meet/rooms/{code}/invitee` | `meet_invitee` | Enlace de invitación nominal para una persona del CRM (la llamada la liga a su ficha). |
 | GET | `/v1/meet/status` | `meet_status` | Servicio de videollamadas habilitado a la empresa: off / video / video_subs. |
 | GET | `/v1/meet/waiting` | `meet_waiting` | Salas con clientes esperando (de toda la empresa); el CRM filtra las del usuario. |
 | GET | `/v1/process/runs` | `proc_runs` | Historial de ejecuciones de procesos (de un lead o del tenant). |
@@ -91,6 +92,7 @@ Total: **122** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/public/meet/{code}/file` | `meet_file_post` | Sube un archivo para compartirlo en el chat de la sala (hasta 10 MB). |
 | GET | `/v1/public/meet/{code}/file/{fid}` | `meet_file_get` | Descarga o muestra un archivo compartido (las imágenes se ven en línea; lo demás se descarga). |
 | POST | `/v1/public/meet/{code}/invite` | `meet_invite_more` | El anfitrión invita por correo a otra persona a la videollamada en curso. |
+| GET | `/v1/public/meet/{code}/invitee/{p}` | `meet_invitee_name` | Nombre de quien fue invitado con un enlace nominal (para saludarlo sin pedirle el nombre). |
 | POST | `/v1/public/meet/{code}/knock` | `meet_knock` | El invitado pide entrar: espera a que el anfitrión lo admita (y se le avisa al anfitrión aunque no esté dentro). |
 | GET | `/v1/public/meet/{code}/knock/{kid}` | `meet_knock_status` | Estado de la solicitud; admitido trae la credencial de entrada. |
 | GET | `/v1/public/meet/{code}/pending` | `meet_pending` | Solicitudes esperando al anfitrión (requiere su clave). |

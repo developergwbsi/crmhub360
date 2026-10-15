@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Videollamada con la información del CRM
+- **Pasar la llamada a otra ventana sin cortarla**: el botón ahora abre una ventana nueva que **entra sola** a la misma sala y, ya conectada, el panel del CRM se cierra (antes cerraba y había que volver a iniciar).
+- **Participantes con su ficha**: bajo el título del panel de la llamada aparecen los participantes («En la llamada: Uno Dock · Dos Dock»); al pulsar uno se ve su tarjeta del CRM (estado, teléfono, correo, asignado, origen) y **Abrir la ficha** lleva a ella **sin cortar la llamada**. A quien no tiene ficha se le puede buscar y vincular.
+- **Invitar a la llamada a personas del CRM** (botón 👤+ del panel): se busca un lead o contacto y se le envía su **enlace personal** (WhatsApp, SMS, correo o copiar); entra ya identificado (no escribe su nombre) y queda ligado a su ficha. Sirve para reuniones grupales.
+
 ### Sala de videollamada al nivel de Meet o Zoom
 - **Más personas en una llamada ya iniciada**: «Invitar a más personas» (enlace para copiar o envío por correo); cada invitado escribe su nombre y espera la admisión del anfitrión. Capacidad de la sala: 12 personas (aplica al reiniciar el servidor de video).
 - **Pantalla compartida en grande y centrada**, con los participantes en una columna lateral (también al fijar a alguien con 📌, o con la «vista de orador»).
