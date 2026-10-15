@@ -366,6 +366,14 @@
         }
     },
     {
+        "route": "/CrmHub/meet/summary",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "meetSummary"
+        }
+    },
+    {
         "route": "/CrmHub/meet/end",
         "method": "post",
         "params": {

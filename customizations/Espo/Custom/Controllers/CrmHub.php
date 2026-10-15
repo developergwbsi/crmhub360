@@ -762,6 +762,28 @@ class CrmHub
         }
     }
 
+    /** GET /CrmHub/meet/summary?code=&since=. Resumen de la reunión de una sala (generado al terminar la llamada), posterior a `since` (ms). Hub: GET /v1/meet/rooms/{código}/summary. */
+    public function getActionMeetSummary(Request $request): \stdClass
+    {
+        $code = preg_replace('/[^a-z0-9-]/', '', (string) $request->getQueryParam('code'));
+        $since = (int) $request->getQueryParam('since');
+        try {
+            $r = (new HubClient($this->config))->request('GET', '/v1/meet/rooms/' . $code . '/summary?since=' . $since, null, 10);
+        } catch (\RuntimeException $e) {
+            return (object) ['ready' => false];
+        }
+        if (!$r) {
+            return (object) ['ready' => false];
+        }
+        if (!empty($r['leadId'])) {
+            $lead = $this->em->getEntityById('Lead', (string) $r['leadId']);
+            if (!$lead || !$this->acl->checkEntityRead($lead)) {
+                throw new Forbidden();
+            }
+        }
+        return (object) ['ready' => true, 'summary' => $r];
+    }
+
     /** POST /CrmHub/meet/end. Usuario con edición del lead. Hub: POST /v1/meet/rooms/{código}/end. Cierra la sala de videollamada del lead. */
     public function postActionMeetEnd(Request $request): \stdClass
     {

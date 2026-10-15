@@ -1190,3 +1190,9 @@ td > .ch-empty-full, td > .ch-empty { min-height: 0; padding: 14px 10px; } td > 
 .ch-dc-hit small { display: block; color: #5d6678; }
 
 .ch-dock-pill .ch-dock-people { display: none; }
+
+/* Resumen de la reunión */
+.ch-sum-pill { position: fixed; z-index: 1250; right: 16px; bottom: 16px; background: #1d2650; color: #e9ecf8; border-radius: 22px; padding: 10px 16px; display: flex; gap: 10px; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,.4); font-size: 13.5px; }
+.ch-sum-pill a { cursor: pointer; opacity: .7; font-size: 18px; line-height: 1; color: inherit; }
+.ch-sm-h { font-weight: 700; margin-bottom: 6px; } .ch-sm-r { font-size: 15px; line-height: 1.5; } .ch-sm h5 { margin: 12px 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #5d6678; }
+.ch-sm ul { margin: 0 0 6px 18px; padding: 0; } .ch-sm li { margin: 2px 0; } .ch-sm-a { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }

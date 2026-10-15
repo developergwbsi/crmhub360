@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **124** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **125** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -75,6 +75,7 @@ Total: **124** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/meet/rooms/{code}/end` | `meet_end` | Cierra una sala: el enlace deja de servir. |
 | GET | `/v1/meet/rooms/{code}/host` | `meet_host` | Enlace de entrada del anfitrión de una sala (para quien tiene acceso a la reunión en el CRM). |
 | POST | `/v1/meet/rooms/{code}/invitee` | `meet_invitee` | Enlace de invitación nominal para una persona del CRM (la llamada la liga a su ficha). |
+| GET | `/v1/meet/rooms/{code}/summary` | `meet_summary_get` | Resumen de la reunión de una sala, posterior a `since` (milisegundos); 204 sin cuerpo si aún no está listo. |
 | GET | `/v1/meet/status` | `meet_status` | Servicio de videollamadas habilitado a la empresa: off / video / video_subs. |
 | GET | `/v1/meet/waiting` | `meet_waiting` | Salas con clientes esperando (de toda la empresa); el CRM filtra las del usuario. |
 | GET | `/v1/process/runs` | `proc_runs` | Historial de ejecuciones de procesos (de un lead o del tenant). |

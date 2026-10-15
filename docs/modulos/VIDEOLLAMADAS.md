@@ -50,6 +50,10 @@ La página es `room.html` + `room.css` + `room.js` (se sirven en `https://meet.<
 - Cada participante lleva en su credencial un `metadata` `{"s":"Lead","l":"<id>"}` cuando se sabe quién es: el cliente de la sala es el lead de la ficha (`meet_rooms.lead_id`) y las personas invitadas desde el CRM entran con un enlace nominal (`meet_invites`, `POST /v1/meet/rooms/{código}/invitee`, `?i=1&p=<código>`).
 - La sala informa al CRM (postMessage `people`) quién está dentro; `custom:call-dock` muestra las fichas, la tarjeta del registro y el invitar desde el CRM (`CrmHub/meet/invitee`). «Pasar a otra ventana» abre la sala con `auto=1` (entra sola) y el panel se cierra al recibir `popout-ready`.
 
+## Resumen de la reunión (`hub-service/app/meet_summary.py`)
+- Cada frase de los subtítulos se guarda en `meet_lines` (solo texto; 7 días). Un ciclo del Hub (cada 20 s) mira las salas de LiveKit: mientras el anfitrión está dentro registra la sesión (`meet_sessions`); si el anfitrión lleva ~45 s fuera, **finaliza**: arma el resumen con Ollama (`MEET_SUMMARY_MODEL`, por defecto el modelo local del Hub; salida JSON: resumen, puntos clave, acuerdos, pendientes, sentimiento, interés), lo guarda en `meet_summaries` y lo escribe como nota en el lead (y en el contacto y la cuenta si el lead está convertido) y en la reunión con esa sala (`videoCode`, que pasa a «Held»).
+- El CRM lo consulta con `GET CrmHub/meet/summary?code=&since=` → Hub `GET /v1/meet/rooms/{código}/summary`; `custom:call-dock` lo espera al colgar y muestra la ventana del resumen.
+
 ## Flujo
 1. El asesor pulsa **Videollamada** en el lead → `POST CrmHub/meet/create` → `POST /v1/meet/rooms` del Hub.
 2. Se devuelve `guestUrl` (`https://meet.<dominio>/<código>`) y `hostUrl` (el mismo con `?h=<clave>`; la clave de anfitrión solo la ve quien crea la sala).

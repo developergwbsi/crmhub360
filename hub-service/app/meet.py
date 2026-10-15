@@ -286,7 +286,7 @@ async def translate(text: str, src: str, dst: str) -> str:
         return ""
 
 
-async def subtitle(code: str, key: str, lang: str, wav: bytes) -> dict:
+async def subtitle(code: str, key: str, lang: str, wav: bytes, name: str = "") -> dict:
     """Un enunciado de audio → {text, lang, tr:{idioma: traducción}} para repartir por el canal de datos de la sala."""
     global _waiting
     r = room(code)
@@ -313,6 +313,9 @@ async def subtitle(code: str, key: str, lang: str, wav: bytes) -> dict:
         t = await translate(text, lang, dst)
         if t:
             tr[dst] = t
+    if text:   # el texto (no el audio) se guarda para el resumen de la reunión
+        from . import meet_summary
+        meet_summary.store_line(code, key.split(".")[0], name, lang, text, tr)
     return {"text": text, "lang": lang, "tr": tr}
 
 
@@ -383,6 +386,12 @@ def _livekit(method: str, body: dict, room: str = "") -> dict:
     r = httpx.post(f"http://127.0.0.1:7880/twirp/livekit.RoomService/{method}", json=body, headers={"Authorization": f"Bearer {tok}"}, timeout=4)
     r.raise_for_status()
     return r.json()
+
+
+def live_all() -> dict[str, dict]:
+    """{sala: {guests: [nombres], hosts: n}} de todas las salas con gente (misma consulta a LiveKit con caché de 6 s)."""
+    live_rooms("")
+    return dict(_LIVE["rooms"])
 
 
 def live_rooms(tenant_slug: str) -> dict[str, dict]:

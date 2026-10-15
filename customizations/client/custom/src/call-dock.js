@@ -5,7 +5,7 @@
  * Se acopla con custom:split (tipo 'call') para que el contenido deje su espacio. La sala avisa al salir (postMessage) y el panel se cierra.
  */
 define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi) {
-    let el = null, mode = 'side', url = '', timer = null, t0 = 0, title = '', counted = false, people = [], links = {}, card = null, popTimer = null, roomRef = null, roomName = '';
+    let el = null, mode = 'side', url = '', timer = null, t0 = 0, title = '', counted = false, people = [], links = {}, card = null, popTimer = null, roomRef = null, roomName = '', openedAt = 0, sumTimer = null;
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const roomOf = u => { try { return new URL(u).pathname; } catch (e) { return u; } };
 
@@ -118,8 +118,51 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
         }});
     }
 
+
+    // ---- resumen de la reunión al terminar la llamada: el Hub lo arma con los subtítulos y lo deja en la ficha; aquí se le muestra al asesor donde esté
+    function watchSummary(info) {
+        if (!info.code) { return; }
+        clearInterval(sumTimer);
+        const pill = document.createElement('div'); pill.className = 'ch-sum-pill'; pill.innerHTML = '<span class="spin"></span> Preparando el resumen de la reunión…<a data-x title="Ocultar">×</a>';
+        document.body.appendChild(pill); pill.querySelector('[data-x]').onclick = () => { clearInterval(sumTimer); pill.remove(); };
+        let tries = 0;
+        const stop = () => { clearInterval(sumTimer); pill.remove(); };
+        sumTimer = setInterval(() => {
+            if (++tries > 70) { stop(); return; }
+            Espo.Ajax.getRequest('CrmHub/meet/summary', {code: info.code, since: info.since}).then(r => { if (r && r.ready) { stop(); showSummary(r.summary, info); } }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
+        }, 6000);
+    }
+
+    function showSummary(sm, info) {
+        const x = sm.summary || {}, esc = ChUi.esc, list = (t, a) => a && a.length ? `<h5>${t}</h5><ul>${a.map(i => `<li>${esc(i)}</li>`).join('')}</ul>` : '';
+        const ref = info.ref || (sm.leadId ? {s: 'Lead', l: sm.leadId} : null);
+        const plain = ['Resumen de la reunión (' + sm.minutes + ' min) · ' + (sm.participants || []).join(', '), x.resumen || '', (x.puntos_clave || []).length ? 'Puntos clave:\n' + x.puntos_clave.map(i => '• ' + i).join('\n') : '', (x.acuerdos || []).length ? 'Acuerdos:\n' + x.acuerdos.map(i => '• ' + i).join('\n') : '', (x.pendientes || []).length ? 'Pendientes:\n' + x.pendientes.map(i => '• ' + i).join('\n') : ''].filter(Boolean).join('\n\n');
+        ChUi.panel({title: 'Resumen de la reunión', icon: 'fas fa-clipboard-list', mount: body => {
+            body.innerHTML = `<div class="ch-sm"><div class="ch-sm-h"><span class="far fa-clock"></span> ${sm.minutes} min <span class="ch-muted">· ${esc((sm.participants || []).join(', '))}</span></div>` +
+                (sm.hasText ? `<p class="ch-sm-r">${esc(x.resumen || '')}</p>${list('Puntos clave', x.puntos_clave)}${list('Acuerdos', x.acuerdos)}${list('Pendientes y siguientes pasos', x.pendientes)}${x.sentimiento || x.interes ? `<p class="ch-muted">Percepción: ${esc(x.sentimiento || '—')} · interés ${esc(x.interes || 'desconocido')}</p>` : ''}`
+                    : '<p class="ch-muted">No hubo subtítulos en esta llamada, así que no hay transcripción. Quedó el registro de la llamada en la ficha.</p>') +
+                `<p class="ch-muted" style="font-size:12px">Ya quedó guardado en la ficha${ref ? ' del cliente' : ''}. Generado con IA a partir de los subtítulos: revísalo.</p>` +
+                `<div class="ch-sm-a">${ref ? '<button class="btn btn-primary btn-sm" data-a="open">Abrir la ficha</button> ' : ''}<button class="btn btn-default btn-sm" data-a="copy"><span class="far fa-copy"></span> Copiar</button>${ref && (x.pendientes || []).length ? ' <button class="btn btn-default btn-sm" data-a="task"><span class="fas fa-list-check"></span> Crear tarea con los pendientes</button>' : ''}</div></div>`;
+            body.onclick = e => {
+                const a = e.target.closest('[data-a]'); if (!a) { return; }
+                if (a.dataset.a === 'open') { window.location.hash = '#' + ref.s + '/view/' + ref.l; }
+                else if (a.dataset.a === 'copy') { (navigator.clipboard ? navigator.clipboard.writeText(plain) : Promise.reject()).then(() => Espo.Ui.success('Resumen copiado'), () => Espo.Ui.warning('No se pudo copiar')); }
+                else if (a.dataset.a === 'task') {
+                    a.disabled = true;
+                    Espo.Ajax.getRequest('App/user').then(u => Espo.Ajax.postRequest('Task', {name: 'Seguimiento: ' + (info.name || 'reunión'), description: (x.pendientes || []).map(i => '• ' + i).join('\n'), parentType: ref.s, parentId: ref.l, status: 'Not Started', assignedUserId: u.user.id}))
+                        .then(() => { Espo.Ui.success('Tarea creada'); a.innerHTML = '<span class="fas fa-check"></span> Tarea creada'; }).catch(xhr => { a.disabled = false; if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo crear la tarea'); });
+                }
+            };
+        }});
+    }
+
+    // termina la llamada de este panel y, si hubo sala, espera su resumen
+    function endCall() { const info = {code: codeOf(), ref: roomRef, name: roomName, since: openedAt}; API.close(); if (info.code) { watchSummary(info); } }
+
     const API = {
         active: () => !!el,
+        // muestra el resumen de la reunión de una sala cuando esté listo (lo usa el panel al terminar la llamada)
+        summary: info => watchSummary(info),
         mode: () => mode,
         // entra a la sala dentro del CRM; si ya hay una videollamada abierta en otra sala, pregunta antes de cambiarla
         // ref: la ficha del cliente de la llamada ({s: 'Lead', l: id}); así su información está a un clic aunque aún no haya entrado
@@ -127,7 +170,7 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
             if (el && roomOf(u) === roomOf(url)) { setMode('side'); return; }
             if (el && !window.confirm('Ya estás en una videollamada. ¿Salir de ella y entrar a esta?')) { return; }
             API.close();
-            url = u; title = name || 'Videollamada'; t0 = Date.now(); people = []; links = {}; roomRef = ref && ref.l ? ref : null; roomName = refName || '';
+            url = u; title = name || 'Videollamada'; t0 = Date.now(); people = []; links = {}; roomRef = ref && ref.l ? ref : null; roomName = refName || ''; openedAt = Date.now() - 5000;
             el = document.createElement('div'); el.id = 'ch-dock';
             el.innerHTML = `<div class="ch-dock-h"><span class="fas fa-video"></span><b>${esc(title)}</b><small data-d="time">0:00</small><span style="flex:1"></span>` +
                 '<button type="button" data-d="inv" title="Invitar a la llamada a alguien del CRM"><span class="fas fa-user-plus"></span></button>' +
@@ -144,7 +187,7 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
                 const b = e.target.closest('[data-d]');
                 if (!b) { if (e.target.closest('.ch-dock-pill-bar')) { setMode('side'); } return; }
                 const k = b.dataset.d;
-                if (k === 'end') { if (window.confirm('¿Salir de la videollamada? Si el cliente sigue dentro, podrás volver a entrar desde la ficha («Videollamadas»).')) { API.close(); } }
+                if (k === 'end') { if (window.confirm('¿Salir de la videollamada? Si el cliente sigue dentro, podrás volver a entrar desde la ficha («Videollamadas»). Al terminar la llamada se te mostrará un resumen.')) { endCall(); } }
                 else if (k === 'min') { setMode(mode === 'pill' ? 'side' : 'pill'); }
                 else if (k === 'size') { setMode(mode === 'full' ? 'side' : 'full'); }
                 else if (k === 'inv') { invitePanel(); }
@@ -169,7 +212,7 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
     // la sala avisa cuando la persona sale de la videollamada: el panel se cierra solo
     window.addEventListener('message', e => {
         const d = e.data; if (!el || !d || d.k !== 'ch-meet') { return; }
-        if (d.ev === 'left') { setTimeout(() => API.close(), 1200); }
+        if (d.ev === 'left') { setTimeout(() => { if (el) { endCall(); } }, 1200); }
         else if (d.ev === 'people') { people = d.people || []; if (d.started) { t0 = d.started; tick(); } paintPeople(); }
         else if (d.ev === 'popout-ready') { clearTimeout(popTimer); Espo.Ui.notify(false); Espo.Ui.success('La llamada continúa en la otra ventana.'); API.close(); }   // la otra ventana ya está conectada
     });

@@ -300,7 +300,7 @@ function wavOf(chunks, rate) {
   for (var m = 0; m < len; m++) { dv.setInt16(44 + m * 2, pcm[m], true); } return new Blob([buf], {type: 'audio/wav'});
 }
 function sendSub(blob) {
-  fetch(CODE + '/stt?lang=' + J.speak, {method: 'POST', headers: {'X-Stt-Key': J.sttKey}, body: blob}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) {
+  fetch(CODE + '/stt?lang=' + J.speak + '&n=' + encodeURIComponent(J.name || ''), {method: 'POST', headers: {'X-Stt-Key': J.sttKey}, body: blob}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) {
     if (!r || !r.text) { return; } if (subsShow) { showLine('Tú', {t: r.text, l: r.lang}, true); }
     try { room.localParticipant.publishData(enc({k: 'sub', n: J.name, l: r.lang, t: r.text, tr: r.tr || {}}), {reliable: true}); } catch (e) { /* nada */ }
   }).catch(function () { /* se omite la frase */ });

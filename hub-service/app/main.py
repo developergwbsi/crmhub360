@@ -23,7 +23,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import meet, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -43,11 +43,14 @@ async def lifespan(_: FastAPI):
     monitor.ensure_schema()
     usage.ensure_schema()
     meet.ensure_schema()
+    meet_summary.ensure_schema()
     templates.ensure_schema()
     bg = asyncio.create_task(broadcast.worker())
     mb = asyncio.create_task(mailbox.worker())
     ag = asyncio.create_task(agent.worker())
+    ms = asyncio.create_task(meet_summary.loop())
     yield
+    ms.cancel()
     bg.cancel()
     mb.cancel()
     ag.cancel()
@@ -1791,6 +1794,15 @@ def meet_invitee_name(code: str, p: str):
     return JSONResponse({"name": meet.invite_name(code, p)}, headers=_MEET_HEADERS)
 
 
+@app.get("/v1/meet/rooms/{code}/summary")
+def meet_summary_get(code: str, since: int = 0, tenant: dict = Depends(tenant_auth)):
+    """Resumen de la reunión de una sala, posterior a `since` (milisegundos); 204 sin cuerpo si aún no está listo."""
+    r = meet_summary.latest(tenant["slug"], code, since)
+    if not r:
+        return Response(status_code=204)
+    return r
+
+
 @app.get("/v1/meet/waiting")
 def meet_waiting(tenant: dict = Depends(tenant_auth)):
     """Salas con clientes esperando (de toda la empresa); el CRM filtra las del usuario."""
@@ -1851,10 +1863,10 @@ def meet_page(code: str):
 
 
 @app.post("/v1/public/meet/{code}/stt")
-async def meet_subtitle(code: str, request: Request, lang: str = "es", x_stt_key: str = Header("")):
+async def meet_subtitle(code: str, request: Request, lang: str = "es", n: str = "", x_stt_key: str = Header("")):
     """Subtítulo de un enunciado de audio (WAV 16 kHz mono): lo transcribe y traduce con IA local. No guarda nada."""
     try:
-        return JSONResponse(await meet.subtitle(code, x_stt_key, lang, await request.body()), headers=_MEET_HEADERS)
+        return JSONResponse(await meet.subtitle(code, x_stt_key, lang, await request.body(), n), headers=_MEET_HEADERS)
     except LookupError as e:
         raise HTTPException(404, str(e))
     except PermissionError as e:

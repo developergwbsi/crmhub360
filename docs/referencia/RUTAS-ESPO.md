@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **108** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **109** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -71,6 +71,7 @@ Total: **108** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/meet/host` | CrmHub.meetHost | POST /CrmHub/meet/host. Usuario con acceso a la reunión. Hub: GET /v1/meet/rooms/{código}/host. Devuelve el enlace de entrada del anfitrión de la videollamada de una reunión. */ |
 | POST | `/CrmHub/meet/invite` | CrmHub.meetInvite | POST /CrmHub/meet/invite. Usuario con edición de la reunión. Envía (o reenvía) al cliente la invitación por correo con «Agregar al calendario». */ |
 | POST | `/CrmHub/meet/invitee` | CrmHub.meetInvitee | POST /CrmHub/meet/invitee. Usuario con acceso al registro. Hub: POST /v1/meet/rooms/{código}/invitee. Enlace de invitación nominal a una persona del CRM para una videollamada en curso. */ |
+| GET | `/CrmHub/meet/summary` | CrmHub.meetSummary | GET /CrmHub/meet/summary?code=&since=. Resumen de la reunión de una sala (generado al terminar la llamada), posterior a `since` (ms). Hub: GET /v1/meet/rooms/{código}/summary. */ |
 | GET | `/CrmHub/meet/waiting` | CrmHub.meetWaiting | GET /CrmHub/meet/waiting[?leadId=]. Clientes que esperan en la sala de espera de las videollamadas, con el enlace para entrar a admitirlos. Con leadId: las del lead (usuario con acceso a él). Sin leadId: las del usuario actual (las salas que creó o de leads que tiene asignados), para avisarle en cualquier pantalla. Hub: GET /v1/meet/rooms y /v1/meet/waiting. */ |
 | GET | `/CrmHub/metrics` | CrmHub.metrics | GET /CrmHub/metrics. Usuario; datos según su ACL. Hub: GET /v1/agent/attended (comercial virtual). */ |
 | GET | `/CrmHub/myroles` | CrmHub.myroles | Roles del usuario actual: el manual muestra solo lo que le corresponde. */ |

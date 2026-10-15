@@ -4,6 +4,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Resumen automático de la reunión
+- **Al terminar la llamada se genera un resumen** con la IA local a partir de los subtítulos y se **deja en la ficha**: duración, participantes, resumen, puntos clave, acuerdos, pendientes y percepción (interés y sentimiento). Si el lead ya fue convertido, también queda en su **contacto y su cuenta**; y la **reunión programada** pasa a «Realizada» con el resumen en su descripción.
+- **Se le muestra al asesor donde esté**: al colgar aparece «Preparando el resumen de la reunión…» y, al estar listo, una ventana con el resumen, **Abrir la ficha**, **Copiar** y **Crear tarea con los pendientes**.
+- La llamada se da por terminada cuando **el asesor sale** y no vuelve en ~45 s (aunque el cliente siga conectado). Sin subtítulos queda al menos el registro de la llamada (duración y participantes).
+- **Privacidad**: el audio no se guarda; el texto de la conversación se conserva 7 días para generar el resumen y los participantes lo ven avisado antes de entrar.
+
 ### Videollamada: pantalla compartida y ficha del cliente
 - **La pantalla compartida ya se ve** (antes quedaba «negra»): al ponerla en grande la ficha se estiraba a una altura enorme y el video quedaba centrado fuera de lo visible. Ahora ocupa el área de la sala y los participantes van en la columna lateral. En el panel angosto del CRM va arriba y los participantes debajo.
 - **La ficha del cliente a un clic desde que se abre la llamada**: la franja del panel muestra «Cliente: <nombre>» aunque aún no haya entrado (tarjeta con estado, teléfono, correo y «Abrir la ficha» sin cortar la llamada), además de los participantes que ya están dentro.
