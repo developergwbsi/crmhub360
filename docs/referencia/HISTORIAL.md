@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.6.0)
+## Sin publicar (después de v1.6.1)
 
+- `c3eddd5` 2026-10-15 — Versión 1.6.2
+- `45828a5` 2026-10-15 — Invitaciones por correo: plantilla profesional por defecto con agregar al calendario en todos los envíos
+
+## v1.6.1
+
+- `86a8de4` 2026-10-15 — Versión 1.6.1
 - `ecff7fd` 2026-10-15 — Versión 1.6.1
 - `6db7d52` 2026-10-15 — Tablero: las cifras abren la lista de esos leads; en «Sin asesor» se pueden repartir automáticamente
 - `60037d4` 2026-10-15 — WhatsApp: las respuestas con LID se ligan al lead contactado en las últimas 24 horas; aviso encendido al asignar una instancia existente; nombre de la empresa en la cabecera con el menú recogido
