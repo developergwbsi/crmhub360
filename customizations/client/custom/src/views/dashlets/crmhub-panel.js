@@ -50,36 +50,46 @@ define('custom:views/dashlets/crmhub-panel', ['views/dashlets/abstract/base', 'c
 
         actionRefresh() { this.load(); }
 
+        // Abre en la lista de leads los que suman en una cifra del tablero (el servidor devuelve los ids con las mismas reglas)
+        openSet(seg, title, assign) {
+            Espo.Ajax.getRequest('CrmHub/metricsLeads', {days: this.days, seg}).then(r => {
+                if (!r.ids.length) { Espo.Ui.warning('No hay leads en esa cifra'); return; }
+                try { sessionStorage.setItem('chLeadSet', JSON.stringify({title, ids: r.ids, assign: !!assign})); } catch (e) { /* sin sessionStorage */ }
+                this.getRouter().navigate('#CrmHub/leadSet', {trigger: true});
+            }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo abrir la lista'); });
+        }
+
         data() {
             const m = this.state;
             const periods = [7, 30, 90, 365].map(d => ({d, label: d === 365 ? '12 meses' : d + ' días', active: d === this.days}));
             if (!m || m.error) { return {loading: !m, error: !!(m && m.error), periods}; }
             const k = m.kpi;
             const kpis = [
-                {label: 'Leads captados', value: nf.format(k.leads), sub: `${nf.format(k.nuevosHoy)} nuevos hoy`, icon: 'fas fa-user-plus', tone: 'primary'},
-                {label: 'Sin asesor', value: nf.format(k.sinAsesor), sub: (k.sinAsesor ? 'Requieren asignación' : 'Todo asignado') + (k.conVirtual ? ` · ${nf.format(k.conVirtual)} los atiende el comercial virtual` : ''), icon: 'fas fa-user-clock', tone: k.sinAsesor ? 'warn' : 'ok'},
-                {label: 'Tasa de calificación', value: nf.format(k.tasaCalificacion) + '%', sub: `${nf.format(k.califican)} de ${nf.format(k.evaluados)} evaluados`, icon: 'fas fa-filter', tone: 'violet'},
-                {label: 'Cierres exitosos', value: nf.format(k.cierres), sub: `${nf.format(k.tasaCierre)}% de los captados`, icon: 'fas fa-handshake', tone: 'ok'},
-                {label: 'Deuda en cartera', value: money(k.deudaTotal), sub: 'Suma de los leads visibles', icon: 'fas fa-wallet', tone: 'info'},
-                {label: 'Deuda en mora', value: money(k.deudaMora), sub: k.deudaTotal ? nf.format(100 * k.deudaMora / k.deudaTotal) + '% de la cartera' : '—', icon: 'fas fa-triangle-exclamation', tone: 'danger'},
+                {seg: 'leads', label: 'Leads captados', value: nf.format(k.leads), sub: `${nf.format(k.nuevosHoy)} nuevos hoy`, icon: 'fas fa-user-plus', tone: 'primary'},
+                {seg: 'sinAsesor', label: 'Sin asesor', value: nf.format(k.sinAsesor), sub: (k.sinAsesor ? 'Requieren asignación' : 'Todo asignado') + (k.conVirtual ? ` · ${nf.format(k.conVirtual)} los atiende el comercial virtual` : ''), icon: 'fas fa-user-clock', tone: k.sinAsesor ? 'warn' : 'ok'},
+                {seg: 'califican', label: 'Tasa de calificación', value: nf.format(k.tasaCalificacion) + '%', sub: `${nf.format(k.califican)} de ${nf.format(k.evaluados)} evaluados`, icon: 'fas fa-filter', tone: 'violet'},
+                {seg: 'cierres', label: 'Cierres exitosos', value: nf.format(k.cierres), sub: `${nf.format(k.tasaCierre)}% de los captados`, icon: 'fas fa-handshake', tone: 'ok'},
+                {seg: 'deuda', label: 'Deuda en cartera', value: money(k.deudaTotal), sub: 'Suma de los leads visibles', icon: 'fas fa-wallet', tone: 'info'},
+                {seg: 'mora', label: 'Deuda en mora', value: money(k.deudaMora), sub: k.deudaTotal ? nf.format(100 * k.deudaMora / k.deudaTotal) + '% de la cartera' : '—', icon: 'fas fa-triangle-exclamation', tone: 'danger'},
             ];
             if (!this.getConfig().get('crmhubCartera')) { kpis.splice(4, 2); }   // sin módulo de cartera: solo captación
             const maxT = Math.max(1, ...m.tendencia.map(t => t.value));
-            const tendencia = m.tendencia.map(t => ({day: t.day, value: t.value, h: Math.max(3, Math.round(100 * t.value / maxT))}));
+            const tendencia = m.tendencia.map(t => ({day: t.day, seg: 'dia:' + t.day, value: t.value, h: Math.max(3, Math.round(100 * t.value / maxT))}));
             const tot = m.tendencia.reduce((a, t) => a + t.value, 0);
             return {
                 loading: false, error: false, periods, kpis,
-                estado: bars(m.estado, r => STATUS_COLORS[r.name] || '#94a3b8'),
-                servicio: bars(m.servicio, (r, i) => PALETTE[i % PALETTE.length]),
-                origen: bars(m.origen, (r, i) => PALETTE[(i + 3) % PALETTE.length]),
-                campanas: bars(m.campanas, (r, i) => PALETTE[(i + 1) % PALETTE.length]),
-                asesores: m.asesores.map(a => ({...a, virtual: !!a.virtual})), hasAsesores: m.asesores.length > 0, multi: m.scope !== 'no',
+                estado: bars(m.estado, r => STATUS_COLORS[r.name] || '#94a3b8').map(r => ({...r, seg: 'estado:' + r.name})),
+                servicio: bars(m.servicio, (r, i) => PALETTE[i % PALETTE.length]).map(r => ({...r, seg: 'servicio:' + r.name})),
+                origen: bars(m.origen, (r, i) => PALETTE[(i + 3) % PALETTE.length]).map(r => ({...r, seg: 'origen:' + r.name})),
+                campanas: bars(m.campanas, (r, i) => PALETTE[(i + 1) % PALETTE.length]).map(r => ({...r, seg: 'campana:' + r.name})),
+                asesores: m.asesores.map(a => ({...a, virtual: !!a.virtual, seg: 'asesor:' + a.name})), hasAsesores: m.asesores.length > 0, multi: m.scope !== 'no',
                 tendencia, trendTotal: tot, trendNote: m.bucketDays > 1 ? `Cada barra agrupa ${m.bucketDays} días` : 'Una barra por día',
                 hasServicio: m.servicio.length > 0, hasCampanas: m.campanas.length > 0,
             };
         }
 
         events = {
+            'click [data-seg]': function (e) { const d = e.currentTarget.dataset; this.openSet(d.seg, d.title, d.seg === 'sinAsesor'); },
             'click [data-action="period"]': function (e) {
                 this.days = parseInt(e.currentTarget.dataset.d, 10);
                 this.load();

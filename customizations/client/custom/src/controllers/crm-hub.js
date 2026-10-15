@@ -11,6 +11,10 @@ define('custom:controllers/crm-hub', ['controller'], function (Dep) {
             this.main('custom:views/manual', {});
         }
 
+        actionLeadSet() {
+            this.main('custom:views/lead-set', {});
+        }
+
         actionOrganigrama() {
             this.main('custom:views/orgchart', {});
         }

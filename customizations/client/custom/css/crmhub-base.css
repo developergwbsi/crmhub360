@@ -1204,3 +1204,11 @@ body.minimized #ch-topbrand { display: flex; flex-direction: column; justify-con
 .ch-tb-sys { color: var(--ch-muted, #5d6678); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
 .ch-tb-sys::before { content: "◆ "; color: var(--ch-primary, #4a63e7); font-size: 9px; }
 @media (max-width: 767px) { body.minimized #ch-topbrand { display: none; } }
+/* Cifras del tablero que abren la lista de leads */
+.ch-link { cursor: pointer; }
+.ch-kpi.ch-link:hover { border-color: var(--ch-primary); transform: translateY(-1px); }
+.ch-bar.ch-link:hover .ch-bar-name, .ch-rank tr.ch-link:hover td { color: var(--ch-primary); }
+.ch-spark span.ch-link:hover { opacity: .75; }
+.ch-ls-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.ch-ls-head h3 { margin: 0; }
+.ch-ls-tools { margin-left: auto; }

@@ -285,7 +285,27 @@ class CrmHub
     public function getActionMetrics(Request $request): \stdClass
     {
         $days = (int) ($request->getQueryParam('days') ?: 30);
-        $days = in_array($days, [7, 30, 90, 365], true) ? $days : 30;
+        return $this->computeMetrics(in_array($days, [7, 30, 90, 365], true) ? $days : 30, null, $ids);
+    }
+
+    /** GET /CrmHub/metricsLeads?days=&seg=. Ids de los leads que suman en una cifra del tablero (con las mismas reglas), para abrirlos en una lista. seg: leads, sinAsesor, conVirtual, califican, cierres, deuda, mora, estado:<estado>, servicio:<nombre>, origen:<nombre>, campana:<nombre>, asesor:<nombre>, dia:<AAAA-MM-DD>. */
+    public function getActionMetricsLeads(Request $request): \stdClass
+    {
+        $days = (int) ($request->getQueryParam('days') ?: 30);
+        $ids = [];
+        $this->computeMetrics(in_array($days, [7, 30, 90, 365], true) ? $days : 30, (string) $request->getQueryParam('seg'), $ids);
+        return (object) ['ids' => array_slice($ids, 0, 2000)];
+    }
+
+    /** Cálculo del tablero; con $seg además junta los ids de ese segmento en $ids. */
+    private function computeMetrics(int $days, ?string $seg, ?array &$ids): \stdClass
+    {
+        $ids = [];
+        $push = function (string $key, $l) use ($seg, &$ids) {
+            if ($seg !== null && $seg === $key) {
+                $ids[] = $l->getId();
+            }
+        };
         $now = time();
         $from = gmdate('Y-m-d H:i:s', $now - $days * 86400);
         $today = gmdate('Y-m-d 00:00:00');
@@ -336,8 +356,15 @@ class CrmHub
             }
             $k['deudaTotal'] += (float) $l->get('totalDebt');
             $k['deudaMora'] += (float) $l->get('overdueDebt');
+            if ((float) $l->get('totalDebt') > 0) {
+                $push('deuda', $l);
+            }
+            if ((float) $l->get('overdueDebt') > 0) {
+                $push('mora', $l);
+            }
             if (isset($estado[$status])) {
                 $estado[$status]++;
+                $push('estado:' . $status, $l);
             }
             $created = (string) $l->get('createdAt');
             if ($created >= $today) {
@@ -347,32 +374,43 @@ class CrmHub
                 continue; // el resto son métricas de los leads captados en el periodo
             }
             $k['leads']++;
+            $push('leads', $l);
             $uid = $l->get('assignedUserId');
             $va = !$uid ? ($virtual[$l->getId()] ?? null) : null;
             if (!$uid && $va) {
                 $k['conVirtual']++;
+                $push('conVirtual', $l);
             } elseif (!$uid) {
                 $k['sinAsesor']++;
+                $push('sinAsesor', $l);
             }
             $q = (string) $l->get('qualificationStatus');
             if ($q !== '') {
                 $k['evaluados']++;
                 if ($q === 'Califica') {
                     $k['califican']++;
+                    $push('califican', $l);
                     $svc = trim(explode(' (', (string) $l->get('suggestedService'))[0]);
                     $servicio[$svc ?: 'Sin servicio'] = ($servicio[$svc ?: 'Sin servicio'] ?? 0) + 1;
+                    $push('servicio:' . ($svc ?: 'Sin servicio'), $l);
                 }
             }
             $won = $status === ($closedList[0] ?? 'Cierre Exitoso');
             $k['cierres'] += $won ? 1 : 0;
+            if ($won) {
+                $push('cierres', $l);
+            }
             $src = (string) ($l->get('source') ?: 'Sin origen');
             $origen[$src] = ($origen[$src] ?? 0) + 1;
+            $push('origen:' . $src, $l);
             if ($cid = $l->get('campaignId')) {
                 $cn = $camps[$cid] ?? 'Campaña';
                 $campana[$cn] = ($campana[$cn] ?? 0) + 1;
+                $push('campana:' . $cn, $l);
             }
             $an = $uid ? ($names[$uid] ?? $uid) : ($va ? 'Comercial virtual · ' . ($va['name'] ?? '') : 'Sin asesor');
             $asesor[$an] ??= ['name' => $an, 'leads' => 0, 'califican' => 0, 'cierres' => 0, 'virtual' => !$uid && $va];
+            $push('asesor:' . $an, $l);
             $asesor[$an]['leads']++;
             $asesor[$an]['califican'] += $q === 'Califica' ? 1 : 0;
             $asesor[$an]['cierres'] += $won ? 1 : 0;
@@ -380,6 +418,7 @@ class CrmHub
             for ($i = count($trendKeys) - 1; $i >= 0; $i--) {
                 if ($day >= $trendKeys[$i]) {
                     $trend[$trendKeys[$i]]++;
+                    $push('dia:' . $trendKeys[$i], $l);
                     break;
                 }
             }
@@ -401,6 +440,32 @@ class CrmHub
             'bucketDays' => $bucket,
             'scope' => $this->user->isAdmin() ? 'all' : ($this->acl->getPermissionLevel('assignmentPermission') ?: 'no'),
         ];
+    }
+
+    /** POST /CrmHub/autoAssign. Quien tiene permiso de asignación. {ids}: reparte esos leads sin asesor con el mismo balanceo del reparto automático (por campaña o grupo general). */
+    public function postActionAutoAssign(Request $request): \stdClass
+    {
+        if ($this->assignmentLevel() === 'no') {
+            throw new Forbidden();
+        }
+        $d = $request->getParsedBody();
+        $assigner = new LeadAssigner($this->em, $this->config);
+        $done = $skipped = 0;
+        foreach (array_slice((array) ($d->ids ?? []), 0, 300) as $id) {
+            $lead = $this->em->getEntityById('Lead', (string) $id);
+            if (!$lead || $lead->get('assignedUserId') || !$this->acl->checkEntityEdit($lead)) {
+                $skipped++;
+                continue;
+            }
+            $u = $assigner->pick($lead->get('campaignId'));
+            if ($u) {
+                $assigner->assign($lead, $u);
+                $done++;
+            } else {
+                $skipped++;
+            }
+        }
+        return (object) ['assigned' => $done, 'skipped' => $skipped];
     }
 
     // ---------- Organigrama: gerentes -> equipos (directores y asesores), derivado de roles y equipos ----------

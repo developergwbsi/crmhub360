@@ -366,6 +366,22 @@
         }
     },
     {
+        "route": "/CrmHub/metricsLeads",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "metricsLeads"
+        }
+    },
+    {
+        "route": "/CrmHub/autoAssign",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "autoAssign"
+        }
+    },
+    {
         "route": "/CrmHub/meet/summary",
         "method": "get",
         "params": {
