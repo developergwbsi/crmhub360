@@ -4,6 +4,7 @@
 
 ## Sin publicar (después de v1.6.0)
 
+- `2fb382c` 2026-10-14 — Resumen automático de la reunión al terminar la llamada: se guarda en la ficha (lead, contacto y cuenta) y en la reunión, y se muestra al asesor con acciones
 - `b6214b8` 2026-10-14 — Videollamada: la pantalla compartida se ve completa, ficha del cliente visible desde que se abre la llamada y ventanitas que no tapan los controles
 - `e6cfe47` 2026-10-14 — WhatsApp: mensaje claro cuando el número no tiene WhatsApp y número con código de país
 

@@ -1863,10 +1863,10 @@ def meet_page(code: str):
 
 
 @app.post("/v1/public/meet/{code}/stt")
-async def meet_subtitle(code: str, request: Request, lang: str = "es", n: str = "", x_stt_key: str = Header("")):
+async def meet_subtitle(code: str, request: Request, lang: str = "es", n: str = "", to: str = "", x_stt_key: str = Header("")):
     """Subtítulo de un enunciado de audio (WAV 16 kHz mono): lo transcribe y traduce con IA local. No guarda nada."""
     try:
-        return JSONResponse(await meet.subtitle(code, x_stt_key, lang, await request.body(), n), headers=_MEET_HEADERS)
+        return JSONResponse(await meet.subtitle(code, x_stt_key, lang, await request.body(), n, [x for x in to.split(",") if x][:4]), headers=_MEET_HEADERS)
     except LookupError as e:
         raise HTTPException(404, str(e))
     except PermissionError as e:

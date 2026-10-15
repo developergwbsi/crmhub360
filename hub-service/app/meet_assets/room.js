@@ -299,8 +299,14 @@ function wavOf(chunks, rate) {
   w(0, 'RIFF'); dv.setUint32(4, 36 + len * 2, true); w(8, 'WAVE'); w(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true); dv.setUint32(24, 16000, true); dv.setUint32(28, 32000, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, 'data'); dv.setUint32(40, len * 2, true);
   for (var m = 0; m < len; m++) { dv.setInt16(44 + m * 2, pcm[m], true); } return new Blob([buf], {type: 'audio/wav'});
 }
+// idiomas a los que hay que traducir lo que digo: los que quienes están en la sala eligieron para leer (cada quien publica el suyo)
+function targets() {
+  var t = []; room.remoteParticipants.forEach(function (p) { var r = (p.attributes || {}).read; if (r && r !== 'off' && r !== J.speak && t.indexOf(r) < 0) { t.push(r); } });
+  return t.length ? t.slice(0, 3) : [J.speak === 'es' ? 'en' : 'es'];
+}
+function publishLang() { try { room.localParticipant.setAttributes({speak: J.speak, read: J.read}); } catch (e) { /* nada */ } }
 function sendSub(blob) {
-  fetch(CODE + '/stt?lang=' + J.speak + '&n=' + encodeURIComponent(J.name || ''), {method: 'POST', headers: {'X-Stt-Key': J.sttKey}, body: blob}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) {
+  fetch(CODE + '/stt?lang=' + J.speak + '&n=' + encodeURIComponent(J.name || '') + '&to=' + targets().join(','), {method: 'POST', headers: {'X-Stt-Key': J.sttKey}, body: blob}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) {
     if (!r || !r.text) { return; } if (subsShow) { showLine('Tú', {t: r.text, l: r.lang}, true); }
     try { room.localParticipant.publishData(enc({k: 'sub', n: J.name, l: r.lang, t: r.text, tr: r.tr || {}}), {reliable: true}); } catch (e) { /* nada */ }
   }).catch(function () { /* se omite la frase */ });
@@ -316,8 +322,9 @@ function hookMic(mt) {
     cur.push(copy); seg += ms; if (loud) { voiced += ms; silent = 0; } else { silent += ms; } if (silent >= 700 || seg >= 12000) { flush(); }
   };
 }
-function langLabel() { if (J) { $('langb').textContent = 'Subtítulos · ' + (J.read === 'off' ? 'apagados' : 'leo en ' + (J.read === 'es' ? 'español' : 'inglés')); } }
-function applyLang() { if (!J) { return; } J.speak = $('sp2').value; J.read = $('rd2').value; subsShow = J.read !== 'off'; $('bcc').classList.toggle('on', subsShow); if (!subsShow) { $('subs').innerHTML = ''; lines = []; } try { localStorage.setItem('meet-speak', J.speak); localStorage.setItem('meet-read', J.read); } catch (e) { /* nada */ } langLabel(); }
+var LN = {es: 'español', en: 'inglés', pt: 'portugués', fr: 'francés', de: 'alemán', it: 'italiano'};
+function langLabel() { if (J) { $('langb').textContent = 'Subtítulos · ' + (J.read === 'off' ? 'apagados' : 'leo en ' + (LN[J.read] || J.read)); } }
+function applyLang() { if (!J) { return; } J.speak = $('sp2').value; J.read = $('rd2').value; subsShow = J.read !== 'off'; $('bcc').classList.toggle('on', subsShow); if (!subsShow) { $('subs').innerHTML = ''; lines = []; } try { localStorage.setItem('meet-speak', J.speak); localStorage.setItem('meet-read', J.read); } catch (e) { /* nada */ } langLabel(); publishLang(); }
 $('sp2').onchange = applyLang; $('rd2').onchange = applyLang;
 $('bcc').onclick = function (e) { e.stopPropagation(); pop('lgp'); }; $('langb').onclick = function (e) { e.stopPropagation(); pop('lgp'); };
 
@@ -352,6 +359,7 @@ function startRoom(j) {
     room.remoteParticipants.forEach(function (p) { tileFor(p, false); p.trackPublications.forEach(function (pb) { if (pb.track) { attach(pb.track, p, false); } }); });
     tileFor(room.localParticipant, true); count();
     if (j.subtitles) { $('bcc').classList.remove('hide'); $('langb').classList.remove('hide'); $('bcc').classList.toggle('on', subsShow); $('sp2').value = j.speak; $('rd2').value = j.read; langLabel(); var seenL = ''; try { seenL = localStorage.getItem('meet-lang-seen') || ''; } catch (e) { /* nada */ } if (!seenL) { $('lgp').classList.remove('hide'); try { localStorage.setItem('meet-lang-seen', '1'); } catch (e) { /* nada */ } } }
+    publishLang();
     if (j.host) { startPending(); } else { $('invb').classList.add('hide'); }
     fetch(CODE + '/chat', {headers: {'X-Stt-Key': j.sttKey}}).then(function (r) { return r.ok ? r.json() : null; }).then(function (r) { if (r) { r.items.forEach(function (m) { addMsg({id: m.id, n: m.n, t: m.t, f: m.f, at: m.at}, m.i === j.sttKey.split('.')[0]); }); unread = 0; $('cbadge').classList.add('hide'); $('cdot').classList.add('hide'); } }).catch(function () { /* sin historial */ });
     return room.localParticipant.setMicrophoneEnabled(mic).then(function () { return room.localParticipant.setCameraEnabled(cam); }).catch(function (e) { console.warn('No se pudo publicar el audio o el video', e); $('wait').textContent = 'No pudimos enviar tu cámara o micrófono: ' + (e && e.message || e); $('wait').classList.remove('hide'); });

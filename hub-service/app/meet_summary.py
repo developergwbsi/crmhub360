@@ -45,17 +45,13 @@ SCHEMA_OUT = {"type": "object", "properties": {
     "required": ["resumen", "puntos_clave", "acuerdos", "pendientes"]}
 
 
-async def _llm(transcript: str, who: list[str]) -> dict:
-    """Resumen estructurado de la transcripción con el modelo local."""
-    system = ("Eres un asistente de ventas. Recibes la transcripción automática de una videollamada entre un asesor y uno o más clientes (puede mezclar español e inglés y tener errores de reconocimiento). "
+async def _llm(tenant: dict, transcript: str, who: list[str]) -> dict:
+    """Resumen estructurado de la transcripción con el motor de IA de la empresa (el que le asigna el Centro de control: Claude, OpenAI, Ollama…)."""
+    from . import llm
+    system = ("Eres un asistente de ventas. Recibes la transcripción automática de una videollamada entre un asesor y uno o más clientes (puede mezclar idiomas y tener errores de reconocimiento). "
               "Escribe en ESPAÑOL un resumen útil para el CRM. No inventes nada que no esté en la conversación. Responde solo con JSON con las claves: resumen (3 a 6 frases), puntos_clave (lista corta), "
               "acuerdos (lo que quedó acordado), pendientes (acciones por hacer; indica quién si se menciona), sentimiento (positivo, neutral o negativo) e interes (alto, medio, bajo o desconocido). Usa listas vacías si no hay.")
-    payload = {"model": MODEL(), "stream": False, "keep_alive": "20m", "format": SCHEMA_OUT, "options": {"temperature": 0.2, "num_predict": 700},
-               "messages": [{"role": "system", "content": system}, {"role": "user", "content": f"Participantes: {', '.join(who)}.\n\nTranscripción:\n{transcript}"}]}
-    async with httpx.AsyncClient(timeout=300) as c:
-        r = await c.post(f"{config.OLLAMA_URL}/api/chat", json=payload)
-        r.raise_for_status()
-    return json.loads(r.json()["message"]["content"])
+    return await llm.chat_json(tenant, system, f"Participantes: {', '.join(who)}.\n\nTranscripción:\n{transcript}", SCHEMA_OUT, max_tokens=900)
 
 
 def _text(s: dict, mins: int, who: list[str], has_text: bool) -> str:
@@ -125,10 +121,10 @@ async def finalize(code: str, session: dict | None = None) -> dict | None:
         if len(tr) > 14000:
             tr = tr[:7000] + "\n[…]\n" + tr[-7000:]
         try:
-            summary = await _llm(tr, names)
+            summary = await _llm(tenant, tr, names)
         except Exception as e:
             log.warning("resumen con IA: %s", str(e)[:150])
-            summary = {"resumen": "No se pudo generar el resumen automático (la IA local no respondió). La conversación quedó transcrita " + f"({len(lines)} frases).", "puntos_clave": [], "acuerdos": [], "pendientes": []}
+            summary = {"resumen": "No se pudo generar el resumen automático (el motor de IA no respondió). La conversación quedó transcrita " + f"({len(lines)} frases).", "puntos_clave": [], "acuerdos": [], "pendientes": []}
     mins = max(1, round(dur / 60))
     text = _text(summary, mins, names, has_text)
     with db.pool.connection() as c:

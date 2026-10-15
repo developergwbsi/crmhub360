@@ -1,6 +1,6 @@
 """Voz a texto y traducción local para los subtítulos de las videollamadas (faster-whisper en CPU, sin enviar audio a terceros).
 
-POST /transcribe?lang=es|en  — cuerpo: audio WAV 16 kHz mono (un enunciado de pocos segundos). Devuelve {"text": ...}.
+POST /transcribe?lang=es|en|pt|fr|de|it  — cuerpo: audio WAV 16 kHz mono (un enunciado de pocos segundos). Devuelve {"text": ...}.
 POST /translate  — {"text", "src", "dst"} (es↔en) con traductores locales opus-mt/CTranslate2 (modelos en /root/.cache/mt; ver convert_models.sh). Responde en fracciones de segundo.
 Solo escucha en 127.0.0.1; lo llama el Hub. El audio no se guarda: se transcribe en memoria y se descarta.
 Variables: STT_MODEL (tiny|base|small|medium, por defecto «small»), STT_THREADS (hilos de CPU), STT_PORT.
@@ -80,7 +80,7 @@ def health():
 @app.post("/transcribe")
 async def transcribe(request: Request, lang: str = "es"):
     """Transcribe un enunciado (WAV) en el idioma indicado."""
-    if lang not in ("es", "en"):
+    if lang not in ("es", "en", "pt", "fr", "de", "it"):
         raise HTTPException(400, "Idioma no soportado")
     data = await request.body()
     if not data or len(data) > 2_000_000:

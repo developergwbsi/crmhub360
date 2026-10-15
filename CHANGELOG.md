@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Subtítulos en más idiomas y motor de IA de la empresa
+- **Subtítulos en 6 idiomas**: español, inglés, **portugués, francés, alemán e italiano** (cada persona elige el que habla y el que quiere leer; la voz a texto local ya era multilingüe). Cada quien publica su idioma de lectura y quien habla traduce solo a los idiomas que hay en la sala.
+- **Los subtítulos traducidos y el resumen de la reunión usan el motor de IA de la empresa** (el que asigna el Centro de control en *Empresas → Servicios y módulos → Motor de IA*: Claude, OpenAI, Ollama…). Con un motor en la nube la traducción es mejor y sirve para todos los idiomas; con el motor local se usa el traductor liviano es↔en y la IA local para el resto. El consumo queda en «Este mes» del panel de IA. Antes el resumen y el respaldo de traducción llamaban a Ollama directo.
+
 ### Resumen automático de la reunión
 - **Al terminar la llamada se genera un resumen** con la IA local a partir de los subtítulos y se **deja en la ficha**: duración, participantes, resumen, puntos clave, acuerdos, pendientes y percepción (interés y sentimiento). Si el lead ya fue convertido, también queda en su **contacto y su cuenta**; y la **reunión programada** pasa a «Realizada» con el resumen en su descripción.
 - **Se le muestra al asesor donde esté**: al colgar aparece «Preparando el resumen de la reunión…» y, al estar listo, una ventana con el resumen, **Abrir la ficha**, **Copiar** y **Crear tarea con los pendientes**.
