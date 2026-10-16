@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Videollamada en otra ventana: ficha de cada participante
+- **Con la llamada en una ventana aparte (sin el panel del CRM) ya puedes ver la información de las personas**: en la lista «En la llamada» el anfitrión toca un nombre y aparece su tarjeta (estado, teléfono, correo, empresa, asesor, origen) con «Abrir la ficha en el CRM», que se abre en otra pestaña sin cortar la llamada. Funciona con el lead de la sala, quienes entraron con invitación personal y los invitados de la reunión programada (leads y contactos), ubicándolos por su ficha o por su nombre.
+
 ## [1.6.6] - 2026-10-16
 
 ### Videollamada: ficha desde la lista de la sala y «Abrir en otra ventana»

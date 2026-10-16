@@ -1919,6 +1919,17 @@ def meet_knock_status(code: str, kid: str):
         raise HTTPException(404, str(e))
 
 
+@app.get("/v1/public/meet/{code}/ficha")
+async def meet_ficha(code: str, h: str = "", n: str = "", r: str = ""):
+    """Información del CRM de una persona de la llamada, solo para el anfitrión (clave en h)."""
+    try:
+        return JSONResponse(await meet.ficha(code, h, n[:80], r[:40]), headers=_MEET_HEADERS)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+
+
 @app.get("/v1/public/meet/{code}/pending")
 def meet_pending(code: str, h: str = ""):
     """Solicitudes esperando al anfitrión (requiere su clave)."""

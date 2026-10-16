@@ -160,6 +160,63 @@ def _is_host(r: dict, host_key: str) -> bool:
     return bool(host_key) and hmac.compare_digest(host_key, r["host_key"])
 
 
+def _norm(t: str) -> str:
+    import unicodedata
+    return re.sub(r"\s+", " ", "".join(ch for ch in unicodedata.normalize("NFD", t or "") if unicodedata.category(ch) != "Mn")).strip().lower()
+
+
+async def ficha(code: str, host_key: str, name: str, ref: str = "") -> dict:
+    """Información del CRM de una persona de la llamada para el anfitrión, sin salir de la sala (ventana aparte). Solo registros ligados a esta llamada:
+    el lead de la sala, quienes recibieron invitación personal y los invitados de la reunión programada (leads y contactos). Se elige por la ficha que trae la persona o por su nombre."""
+    from .espo import Espo
+    r = _live(code)
+    if not _is_host(r, host_key):
+        raise PermissionError("Solo el anfitrión.")
+    t = db.get_tenant(r["tenant"])
+    e = Espo(t)
+    cand: list[tuple[str, str]] = []
+    if r.get("lead_id"):
+        cand.append(("Lead", r["lead_id"]))
+    with db.pool.connection() as c:
+        for iv in c.execute("SELECT scope, rec_id FROM meet_invites WHERE room = %s", (code,)).fetchall():
+            cand.append((iv["scope"], iv["rec_id"]))
+    try:
+        ms = await e.get("Meeting", select="id,parentType,parentId", **{"where[0][type]": "equals", "where[0][attribute]": "videoCode", "where[0][value]": code, "maxSize": 1})
+        for m in ms.get("list", []):
+            if m.get("parentType") in ("Lead", "Contact", "Account") and m.get("parentId"):
+                cand.append((m["parentType"], m["parentId"]))
+            for link, sc in (("leads", "Lead"), ("contacts", "Contact")):
+                try:
+                    for x in (await e.get(f"Meeting/{m['id']}/{link}", select="id", maxSize=50)).get("list", []):
+                        cand.append((sc, x["id"]))
+                except Exception:
+                    pass
+    except Exception as ex:
+        log.warning("invitados de la reunión: %s", str(ex)[:100])
+    seen, pick, byname = set(), None, None
+    fields = "name,status,stage,phoneNumber,emailAddress,accountName,assignedUserName,source"
+    for sc, i in cand:
+        if (sc, i) in seen or sc not in ("Lead", "Contact", "Account"):
+            continue
+        seen.add((sc, i))
+        try:
+            d = await e.get(f"{sc}/{i}", select=fields)
+        except Exception:
+            continue
+        d["_s"], d["_i"] = sc, i
+        if ref and ref == i:
+            pick = d
+            break
+        if byname is None and _norm(d.get("name")) == _norm(name):
+            byname = d
+    d = pick or byname
+    if not d:
+        return {"found": False}
+    base = "https://" + t["host"]
+    return {"found": True, "scope": d["_s"], "id": d["_i"], "name": d.get("name") or name, "status": d.get("status") or d.get("stage") or "", "phone": d.get("phoneNumber") or "", "email": d.get("emailAddress") or "",
+            "account": d.get("accountName") or "", "assigned": d.get("assignedUserName") or "", "source": d.get("source") or "", "url": f"{base}/#{d['_s']}/view/{d['_i']}"}
+
+
 def join(code: str, name: str, host_key: str = "") -> dict:
     """Entrada directa del anfitrión (con su clave). Los invitados pasan por la sala de espera (knock) y los admite el anfitrión."""
     r = _live(code)

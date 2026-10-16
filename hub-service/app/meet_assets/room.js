@@ -9,6 +9,7 @@ var mic = true, cam = true, stream = null, room = null, J = null;
 var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); };
 var enc = function (o) { return new TextEncoder().encode(JSON.stringify(o)); };
 if (window.parent !== window) { document.body.classList.add('framed'); }
+
 function post(path, body, headers) { return fetch(CODE + '/' + path, {method: 'POST', headers: Object.assign({'Content-Type': 'application/json'}, headers || {}), body: JSON.stringify(body)}); }
 function reqToast(k) {
   var d = document.createElement('div'); d.className = 'tt'; d.dataset.k = k.id; d.innerHTML = '<b></b> quiere entrar a la videollamada <button data-y>Admitir</button> <button data-n>Rechazar</button>'; d.querySelector('b').textContent = k.name;
@@ -102,6 +103,21 @@ function renderPeople() {
   var b = $('pbadge'); b.textContent = pend.length; b.classList.toggle('hide', !pend.length);
   $('bp').classList.toggle('act', pend.length > 0);
 }
+// Ventana aparte (sin el panel del CRM): el anfitrión ve aquí la ficha de la persona (el Hub la consulta al CRM; solo registros ligados a esta llamada)
+function showFicha(pid) {
+  var p = room.remoteParticipants.get(pid); if (!p) { return; }
+  var ref = null; try { ref = p.metadata ? JSON.parse(p.metadata) : null; } catch (e) { /* sin ficha */ }
+  var box = $('fcard'); if (!box) { box = document.createElement('div'); box.id = 'fcard'; document.body.appendChild(box); }
+  box.innerHTML = '<div class="fh"><b>' + esc(p.name || p.identity) + '</b><button class="fx" title="Cerrar">✕</button></div><div class="fr">Buscando en el CRM…</div>'; box.classList.remove('hide');
+  box.querySelector('.fx').onclick = function () { box.classList.add('hide'); };
+  fetch(CODE + '/ficha?h=' + encodeURIComponent(HK) + '&n=' + encodeURIComponent(p.name || '') + '&r=' + encodeURIComponent(ref && ref.l || '')).then(function (r) { return r.ok ? r.json() : null; }).then(function (f) {
+    var row = function (ic, v) { return v ? '<div class="fr">' + ic + ' ' + esc(v) + '</div>' : ''; };
+    if (!f || !f.found) { box.querySelector('.fr').textContent = 'No encontré a esta persona entre los invitados de la reunión. Búscala en el CRM.'; return; }
+    box.innerHTML = '<div class="fh"><b>' + esc(f.name) + '</b><button class="fx" title="Cerrar">✕</button></div>' + row('🚩', f.status) + row('📞', f.phone) + row('✉️', f.email) + row('🏢', f.account) + row('👤', f.assigned ? 'Asignado a ' + f.assigned : '') + row('🏷️', f.source) +
+      '<div class="fa"><a href="' + esc(f.url) + '" target="_blank" rel="noopener">Abrir la ficha en el CRM ↗</a></div>';
+    box.querySelector('.fx').onclick = function () { box.classList.add('hide'); };
+  }).catch(function () { box.querySelector('.fr').textContent = 'No se pudo consultar el CRM.'; });
+}
 function hostCmd(action, id, name) {
   if (action === 'remove' && !confirm('¿Sacar a ' + (name || 'esta persona') + ' de la llamada?')) { return; }
   post('admin', {host: HK, action: action, identity: id}).then(function () { toast(action === 'mute' ? 'Silenciado' : 'Sacado de la llamada', 2500); }).catch(function () { toast('No se pudo completar la acción.'); });
@@ -110,7 +126,7 @@ function hostCmd(action, id, name) {
 window.addEventListener('message', function (e) { var d = e.data; if (e.source !== parent || !d || d.k !== 'ch-cmd' || !J || !J.host) { return; } if (d.cmd === 'mute' || d.cmd === 'remove') { hostCmd(d.cmd, d.id, d.name); } });
 $('p-people').onclick = function (e) {
   var a = e.target.closest('button');
-  if (!a) { var row = e.target.closest('.pr[data-pid]'); if (row && window.parent !== window) { try { parent.postMessage({k: 'ch-meet', ev: 'person', id: row.dataset.pid}, '*'); } catch (x) { /* sin CRM */ } } return; }
+  if (!a) { var row = e.target.closest('.pr[data-pid]'); if (row) { if (window.parent !== window) { try { parent.postMessage({k: 'ch-meet', ev: 'person', id: row.dataset.pid}, '*'); } catch (x) { /* sin CRM */ } } else if (J && J.host) { showFicha(row.dataset.pid); } } return; }
   if (a.dataset.ad || a.dataset.dn) { decide(a.dataset.ad || a.dataset.dn, !!a.dataset.ad); }
   else if (a.dataset.mute) { hostCmd('mute', a.dataset.mute); }
   else if (a.dataset.rm) { hostCmd('remove', a.dataset.rm); }

@@ -65,3 +65,10 @@ input[type=text],select{width:100%;padding:11px;border-radius:10px;border:1px so
 /* dentro del CRM, cada persona de la lista abre su ficha */
 body.framed .pr[data-pid] { cursor: pointer; }
 body.framed .pr[data-pid]:hover { background: #ffffff14; }
+
+/* ficha del CRM dentro de la sala (ventana aparte) */
+body:not(.framed) .pr[data-pid] { cursor: pointer; } body:not(.framed) .pr[data-pid]:hover { background: #ffffff14; }
+#fcard { position: fixed; z-index: 60; right: 330px; top: 70px; width: 300px; max-width: calc(100vw - 24px); background: #fff; color: #1c2233; border-radius: 12px; padding: 12px 14px; box-shadow: 0 14px 40px rgba(0,0,0,.5); }
+#fcard.hide { display: none; } #fcard .fh { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; } #fcard .fh b { flex: 1; font-size: 15px; } #fcard .fx { border: 0; background: none; font-size: 16px; color: #5d6678; }
+#fcard .fr { font-size: 13.5px; padding: 3px 0; word-break: break-word; } #fcard .fa { margin-top: 8px; } #fcard .fa a { font-weight: 600; color: #3a52e0; }
+@media (max-width: 700px) { #fcard { right: 12px; left: 12px; width: auto; } }
