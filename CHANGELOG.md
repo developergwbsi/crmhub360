@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Videollamada: ficha desde la lista de la sala y «Abrir en otra ventana»
+- **En pantalla completa (y en el panel) ya puedes tocar a una persona de la lista «En la llamada» de la sala** y se abre su ficha del CRM (estado, teléfono, correo, asesor, «Abrir la ficha», silenciar y sacar de la llamada). Antes solo se podía desde la franja de nombres de arriba.
+- **«↗ Abrir en otra ventana» también está en el menú ⋮ de la sala** (además del botón del encabezado del panel, que ahora es más fácil de encontrar), para pasar la llamada a otra ventana o monitor sin cortarla.
+
 ## [1.6.5] - 2026-10-16
 
 ### Videollamada: ficha automática de cada participante

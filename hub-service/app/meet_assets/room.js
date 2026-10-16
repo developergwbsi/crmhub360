@@ -8,6 +8,7 @@ var $ = function (i) { return document.getElementById(i); };
 var mic = true, cam = true, stream = null, room = null, J = null;
 var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); };
 var enc = function (o) { return new TextEncoder().encode(JSON.stringify(o)); };
+if (window.parent !== window) { document.body.classList.add('framed'); }
 function post(path, body, headers) { return fetch(CODE + '/' + path, {method: 'POST', headers: Object.assign({'Content-Type': 'application/json'}, headers || {}), body: JSON.stringify(body)}); }
 function reqToast(k) {
   var d = document.createElement('div'); d.className = 'tt'; d.dataset.k = k.id; d.innerHTML = '<b></b> quiere entrar a la videollamada <button data-y>Admitir</button> <button data-n>Rechazar</button>'; d.querySelector('b').textContent = k.name;
@@ -92,7 +93,7 @@ function renderPeople() {
   if (!room) { return; }
   var me = room.localParticipant, list = [Object.assign(who(me), {me: true})].concat(Array.from(room.remoteParticipants.values()).map(who));
   $('plist').innerHTML = list.map(function (x) {
-    return '<div class="pr"><span class="av2">' + esc(initial(x.name)) + '</span><span class="n">' + esc(x.name) + (x.me ? ' (tú)' : '') + '</span>' + (x.hand ? '<span class="st">✋</span>' : '') + '<span class="st">' + (x.mic ? '🎤' : '🔇') + '</span>' +
+    return '<div class="pr" data-pid="' + esc(x.id) + '"><span class="av2">' + esc(initial(x.name)) + '</span><span class="n">' + esc(x.name) + (x.me ? ' (tú)' : '') + '</span>' + (x.hand ? '<span class="st">✋</span>' : '') + '<span class="st">' + (x.mic ? '🎤' : '🔇') + '</span>' +
       (J.host && !x.me ? '<button data-mute="' + esc(x.id) + '" title="Silenciar">🔇</button><button data-rm="' + esc(x.id) + '" title="Quitar de la llamada">⛔</button>' : '') + '</div>';
   }).join('');
   emitPeople(list);
@@ -108,7 +109,8 @@ function hostCmd(action, id, name) {
 // el CRM (panel de la llamada) también puede silenciar o sacar a un participante
 window.addEventListener('message', function (e) { var d = e.data; if (e.source !== parent || !d || d.k !== 'ch-cmd' || !J || !J.host) { return; } if (d.cmd === 'mute' || d.cmd === 'remove') { hostCmd(d.cmd, d.id, d.name); } });
 $('p-people').onclick = function (e) {
-  var a = e.target.closest('button'); if (!a) { return; }
+  var a = e.target.closest('button');
+  if (!a) { var row = e.target.closest('.pr[data-pid]'); if (row && window.parent !== window) { try { parent.postMessage({k: 'ch-meet', ev: 'person', id: row.dataset.pid}, '*'); } catch (x) { /* sin CRM */ } } return; }
   if (a.dataset.ad || a.dataset.dn) { decide(a.dataset.ad || a.dataset.dn, !!a.dataset.ad); }
   else if (a.dataset.mute) { hostCmd('mute', a.dataset.mute); }
   else if (a.dataset.rm) { hostCmd('remove', a.dataset.rm); }
@@ -271,7 +273,7 @@ $('invsend').onclick = function () { var to = $('invto').value.trim(); if (!to) 
 /* ---------------- menú «más» ---------------- */
 var locked = false;
 function buildMore() {
-  var h = '<button data-a="bg">🖼️ Fondos y efectos</button><button data-a="dev">⚙️ Audio y video</button><button data-a="lay">' + (layoutMode === 'speaker' ? '▦ Vista de cuadrícula' : '👤 Vista de orador') + '</button><button data-a="full">⛶ Pantalla completa</button><button data-a="inv">➕ Invitar a más personas</button>';
+  var h = '<button data-a="bg">🖼️ Fondos y efectos</button><button data-a="dev">⚙️ Audio y video</button><button data-a="lay">' + (layoutMode === 'speaker' ? '▦ Vista de cuadrícula' : '👤 Vista de orador') + '</button><button data-a="full">⛶ Pantalla completa</button><button data-a="inv">➕ Invitar a más personas</button>' + (window.parent !== window ? '<button data-a="pop">↗ Abrir en otra ventana</button>' : '');
   if (J.host) { h += '<hr><div class="hl">Anfitrión</div><button data-a="muteall">🔇 Silenciar a todos</button><button data-a="lock">' + (locked ? '🔓 Desbloquear la sala' : '🔒 Bloquear la sala') + '</button><button data-a="end">⛔ Terminar para todos</button>'; }
   $('more').innerHTML = h;
 }
@@ -283,6 +285,7 @@ $('more').onclick = function (e) {
   else if (a === 'lay') { layoutMode = layoutMode === 'speaker' ? 'grid' : 'speaker'; hidePops(); relayout(); toast(layoutMode === 'speaker' ? 'Vista de orador' : 'Vista de cuadrícula', 1800); }
   else if (a === 'full') { hidePops(); (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(function () { /* sin permiso */ }); }
   else if (a === 'inv') { openInvite(); }
+  else if (a === 'pop') { hidePops(); try { parent.postMessage({k: 'ch-meet', ev: 'popout'}, '*'); } catch (e) { /* sin CRM */ } }
   else if (a === 'muteall') { hidePops(); post('admin', {host: HK, action: 'mute_all'}).then(function () { toast('Todos silenciados'); }); }
   else if (a === 'lock') { hidePops(); post('admin', {host: HK, action: locked ? 'unlock' : 'lock'}).then(function (r) { return r.json(); }).then(function (j) { locked = !!j.locked; toast(locked ? 'Sala bloqueada: nadie más puede pedir entrar' : 'Sala desbloqueada'); }); }
   else if (a === 'end') { hidePops(); if (confirm('¿Terminar la videollamada para todos?')) { post('admin', {host: HK, action: 'end'}).then(function () { leave(); }); } }

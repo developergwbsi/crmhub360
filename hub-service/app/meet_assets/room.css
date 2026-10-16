@@ -61,3 +61,7 @@ input[type=text],select{width:100%;padding:11px;border-radius:10px;border:1px so
 .irow{display:flex;gap:6px}.irow input{flex:1}
 #clock{font-variant-numeric:tabular-nums;background:#1d2650;border-radius:999px;padding:3px 10px;font-size:13px;color:var(--tx)}
 .tb .tmute,.tb .trm{background:#5a2330}
+
+/* dentro del CRM, cada persona de la lista abre su ficha */
+body.framed .pr[data-pid] { cursor: pointer; }
+body.framed .pr[data-pid]:hover { background: #ffffff14; }

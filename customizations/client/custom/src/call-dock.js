@@ -228,6 +228,8 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
         const d = e.data; if (!el || !d || d.k !== 'ch-meet') { return; }
         if (d.ev === 'left') { setTimeout(() => { if (el) { endCall(); } }, 1200); }
         else if (d.ev === 'people') { people = d.people || []; if (d.started) { t0 = d.started; tick(); } paintPeople(); }
+        else if (d.ev === 'person') { const q = people.find(x => x.id === d.id); if (q && !q.me) { openCard(d.id); } }   // clic en una persona de la lista de la sala
+        else if (d.ev === 'popout') { API.popOut(); }   // «Abrir en otra ventana» desde el menú de la sala
         else if (d.ev === 'popout-ready') { clearTimeout(popTimer); Espo.Ui.notify(false); Espo.Ui.success('La llamada continúa en la otra ventana.'); API.close(); }   // la otra ventana ya está conectada
     });
     window.ChCallDock = API;
