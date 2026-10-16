@@ -114,7 +114,14 @@ $('p-people').onclick = function (e) {
   else if (a.dataset.rm) { hostCmd('remove', a.dataset.rm); }
 };
 $('admitall').onclick = function () { pend.slice().forEach(function (k) { decide(k.id, true); }); };
-function decide(id, ok) { pend = pend.filter(function (k) { return k.id !== id; }); renderPeople(); post('decide', {host: HK, id: id, admit: ok}); }
+function decide(id, ok) {
+  var k = pend.filter(function (x) { return x.id === id; })[0]; pend = pend.filter(function (x) { return x.id !== id; });
+  // primero se avisa al servidor (si el repintado fallara por cualquier cosa, la decisión no se pierde) y se confirma o se avisa del error
+  var sent = post('decide', {host: HK, id: id, admit: ok}).then(function (r) { return r.ok ? r.json() : Promise.reject(); }).then(function (j) { toast(j.ok ? (ok ? (k ? k.name + ' ya puede entrar' : 'Admitido') : 'Solicitud rechazada') : 'Esa solicitud ya no estaba pendiente', 2500); })
+    .catch(function () { if (k) { pend.push(k); seen[k.id] = 0; } toast('No se pudo completar. Vuelve a intentarlo.', 4000); try { renderPeople(); } catch (e) { /* nada */ } });
+  try { renderPeople(); } catch (e) { console.warn('personas', e); }
+  return sent;
+}
 var seen = {};
 function startPending() {
   setInterval(function () {
@@ -369,15 +376,17 @@ function waitAdmit(id, host) {
   $('lf').classList.add('hide'); $('wr').classList.remove('hide'); $('wrt').textContent = 'Esperando a que ' + (host || 'tu asesor') + ' te dé acceso…';
   var stop = false; setTimeout(function () { if (!stop) { $('wrt').textContent = (host || 'Tu asesor') + ' aún no entra a la sala. Ya le avisamos; no cierres esta ventana.'; } }, 45000);
   $('wrx').onclick = function () { stop = true; $('wr').classList.add('hide'); $('lf').classList.remove('hide'); $('go').disabled = false; };
-  (function poll() {
+  var tm = null; document.addEventListener('visibilitychange', function () { if (!document.hidden && !stop) { clearTimeout(tm); poll(); } });   // al volver a la pestaña no espera el siguiente turno del temporizador
+  function poll() {
     if (stop) { return; }
     fetch(CODE + '/knock/' + id).then(function (r) { if (r.status === 404) { throw new Error('x'); } return r.json(); }).then(function (j) {
       if (stop) { return; }
       if (j.status === 'admitted') { stop = true; $('wr').classList.add('hide'); return startRoom(j).catch(function (e) { $('lf').classList.remove('hide'); $('go').disabled = false; err(e.message || 'No se pudo entrar.'); }); }
       if (j.status === 'denied') { stop = true; $('wr').classList.add('hide'); $('lf').classList.remove('hide'); $('go').disabled = false; err('El anfitrión no pudo admitirte ahora. Pídele que te vuelva a enviar el enlace.'); return; }
-      setTimeout(poll, 2000);
-    }).catch(function (e) { if (e && e.message === 'x') { stop = true; $('wr').classList.add('hide'); $('lf').classList.remove('hide'); $('go').disabled = false; err('Esta videollamada ya terminó.'); return; } setTimeout(poll, 3000); });
-  })();
+      tm = setTimeout(poll, 2000);
+    }).catch(function (e) { if (e && e.message === 'x') { stop = true; $('wr').classList.add('hide'); $('lf').classList.remove('hide'); $('go').disabled = false; err('Esta videollamada ya terminó.'); return; } tm = setTimeout(poll, 3000); });
+  }
+  poll();
 }
 $('go').onclick = function () {
   var name = $('nm').value.trim(); if (!name && !HK) { err('Escribe tu nombre para entrar.'); return; }
