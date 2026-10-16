@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.6.4)
+## Sin publicar (después de v1.6.5)
 
+- `484ee55` 2026-10-15 — Versión 1.6.6
+- `c76aa47` 2026-10-15 — Videollamada: clic en la lista de la sala abre la ficha del participante; «Abrir en otra ventana» en el menú de la sala
+
+## v1.6.5
+
+- `53d9200` 2026-10-15 — Versión 1.6.5
 - `637c883` 2026-10-15 — Versión 1.6.5
 - `caa917b` 2026-10-15 — Videollamada: liga sola la ficha del CRM de quien entra por el enlace general (búsqueda por nombre)
 - `4e824b1` 2026-10-15 — Sala: la decisión de admitir se envía antes de repintar y confirma o avisa del error; quien espera consulta de inmediato al volver a su pestaña
