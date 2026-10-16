@@ -28,8 +28,22 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
     const codeOf = () => { try { return new URL(url).pathname.replace(/^\//, ''); } catch (e) { return ''; } };
     const refOf = p => links[p.id] || (p.ref && p.ref.l ? {s: p.ref.s || 'Lead', l: p.ref.l} : null);
 
+    // Quien entra por el enlace general no trae ficha: se busca en el CRM por su nombre y, si hay una sola persona con ese nombre, se liga sola (si no, queda el buscador)
+    const tried = {}, norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    function autoLink() {
+        people.filter(p => !p.me && !p.host && !refOf(p) && !tried[p.id + '|' + p.name] && norm(p.name).length > 2).forEach(p => {
+            tried[p.id + '|' + p.name] = 1;
+            const get = sc => Espo.Ajax.getRequest(sc, {maxSize: 6, select: 'name', where: [{type: 'textFilter', value: p.name}]}).then(r => (r.list || []).map(x => ({s: sc, l: x.id, name: x.name}))).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } return []; });
+            Promise.all([get('Lead'), get('Contact')]).then(([a, b]) => {
+                const hit = a.concat(b).filter(x => norm(x.name) === norm(p.name));
+                if (hit.length === 1 && !links[p.id]) { links[p.id] = {s: hit[0].s, l: hit[0].l}; paintPeople(); }
+            });
+        });
+    }
+
     function paintPeople() {
         const box = el && el.querySelector('.ch-dock-people'); if (!box) { return; }
+        autoLink();
         const others = people.filter(p => !p.me), seenRef = others.some(p => { const r = refOf(p); return r && roomRef && r.l === roomRef.l; });
         box.classList.remove('hide');
         const first = roomRef && !seenRef ? `<button class="ch-dp lk" data-p="__room" title="Ver la información del cliente de esta llamada"><span class="fas fa-address-card"></span> ${ChUi.esc(roomName || 'Ficha del cliente')}</button>` : '';

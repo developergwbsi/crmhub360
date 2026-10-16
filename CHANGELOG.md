@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Videollamada: ficha automática de cada participante
+- Quien entra por el **enlace general** (sin invitación personal) aparecía como «Sin ficha» y había que buscarlo a mano. Ahora el panel de la llamada **lo busca en el CRM por su nombre** y, si hay una sola persona (lead o contacto) con ese nombre, **le liga la ficha solo**: un clic en su nombre muestra estado, teléfono, correo, asesor y «Abrir la ficha». Si hay varios con el mismo nombre o ninguno, queda el buscador para vincularlo.
+- La sala ahora confirma «X ya puede entrar» al admitir y avisa si no se pudo; quien espera entra de inmediato al volver a su pestaña.
+
 ## [1.6.4] - 2026-10-15
 
 ### Avisar a todas las personas de la reunión
