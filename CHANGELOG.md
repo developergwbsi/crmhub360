@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.7.1] - 2026-10-17
+
 ### Ficha con menos scroll (más pestañas)
 - **Lead, contacto, cuenta y oportunidad**: lo que antes estaba apilado hacia abajo y en la columna derecha ahora va en **pestañas bajo el encabezado**: **Actividad**, **Agenda y tareas** (próximas actividades, tareas e historial de actividades), **Formularios**, **Documentos** (lectura de PDF), **Videollamadas**, **Comercial virtual** y **Estados** (historial). La columna derecha queda solo con asignación, equipos y creación.
 - **Todo en una sola vista (pantallas anchas)**: los datos del lead, cliente, cuenta u oportunidad (Resumen, Detalles, Calificación y la tarjeta de asignación) van **a la izquierda en 4/12** y las pestañas de actividad (Actividad, Agenda y tareas, Formularios, Documentos, Videollamadas, Comercial virtual, Estados) **a la derecha en 8/12**, con el encabezado, la barra de etapas y la agenda más bajitos. Las pestañas de la derecha se desplazan solas sin mover los datos. En pantallas angostas y en el panel lateral se mantiene el orden vertical de siempre.
