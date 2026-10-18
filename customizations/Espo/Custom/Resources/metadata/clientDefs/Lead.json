@@ -131,6 +131,16 @@
                 "hidden": true,
                 "style": "success",
                 "isForm": true
+            }
+        ]
+    },
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "chForms",
+                "label": "Formularios",
+                "view": "custom:views/lead/panels/forms",
+                "order": 2
             },
             {
                 "name": "chDocs",
@@ -165,16 +175,6 @@
             {
                 "name": "tasks",
                 "reference": "tasks"
-            }
-        ]
-    },
-    "bottomPanels": {
-        "detail": [
-            {
-                "name": "chForms",
-                "label": "Formularios",
-                "view": "custom:views/lead/panels/forms",
-                "order": 2
             }
         ]
     }

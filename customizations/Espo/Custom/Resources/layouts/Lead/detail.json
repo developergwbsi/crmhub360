@@ -91,7 +91,9 @@
                 }
             ]
         ],
-        "name": "details"
+        "name": "details",
+        "tabBreak": true,
+        "tabLabel": "Detalles"
     },
     {
         "label": "Filtro y servicio sugerido",

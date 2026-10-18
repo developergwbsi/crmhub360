@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Ficha con menos scroll (más pestañas)
+- **Lead, contacto, cuenta y oportunidad**: lo que antes estaba apilado hacia abajo y en la columna derecha ahora va en **pestañas bajo el encabezado**: **Actividad**, **Agenda y tareas** (próximas actividades, tareas e historial de actividades), **Formularios**, **Documentos** (lectura de PDF), **Videollamadas**, **Comercial virtual** y **Estados** (historial). La columna derecha queda solo con asignación, equipos y creación.
+- En el lead, los datos se reparten además en **Resumen**, **Detalles** y **Calificación** (antes «Detalles» iba debajo de «General»).
+
 ## [1.7.0] - 2026-10-17
 
 ### Formularios internos de gestión

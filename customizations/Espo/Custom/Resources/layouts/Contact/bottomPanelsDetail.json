@@ -1,0 +1,32 @@
+{
+    "_tab_actividad": {
+        "index": 0,
+        "tabBreak": true,
+        "tabLabel": "Actividad"
+    },
+    "stream": {
+        "index": 1
+    },
+    "_tab_agenda": {
+        "index": 100,
+        "tabBreak": true,
+        "tabLabel": "Agenda y tareas"
+    },
+    "activities": {
+        "index": 101
+    },
+    "tasks": {
+        "index": 102
+    },
+    "chHistory": {
+        "index": 103
+    },
+    "_tab_video": {
+        "index": 110,
+        "tabBreak": true,
+        "tabLabel": "Videollamadas"
+    },
+    "chVideo": {
+        "index": 111
+    }
+}
