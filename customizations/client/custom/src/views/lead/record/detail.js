@@ -10,6 +10,7 @@ define('custom:views/lead/record/detail', ['views/record/detail', 'custom:lead-h
         afterRender() {
             super.afterRender();
             Hero.mount(this);
+            if (this.el && !this.el.closest('.modal-body')) { this.el.classList.add('ch-split'); }   // vista completa: datos a un lado (4/12) y pestañas de actividad al otro (8/12)
             if (this.model.entityType === 'Lead') { this.chDecorate(); }
             // Sin el módulo «Cartera y cobranza» no se muestra el reporte de crédito (deuda, mora, ingresos…)
             if (this.model.entityType === 'Lead') { try { this.hidePanel('targetLists', true); } catch (e) { /* sin esa relación */ } }   // las listas de objetivos (campañas masivas de Espo) no se usan aquí

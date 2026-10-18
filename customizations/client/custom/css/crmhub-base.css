@@ -1273,3 +1273,26 @@ body.minimized #ch-topbrand { display: flex; flex-direction: column; justify-con
 .ch-wp-txt { font-weight: 600; max-height: 90px; overflow: auto; overflow-wrap: anywhere; } .ch-wp-c code { font-size: 11px; overflow-wrap: anywhere; }
 .ch-wp-it { display: flex; flex-direction: column; font-size: 13px; padding: 4px 0; border-bottom: 1px solid var(--ch-line); } .ch-wp-it small { color: var(--ch-muted); overflow-wrap: anywhere; }
 @media (max-width: 900px) { .ch-wp-main { grid-template-columns: 1fr; height: auto; } .ch-wp-frame { height: 50vh; } }
+/* Ficha en dos zonas: datos (Resumen, Detalles, Calificación) a la izquierda en 4/12 y las pestañas de actividad a la derecha en 8/12 */
+@media (min-width: 1100px) {
+    .ch-split .record-grid { display: grid; grid-template-columns: minmax(340px, 4fr) 8fr; column-gap: 16px; align-items: start; }
+    .ch-split .record-grid > .left { display: contents; }
+    .ch-split .record-grid > .left > .middle-tabs { grid-column: 1; grid-row: 1; width: auto; max-width: 100%; overflow-x: auto; }
+    .ch-split .record-grid > .left > .middle { grid-column: 1; grid-row: 2; width: auto; }
+    .ch-split .record-grid > .side { grid-column: 1; grid-row: 3; width: auto; float: none; padding: 0; margin: 0; }
+    .ch-split .record-grid > .left > .extra { display: none; }
+    .ch-split .record-grid > .left > .bottom { grid-column: 2; grid-row: 1 / span 3; width: auto; min-width: 0; position: sticky; top: 8px; max-height: calc(100vh - 120px); overflow-y: auto; }
+    /* en la zona estrecha los campos van de a uno por fila */
+    .ch-split .middle .row > .cell, .ch-split .middle .cell[class*="col-sm-"], .ch-split .side .cell[class*="col-"] { width: 100%; float: none; }
+    .ch-split .middle .row { margin-left: 0; margin-right: 0; }
+}
+@media (min-width: 1100px) {
+    /* cabecera, etapas y agenda más bajitas para ver más en una sola pantalla */
+    .ch-split .ch-lead-hero { padding: 12px 18px; margin-bottom: 8px; gap: 12px 16px; }
+    .ch-split .ch-lead-hero .ch-avatar-lg { width: 46px; height: 46px; font-size: 18px; }
+    .ch-split .ch-lh-name { font-size: 19px; } .ch-split .ch-lh-chips { margin-top: 4px; } .ch-split .ch-lh-meta { margin-top: 4px; }
+    .ch-split .ch-stepper { margin-top: 6px; } .ch-split .ch-step { padding-top: 6px; padding-bottom: 6px; }
+    .ch-split .ch-agenda { margin-bottom: 8px; padding-top: 8px; padding-bottom: 8px; } .ch-split .ch-ag-empty { display: none; }
+    .ch-split .detail-button-container { margin-bottom: 4px; }
+    .ch-split .bottom .tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; } .ch-split .bottom .tabs .btn { padding: 8px 8px; font-size: 12.5px; white-space: nowrap; flex: none; }
+}
