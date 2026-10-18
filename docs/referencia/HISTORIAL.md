@@ -2,8 +2,16 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.6.6)
+## Sin publicar (después de v1.7.0)
 
+- `2f641fa` 2026-10-17 — Versión 1.7.1
+- `714ca65` 2026-10-17 — Ficha: pestañas y títulos de panel fijos al desplazarse (apilados bajo encabezado, etapas y botones)
+- `94675af` 2026-10-17 — Ficha en dos zonas: datos a la izquierda (4/12) y pestañas de actividad a la derecha (8/12), cabecera más compacta
+- `0e53fca` 2026-10-17 — Ficha de lead, contacto, cuenta y oportunidad: paneles en pestañas (Actividad, Agenda y tareas, Formularios, Documentos, Videollamadas, Comercial virtual, Estados) y Detalles como pestaña propia
+
+## v1.7.0
+
+- `8170541` 2026-10-17 — Versión 1.7.0
 - `b071b58` 2026-10-17 — Versión 1.7.0
 - `cff1365` 2026-10-17 — Formularios: vista previa de la página para elegir con clics qué datos traer de una consulta web
 - `b4defae` 2026-10-17 — Formularios: lectura de PDF sin revisión, consulta de páginas web con análisis de IA, PDF con logo/color/firmas, claves automáticas; ficha del lead con barra de etapas y pestañas
