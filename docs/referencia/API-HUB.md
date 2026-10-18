@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **133** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **136** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -135,6 +135,9 @@ Total: **133** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/twilio/test` | `twilio_test` | Verifica las credenciales de Twilio y devuelve nombre y estado de la cuenta. |
 | POST | `/v1/voice/call` | `voice_call` | Inicia una llamada saliente que conecta primero al asesor y luego al lead; registra el trabajo. |
 | GET | `/v1/wa/route` | `wa_route` | Número preferido para escribirle al cliente (el último desde el que respondió, o al que se le escribió) y quién le escribió. |
+| GET | `/v1/websources` | `websources_list` | — |
+| PUT | `/v1/websources` | `websources_save` | — |
+| POST | `/v1/websources/run` | `websources_run` | — |
 | POST | `/v1/whatsapp/qr` | `wa_qr` | Obtiene el código QR para vincular un número de WhatsApp (Evolution). |
 | POST | `/v1/whatsapp/send` | `wa_send` | Envía un mensaje de WhatsApp a un lead (1 a 4000 caracteres) y registra el trabajo; lo llama la interfaz de Espo. |
 | POST | `/v1/whatsapp/test` | `wa_test` | Prueba la conexión del proveedor de WhatsApp de la línea indicada. |

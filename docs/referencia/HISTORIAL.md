@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.7.0)
+## Sin publicar (después de v1.7.1)
 
+- `bad3686` 2026-10-17 — Tablero de leads sobrio y profesional; ficha con desplazamiento independiente de cada zona
+- `73fef90` 2026-10-17 — Panel lateral con pestañas fijas, pestañas fijas en pantallas angostas, tablero de leads con más vida y botones para abrir en panel lateral o ficha completa
+
+## v1.7.1
+
+- `128f574` 2026-10-17 — Versión 1.7.1
 - `2f641fa` 2026-10-17 — Versión 1.7.1
 - `714ca65` 2026-10-17 — Ficha: pestañas y títulos de panel fijos al desplazarse (apilados bajo encabezado, etapas y botones)
 - `94675af` 2026-10-17 — Ficha en dos zonas: datos a la izquierda (4/12) y pestañas de actividad a la derecha (8/12), cabecera más compacta

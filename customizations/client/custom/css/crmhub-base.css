@@ -1368,3 +1368,4 @@ body:has(.list-kanban) .page-header [data-action="create"] { font-weight: 600; }
     body:has(.ch-split) #footer, body:has(.ch-split) footer { display: none; }
     body.has-navbar:has(.ch-split) { min-height: 0 !important; }
 }
+.ch-wp-res { margin-top: 12px; padding: 12px; border: 1px solid var(--ch-line); border-radius: 12px; } .ch-wp-res h4 { margin: 0 0 2px; } .ch-wp-res h5 { margin-top: 10px; }

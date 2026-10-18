@@ -321,7 +321,18 @@
 
     /* ---------------- Observador: el DOM de la app se pinta después ---------------- */
     // Encabezado fijo: la altura real del encabezado de página se publica como variable para apilar debajo el resumen del lead.
+    // Espo copia el desplazamiento de la página al menú lateral (por eso el menú «se movía» al hacer scroll). Se ignoran esas asignaciones; el scroll propio del menú (con la rueda) sigue funcionando.
+    function pinNavbar() {
+        var t = document.querySelector('#navbar .tabs');
+        if (!t || t._chPinned) { return; }
+        t._chPinned = true;
+        var d = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+        Object.defineProperty(t, 'scrollTop', {configurable: true, get: function () { return d.get.call(t); }, set: function () { /* lo mueve solo el usuario */ }});
+        d.set.call(t, 0);
+    }
+
     function syncSticky() {
+        pinNavbar();
         var ph = document.querySelector('#main .page-header, .page-header');
         var h = ph ? Math.round(ph.getBoundingClientRect().height) : 0;
         if (h && document.documentElement.style.getPropertyValue('--ch-ph-h') !== h + 'px') { document.documentElement.style.setProperty('--ch-ph-h', h + 'px'); }

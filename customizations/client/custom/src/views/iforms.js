@@ -24,11 +24,13 @@ define('custom:views/iforms', ['view', 'custom:ui'], function (Dep, ChUi) {
         data0 = null
         sel = 0
         stages = []
+        webSources = []
         dirty = false
 
         setup() {
             this.getHelper().pageTitle.setTitle('Formularios internos');
             this.stages = (this.getMetadata().get('entityDefs.Lead.fields.status.options') || []).filter(Boolean);
+            Espo.Ajax.getRequest('CrmHub/webSources', {all: 1}).then(w => { this.webSources = w.sources || []; }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } });
             Espo.Ajax.getRequest('CrmHub/iforms', {all: 1}).then(r => { this.data0 = r; this.forms = JSON.parse(JSON.stringify(r.forms || [])); this.draw(); })
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } this.data0 = {error: true}; this.draw(); });
         }
@@ -81,7 +83,7 @@ define('custom:views/iforms', ['view', 'custom:ui'], function (Dep, ChUi) {
 
         actionEd(f, a, i, keys) {
             const c = a.config || {}, AT = Object.entries(this.data0.actionTypes), p = `actions.${i}.config.`;
-            let cfg = '';
+            let cfg = '', cfg0 = '';
             if (a.type === 'pdf') {
                 cfg = `<input class="form-control input-sm" data-b="${p}title" value="${esc(c.title)}" placeholder="Título del PDF (por defecto, el nombre del formulario)">
                     <input class="form-control input-sm" data-b="${p}footer" value="${esc(c.footer)}" placeholder="Texto al pie (opcional)"><input class="form-control input-sm" data-b="${p}subtitle" value="${esc(c.subtitle)}" placeholder="Subtítulo (opcional)">
@@ -90,7 +92,13 @@ define('custom:views/iforms', ['view', 'custom:ui'], function (Dep, ChUi) {
                     <label class="ch-ifb-ck"><input type="checkbox" data-b="${p}signature" ${c.signature ? 'checked' : ''}> Líneas de firma</label>
                     <label class="ch-ifb-ck">Color <input type="color" data-b="${p}color" value="${esc(c.color || '#3a52e0')}" style="width:42px;height:26px;padding:0;border:0"></label></div>
                     <div class="ch-muted">Campos en el PDF (sin marcar = todos):</div><div class="ch-if-chk">${keys.map(k => `<label><input type="checkbox" data-pf="${i}:${esc(k.key || k.label)}" ${(c.fields || []).includes(k.key) ? 'checked' : ''}> ${esc(k.label)}</label>`).join('')}</div>`;
+            } else if (a.type === 'web' && c.sourceId) {
+                const src = (this.webSources || []).find(w => w.id === c.sourceId), map = c.map || {}, fopts = lbl => '<option value="">No guardar en un campo</option>' + keys.map(k => `<option value="${esc(k.key)}" ${map[lbl] === k.key ? 'selected' : ''}>${esc(k.label)}</option>`).join('');
+                cfg = `<div class="ch-ifb-row"><select class="form-control input-sm" data-b="${p}sourceId" data-redraw><option value="">Definir aquí la página y los datos</option>${(this.webSources || []).map(w => `<option value="${esc(w.id)}" ${w.id === c.sourceId ? 'selected' : ''}>Usar la consulta: ${esc(w.name)}</option>`).join('')}</select></div>` +
+                    (src ? `<div class="ch-muted">${esc(src.url)}</div>` + src.rules.map(r => `<div class="ch-ifb-row"><span style="min-width:160px">${esc(r.label)}</span><span class="fas fa-arrow-right"></span><select class="form-control input-sm" data-wmap="${i}:${esc(r.label)}">${fopts(r.label)}</select></div>`).join('') +
+                        (src.analyze ? `<div class="ch-ifb-row"><span style="min-width:160px">Análisis de la IA</span><span class="fas fa-arrow-right"></span><select class="form-control input-sm" data-b="${p}analyzeTo"><option value="">Solo en la nota del lead</option>${keys.filter(k => ['text', 'textarea'].includes(k.type)).map(k => `<option value="${esc(k.key)}" ${c.analyzeTo === k.key ? 'selected' : ''}>${esc(k.label)}</option>`).join('')}</select></div>` : '') : '<div class="ch-muted">Esa consulta ya no existe.</div>');
             } else if (a.type === 'web') {
+                cfg0 = (this.webSources || []).length ? `<div class="ch-ifb-row"><select class="form-control input-sm" data-b="${p}sourceId" data-redraw><option value="">Definir aquí la página y los datos</option>${this.webSources.map(w => `<option value="${esc(w.id)}">Usar la consulta guardada: ${esc(w.name)}</option>`).join('')}</select><span class="ch-muted">o configúralas en el menú «Consultas web»</span></div>` : '<div class="ch-muted">Tip: en el menú «Consultas web» puedes guardar consultas y reutilizarlas aquí.</div>';
                 const rules = c.rules || [], fopts = '<option value="">No guardar en un campo</option>' + keys.map(k => `<option value="${esc(k.key)}">${esc(k.label)}</option>`).join('');
                 cfg = `<input class="form-control input-sm" data-b="${p}url" value="${esc(c.url)}" placeholder="https://ejemplo.com/consulta?documento={{identificacion}}">
                     <div class="ch-muted">En la dirección puedes usar {{nombre}}, {{identificacion}}, {{telefono}}, {{correo}} y {{clave_del_campo}}. Solo páginas públicas que ya muestran su contenido (sin JavaScript, captcha ni usuario y clave). Respeta los términos de uso de cada sitio.</div>` +
@@ -120,7 +128,20 @@ define('custom:views/iforms', ['view', 'custom:ui'], function (Dep, ChUi) {
             return `<div class="ch-ifb-act"><div class="ch-ifb-row"><select class="form-control input-sm" data-b="actions.${i}.type" data-redraw>${this.opt(AT, a.type)}</select>
                 <input class="form-control input-sm" data-b="actions.${i}.label" value="${esc(a.label)}" placeholder="Nombre del botón">
                 <select class="form-control input-sm" data-b="actions.${i}.when"><option value="button" ${a.when !== 'save' ? 'selected' : ''}>Con un botón en la ficha</option><option value="save" ${a.when === 'save' ? 'selected' : ''}>Automática al guardar</option></select>
-                <label class="ch-ifb-ck"><input type="checkbox" data-b="actions.${i}.onlyComplete" ${a.onlyComplete !== false ? 'checked' : ''}> Solo si está completo</label><a data-del-a="${i}" title="Quitar"><span class="far fa-trash-can"></span></a></div>${cfg}</div>`;
+                <label class="ch-ifb-ck"><input type="checkbox" data-b="actions.${i}.onlyComplete" ${a.onlyComplete !== false ? 'checked' : ''}> Solo si está completo</label><a data-del-a="${i}" title="Quitar"><span class="far fa-trash-can"></span></a></div>${cfg0}${cfg}</div>`;
+        }
+
+        // la clave de un campo nuevo sigue a su nombre (y no se repite); al guardar queda fija
+        syncKeys(f) {
+            const used = new Set(f.fields.filter(x => !x._new).map(x => x.key));
+            f.fields.forEach(x => { if (x._new || !x.key) { let k = slug(x.label), n = 2, b = k; while (used.has(k)) { k = b + '_' + n++; } x.key = k; x._new = true; used.add(k); } });
+        }
+
+        // Vista previa de la página (custom:web-picker): el usuario pulsa el dato y se agrega como regla de la acción
+        pickWeb(i) {
+            const f = this.forms[this.sel], act = f.actions[i], keys = f.fields.filter(x => x.type !== 'heading');
+            act.config.rules = act.config.rules || [];
+            Espo.loader.require('custom:web-picker', WP => WP.open({url: act.config.url, rules: act.config.rules, fields: keys, onUrl: u => { if (!act.config.url) { act.config.url = u; } }}).then(() => { this.dirty = true; this.draw(); }));
         }
 
         // la clave de un campo nuevo sigue a su nombre (y no se repite); al guardar queda fija
@@ -199,6 +220,7 @@ define('custom:views/iforms', ['view', 'custom:ui'], function (Dep, ChUi) {
                 if (t.dataset.st) { const s = f().stages, i = s.indexOf(t.dataset.st); if (t.checked && i < 0) { s.push(t.dataset.st); } else if (!t.checked && i >= 0) { s.splice(i, 1); } this.dirty = true; return; }
                 if (t.dataset.opts) { f().fields[+t.dataset.opts].options = t.value.split('\n').map(x => x.trim()).filter(Boolean); this.dirty = true; return; }
                 if (t.dataset.pf) { const [i, k] = t.dataset.pf.split(':'), c = f().actions[+i].config, fk = f().fields.find(x => (x.key || x.label) === k); const key = fk && fk.key; if (!key) { return; } c.fields = c.fields || []; const j = c.fields.indexOf(key); if (t.checked && j < 0) { c.fields.push(key); } else if (!t.checked && j >= 0) { c.fields.splice(j, 1); } this.dirty = true; return; }
+                if (t.dataset.wmap) { const idx = t.dataset.wmap.indexOf(':'), i = +t.dataset.wmap.slice(0, idx), lbl = t.dataset.wmap.slice(idx + 1), c = f().actions[i].config; c.map = c.map || {}; if (t.value) { c.map[lbl] = t.value; } else { delete c.map[lbl]; } this.dirty = true; return; }
                 if (t.dataset.map) { const [i, k] = t.dataset.map.split(':'), c = f().actions[+i].config; c.map = c.map || {}; if (t.value) { c.map[k] = t.value; } else { delete c.map[k]; } this.dirty = true; }
             };
             root.onclick = e => {

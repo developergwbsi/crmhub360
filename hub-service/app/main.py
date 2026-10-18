@@ -1163,6 +1163,39 @@ async def iforms_webpick(req: IFormPickReq, tenant: dict = Depends(tenant_auth))
         raise HTTPException(422, str(e))
 
 
+class WebSourcesSaveReq(BaseModel):
+    """Consultas web guardadas de la empresa."""
+    sources: list[dict]
+
+
+class WebSourceRunReq(BaseModel):
+    """Ejecutar una consulta web guardada sobre un lead."""
+    sourceId: str
+    leadId: str
+    userName: str = ""
+
+
+@app.get("/v1/websources")
+async def websources_list(all: bool = False, tenant: dict = Depends(tenant_auth)):
+    return {"sources": iforms.sources(tenant["slug"], only_active=not all)}
+
+
+@app.put("/v1/websources")
+async def websources_save(req: WebSourcesSaveReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return {"sources": iforms.save_sources(tenant["slug"], req.sources)}
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/websources/run")
+async def websources_run(req: WebSourceRunReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return await iforms.run_source(tenant, req.sourceId, req.leadId, req.userName)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
 @app.get("/v1/iforms/entries")
 async def iforms_entries(leadId: str, tenant: dict = Depends(tenant_auth)):
     return {"entries": iforms.entries(tenant["slug"], leadId)}

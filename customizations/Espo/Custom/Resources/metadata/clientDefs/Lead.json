@@ -95,6 +95,12 @@
                     "label": "Leer documento (PDF)",
                     "handler": "custom:handlers/lead-process",
                     "actionFunction": "actionDoc"
+                },
+                {
+                    "name": "webQuery",
+                    "label": "Consultar web",
+                    "handler": "custom:handlers/lead-web",
+                    "actionFunction": "actionWebQuery"
                 }
             ]
         }

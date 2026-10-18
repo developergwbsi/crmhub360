@@ -1,6 +1,6 @@
 # Formularios internos de gestión
 
-Código: `hub-service/app/iforms.py` (+ `/v1/iforms*` en `main.py`), `Controllers/CrmHub.php` (`iforms*`), vistas `custom:views/iforms` (diseño), `custom:views/lead/panels/forms` (panel de la ficha) y `custom:iform` (dibuja y guarda). Tablas del Hub: `iform_defs`, `iform_entries`, `iform_runs`.
+Código: `hub-service/app/iforms.py` (también las consultas web guardadas: `web_sources`, `/v1/websources*`; vistas `custom:views/web-sources` y `custom:web-picker`) (+ `/v1/iforms*` en `main.py`), `Controllers/CrmHub.php` (`iforms*`), vistas `custom:views/iforms` (diseño), `custom:views/lead/panels/forms` (panel de la ficha) y `custom:iform` (dibuja y guarda). Tablas del Hub: `iform_defs`, `iform_entries`, `iform_runs`.
 
 ## Qué permite
 

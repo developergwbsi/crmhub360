@@ -4,6 +4,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Consultas web con su propio menú, y el menú lateral deja de moverse
+- **Nuevo menú «Consultas web»** (Organización; para gerentes, directores y supervisores): ahí se configura todo lo del web scraping. Cada consulta tiene su página (con variables como `{{identificacion}}`), los datos a traer —**eliges viendo la página y pulsando con el cursor**— y, si quieres, qué debe analizar la IA para recomendar. Antes solo se podía definir dentro de una acción de formulario.
+- **«Consultar web» en la ficha del lead** (menú ⋯): el asesor elige una consulta guardada, se ejecuta con los datos del lead y ve lo que encontró y el análisis de la IA; además queda una nota en el historial.
+- Las acciones de **formulario** pueden **usar una consulta guardada** (y dirigir cada dato a un campo del formulario) o seguir definiendo la página ahí mismo.
+- **El menú lateral ya no se mueve al hacer scroll** en ninguna página (EspoCRM copiaba el desplazamiento de la página al menú).
+
 ### Panel lateral del lead con pestañas fijas, tablero con más vida y dos formas de abrir una ficha
 - **El panel lateral (modal) de la ficha ahora tiene pestañas** —Contacto, Gestión, Crédito, Notas y, debajo, Actividad, Agenda y tareas, Formularios, Documentos, Videollamadas, Comercial virtual y Estados— y **quedan fijas** (las dos filas apiladas bajo el resumen del lead, con el título de cada panel) mientras te desplazas. Antes era una sola columna larga sin pestañas.
 - **Pestañas fijas también en pantallas angostas** de la ficha completa (Espo dejaba un desplazamiento interno en la columna izquierda que lo impedía).

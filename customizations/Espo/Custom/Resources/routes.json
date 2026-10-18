@@ -438,6 +438,30 @@
         }
     },
     {
+        "route": "/CrmHub/webSources",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "webSources"
+        }
+    },
+    {
+        "route": "/CrmHub/webSourcesSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "webSourcesSave"
+        }
+    },
+    {
+        "route": "/CrmHub/webSourceRun",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "webSourceRun"
+        }
+    },
+    {
         "route": "/CrmHub/metricsLeads",
         "method": "get",
         "params": {

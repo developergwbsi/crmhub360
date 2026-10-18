@@ -1915,6 +1915,34 @@ class CrmHub
         return (object) $this->hubCall('PUT', '/v1/iforms', ['forms' => json_decode(json_encode($d->forms ?? []), true), 'by' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 30);
     }
 
+    /** GET /CrmHub/webSources[?all=1]. Usuario (no API ni portal). Consultas web guardadas (solo activas; con all=1 y permiso de diseño, también las inactivas). Hub: GET /v1/websources. */
+    public function getActionWebSources(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $all = $request->getQueryParam('all') && $this->canManageForms();
+        $r = $this->hubCall('GET', '/v1/websources?all=' . ($all ? 'true' : 'false'), null, 10);
+        $r['canManage'] = $this->canManageForms();
+        return (object) $r;
+    }
+
+    /** POST /CrmHub/webSourcesSave. Gerente, director o supervisor. {sources}. Hub: PUT /v1/websources. */
+    public function postActionWebSourcesSave(Request $request): \stdClass
+    {
+        if (!$this->canManageForms()) {
+            throw new Forbidden();
+        }
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('PUT', '/v1/websources', ['sources' => json_decode(json_encode($d->sources ?? []), true)], 30);
+    }
+
+    /** POST /CrmHub/webSourceRun. Usuario con edición del lead. {leadId, sourceId}: consulta la página, deja el resultado en una nota del lead y lo devuelve. Hub: POST /v1/websources/run. */
+    public function postActionWebSourceRun(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->docLead((string) ($d->leadId ?? ''), true);
+        return (object) $this->hubCall('POST', '/v1/websources/run', ['sourceId' => (string) ($d->sourceId ?? ''), 'leadId' => $lead->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 90);
+    }
+
     /** POST /CrmHub/iformWebPreview. Gerente, director o supervisor. {url}: devuelve la página (saneada) para elegir visualmente qué datos traer. Hub: POST /v1/iforms/webpreview. */
     public function postActionIformWebPreview(Request $request): \stdClass
     {

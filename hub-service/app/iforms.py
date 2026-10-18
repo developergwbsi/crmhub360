@@ -22,6 +22,7 @@ CREATE INDEX IF NOT EXISTS iform_entries_lead ON iform_entries (tenant, lead_id,
 CREATE TABLE IF NOT EXISTS iform_runs (id SERIAL PRIMARY KEY, tenant TEXT NOT NULL, entry_id INTEGER NOT NULL, action_id TEXT NOT NULL, kind TEXT NOT NULL, ok BOOLEAN NOT NULL DEFAULT true,
     detail TEXT NOT NULL DEFAULT '', attachment_id TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS iform_runs_entry ON iform_runs (tenant, entry_id, id DESC);
+CREATE TABLE IF NOT EXISTS web_sources (tenant TEXT NOT NULL, id TEXT NOT NULL, def JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant, id));
 """
 FIELD_TYPES = {"heading": "Título de sección", "text": "Texto corto", "textarea": "Texto largo", "number": "Número", "money": "Monto", "date": "Fecha", "select": "Lista (una opción)",
                "multiselect": "Lista (varias opciones)", "bool": "Sí / No", "phone": "Teléfono", "email": "Correo"}
@@ -108,6 +109,8 @@ def clean(forms: list) -> list[dict]:
             elif typ == "send":
                 ch = c.get("channel") if c.get("channel") in ("email", "whatsapp", "sms") else "email"
                 cfg = {"channel": ch, "attachPdf": bool(c.get("attachPdf")) and ch == "email", "subject": str(c.get("subject", ""))[:160], "text": str(c.get("text", ""))[:1500]}
+            elif typ == "web" and c.get("sourceId"):
+                cfg = {"sourceId": str(c["sourceId"])[:40], "map": {k: v for k, v in (c.get("map") or {}).items() if v in fkeys}, "analyzeTo": c.get("analyzeTo") if c.get("analyzeTo") in fkeys else ""}
             elif typ == "web":
                 url = str(c.get("url", "")).strip()[:600]
                 if not re.match(r"^https?://", url):
@@ -161,6 +164,94 @@ def save_defs(tenant: str, forms: list, by: str) -> list[dict]:
             c.execute("INSERT INTO iform_defs (tenant, id, def, updated_by) VALUES (%s,%s,%s::jsonb,%s) ON CONFLICT (tenant,id) DO UPDATE SET def=EXCLUDED.def, updated_at=now(), updated_by=EXCLUDED.updated_by",
                       (tenant, d["id"], json.dumps(d, ensure_ascii=False), by[:80]))
     return new
+
+
+# ---------------- consultas web guardadas (se usan desde el lead o desde una acción de formulario)
+def clean_sources(items: list) -> list[dict]:
+    out, ids = [], set()
+    for x in (items or [])[:30]:
+        name = str(x.get("name", "")).strip()[:80]
+        if len(name) < 2:
+            raise ValueError("Cada consulta necesita un nombre.")
+        url = str(x.get("url", "")).strip()[:600]
+        if not re.match(r"^https?://", url):
+            raise ValueError(f"«{name}»: la dirección debe empezar por http:// o https://")
+        sid = _slug(x.get("id"), "w" + secrets.token_hex(3))
+        while sid in ids:
+            sid += "_2"
+        ids.add(sid)
+        rules = []
+        for r in (x.get("rules") or [])[:12]:
+            mode = r.get("mode") if r.get("mode") in ("selector", "regex", "text") else "selector"
+            expr = str(r.get("expr", "")).strip()[:300]
+            if mode != "text" and not expr:
+                continue
+            if mode == "regex":
+                try:
+                    re.compile(expr)
+                except re.error:
+                    raise ValueError(f"«{name}»: la expresión «{expr}» no es válida.")
+            rules.append({"label": str(r.get("label", ""))[:80] or expr[:40], "mode": mode, "expr": expr})
+        analyze = str(x.get("analyze", ""))[:600]
+        if not rules and not analyze:
+            raise ValueError(f"«{name}»: indica qué datos traer de la página o qué debe analizar la IA.")
+        out.append({"id": sid, "name": name, "description": str(x.get("description", ""))[:300], "url": url, "rules": rules, "analyze": analyze, "note": x.get("note") is not False, "active": x.get("active") is not False})
+    return out
+
+
+def sources(tenant: str, only_active: bool = False) -> list[dict]:
+    with db.pool.connection() as c:
+        rows = c.execute("SELECT def FROM web_sources WHERE tenant=%s ORDER BY (def->>'name')", (tenant,)).fetchall()
+    out = [r["def"] for r in rows]
+    return [d for d in out if d.get("active", True)] if only_active else out
+
+
+def get_source(tenant: str, sid: str) -> dict | None:
+    with db.pool.connection() as c:
+        r = c.execute("SELECT def FROM web_sources WHERE tenant=%s AND id=%s", (tenant, sid)).fetchone()
+    return r["def"] if r else None
+
+
+def save_sources(tenant: str, items: list) -> list[dict]:
+    new = clean_sources(items)
+    with db.pool.connection() as c:
+        c.execute("DELETE FROM web_sources WHERE tenant=%s AND NOT (id = ANY(%s))", (tenant, [d["id"] for d in new]))
+        for d in new:
+            c.execute("INSERT INTO web_sources (tenant, id, def) VALUES (%s,%s,%s::jsonb) ON CONFLICT (tenant,id) DO UPDATE SET def=EXCLUDED.def, updated_at=now()", (tenant, d["id"], json.dumps(d, ensure_ascii=False)))
+    return new
+
+
+async def web_fetch(tenant: dict, url_tpl: str, rules: list, analyze: str, vv: dict, ctx_text: str = "", lead_name: str = "") -> dict:
+    """Consulta una página: sustituye las variables de la dirección, extrae los datos y, si hay criterio, pide a la IA un análisis. Devuelve {final, found, analysis}."""
+    from urllib.parse import quote
+    from . import llm, webscrape
+    url = re.sub(r"\{\{\s*(\w+)\s*\}\}", lambda m: quote(str(vv.get(m.group(1), "")), safe=""), url_tpl)
+    final, html = await webscrape.fetch(url)
+    found = webscrape.extract(html, rules)
+    analysis = ""
+    if analyze:
+        page = webscrape.text_of(html, 9000)
+        if len(page) < 40:
+            raise ValueError("La página no trae texto que se pueda leer (puede cargar su contenido con JavaScript).")
+        analysis = (await llm.chat_text(tenant, "Eres un analista de una empresa de servicios financieros. Lees información de una página web y ayudas a tomar una decisión sobre un cliente. Responde en español, claro y breve (máximo 8 líneas), "
+                                        "separando lo que la página dice de tu recomendación. No inventes datos que no estén en la página.",
+                                        f"Cliente: {lead_name}. {ctx_text}\n\nPregunta o criterio: {analyze}\n\nContenido de la página ({final}):\n{page}")).strip()
+    return {"final": final, "found": found, "analysis": analysis}
+
+
+async def run_source(tenant: dict, sid: str, lead_id: str, user_name: str) -> dict:
+    """Ejecuta una consulta web guardada sobre un lead: deja el resultado en una nota y lo devuelve para mostrarlo."""
+    src = get_source(tenant["slug"], sid)
+    if not src or not src.get("active", True):
+        raise ValueError("Esa consulta ya no existe.")
+    e = Espo(tenant)
+    lead = await e.get(f"Lead/{lead_id}", select="name,identification,phoneNumber,emailAddress")
+    vv = {"nombre": lead.get("name") or "", "identificacion": lead.get("identification") or "", "telefono": lead.get("phoneNumber") or "", "correo": lead.get("emailAddress") or ""}
+    r = await web_fetch(tenant, src["url"], src["rules"], src["analyze"], vv, "", lead.get("name") or "")
+    if src.get("note", True):
+        lines = [f"[Consulta web] {src['name']} · {r['final']} (por {user_name or 'un usuario'})"] + [f"{k}: {v}" for k, v in r["found"].items()] + ([f"Análisis: {r['analysis']}"] if r["analysis"] else [])
+        await e.note(lead_id, "\n".join(lines)[:4000])
+    return {"name": src["name"], "url": r["final"], "found": r["found"], "analysis": r["analysis"]}
 
 
 # ---------------- respuestas
@@ -396,31 +487,28 @@ async def run_action(tenant: dict, entry_id: int, action_id: str, user_id: str, 
             res["detail"] = "PDF generado y adjunto en la ficha"
             res["attachmentId"] = att
         elif t == "web":
-            from urllib.parse import quote
-            from . import llm, webscrape
             lead_full = await e.get(f"Lead/{row['lead_id']}", select="name,identification,phoneNumber,emailAddress,status")
             vv = {"nombre": lead_full.get("name") or "", "identificacion": lead_full.get("identification") or "", "telefono": lead_full.get("phoneNumber") or "", "correo": lead_full.get("emailAddress") or ""}
             for f in d["fields"]:
                 if f["type"] != "heading":
                     vv[f["key"]] = _fmt(f, row["values"].get(f["key"])) if row["values"].get(f["key"]) not in (None, "", []) else ""
-            url = re.sub(r"\{\{\s*(\w+)\s*\}\}", lambda m: quote(str(vv.get(m.group(1), "")), safe=""), c["url"])
-            final, html = await webscrape.fetch(url)
-            found = webscrape.extract(html, c["rules"])
-            newv = {r["to"]: found[r["label"] or r["expr"]] for r in c["rules"] if r["to"] and (r["label"] or r["expr"]) in found}
-            analysis = ""
-            if c["analyze"]:
-                page = webscrape.text_of(html, 9000)
-                if len(page) < 40:
-                    raise ValueError("La página no trae texto que se pueda leer (puede cargar su contenido con JavaScript).")
-                ctx = "; ".join(f"{f['label']}: {_fmt(f, row['values'].get(f['key']))}" for f in d["fields"] if f["type"] != "heading" and row["values"].get(f["key"]) not in (None, "", []))
-                analysis = (await llm.chat_text(tenant, "Eres un analista de una empresa de servicios financieros. Lees información de una página web y ayudas a tomar una decisión sobre un cliente. Responde en español, claro y breve (máximo 8 líneas), "
-                                                "separando lo que la página dice de tu recomendación. No inventes datos que no estén en la página.",
-                                                f"Cliente: {lead_full.get('name') or ''}. Datos del formulario «{d['name']}»: {ctx or 'sin datos'}.\n\nPregunta o criterio: {c['analyze']}\n\nContenido de la página ({final}):\n{page}")).strip()
-                if c["analyzeTo"]:
-                    newv[c["analyzeTo"]] = analysis
+            ctx = "Datos del formulario «" + d["name"] + "»: " + ("; ".join(f"{f['label']}: {_fmt(f, row['values'].get(f['key']))}" for f in d["fields"] if f["type"] != "heading" and row["values"].get(f["key"]) not in (None, "", [])) or "sin datos")
+            if c.get("sourceId"):
+                src = get_source(slug, c["sourceId"])
+                if not src:
+                    raise ValueError("La consulta web elegida ya no existe.")
+                rules = [{"label": r["label"], "mode": r["mode"], "expr": r["expr"], "to": c["map"].get(r["label"], "")} for r in src["rules"]]
+                url_tpl, analyze, analyze_to, note = src["url"], src["analyze"], c.get("analyzeTo", ""), src.get("note", True)
+            else:
+                rules, url_tpl, analyze, analyze_to, note = c["rules"], c["url"], c["analyze"], c["analyzeTo"], c["note"]
+            r = await web_fetch(tenant, url_tpl, rules, analyze, vv, ctx, lead_full.get("name") or "")
+            found, analysis, final = r["found"], r["analysis"], r["final"]
+            newv = {x["to"]: found[x["label"] or x["expr"]] for x in rules if x.get("to") and (x["label"] or x["expr"]) in found}
+            if analysis and analyze_to:
+                newv[analyze_to] = analysis
             if newv:
                 await merge_entry(tenant, row["lead_id"], row["form_id"], newv, user_id, user_name, "web", run_actions=False)
-            if c["note"]:
+            if note:
                 lines = [f"[Consulta web] {d['name']} · {final}"] + [f"{k}: {v}" for k, v in found.items()] + ([f"Análisis: {analysis}"] if analysis else [])
                 await e.note(row["lead_id"], "\n".join(lines)[:4000])
             res["detail"] = (f"{len(found)} dato(s) traídos de la página" if found else "Página consultada sin datos que coincidan") + (" y análisis de IA" if analysis else "")
