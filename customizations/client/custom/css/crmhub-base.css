@@ -1281,7 +1281,7 @@ body.minimized #ch-topbrand { display: flex; flex-direction: column; justify-con
     .ch-split .record-grid > .left > .middle { grid-column: 1; grid-row: 2; width: auto; }
     .ch-split .record-grid > .side { grid-column: 1; grid-row: 3; width: auto; float: none; padding: 0; margin: 0; }
     .ch-split .record-grid > .left > .extra { display: none; }
-    .ch-split .record-grid > .left > .bottom { grid-column: 2; grid-row: 1 / span 3; width: auto; min-width: 0; position: sticky; top: 8px; max-height: calc(100vh - 120px); overflow-y: auto; }
+    .ch-split .record-grid > .left > .bottom { grid-column: 2; grid-row: 1 / span 3; width: auto; min-width: 0; }
     /* en la zona estrecha los campos van de a uno por fila */
     .ch-split .middle .row > .cell, .ch-split .middle .cell[class*="col-sm-"], .ch-split .side .cell[class*="col-"] { width: 100%; float: none; }
     .ch-split .middle .row { margin-left: 0; margin-right: 0; }
@@ -1296,3 +1296,10 @@ body.minimized #ch-topbrand { display: flex; flex-direction: column; justify-con
     .ch-split .detail-button-container { margin-bottom: 4px; }
     .ch-split .bottom .tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; } .ch-split .bottom .tabs .btn { padding: 8px 8px; font-size: 12.5px; white-space: nowrap; flex: none; }
 }
+
+/* Pestañas y títulos siempre fijos al desplazarse: se apilan bajo el encabezado de página, el resumen del lead y la barra de botones */
+body { --ch-stick: calc(var(--top-bar-height, 52px) + var(--ch-ph-h, 56px) + var(--ch-hero-h, 0px) + var(--ch-bc-h, 0px)); --ch-tabs-h: 42px; }
+#main .detail .middle-tabs, #main .detail .bottom > .tabs { position: sticky; top: var(--ch-stick); z-index: 70; background: var(--ch-bg); margin-top: 0; padding-top: 2px; min-height: var(--ch-tabs-h); }
+#main .detail .bottom .panel > .panel-heading, #main .detail .middle .panel > .panel-heading { position: sticky; top: calc(var(--ch-stick) + var(--ch-tabs-h)); z-index: 60; background: var(--ch-surface, #fff); border-radius: 14px 14px 0 0; }
+.ch-in-modal ~ * .middle-tabs, .modal-body .middle-tabs, .modal-body .bottom > .tabs, .modal-body .panel > .panel-heading { position: static; }
+#main .detail .ch-fp-top { position: sticky; top: calc(var(--ch-stick) + var(--ch-tabs-h) + 44px); z-index: 50; background: var(--ch-surface, #fff); }

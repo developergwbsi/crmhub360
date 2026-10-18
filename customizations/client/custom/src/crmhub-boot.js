@@ -325,6 +325,11 @@
         var ph = document.querySelector('#main .page-header, .page-header');
         var h = ph ? Math.round(ph.getBoundingClientRect().height) : 0;
         if (h && document.documentElement.style.getPropertyValue('--ch-ph-h') !== h + 'px') { document.documentElement.style.setProperty('--ch-ph-h', h + 'px'); }
+        var bc = document.querySelector('#main .detail-button-container.record-buttons');   // barra de botones (Editar…): los títulos y pestañas se apilan debajo
+        if (bc && !bc._chRo && window.ResizeObserver) {
+            bc._chRo = new ResizeObserver(function () { document.documentElement.style.setProperty('--ch-bc-h', Math.round(bc.getBoundingClientRect().height) + 'px'); });
+            bc._chRo.observe(bc);
+        } else if (!bc) { document.documentElement.style.setProperty('--ch-bc-h', '0px'); }
         var hero = document.querySelector('.ch-lead-hero:not(.ch-in-modal)');
         if (!hero) { document.documentElement.style.setProperty('--ch-hero-h', '0px'); }
         else if (!hero._chRo && window.ResizeObserver) {
