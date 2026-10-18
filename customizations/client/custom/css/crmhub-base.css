@@ -1312,33 +1312,59 @@ body { --ch-stick: calc(var(--top-bar-height, 52px) + var(--ch-ph-h, 56px) + var
 .ch-drawer .modal-body .ch-fp-top { top: calc(var(--ch-mh, 0px) + var(--ch-tabs-h) * 2 + 44px); }
 #main .detail .ch-fp-top { position: sticky; top: calc(var(--ch-stick) + var(--ch-tabs-h) + 44px); z-index: 50; background: var(--ch-surface, #fff); }
 
-/* ============ Leads: tablero con más vida ============ */
-.ch-card { position: relative; } .ch-card-acts { position: absolute; top: 6px; right: 6px; z-index: 3; display: flex; gap: 2px; opacity: 0; transition: opacity .15s; padding: 2px; border-radius: 10px; background: var(--ch-surface); box-shadow: 0 2px 8px rgba(30, 40, 90, .16); }
+/* ============ Leads: tablero sobrio y profesional ============ */
+.ch-card { position: relative; }
+.ch-card-acts { position: absolute; top: 8px; right: 8px; z-index: 3; display: flex; gap: 2px; opacity: 0; transition: opacity .15s; padding: 2px; border-radius: 8px; background: var(--ch-surface); border: 1px solid var(--ch-line); box-shadow: 0 2px 6px rgba(16, 24, 40, .10); }
 .ch-card:hover .ch-card-acts, .ch-card:focus-within .ch-card-acts { opacity: 1; }
-.ch-card-acts button, .ch-row-acts button { border: 0; background: color-mix(in srgb, var(--ch-primary) 10%, transparent); color: var(--ch-primary); width: 26px; height: 26px; border-radius: 8px; font-size: 12px; cursor: pointer; }
-.ch-card-acts button:hover, .ch-row-acts button:hover { background: var(--ch-primary); color: #fff; }
-.ch-row-acts { display: inline-flex; gap: 4px; margin-left: 10px; opacity: 0; transition: opacity .15s; vertical-align: middle; }
+.ch-card-acts button, .ch-row-acts button { border: 0; background: transparent; color: var(--ch-muted); width: 26px; height: 26px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+.ch-card-acts button:hover, .ch-row-acts button:hover { background: var(--ch-soft, #eef1f8); color: var(--ch-primary); }
+.ch-row-acts { display: inline-flex; gap: 2px; margin-left: 10px; opacity: 0; transition: opacity .15s; vertical-align: middle; }
 tr.list-row:hover .ch-row-acts { opacity: 1; }
 @media (hover: none) { .ch-card-acts, .ch-row-acts { opacity: 1; } }
 
-/* fondo suave con color en lugar de gris plano */
-body:has(.list-kanban) #main, body:has(.list-kanban) #content { background: radial-gradient(1100px 380px at 12% -8%, color-mix(in srgb, var(--ch-primary) 11%, transparent), transparent 70%), radial-gradient(900px 340px at 92% 0%, color-mix(in srgb, #8b5cf6 9%, transparent), transparent 70%), var(--ch-bg); }
-body:has(.list-kanban) .page-header h3 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; background: linear-gradient(90deg, var(--ch-primary), #8b5cf6); -webkit-background-clip: text; background-clip: text; color: transparent; }
-body:has(.list-kanban) .page-header .btn-default.btn-xs-wide, body:has(.list-kanban) .page-header .btn-default { border-radius: 12px; font-weight: 600; }
-body:has(.list-kanban) .page-header [data-action="create"] .fas, body:has(.list-kanban) .page-header [data-action="create"] .fa-plus { color: #fff; } body:has(.list-kanban) .page-header [data-action="create"] { background: linear-gradient(135deg, var(--ch-primary), #7b5bf0); color: #fff; border: 0; box-shadow: 0 6px 16px color-mix(in srgb, var(--ch-primary) 38%, transparent); }
+body:has(.list-kanban) .page-header h3 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; color: var(--ch-ink); }
+body:has(.list-kanban) .page-header [data-action="create"] { font-weight: 600; }
 
-/* columnas: cabecera con degradado y contador, y fondo tenue del color de la etapa */
-.list-kanban th.group-header { --stage: #94a3b8; border-radius: 12px !important; box-shadow: 0 4px 12px color-mix(in srgb, var(--stage) 35%, transparent); letter-spacing: .01em; }
-.list-kanban td.group-column { --stage: #94a3b8; background: color-mix(in srgb, var(--stage) 7%, transparent); border-radius: 14px; }
-.list-kanban [data-name="Nuevo Lead"] { --stage: #64748b; } .list-kanban [data-name="En Calificación"] { --stage: #4f63e8; } .list-kanban [data-name="Calificado"] { --stage: #8b5cf6; }
-.list-kanban [data-name="En Enfriamiento/Contactado"] { --stage: #f59e0b; } .list-kanban [data-name="Cierre Exitoso"] { --stage: #2fa36b; } .list-kanban [data-name="Perdido"], .list-kanban [data-name="Dead"] { --stage: #ef5b5b; }
-.group-column-list:not(:has(.item))::before { content: "Arrastra un lead aquí"; display: block; margin: 8px 6px; padding: 22px 10px; border: 2px dashed color-mix(in srgb, var(--stage, #94a3b8) 45%, transparent); border-radius: 12px; text-align: center; color: color-mix(in srgb, var(--stage, #94a3b8) 80%, #000); font-size: 12.5px; font-weight: 600; opacity: .8; }
+/* columnas: cabecera limpia con punto de color y contador; fondo neutro */
+.list-kanban th.group-header { padding: 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important; overflow: visible !important; }
+.list-kanban th.group-header > div { --stage-c: var(--stage, #94a3b8); background: var(--ch-surface) !important; color: var(--ch-ink) !important; border: 1px solid var(--ch-line); border-top: 3px solid var(--stage-c); border-radius: 10px !important; padding: 0 12px !important; line-height: 32px !important; box-shadow: 0 1px 2px rgba(16, 24, 40, .05); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+.list-kanban th.group-header .kanban-group-label { color: var(--ch-ink) !important; } .list-kanban th.group-header .create-button { color: var(--ch-muted) !important; }
+.list-kanban td.group-column { background: color-mix(in srgb, var(--ch-ink) 3.5%, transparent); border-radius: 12px; }
+.list-kanban th[data-name="Nuevo Lead"], .list-kanban td[data-name="Nuevo Lead"] { --stage: #64748b; } .list-kanban th[data-name="En Calificación"], .list-kanban td[data-name="En Calificación"] { --stage: #4f63e8; } .list-kanban th[data-name="Calificado"], .list-kanban td[data-name="Calificado"] { --stage: #8b5cf6; }
+.list-kanban th[data-name="En Enfriamiento/Contactado"], .list-kanban td[data-name="En Enfriamiento/Contactado"] { --stage: #f59e0b; } .list-kanban th[data-name="Cierre Exitoso"], .list-kanban td[data-name="Cierre Exitoso"] { --stage: #2fa36b; } .list-kanban th[data-name="Perdido"], .list-kanban td[data-name="Perdido"], .list-kanban th[data-name="Dead"], .list-kanban td[data-name="Dead"] { --stage: #ef5b5b; }
+.group-column-list:not(:has(.item))::before { content: "Sin leads en esta etapa"; display: block; padding: 22px 8px; text-align: center; color: var(--ch-muted); font-size: 12.5px; }
 
-/* tarjetas: acento por calificación, avatar con aro y elevación al pasar el cursor */
-.ch-card { border-left: 4px solid color-mix(in srgb, var(--stage, #94a3b8) 70%, transparent) !important; transition: transform .15s, box-shadow .15s; background: linear-gradient(180deg, var(--ch-surface) 0%, color-mix(in srgb, var(--stage, #94a3b8) 4%, var(--ch-surface)) 100%); }
-.ch-card.q-ok { border-left-color: #2fa36b !important; } .ch-card.q-warn { border-left-color: #f59e0b !important; } .ch-card.q-bad { border-left-color: #ef5b5b !important; }
-.group-column-list .item:hover .ch-card { transform: translateY(-2px); }
-.ch-card .ch-avatar { box-shadow: 0 0 0 3px color-mix(in srgb, var(--stage, #94a3b8) 22%, transparent); }
-.ch-card .ch-f-totalDebt, .ch-card .ch-f-opportunityAmount { font-weight: 700; color: #1f8a5b; }
+/* tarjetas: planas, con borde fino y datos secundarios en gris */
+.list-kanban .kanban-item, .kanban-item, td.group-column .item { border: 0; box-shadow: none; }
+.ch-card { border: 1px solid var(--ch-line) !important; border-radius: 10px !important; box-shadow: 0 1px 2px rgba(16, 24, 40, .06) !important; background: var(--ch-surface) !important; transition: box-shadow .15s, border-color .15s; }
+.group-column-list .item:hover .ch-card { box-shadow: 0 6px 16px rgba(16, 24, 40, .12) !important; border-color: color-mix(in srgb, var(--ch-primary) 35%, var(--ch-line)) !important; }
+.ch-card .panel-body { padding: 11px 12px 10px; }
+.ch-card .ch-avatar { width: 30px; height: 30px; font-size: 11px; box-shadow: none; }
+.ch-card-head { margin-bottom: 6px; gap: 9px; } .ch-card-name { font-size: 13.5px; font-weight: 650; line-height: 1.25; padding-right: 54px; }
+.ch-f { font-size: 12px; margin-top: 2px; } .ch-f::before { color: #9aa3b8; }
+.ch-f-qualificationStatus { display: inline-flex; width: auto; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--ch-muted) 12%, transparent); font-weight: 600; font-size: 11.5px; margin: 2px 0 4px; }
+.ch-f-qualificationStatus::before { display: none; }
+.ch-card.q-ok .ch-f-qualificationStatus { background: #e4f5ec; color: #1b7a4b; } .ch-card.q-warn .ch-f-qualificationStatus { background: #fdf1d9; color: #946200; } .ch-card.q-bad .ch-f-qualificationStatus { background: #fde6e6; color: #b43030; }
+.ch-card .ch-f-totalDebt, .ch-card .ch-f-opportunityAmount { font-weight: 650; color: var(--ch-ink); }
 /* Espo deja «overflow: auto» en la columna izquierda: eso impedía que las pestañas quedaran fijas en pantallas angostas */
 #main .detail .record-grid > .left { overflow: visible !important; }
+
+/* ===== Ficha en dos zonas con desplazamiento independiente: izquierda (datos) y derecha (actividad) se mueven por separado ===== */
+@media (min-width: 1100px) {
+    #main .ch-split .record-grid { height: calc(100vh - var(--ch-stick) - 12px); min-height: 440px; grid-template-rows: auto minmax(0, 1fr) auto; }
+    #main .ch-split .record-grid > .left > .middle-tabs { position: static; top: auto; }
+    #main .ch-split .record-grid > .left > .middle { overflow-y: auto; min-height: 0; align-self: stretch; padding-right: 4px; }
+    #main .ch-split .record-grid > .side { max-height: 150px; overflow-y: auto; }
+    #main .ch-split .record-grid > .left > .bottom { overflow-y: auto; height: 0; min-height: 100%; max-height: none; position: static; padding-right: 4px; }
+    #main .ch-split .bottom > .tabs { top: 0; }
+    #main .ch-split .bottom .panel > .panel-heading { top: var(--ch-tabs-h); }
+    #main .ch-split .middle .panel > .panel-heading { top: 0; }
+    #main .ch-split .ch-fp-top { top: calc(var(--ch-tabs-h) + 44px); }
+    #main .ch-split .middle, #main .ch-split .bottom { scrollbar-width: thin; }
+}
+@media (min-width: 1100px) {
+    /* la página no se alarga más allá de la ficha: así cada zona se desplaza por su lado y las pestañas nunca quedan bajo los encabezados fijos */
+    body:has(.ch-split) #main > .container.content, body:has(.ch-split) .container.content { min-height: 0 !important; padding-bottom: 12px !important; }
+    body:has(.ch-split) #footer, body:has(.ch-split) footer { display: none; }
+    body.has-navbar:has(.ch-split) { min-height: 0 !important; }
+}
