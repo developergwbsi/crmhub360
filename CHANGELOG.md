@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.7.2] - 2026-10-18
+
 ### Ficha y pantallas de diseño con zonas independientes
 - **Ficha del lead, cliente, cuenta u oportunidad (pantallas anchas)**: la página **ya no se desplaza**; el encabezado, la barra de etapas y los botones quedan quietos y **la zona de los datos (4/12) y la de actividad (8/12) se desplazan cada una por su lado**, sin mover la otra. Se quitó un comportamiento antiguo que subía toda la página al girar la rueda sobre una columna y que era la causa de que «se moviera todo».
 - **Formularios internos y Consultas web con diseño profesional**: cabecera fija con título y acciones («Nuevo», «Usar ejemplo», «Guardar todo» y aviso de cambios sin guardar), lista a la izquierda que no se mueve y el editor a la derecha con **pestañas fijas** (General, Dónde se ve, Campos, Acciones / La consulta, Datos a traer, Análisis con IA) y contenido que se desplaza por dentro. La página no se mueve.
