@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **118** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **120** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -48,6 +48,8 @@ Total: **118** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/iformAction` | CrmHub.iformAction | POST /CrmHub/iformAction. Usuario con edición del lead. {leadId, entryId, actionId}. Ejecuta una acción de botón del formulario. Hub: POST /v1/iforms/action. */ |
 | GET | `/CrmHub/iformEntries` | CrmHub.iformEntries | GET /CrmHub/iformEntries?leadId=. Usuario con lectura del lead. Respuestas de los formularios del lead. Hub: GET /v1/iforms/entries. */ |
 | POST | `/CrmHub/iformEntry` | CrmHub.iformEntry | POST /CrmHub/iformEntry. Usuario con edición del lead. {leadId, formId, values, entryId?, partial?}. Guarda las respuestas y ejecuta las acciones «al guardar». Hub: POST /v1/iforms/entry. */ |
+| POST | `/CrmHub/iformWebPick` | CrmHub.iformWebPick | POST /CrmHub/iformWebPick. Gerente, director o supervisor. {previewId, idx}: selector CSS y texto de muestra del elemento elegido. Hub: POST /v1/iforms/webpick. */ |
+| POST | `/CrmHub/iformWebPreview` | CrmHub.iformWebPreview | POST /CrmHub/iformWebPreview. Gerente, director o supervisor. {url}: devuelve la página (saneada) para elegir visualmente qué datos traer. Hub: POST /v1/iforms/webpreview. */ |
 | GET | `/CrmHub/iforms` | CrmHub.iforms | GET /CrmHub/iforms[?all=1]. Usuario (no API ni portal). Formularios activos y catálogos; con all=1 (solo quien los diseña) incluye los inactivos. Hub: GET /v1/iforms. */ |
 | POST | `/CrmHub/iformsSave` | CrmHub.iformsSave | POST /CrmHub/iformsSave. Gerente, director o supervisor. {forms}. Hub: PUT /v1/iforms. */ |
 | GET | `/CrmHub/integrations` | CrmHub.integrations | GET /CrmHub/integrations. Admin. Hub: GET /v1/tenant/settings. */ |

@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **131** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **133** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -49,6 +49,8 @@ Total: **131** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/iforms/action` | `iforms_action` | — |
 | GET | `/v1/iforms/entries` | `iforms_entries` | — |
 | POST | `/v1/iforms/entry` | `iforms_entry` | — |
+| POST | `/v1/iforms/webpick` | `iforms_webpick` | Selector CSS y texto de muestra del elemento elegido en la vista previa. |
+| POST | `/v1/iforms/webpreview` | `iforms_webpreview` | Descarga una página pública y la devuelve lista para mostrarla y elegir datos con clics. |
 | POST | `/v1/ingest/{slug}/evolution` | `evo_ingest` | Webhook de Evolution API: registra los mensajes de WhatsApp entrantes. |
 | GET | `/v1/ingest/{slug}/facebook` | `fb_verify` | Verificación del webhook de Facebook Lead Ads (hub.challenge) con el token del tenant. |
 | POST | `/v1/ingest/{slug}/facebook` | `fb_ingest` | Webhook de Facebook Lead Ads: valida la firma de Meta y crea o actualiza los leads. |

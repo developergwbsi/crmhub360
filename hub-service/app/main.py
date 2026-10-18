@@ -1131,6 +1131,38 @@ async def iforms_save(req: IFormsSaveReq, tenant: dict = Depends(tenant_auth)):
         raise HTTPException(422, str(e))
 
 
+class IFormPreviewReq(BaseModel):
+    """Dirección de la página que se quiere ver para elegir datos."""
+    url: str
+
+
+class IFormPickReq(BaseModel):
+    """Elemento elegido (posición data-chi) en una vista previa."""
+    previewId: str
+    idx: int
+
+
+@app.post("/v1/iforms/webpreview")
+async def iforms_webpreview(req: IFormPreviewReq, tenant: dict = Depends(tenant_auth)):
+    """Descarga una página pública y la devuelve lista para mostrarla y elegir datos con clics."""
+    from . import webscrape
+    try:
+        final, html = await webscrape.fetch(req.url.strip()[:600])
+        return webscrape.preview(tenant["slug"], final, html)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/iforms/webpick")
+async def iforms_webpick(req: IFormPickReq, tenant: dict = Depends(tenant_auth)):
+    """Selector CSS y texto de muestra del elemento elegido en la vista previa."""
+    from . import webscrape
+    try:
+        return webscrape.pick(tenant["slug"], req.previewId, req.idx)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
 @app.get("/v1/iforms/entries")
 async def iforms_entries(leadId: str, tenant: dict = Depends(tenant_auth)):
     return {"entries": iforms.entries(tenant["slug"], leadId)}

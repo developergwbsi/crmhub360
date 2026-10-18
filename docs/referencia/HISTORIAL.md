@@ -4,6 +4,7 @@
 
 ## Sin publicar (después de v1.6.6)
 
+- `b4defae` 2026-10-17 — Formularios: lectura de PDF sin revisión, consulta de páginas web con análisis de IA, PDF con logo/color/firmas, claves automáticas; ficha del lead con barra de etapas y pestañas
 - `db372a9` 2026-10-17 — Formularios internos de gestión: diseño por gerentes, panel con pestañas en la ficha, acciones (PDF, estado, tarea, envío, copiar a campos) y destino de la lectura de PDF
 - `557674c` 2026-10-15 — Videollamada en ventana aparte: el anfitrión ve la ficha del CRM de cada participante desde la lista de la sala
 

@@ -644,7 +644,7 @@ Completa los campos (los marcados con ***** son obligatorios) y pulsa **Guardar*
 
 Consultar una página web
 
-Una acción del formulario puede **consultar una página pública** (por ejemplo, un registro o un directorio), traer los datos que definiste a campos del formulario y, si lo pediste, pedirle a la IA que **analice lo que dice la página y recomiende** para ayudarte a decidir. El resultado queda en el formulario y en una nota del lead. Funciona con páginas que muestran su contenido directamente (no con las que exigen usuario, clave o captcha).
+Una acción del formulario puede **consultar una página pública** (por ejemplo, un registro o un directorio), traer los datos que definiste a campos del formulario (al diseñarla, **ves la página y pulsas con el cursor** sobre cada dato que quieres, sin escribir selectores) y, si lo pediste, pedirle a la IA que **analice lo que dice la página y recomiende** para ayudarte a decidir. El resultado queda en el formulario y en una nota del lead. Funciona con páginas que muestran su contenido directamente (no con las que exigen usuario, clave o captcha).
 
 Etapas y pestañas de la ficha
 

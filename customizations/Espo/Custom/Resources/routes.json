@@ -422,6 +422,22 @@
         }
     },
     {
+        "route": "/CrmHub/iformWebPreview",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "iformWebPreview"
+        }
+    },
+    {
+        "route": "/CrmHub/iformWebPick",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "iformWebPick"
+        }
+    },
+    {
         "route": "/CrmHub/metricsLeads",
         "method": "get",
         "params": {

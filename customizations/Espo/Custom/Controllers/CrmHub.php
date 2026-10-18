@@ -1915,6 +1915,26 @@ class CrmHub
         return (object) $this->hubCall('PUT', '/v1/iforms', ['forms' => json_decode(json_encode($d->forms ?? []), true), 'by' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 30);
     }
 
+    /** POST /CrmHub/iformWebPreview. Gerente, director o supervisor. {url}: devuelve la página (saneada) para elegir visualmente qué datos traer. Hub: POST /v1/iforms/webpreview. */
+    public function postActionIformWebPreview(Request $request): \stdClass
+    {
+        if (!$this->canManageForms()) {
+            throw new Forbidden();
+        }
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/iforms/webpreview', ['url' => (string) ($d->url ?? '')], 40);
+    }
+
+    /** POST /CrmHub/iformWebPick. Gerente, director o supervisor. {previewId, idx}: selector CSS y texto de muestra del elemento elegido. Hub: POST /v1/iforms/webpick. */
+    public function postActionIformWebPick(Request $request): \stdClass
+    {
+        if (!$this->canManageForms()) {
+            throw new Forbidden();
+        }
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/iforms/webpick', ['previewId' => (string) ($d->previewId ?? ''), 'idx' => (int) ($d->idx ?? -1)], 15);
+    }
+
     /** GET /CrmHub/iformEntries?leadId=. Usuario con lectura del lead. Respuestas de los formularios del lead. Hub: GET /v1/iforms/entries. */
     public function getActionIformEntries(Request $request): \stdClass
     {
