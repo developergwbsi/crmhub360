@@ -1,0 +1,64 @@
+{
+    "_tab_actividad": {
+        "index": 0,
+        "tabBreak": true,
+        "tabLabel": "Actividad"
+    },
+    "stream": {
+        "index": 1
+    },
+    "_tab_agenda": {
+        "index": 10,
+        "tabBreak": true,
+        "tabLabel": "Agenda y tareas"
+    },
+    "activities": {
+        "index": 11
+    },
+    "tasks": {
+        "index": 12
+    },
+    "chHistory": {
+        "index": 13
+    },
+    "_tab_forms": {
+        "index": 20,
+        "tabBreak": true,
+        "tabLabel": "Formularios"
+    },
+    "chForms": {
+        "index": 21
+    },
+    "_tab_docs": {
+        "index": 30,
+        "tabBreak": true,
+        "tabLabel": "Documentos"
+    },
+    "chDocs": {
+        "index": 31
+    },
+    "_tab_video": {
+        "index": 40,
+        "tabBreak": true,
+        "tabLabel": "Videollamadas"
+    },
+    "chVideo": {
+        "index": 41
+    },
+    "_tab_agent": {
+        "index": 50,
+        "tabBreak": true,
+        "tabLabel": "Comercial virtual"
+    },
+    "chAgent": {
+        "index": 51
+    },
+    "_tab_estados": {
+        "index": 60,
+        "tabBreak": true,
+        "tabLabel": "Estados"
+    },
+    "statusHistory": {
+        "index": 61
+    }
+}

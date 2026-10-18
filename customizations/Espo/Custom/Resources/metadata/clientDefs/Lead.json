@@ -176,6 +176,48 @@
                 "name": "tasks",
                 "reference": "tasks"
             }
+        ],
+        "detailSmall": [
+            {
+                "name": "chForms",
+                "label": "Formularios",
+                "view": "custom:views/lead/panels/forms",
+                "order": 2
+            },
+            {
+                "name": "chDocs",
+                "label": "Lectura de documentos",
+                "view": "custom:views/lead/panels/documents"
+            },
+            {
+                "name": "chAgent",
+                "label": "Comercial virtual",
+                "view": "custom:views/lead/panels/agent"
+            },
+            {
+                "name": "chVideo",
+                "label": "Videollamadas",
+                "view": "custom:views/panels/video"
+            },
+            {
+                "name": "activities",
+                "reference": "activities"
+            },
+            {
+                "name": "chHistory",
+                "label": "Historial de actividades",
+                "view": "custom:views/lead/panels/activity-history",
+                "notRefreshable": false
+            },
+            {
+                "name": "statusHistory",
+                "label": "Historial de estados",
+                "view": "custom:views/lead/panels/status-history"
+            },
+            {
+                "name": "tasks",
+                "reference": "tasks"
+            }
         ]
     }
 }

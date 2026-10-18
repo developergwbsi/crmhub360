@@ -37,6 +37,13 @@ define('custom:views/record/kanban-drawer', ['views/record/kanban', 'custom:live
                 if (!it || it.dataset.id !== d.id || e.target.closest(SKIP)) { return; }
                 this.openDrawer(d.id);
             }, true);
+            // botones de la tarjeta: «ver en el panel lateral» y «abrir la ficha completa»
+            this.el.addEventListener('click', e => {
+                const b = e.target.closest('[data-ch-act]'); if (!b) { return; }
+                e.preventDefault(); e.stopPropagation();
+                const it = b.closest('.group-column-list .item'); if (!it) { return; }
+                if (b.dataset.chAct === 'full') { this.getRouter().navigate('#' + this.entityType + '/view/' + it.dataset.id, {trigger: true}); } else { this.openDrawer(it.dataset.id); }
+            }, true);
             // el enlace del nombre no debe navegar a pantalla completa
             this.el.addEventListener('click', e => {
                 if (e.ctrlKey || e.metaKey || e.shiftKey || e.button || e.target.closest(SKIP)) { return; }

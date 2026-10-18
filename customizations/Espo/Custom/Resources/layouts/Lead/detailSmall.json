@@ -18,7 +18,10 @@
                     "name": "telegramUsername"
                 }
             ]
-        ]
+        ],
+        "name": "contact",
+        "tabBreak": true,
+        "tabLabel": "Contacto"
     },
     {
         "label": "Gestión",
@@ -47,7 +50,10 @@
                     "name": "suggestedService"
                 }
             ]
-        ]
+        ],
+        "name": "management",
+        "tabBreak": true,
+        "tabLabel": "Gestión"
     },
     {
         "label": "Crédito",
@@ -76,7 +82,10 @@
                     "name": "maxDaysOverdue"
                 }
             ]
-        ]
+        ],
+        "name": "credit",
+        "tabBreak": true,
+        "tabLabel": "Crédito"
     },
     {
         "label": "Notas",
@@ -86,6 +95,9 @@
                     "name": "description"
                 }
             ]
-        ]
+        ],
+        "name": "notes",
+        "tabBreak": true,
+        "tabLabel": "Notas"
     }
 ]

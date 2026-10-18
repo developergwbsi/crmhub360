@@ -4,6 +4,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Panel lateral del lead con pestañas fijas, tablero con más vida y dos formas de abrir una ficha
+- **El panel lateral (modal) de la ficha ahora tiene pestañas** —Contacto, Gestión, Crédito, Notas y, debajo, Actividad, Agenda y tareas, Formularios, Documentos, Videollamadas, Comercial virtual y Estados— y **quedan fijas** (las dos filas apiladas bajo el resumen del lead, con el título de cada panel) mientras te desplazas. Antes era una sola columna larga sin pestañas.
+- **Pestañas fijas también en pantallas angostas** de la ficha completa (Espo dejaba un desplazamiento interno en la columna izquierda que lo impedía).
+- **Tablero de Leads con más color**: fondo con degradado suave, título con degradado y botón «Crear lead» destacado, columnas con el color de su etapa, cajas punteadas «Arrastra un lead aquí» en las columnas vacías, tarjetas con borde de color según la calificación (verde califica, ámbar revisión manual, rojo no califica), avatar con aro, monto en verde y elevación al pasar el cursor.
+- **Dos formas de abrir un lead (y cuentas, contactos y oportunidades)** desde la tarjeta del tablero o la fila de la lista: el icono del ojo abre solo el **panel lateral** y el de flechas abre la **ficha completa**; además, el botón «Abrir completo» del panel lateral.
+
 ## [1.7.1] - 2026-10-17
 
 ### Ficha con menos scroll (más pestañas)

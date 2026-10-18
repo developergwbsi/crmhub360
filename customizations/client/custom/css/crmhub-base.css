@@ -1300,6 +1300,45 @@ body.minimized #ch-topbrand { display: flex; flex-direction: column; justify-con
 /* Pestañas y títulos siempre fijos al desplazarse: se apilan bajo el encabezado de página, el resumen del lead y la barra de botones */
 body { --ch-stick: calc(var(--top-bar-height, 52px) + var(--ch-ph-h, 56px) + var(--ch-hero-h, 0px) + var(--ch-bc-h, 0px)); --ch-tabs-h: 42px; }
 #main .detail .middle-tabs, #main .detail .bottom > .tabs { position: sticky; top: var(--ch-stick); z-index: 70; background: var(--ch-bg); margin-top: 0; padding-top: 2px; min-height: var(--ch-tabs-h); }
+/* en una sola columna (pantallas angostas) las dos filas de pestañas se apilan una bajo la otra */
+#main .detail .bottom > .tabs { top: calc(var(--ch-stick) + var(--ch-tabs-h)); }
+#main .detail .bottom .panel > .panel-heading { top: calc(var(--ch-stick) + var(--ch-tabs-h) * 2); }
+@media (min-width: 1100px) { #main .ch-split .bottom > .tabs { top: var(--ch-stick); } #main .ch-split .bottom .panel > .panel-heading { top: calc(var(--ch-stick) + var(--ch-tabs-h)); } }
 #main .detail .bottom .panel > .panel-heading, #main .detail .middle .panel > .panel-heading { position: sticky; top: calc(var(--ch-stick) + var(--ch-tabs-h)); z-index: 60; background: var(--ch-surface, #fff); border-radius: 14px 14px 0 0; }
-.ch-in-modal ~ * .middle-tabs, .modal-body .middle-tabs, .modal-body .bottom > .tabs, .modal-body .panel > .panel-heading { position: static; }
+/* en el panel lateral (modal) todo se ancla bajo el resumen del lead, dentro del cuerpo que se desplaza */
+.ch-drawer .modal-body .middle-tabs { position: sticky; top: var(--ch-mh, 0px); z-index: 71; background: var(--ch-bg); min-height: var(--ch-tabs-h); }
+.ch-drawer .modal-body .bottom > .tabs { position: sticky; top: calc(var(--ch-mh, 0px) + var(--ch-tabs-h)); z-index: 70; background: var(--ch-bg); min-height: var(--ch-tabs-h); }
+.ch-drawer .modal-body .panel > .panel-heading { position: sticky; top: calc(var(--ch-mh, 0px) + var(--ch-tabs-h) * 2); z-index: 60; background: var(--ch-surface, #fff); }
+.ch-drawer .modal-body .ch-fp-top { top: calc(var(--ch-mh, 0px) + var(--ch-tabs-h) * 2 + 44px); }
 #main .detail .ch-fp-top { position: sticky; top: calc(var(--ch-stick) + var(--ch-tabs-h) + 44px); z-index: 50; background: var(--ch-surface, #fff); }
+
+/* ============ Leads: tablero con más vida ============ */
+.ch-card { position: relative; } .ch-card-acts { position: absolute; top: 6px; right: 6px; z-index: 3; display: flex; gap: 2px; opacity: 0; transition: opacity .15s; padding: 2px; border-radius: 10px; background: var(--ch-surface); box-shadow: 0 2px 8px rgba(30, 40, 90, .16); }
+.ch-card:hover .ch-card-acts, .ch-card:focus-within .ch-card-acts { opacity: 1; }
+.ch-card-acts button, .ch-row-acts button { border: 0; background: color-mix(in srgb, var(--ch-primary) 10%, transparent); color: var(--ch-primary); width: 26px; height: 26px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+.ch-card-acts button:hover, .ch-row-acts button:hover { background: var(--ch-primary); color: #fff; }
+.ch-row-acts { display: inline-flex; gap: 4px; margin-left: 10px; opacity: 0; transition: opacity .15s; vertical-align: middle; }
+tr.list-row:hover .ch-row-acts { opacity: 1; }
+@media (hover: none) { .ch-card-acts, .ch-row-acts { opacity: 1; } }
+
+/* fondo suave con color en lugar de gris plano */
+body:has(.list-kanban) #main, body:has(.list-kanban) #content { background: radial-gradient(1100px 380px at 12% -8%, color-mix(in srgb, var(--ch-primary) 11%, transparent), transparent 70%), radial-gradient(900px 340px at 92% 0%, color-mix(in srgb, #8b5cf6 9%, transparent), transparent 70%), var(--ch-bg); }
+body:has(.list-kanban) .page-header h3 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; background: linear-gradient(90deg, var(--ch-primary), #8b5cf6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+body:has(.list-kanban) .page-header .btn-default.btn-xs-wide, body:has(.list-kanban) .page-header .btn-default { border-radius: 12px; font-weight: 600; }
+body:has(.list-kanban) .page-header [data-action="create"] .fas, body:has(.list-kanban) .page-header [data-action="create"] .fa-plus { color: #fff; } body:has(.list-kanban) .page-header [data-action="create"] { background: linear-gradient(135deg, var(--ch-primary), #7b5bf0); color: #fff; border: 0; box-shadow: 0 6px 16px color-mix(in srgb, var(--ch-primary) 38%, transparent); }
+
+/* columnas: cabecera con degradado y contador, y fondo tenue del color de la etapa */
+.list-kanban th.group-header { --stage: #94a3b8; border-radius: 12px !important; box-shadow: 0 4px 12px color-mix(in srgb, var(--stage) 35%, transparent); letter-spacing: .01em; }
+.list-kanban td.group-column { --stage: #94a3b8; background: color-mix(in srgb, var(--stage) 7%, transparent); border-radius: 14px; }
+.list-kanban [data-name="Nuevo Lead"] { --stage: #64748b; } .list-kanban [data-name="En Calificación"] { --stage: #4f63e8; } .list-kanban [data-name="Calificado"] { --stage: #8b5cf6; }
+.list-kanban [data-name="En Enfriamiento/Contactado"] { --stage: #f59e0b; } .list-kanban [data-name="Cierre Exitoso"] { --stage: #2fa36b; } .list-kanban [data-name="Perdido"], .list-kanban [data-name="Dead"] { --stage: #ef5b5b; }
+.group-column-list:not(:has(.item))::before { content: "Arrastra un lead aquí"; display: block; margin: 8px 6px; padding: 22px 10px; border: 2px dashed color-mix(in srgb, var(--stage, #94a3b8) 45%, transparent); border-radius: 12px; text-align: center; color: color-mix(in srgb, var(--stage, #94a3b8) 80%, #000); font-size: 12.5px; font-weight: 600; opacity: .8; }
+
+/* tarjetas: acento por calificación, avatar con aro y elevación al pasar el cursor */
+.ch-card { border-left: 4px solid color-mix(in srgb, var(--stage, #94a3b8) 70%, transparent) !important; transition: transform .15s, box-shadow .15s; background: linear-gradient(180deg, var(--ch-surface) 0%, color-mix(in srgb, var(--stage, #94a3b8) 4%, var(--ch-surface)) 100%); }
+.ch-card.q-ok { border-left-color: #2fa36b !important; } .ch-card.q-warn { border-left-color: #f59e0b !important; } .ch-card.q-bad { border-left-color: #ef5b5b !important; }
+.group-column-list .item:hover .ch-card { transform: translateY(-2px); }
+.ch-card .ch-avatar { box-shadow: 0 0 0 3px color-mix(in srgb, var(--stage, #94a3b8) 22%, transparent); }
+.ch-card .ch-f-totalDebt, .ch-card .ch-f-opportunityAmount { font-weight: 700; color: #1f8a5b; }
+/* Espo deja «overflow: auto» en la columna izquierda: eso impedía que las pestañas quedaran fijas en pantallas angostas */
+#main .detail .record-grid > .left { overflow: visible !important; }

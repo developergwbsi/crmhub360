@@ -96,6 +96,7 @@ define('custom:lead-hero', ['custom:agenda'], function (Agenda) {
             try { Agenda.mount(view, el); } catch (e) { /* sin agenda */ }
             // dentro del panel lateral el que se desplaza es el cuerpo del modal
             const body = view.el.closest('.modal-body');
+            if (body && !el._chRo && window.ResizeObserver) { el._chRo = new ResizeObserver(() => body.style.setProperty('--ch-mh', Math.round(el.getBoundingClientRect().height + 14) + 'px')); el._chRo.observe(el); }
             if (body && !el._chScroll) {
                 el._chScroll = true; el.classList.add('ch-in-modal');
                 body.addEventListener('scroll', () => el.classList.toggle('ch-compact', body.scrollTop > 40), {passive: true});

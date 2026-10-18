@@ -17,6 +17,9 @@ define('custom:views/lead/kanban-item', ['views/record/kanban-item'], function (
             });
             hideEmpty();
             setTimeout(hideEmpty, 400);
+            // color según la calificación (borde izquierdo de la tarjeta)
+            const card = this.el.querySelector('.ch-card');
+            if (card) { const q = this.model.get('qualificationStatus'); card.classList.toggle('q-ok', q === 'Califica'); card.classList.toggle('q-warn', q === 'Revisión Manual'); card.classList.toggle('q-bad', q === 'No califica'); }
         }
 
         data() {
