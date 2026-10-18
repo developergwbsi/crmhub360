@@ -4,6 +4,8 @@
 
 ## Sin publicar (después de v1.7.1)
 
+- `13ac50b` 2026-10-17 — Versión 1.7.2
+- `8fc7163` 2026-10-17 — Documentación
 - `91f9970` 2026-10-17 — Ficha: la tarjeta de asignación pasa a ser la pestaña «Asignación» junto a Calificación
 - `1461233` 2026-10-17 — Ficha sin desplazamiento de página (cada zona se desplaza sola) y pantallas de diseño con cabecera y pestañas fijas; se quita el desplazamiento antiguo por rueda
 - `ec88acf` 2026-10-17 — Ficha y pantallas de diseño a altura completa: la página no se mueve, cada zona se desplaza sola; formularios internos y consultas web con cabecera fija y pestañas
