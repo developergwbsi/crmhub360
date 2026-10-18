@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.7.0] - 2026-10-17
+
 ### Formularios internos de gestión
 - **Nuevo: formularios que la propia empresa diseña** para capturar información de la gestión de cada lead (visitas, verificaciones, solicitudes…). Los crean **gerentes, directores y supervisores** en *Organización → Formularios internos*: campos (texto, número, monto, fecha, listas, Sí/No, teléfono, correo y títulos de sección), obligatorios, **en qué etapas del lead se ven** y **dónde aparecen**.
 - **En la ficha del lead**, nuevo panel **Formularios** con pestañas (sin alargar la página): «Esta etapa» y una pestaña por formulario que se llena ahí mismo; y un botón **Llenar formulario** para los que se lanzan desde un botón.
