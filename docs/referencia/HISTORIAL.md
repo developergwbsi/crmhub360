@@ -4,6 +4,10 @@
 
 ## Sin publicar (después de v1.7.1)
 
+- `91f9970` 2026-10-17 — Ficha: la tarjeta de asignación pasa a ser la pestaña «Asignación» junto a Calificación
+- `1461233` 2026-10-17 — Ficha sin desplazamiento de página (cada zona se desplaza sola) y pantallas de diseño con cabecera y pestañas fijas; se quita el desplazamiento antiguo por rueda
+- `ec88acf` 2026-10-17 — Ficha y pantallas de diseño a altura completa: la página no se mueve, cada zona se desplaza sola; formularios internos y consultas web con cabecera fija y pestañas
+- `1ee3b55` 2026-10-17 — Consultas web: menú propio con selección visual, ejecución desde la ficha del lead y uso en formularios; el menú lateral ya no se mueve con el scroll
 - `bad3686` 2026-10-17 — Tablero de leads sobrio y profesional; ficha con desplazamiento independiente de cada zona
 - `73fef90` 2026-10-17 — Panel lateral con pestañas fijas, pestañas fijas en pantallas angostas, tablero de leads con más vida y botones para abrir en panel lateral o ficha completa
 
