@@ -25,7 +25,7 @@ CREATE INDEX IF NOT EXISTS iform_runs_entry ON iform_runs (tenant, entry_id, id 
 """
 FIELD_TYPES = {"heading": "Título de sección", "text": "Texto corto", "textarea": "Texto largo", "number": "Número", "money": "Monto", "date": "Fecha", "select": "Lista (una opción)",
                "multiselect": "Lista (varias opciones)", "bool": "Sí / No", "phone": "Teléfono", "email": "Correo"}
-ACTION_TYPES = {"pdf": "Generar PDF", "status": "Cambiar el estado del lead", "task": "Crear una tarea", "send": "Enviar al cliente", "setfields": "Copiar respuestas a campos del lead"}
+ACTION_TYPES = {"web": "Consultar una página web", "pdf": "Generar PDF", "status": "Cambiar el estado del lead", "task": "Crear una tarea", "send": "Enviar al cliente", "setfields": "Copiar respuestas a campos del lead"}
 LEAD_TARGETS = list(processes.FIELDS)
 MAX_FORMS, MAX_FIELDS, MAX_ACTIONS = 30, 60, 8
 
@@ -95,7 +95,10 @@ def clean(forms: list) -> list[dict]:
             c = a.get("config") or {}
             cfg: dict = {}
             if typ == "pdf":
-                cfg = {"title": str(c.get("title", ""))[:120], "footer": str(c.get("footer", ""))[:300], "fields": [k for k in (c.get("fields") or []) if k in fkeys], "showLead": c.get("showLead") is not False}
+                col = str(c.get("color") or "")
+                cfg = {"title": str(c.get("title", ""))[:120], "subtitle": str(c.get("subtitle", ""))[:160], "footer": str(c.get("footer", ""))[:300], "fields": [k for k in (c.get("fields") or []) if k in fkeys],
+                       "showLead": c.get("showLead") is not False, "logo": c.get("logo") is not False, "color": col if re.fullmatch(r"#[0-9a-fA-F]{6}", col) else "#3a52e0",
+                       "signature": bool(c.get("signature"))}
             elif typ == "status":
                 cfg = {"status": str(c.get("status", ""))[:80]}
                 if not cfg["status"]:
@@ -105,6 +108,25 @@ def clean(forms: list) -> list[dict]:
             elif typ == "send":
                 ch = c.get("channel") if c.get("channel") in ("email", "whatsapp", "sms") else "email"
                 cfg = {"channel": ch, "attachPdf": bool(c.get("attachPdf")) and ch == "email", "subject": str(c.get("subject", ""))[:160], "text": str(c.get("text", ""))[:1500]}
+            elif typ == "web":
+                url = str(c.get("url", "")).strip()[:600]
+                if not re.match(r"^https?://", url):
+                    raise ValueError(f"«{name}»: la dirección de la página debe empezar por http:// o https://")
+                rules = []
+                for r in (c.get("rules") or [])[:12]:
+                    mode = r.get("mode") if r.get("mode") in ("selector", "regex", "text") else "selector"
+                    expr = str(r.get("expr", "")).strip()[:300]
+                    if mode != "text" and not expr:
+                        continue
+                    if mode == "regex":
+                        try:
+                            re.compile(expr)
+                        except re.error:
+                            raise ValueError(f"«{name}»: la expresión «{expr}» no es válida.")
+                    rules.append({"label": str(r.get("label", ""))[:80] or expr[:40], "mode": mode, "expr": expr, "to": r.get("to") if r.get("to") in fkeys else ""})
+                cfg = {"url": url, "rules": rules, "analyze": str(c.get("analyze", ""))[:600], "analyzeTo": c.get("analyzeTo") if c.get("analyzeTo") in fkeys else "", "note": c.get("note") is not False}
+                if not rules and not cfg["analyze"]:
+                    raise ValueError(f"«{name}»: indica qué datos traer de la página o qué debe analizar la IA.")
             elif typ == "setfields":
                 m = {k: v for k, v in (c.get("map") or {}).items() if k in fkeys and (v in LEAD_TARGETS or v == "status")}
                 if not m:
@@ -186,7 +208,7 @@ def get_entry(tenant: str, eid: int) -> dict | None:
         return c.execute("SELECT * FROM iform_entries WHERE tenant=%s AND id=%s", (tenant, eid)).fetchone()
 
 
-async def save_entry(tenant: dict, lead_id: str, form_id: str, values: dict, entry_id: int | None, user_id: str, user_name: str, source: str = "manual", partial: bool = False) -> dict:
+async def save_entry(tenant: dict, lead_id: str, form_id: str, values: dict, entry_id: int | None, user_id: str, user_name: str, source: str = "manual", partial: bool = False, run_actions: bool = True) -> dict:
     """Guarda (o actualiza) las respuestas y ejecuta las acciones «al guardar» si quedó completo."""
     slug = tenant["slug"]
     d = get_def(slug, form_id)
@@ -212,14 +234,14 @@ async def save_entry(tenant: dict, lead_id: str, form_id: str, values: dict, ent
     except Exception as ex:
         log.warning("nota del formulario: %s", str(ex)[:100])
     results = []
-    if complete:
+    if complete and run_actions:
         for a in d["actions"]:
             if a["when"] == "save":
                 results.append(await run_action(tenant, eid, a["id"], user_id, user_name))
     return {"id": eid, "complete": complete, "missing": missing, "results": results}
 
 
-async def merge_entry(tenant: dict, lead_id: str, form_id: str, values: dict, user_id: str, user_name: str, source: str) -> int | None:
+async def merge_entry(tenant: dict, lead_id: str, form_id: str, values: dict, user_id: str, user_name: str, source: str, run_actions: bool = True) -> int | None:
     """Mezcla datos (p. ej. leídos de un PDF) sobre la respuesta existente del lead; si no hay, crea una incompleta para revisar."""
     d = get_def(tenant["slug"], form_id)
     if not d:
@@ -228,7 +250,7 @@ async def merge_entry(tenant: dict, lead_id: str, form_id: str, values: dict, us
         row = c.execute("SELECT id, values FROM iform_entries WHERE tenant=%s AND lead_id=%s AND form_id=%s ORDER BY id LIMIT 1", (tenant["slug"], lead_id, form_id)).fetchone()
     cur = dict(row["values"]) if row else {}
     cur.update({k: v for k, v in values.items() if v not in (None, "")})
-    r = await save_entry(tenant, lead_id, form_id, cur, row["id"] if row else None, user_id, user_name, source, partial=True)
+    r = await save_entry(tenant, lead_id, form_id, cur, row["id"] if row else None, user_id, user_name, source, partial=True, run_actions=run_actions)
     return r["id"]
 
 
@@ -247,7 +269,30 @@ def _fmt(f: dict, v) -> str:
     return str(v)
 
 
-def render_pdf(tenant: dict, d: dict, entry: dict, lead: dict, cfg: dict) -> bytes:
+_LOGO: dict = {}
+
+
+async def _logo(tenant: dict) -> bytes | None:
+    """Logo de la empresa (Configuración del CRM) en PNG o JPEG, para el encabezado del PDF; None si no hay o no se puede leer. Se recuerda 10 minutos."""
+    import time
+    hit = _LOGO.get(tenant["slug"])
+    if hit and time.time() - hit[0] < 600:
+        return hit[1]
+    data = None
+    try:
+        e = Espo(tenant)
+        lid = (await e.get("Settings", select="companyLogoId")).get("companyLogoId")
+        if lid:
+            raw = await e.file(lid)
+            if raw[:8] == b"\x89PNG\r\n\x1a\n" or raw[:3] == b"\xff\xd8\xff":
+                data = raw
+    except Exception as ex:
+        log.warning("logo para el PDF: %s", str(ex)[:100])
+    _LOGO[tenant["slug"]] = (time.time(), data)
+    return data
+
+
+def render_pdf(tenant: dict, d: dict, entry: dict, lead: dict, cfg: dict, logo: bytes | None = None) -> bytes:
     """PDF de las respuestas: encabezado con la empresa, datos del lead, tabla campo → respuesta y pie con fecha."""
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
@@ -256,14 +301,24 @@ def render_pdf(tenant: dict, d: dict, entry: dict, lead: dict, cfg: dict) -> byt
     from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
     from xml.sax.saxutils import escape as esc
     ss = getSampleStyleSheet()
+    accent = colors.HexColor(cfg.get("color") or "#3a52e0")
     h1 = ParagraphStyle("h1", parent=ss["Title"], fontSize=18, textColor=colors.HexColor("#1c2233"), alignment=0, spaceAfter=2)
     sub = ParagraphStyle("sub", parent=ss["Normal"], fontSize=9.5, textColor=colors.HexColor("#5d6678"))
-    sec = ParagraphStyle("sec", parent=ss["Heading3"], fontSize=11.5, textColor=colors.HexColor("#3a52e0"), spaceBefore=10, spaceAfter=3)
+    sec = ParagraphStyle("sec", parent=ss["Heading3"], fontSize=11.5, textColor=accent, spaceBefore=10, spaceAfter=3)
     cell = ParagraphStyle("c", parent=ss["Normal"], fontSize=10, leading=13)
     lab = ParagraphStyle("l", parent=cell, textColor=colors.HexColor("#5d6678"))
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=2 * cm, rightMargin=2 * cm, topMargin=1.8 * cm, bottomMargin=1.8 * cm, title=cfg.get("title") or d["name"])
-    story = [Paragraph(esc(tenant.get("name") or ""), sub), Paragraph(esc(cfg.get("title") or d["name"]), h1)]
+    story = []
+    if logo and cfg.get("logo", True):
+        from reportlab.platypus import Image
+        from reportlab.lib.utils import ImageReader
+        w, h = ImageReader(io.BytesIO(logo)).getSize()
+        k = min(5.5 * cm / w, 1.6 * cm / h)
+        story += [Image(io.BytesIO(logo), width=w * k, height=h * k, hAlign="LEFT"), Spacer(1, 6)]
+    story += [Paragraph(esc(tenant.get("name") or ""), sub), Paragraph(esc(cfg.get("title") or d["name"]), h1)]
+    if cfg.get("subtitle"):
+        story.append(Paragraph(esc(cfg["subtitle"]), sub))
     when = datetime.now(timezone(timedelta(hours=-5))).strftime("%d/%m/%Y %H:%M")
     story.append(Paragraph(f"Generado el {when}", sub))
     story.append(Spacer(1, 8))
@@ -291,6 +346,10 @@ def render_pdf(tenant: dict, d: dict, entry: dict, lead: dict, cfg: dict) -> byt
             continue
         block.append([Paragraph(esc(f["label"]), lab), Paragraph(esc(_fmt(f, entry["values"].get(f["key"]))).replace("\n", "<br/>"), cell)])
     flush()
+    if cfg.get("signature"):
+        sig = Table([["", ""], [Paragraph("Firma del cliente", sub), Paragraph("Firma del asesor", sub)]], colWidths=[8.5 * cm, 8.5 * cm], rowHeights=[1.8 * cm, 0.6 * cm])
+        sig.setStyle(TableStyle([("LINEABOVE", (0, 1), (0, 1), 0.6, colors.HexColor("#5d6678")), ("LINEABOVE", (1, 1), (1, 1), 0.6, colors.HexColor("#5d6678")), ("LEFTPADDING", (0, 0), (-1, -1), 4)]))
+        story += [Spacer(1, 20), sig]
     if cfg.get("footer"):
         story += [Spacer(1, 14), Paragraph(esc(cfg["footer"]), sub)]
     doc.build(story)
@@ -330,12 +389,43 @@ async def run_action(tenant: dict, entry_id: int, action_id: str, user_id: str, 
         lead = await e.get(f"Lead/{row['lead_id']}", select="name,status,phoneNumber,emailAddress,assignedUserId")
         c, t = a["config"], a["type"]
         if t == "pdf":
-            pdf = render_pdf(tenant, d, entry, lead, c)
+            pdf = render_pdf(tenant, d, entry, lead, c, await _logo(tenant))
             fname = re.sub(r"[^\w\-]+", "_", f"{d['name']}_{lead.get('name') or ''}")[:80] + ".pdf"
             att = await e.upload(fname, "application/pdf", pdf)
             await e.note(row["lead_id"], f"[Formulario] PDF «{d['name']}» generado por {user_name or 'un usuario'}", [att])
             res["detail"] = "PDF generado y adjunto en la ficha"
             res["attachmentId"] = att
+        elif t == "web":
+            from urllib.parse import quote
+            from . import llm, webscrape
+            lead_full = await e.get(f"Lead/{row['lead_id']}", select="name,identification,phoneNumber,emailAddress,status")
+            vv = {"nombre": lead_full.get("name") or "", "identificacion": lead_full.get("identification") or "", "telefono": lead_full.get("phoneNumber") or "", "correo": lead_full.get("emailAddress") or ""}
+            for f in d["fields"]:
+                if f["type"] != "heading":
+                    vv[f["key"]] = _fmt(f, row["values"].get(f["key"])) if row["values"].get(f["key"]) not in (None, "", []) else ""
+            url = re.sub(r"\{\{\s*(\w+)\s*\}\}", lambda m: quote(str(vv.get(m.group(1), "")), safe=""), c["url"])
+            final, html = await webscrape.fetch(url)
+            found = webscrape.extract(html, c["rules"])
+            newv = {r["to"]: found[r["label"] or r["expr"]] for r in c["rules"] if r["to"] and (r["label"] or r["expr"]) in found}
+            analysis = ""
+            if c["analyze"]:
+                page = webscrape.text_of(html, 9000)
+                if len(page) < 40:
+                    raise ValueError("La página no trae texto que se pueda leer (puede cargar su contenido con JavaScript).")
+                ctx = "; ".join(f"{f['label']}: {_fmt(f, row['values'].get(f['key']))}" for f in d["fields"] if f["type"] != "heading" and row["values"].get(f["key"]) not in (None, "", []))
+                analysis = (await llm.chat_text(tenant, "Eres un analista de una empresa de servicios financieros. Lees información de una página web y ayudas a tomar una decisión sobre un cliente. Responde en español, claro y breve (máximo 8 líneas), "
+                                                "separando lo que la página dice de tu recomendación. No inventes datos que no estén en la página.",
+                                                f"Cliente: {lead_full.get('name') or ''}. Datos del formulario «{d['name']}»: {ctx or 'sin datos'}.\n\nPregunta o criterio: {c['analyze']}\n\nContenido de la página ({final}):\n{page}")).strip()
+                if c["analyzeTo"]:
+                    newv[c["analyzeTo"]] = analysis
+            if newv:
+                await merge_entry(tenant, row["lead_id"], row["form_id"], newv, user_id, user_name, "web", run_actions=False)
+            if c["note"]:
+                lines = [f"[Consulta web] {d['name']} · {final}"] + [f"{k}: {v}" for k, v in found.items()] + ([f"Análisis: {analysis}"] if analysis else [])
+                await e.note(row["lead_id"], "\n".join(lines)[:4000])
+            res["detail"] = (f"{len(found)} dato(s) traídos de la página" if found else "Página consultada sin datos que coincidan") + (" y análisis de IA" if analysis else "")
+            if analysis:
+                res["analysis"] = analysis
         elif t == "status":
             await e.put(f"Lead/{row['lead_id']}", {"status": c["status"]})
             res["detail"] = f"Estado cambiado a «{c['status']}»"
@@ -368,7 +458,8 @@ async def run_action(tenant: dict, entry_id: int, action_id: str, user_id: str, 
                 from . import mailout
                 files = []
                 if c["attachPdf"]:
-                    files.append({"name": re.sub(r"[^\w\-]+", "_", d["name"])[:60] + ".pdf", "bytes": render_pdf(tenant, d, entry, lead, next((x["config"] for x in d["actions"] if x["type"] == "pdf"), {}))})
+                    pc = next((x["config"] for x in d["actions"] if x["type"] == "pdf"), {})
+                    files.append({"name": re.sub(r"[^\w\-]+", "_", d["name"])[:60] + ".pdf", "bytes": render_pdf(tenant, d, entry, lead, pc, await _logo(tenant))})
                 body = "<div style=\"font-family:Arial,sans-serif;max-width:560px;color:#1c2233;line-height:1.55\">" + "".join(f"<p>{__import__('html').escape(p)}</p>" for p in text.split("\n") if p.strip()) + "</div>"
                 await mailout.send(tenant, {"userId": user_id or "system", "userName": user_name, "to": lead["emailAddress"], "subject": _tpl(c["subject"], d, entry, lead) or d["name"], "html": body,
                                             "attachments": files, "parentType": "Lead", "parentId": row["lead_id"]})

@@ -82,6 +82,7 @@ define('custom:doc-reader', ['custom:ui', 'custom:tpl'], function (ChUi, Tpl) {
 
             function done(r) {
                 finished = true; reading = null; run = r; attId = r.attachmentId || attId; profileId = r.mode === 'auto' ? 'auto' : (r.profile && r.profile.id) || profileId; engine = r.engine || engine;
+                if (r.autoApplied) { return autoDone(r); }
                 if (r.mode === 'auto') { reviewAuto(); } else { review(); }
             }
 
@@ -137,6 +138,13 @@ define('custom:doc-reader', ['custom:ui', 'custom:tpl'], function (ChUi, Tpl) {
                         .then(() => { Espo.Ui.success('Datos guardados en el lead'); model.fetch(); watch(); onDone && onDone(); close(true); })
                         .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } err(Tpl.reason(xhr, 'No se pudo guardar.')); b.disabled = false; });
                 };
+            }
+
+            // el perfil se aplica solo (sin revisión): se informa qué se guardó
+            function autoDone(r) {
+                const a = r.applyResult || {};
+                body.innerHTML = `<div class="ch-doc-auto"><span class="fas fa-circle-check" style="color:#2fa36b;font-size:30px"></span><h4>Documento leído y guardado</h4><p class="ch-muted">«${esc((r.profile && r.profile.name) || 'Documento')}» se aplicó sin revisión: ${a.updated || 0} campo(s) del lead, ${a.forms || 0} dato(s) en formularios y ${a.notes || 0} en la nota del historial.</p><button class="btn btn-primary btn-sm" data-act="ok">Listo</button></div>`;
+                model.fetch(); watch(); onDone && onDone(); q('[data-act="ok"]').onclick = () => close(true);
             }
 
             function review() {

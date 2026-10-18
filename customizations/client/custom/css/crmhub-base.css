@@ -1255,3 +1255,11 @@ body.minimized #ch-topbrand { display: flex; flex-direction: column; justify-con
 @media (max-width: 900px) { .ch-ifb-wrap { grid-template-columns: 1fr; } }
 .ch-ifb label, .ch-fp label, .ch-if label { text-transform: none; letter-spacing: 0; }
 .ch-ifb-ck { font-size: 13px; }
+/* Barra de etapas del lead (estilo embudo) */
+.ch-stepper { flex: 1 1 100%; display: flex; gap: 0; margin-top: 14px; overflow-x: auto; }
+.ch-step { flex: 1 1 0; min-width: 110px; position: relative; border: 0; background: var(--ch-line); color: var(--ch-muted); font-size: 12.5px; font-weight: 600; padding: 9px 18px 9px 22px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%); margin-right: -6px; white-space: nowrap; cursor: pointer; }
+.ch-step:first-child { clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%); padding-left: 16px; border-radius: 8px 0 0 8px; }
+.ch-step.done { background: color-mix(in srgb, var(--ch-primary) 28%, var(--ch-surface)); color: var(--ch-ink); }
+.ch-step.now { background: var(--ch-primary); color: #fff; }
+.ch-step:hover:not(.now):not(:disabled) { filter: brightness(.95); } .ch-step:disabled { cursor: default; }
+.ch-drawer .ch-stepper { display: none; }

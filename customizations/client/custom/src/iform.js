@@ -7,7 +7,7 @@
 define('custom:iform', ['custom:ui'], function (ChUi) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const dl = id => `?entryPoint=download&id=${encodeURIComponent(id)}`;
-    const ICON = {pdf: 'fas fa-file-pdf', status: 'fas fa-arrows-rotate', task: 'fas fa-list-check', send: 'fas fa-paper-plane', setfields: 'fas fa-arrow-right-arrow-left'};
+    const ICON = {pdf: 'fas fa-file-pdf', status: 'fas fa-arrows-rotate', task: 'fas fa-list-check', send: 'fas fa-paper-plane', setfields: 'fas fa-arrow-right-arrow-left', web: 'fas fa-globe'};
 
     function fieldHtml(f, v, idx) {
         const id = 'f' + idx + '-' + f.key, req = f.required ? ' <span class="ch-if-req">*</span>' : '', help = f.help ? `<div class="ch-if-help">${esc(f.help)}</div>` : '';
@@ -57,7 +57,7 @@ define('custom:iform', ['custom:ui'], function (ChUi) {
             const save = (b, partial) => {
                 err(''); b.disabled = true;
                 Espo.Ajax.postRequest('CrmHub/iformEntry', {leadId: opts.leadId, formId: form.id, entryId: entry && entry.id, values: collect(root, form), partial}).then(r => {
-                    (r.results || []).forEach(x => (x.ok ? Espo.Ui.success : Espo.Ui.warning)(x.label + ': ' + x.detail));
+                    (r.results || []).forEach(x => { (x.ok ? Espo.Ui.success : Espo.Ui.warning)(x.label + ': ' + x.detail); if (x.analysis) { ChUi.notice({title: 'Lo que encontré para decidir', icon: 'fas fa-globe', html: '<div style="white-space:pre-wrap">' + esc(x.analysis) + '</div>', ok: 'Entendido'}); } });
                     Espo.Ui.success(r.complete ? 'Formulario guardado' : 'Borrador guardado');
                     entry = Object.assign({}, entry || {}, {id: r.id, values: collect(root, form), complete: r.complete}); if (opts.onSaved) { opts.onSaved(r); }
                 }).catch(xhr => { b.disabled = false; err((xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || 'No se pudo guardar.'); if (xhr) { xhr.errorIsHandled = true; } });
@@ -65,7 +65,7 @@ define('custom:iform', ['custom:ui'], function (ChUi) {
             const run = (b, aid) => {
                 b.disabled = true;
                 Espo.Ajax.postRequest('CrmHub/iformAction', {leadId: opts.leadId, entryId: entry.id, actionId: aid}).then(r => {
-                    (r.ok ? Espo.Ui.success : Espo.Ui.warning)(r.detail || r.label); b.disabled = false; if (opts.onSaved) { opts.onSaved(r); }
+                    (r.ok ? Espo.Ui.success : Espo.Ui.warning)(r.detail || r.label); b.disabled = false; if (r.analysis) { ChUi.notice({title: 'Lo que encontré para decidir', icon: 'fas fa-globe', html: '<div style="white-space:pre-wrap">' + esc(r.analysis) + '</div>', ok: 'Entendido'}); } if (opts.onSaved) { opts.onSaved(r); }
                 }).catch(xhr => { b.disabled = false; Espo.Ui.error((xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || 'No se pudo ejecutar la acción.'); if (xhr) { xhr.errorIsHandled = true; } });
             };
         };

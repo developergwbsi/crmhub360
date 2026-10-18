@@ -127,7 +127,7 @@ def clean(new: list) -> list[dict]:
             fields.append({"key": key, "label": label, "type": typ, "to": to, "hint": str(f.get("hint", ""))[:200]})
         if not fields:
             raise ValueError(f"«{name}»: añade al menos un dato a extraer.")
-        out.append({"id": str(p.get("id") or "d" + secrets.token_hex(3)), "name": name, "instructions": str(p.get("instructions", ""))[:600], "fields": fields, "recalc": bool(p.get("recalc", False))})
+        out.append({"id": str(p.get("id") or "d" + secrets.token_hex(3)), "name": name, "instructions": str(p.get("instructions", ""))[:600], "fields": fields, "recalc": bool(p.get("recalc", False)), "autoApply": bool(p.get("autoApply", False))})
     return out
 
 
@@ -227,7 +227,7 @@ async def apply(tenant: dict, lead_id: str, run_id: int, values: dict, agent: st
             log.warning("recalcular calificación: %s", str(e)[:120])
     with db.pool.connection() as c:
         c.execute("UPDATE doc_runs SET status='applied', applied_at=now(), result=%s WHERE id=%s", (json.dumps(values, ensure_ascii=False), run_id))
-    return {"updated": len(put), "notes": len(notes)}
+    return {"updated": len(put), "notes": len(notes), "forms": sum(len(v) for v in form_vals.values())}
 
 
 def history(tenant: str, lead_id: str) -> list[dict]:
@@ -302,7 +302,7 @@ async def apply_items(tenant: dict, lead_id: str, run_id: int, items: list[dict]
         log.warning("recalcular calificación: %s", str(e)[:120])
     with db.pool.connection() as c:
         c.execute("UPDATE doc_runs SET status='applied', applied_at=now(), result=%s WHERE id=%s", (json.dumps({"items": items}, ensure_ascii=False), run_id))
-    return {"updated": len(put), "notes": len(notes)}
+    return {"updated": len(put), "notes": len(notes), "forms": sum(len(v) for v in form_vals.values())}
 
 
 def profile_from_items(tenant: dict, name: str, items: list[dict]) -> dict:
@@ -349,6 +349,18 @@ async def _work(tenant: dict, run_id: int, lead_id: str, attachment_id: str, pro
             res = await extract_internal(tenant, lead_id, attachment_id, profile_id)
         with db.pool.connection() as c:
             c.execute("UPDATE doc_runs SET status='read', profile_name=%s, result=%s WHERE id=%s", (res["name"], json.dumps(res["payload"], ensure_ascii=False), run_id))
+        prof = next((p for p in profiles(tenant) if p["id"] == profile_id), None) if profile_id != AUTO_ID else None
+        if prof and prof.get("autoApply") and (res["payload"].get("values") or {}):
+            # el perfil se aplica solo, sin pasar por revisión: guarda en el lead y en los formularios destino y deja constancia
+            try:
+                out = await apply(tenant, lead_id, run_id, res["payload"]["values"], "lectura automática")
+                with db.pool.connection() as c:
+                    c.execute("UPDATE doc_runs SET result=%s WHERE id=%s", (json.dumps({**res["payload"], "autoApplied": True, "applyResult": out}, ensure_ascii=False), run_id))
+                if user_id:
+                    await push.send(tenant["slug"], title="Documento leído y guardado", body=f"{lead_name or 'Lead'}: {res['name']} (sin revisión)", url=f"/#Lead/view/{lead_id}", tag=f"crmhub-doc-{run_id}", kind="doc", user_id=user_id)
+                return
+            except Exception as e:
+                log.warning("aplicación automática: %s", str(e)[:160])   # si falla queda lista para revisar
         if user_id and time.time() - t0 > 10:   # tardó: seguramente el usuario ya cerró la ventana, se le avisa
             try:
                 await push.send(tenant["slug"], title="Lectura de documento lista", body=f"{lead_name or 'Lead'}: {res['name']}", url=f"/#Lead/view/{lead_id}", tag=f"crmhub-doc-{run_id}", kind="doc", user_id=user_id)

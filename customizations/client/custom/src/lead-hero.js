@@ -63,6 +63,17 @@ define('custom:lead-hero', ['custom:agenda'], function (Agenda) {
             `<div class="ch-lh-meta">${meta.join('')}</div></div>${kpis ? `<div class="ch-lh-kpis">${kpis}</div>` : ''}`;
     }
 
+    // Barra de etapas del lead (como el embudo de HubSpot): la actual resaltada, las anteriores completadas; al pulsar otra se cambia el estado
+    const PIPE_SKIP = ['Converted', 'Dead', 'Recycled'];
+    function stepper(view) {
+        if ((view.model.entityType || '') !== 'Lead') { return ''; }
+        const a = view.model.attributes, lang = view.getLanguage(), all = (view.getMetadata().get('entityDefs.Lead.fields.status.options') || []).filter(Boolean);
+        const main = all.filter(o => !PIPE_SKIP.includes(o)), cur = main.indexOf(a.status);
+        if (main.length < 2) { return ''; }
+        const can = view.getAcl().checkModel(view.model, 'edit');
+        return '<div class="ch-stepper">' + main.map((o, i) => `<button type="button" class="ch-step ${i === cur ? 'now' : i < cur ? 'done' : ''}" data-st="${esc(o)}" ${can ? '' : 'disabled'} title="${can ? 'Mover a esta etapa' : ''}"><span>${esc(lang.translateOption(o, 'status', 'Lead'))}</span></button>`).join('') + '</div>';
+    }
+
     // Inserta (o refresca) el encabezado al inicio del registro y lo mantiene al día cuando el modelo cambia.
     function mount(view) {
         const paint = () => {
@@ -74,6 +85,14 @@ define('custom:lead-hero', ['custom:agenda'], function (Agenda) {
                 view.el.insertBefore(el, view.el.firstChild);
             }
             el.innerHTML = html(view);
+            const sp = stepper(view);
+            if (sp) {
+                el.insertAdjacentHTML('beforeend', sp);
+                el.querySelector('.ch-stepper').onclick = e => {
+                    const b = e.target.closest('.ch-step'); if (!b || b.disabled || b.classList.contains('now')) { return; }
+                    Espo.loader.require('custom:ui', ChUi => ChUi.confirm({title: 'Cambiar de etapa', text: `¿Mover este lead a «${b.textContent.trim()}»?`, ok: 'Mover'}).then(y => { if (y) { view.model.save({status: b.dataset.st}, {patch: true}).then(() => Espo.Ui.success('Etapa actualizada')).catch(() => Espo.Ui.error('No se pudo cambiar la etapa')); } }));
+                };
+            }
             try { Agenda.mount(view, el); } catch (e) { /* sin agenda */ }
             // dentro del panel lateral el que se desplaza es el cuerpo del modal
             const body = view.el.closest('.modal-body');

@@ -642,9 +642,17 @@ Llenarlos
 
 Completa los campos (los marcados con ***** son obligatorios) y pulsa **Guardar**; con **Guardar borrador** guardas lo que llevas. Debajo aparecen los botones de acción que haya configurado tu empresa (por ejemplo **Generar PDF**) y los PDF ya generados, que también quedan en el historial del lead. Al guardarse, el formulario puede además crear una tarea, cambiar el estado del lead, copiar respuestas a campos del lead o enviar un mensaje al cliente.
 
+Consultar una página web
+
+Una acción del formulario puede **consultar una página pública** (por ejemplo, un registro o un directorio), traer los datos que definiste a campos del formulario y, si lo pediste, pedirle a la IA que **analice lo que dice la página y recomiende** para ayudarte a decidir. El resultado queda en el formulario y en una nota del lead. Funciona con páginas que muestran su contenido directamente (no con las que exigen usuario, clave o captcha).
+
+Etapas y pestañas de la ficha
+
+En el encabezado de la ficha verás la **barra de etapas** del lead: pulsa otra etapa para moverlo (te pide confirmar). Abajo, las pestañas **Actividad** y **Formularios** separan el historial de los formularios.
+
 Desde un PDF
 
-Al **leer un documento** (5f) puedes elegir como destino de cada dato un campo de un formulario: queda guardado en el formulario del lead, mezclado con lo que ya estaba, para que lo revises.
+Al **leer un documento** (5f) puedes elegir como destino de cada dato un campo de un formulario: queda guardado en el formulario del lead, mezclado con lo que ya estaba. Si el perfil de lectura tiene marcado **«Aplicar sin revisión»**, se guarda solo apenas termina de leer.
 
 Diseñarlos (gerentes, directores y supervisores)
 

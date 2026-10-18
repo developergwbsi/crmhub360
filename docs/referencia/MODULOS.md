@@ -42,6 +42,7 @@
 | `twilio.py` | Cliente mínimo de Twilio (SMS, WhatsApp y llamadas con la misma cuenta). |
 | `usage.py` | Libro de consumo: cada mensaje, llamada o correo que sale (o entra) por el Hub queda registrado por empresa, canal, proveedor y línea, con unidades y costo/precio estimados. |
 | `voice.py` | Llamadas desde el CRM (click-to-call): el proveedor/central llama PRIMERO al teléfono o extensión del asesor y, al contestar, lo conecta con el cliente. La troncal SIP vive en el proveedor (Twilio, Telnyx…) o en tu central (Asterisk/FreePBX, 3CX…). |
+| `webscrape.py` | Consulta de páginas web públicas para traer información a un formulario (y que la persona o la IA decida con ella): descarga la página con límites (http/https, sin direcciones internas, tamaño y tiempo acotados, redirecciones revisadas) y extrae datos con un selector CSS, una expresión regular o el texto completo. No ejecuta JavaScript ni resuelve captchas: sirve para páginas que ya muestran su contenido en el HTML. Úsalo solo en sitios cuyos términos lo permitan. |
 | `whatsapp.py` | WhatsApp con varios proveedores: Evolution API, Meta WhatsApp Cloud API y Gupshup. Cada empresa elige uno (tenants.settings.wa_provider). Las credenciales viven en tenants.settings y nunca se devuelven a la interfaz. |
 
 ## Centro de control (`control-service/app/`)

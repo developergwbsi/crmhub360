@@ -10,9 +10,13 @@ Gerentes, directores y supervisores (administrador o permiso de asignación) dis
 - **Dónde se ve**: etapas del lead (vacío = todas), pestaña en el panel «Formularios» de la ficha y/o botón «Llenar formulario». Opción de varias respuestas por lead.
 - **Acciones**, «al guardar» (si está completo) o «con botón»: `pdf` (genera un PDF y lo adjunta en la ficha con una nota), `status` (cambia el estado), `task` (crea una tarea), `send` (correo con o sin PDF, WhatsApp o SMS con variables `{{nombre}}`, `{{formulario}}`, `{{clave}}`), `setfields` (copia respuestas a campos del lead).
 
+## Consulta web (`web`)
+
+`hub-service/app/webscrape.py` descarga páginas públicas (http/https, sin direcciones internas, 1,5 MB y 20 s como máximo, redirecciones revisadas) y extrae datos por selector CSS, expresión regular o texto (BeautifulSoup). La acción guarda los datos en campos del formulario (sin disparar las acciones «al guardar» para evitar bucles), deja una nota y, si hay pregunta para la IA, guarda su análisis. No ejecuta JavaScript ni resuelve captchas.
+
 ## Lectura de PDF → formulario
 
-Los perfiles de lectura aceptan el destino `form:<id>.<clave>`; al aplicar la lectura (`documents.apply` / `apply_items`) los datos se mezclan con la respuesta del lead (`iforms.merge_entry`, incompleta si faltan obligatorios, marcada como «llenado desde un documento»).
+Con `autoApply` en el perfil, la lectura se aplica sin pasar por revisión (`documents._work`). Los perfiles de lectura aceptan el destino `form:<id>.<clave>`; al aplicar la lectura (`documents.apply` / `apply_items`) los datos se mezclan con la respuesta del lead (`iforms.merge_entry`, incompleta si faltan obligatorios, marcada como «llenado desde un documento»).
 
 ## Permisos y datos
 

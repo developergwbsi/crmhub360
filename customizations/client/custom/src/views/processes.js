@@ -124,7 +124,8 @@ define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (
                 const e = this.docEdit, tg = [['note', 'Nota en el historial'], ...Object.keys(FIELD_LABEL).map(k => ['field:' + k, 'Campo: ' + FIELD_LABEL[k]]), ...((this.docs && this.docs.formTargets) || []).map(t => [t.value, t.label])];
                 return `<div class="ch-sim-card ch-proc-ed"><h4>${e.id ? 'Editar perfil' : 'Nuevo perfil de lectura'}</h4><label>Nombre del documento</label><input data-d="name" maxlength="80" value="${esc(e.name)}" placeholder="Ej.: Certificado laboral">
                     <label>Qué documento es (ayuda a la lectura)</label><input data-d="instructions" maxlength="600" value="${esc(e.instructions)}" placeholder="Ej.: Certificado laboral de una empresa colombiana; montos en pesos">
-                    <label class="ch-dz-chk"><input type="checkbox" data-d="recalc" ${e.recalc ? 'checked' : ''}> Volver a calcular la calificación del lead al guardar</label><h5>Datos a extraer</h5>` +
+                    <label class="ch-dz-chk"><input type="checkbox" data-d="recalc" ${e.recalc ? 'checked' : ''}> Volver a calcular la calificación del lead al guardar</label>
+                    <label class="ch-dz-chk"><input type="checkbox" data-d="auto" ${e.autoApply ? 'checked' : ''}> <b>Aplicar sin revisión</b>: al terminar de leer, guarda los datos en el lead y en los formularios destino sin pedir validación (si algo falla, queda para revisar)</label><h5>Datos a extraer</h5>` +
                     e.fields.map((f, i) => `<div class="ch-doc-frow"><input data-fl="${i}" value="${esc(f.label)}" placeholder="Nombre del dato (ej. Ingreso mensual)"><select data-ft="${i}">${Object.keys(FTYPES).map(k => `<option value="${k}" ${f.type === k ? 'selected' : ''}>${FTYPES[k]}</option>`).join('')}</select><select data-fo="${i}">${tg.map(([v, l]) => `<option value="${esc(v)}" ${f.to === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><input data-fh="${i}" value="${esc(f.hint)}" placeholder="Pista: dónde o cómo aparece (opcional)"><a data-act="delfield" data-i="${i}"><span class="far fa-trash-can"></span></a></div>`).join('') +
                     `<a class="ch-dz-link" data-act="addfield"><span class="fas fa-plus"></span> Añadir dato</a><div class="ch-chat-err" data-role="err" hidden></div><div class="ch-mail-actions"><button class="btn btn-primary btn-sm" data-act="docsave"><span class="fas fa-floppy-disk"></span> Guardar</button><button class="btn btn-default btn-sm" data-act="doccancel">Cancelar</button></div></div>`;
             }
@@ -136,7 +137,7 @@ define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (
 
         readDoc() {
             const e = this.docEdit, q = s => this.el.querySelector(s);
-            e.name = q('[data-d="name"]').value; e.instructions = q('[data-d="instructions"]').value; e.recalc = q('[data-d="recalc"]').checked;
+            e.name = q('[data-d="name"]').value; e.instructions = q('[data-d="instructions"]').value; e.recalc = q('[data-d="recalc"]').checked; e.autoApply = q('[data-d="auto"]').checked;
             e.fields = e.fields.map((f, i) => ({...f, label: q(`[data-fl="${i}"]`).value, type: q(`[data-ft="${i}"]`).value, to: q(`[data-fo="${i}"]`).value, hint: q(`[data-fh="${i}"]`).value}));
         }
 

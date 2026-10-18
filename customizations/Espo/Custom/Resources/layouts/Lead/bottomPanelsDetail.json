@@ -1,0 +1,12 @@
+{
+    "stream": {
+        "index": 0,
+        "tabBreak": true,
+        "tabLabel": "Actividad"
+    },
+    "chForms": {
+        "index": 1,
+        "tabBreak": true,
+        "tabLabel": "Formularios"
+    }
+}
