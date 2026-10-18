@@ -5,12 +5,12 @@
  * (formulario, WhatsApp…) en vez del usuario técnico de la integración; y se marca la identificación temporal (celular o correo) hasta que se registre la real.
  * Sin endpoints.
  */
-define('custom:views/lead/record/detail', ['views/record/detail', 'custom:lead-hero'], function (Dep, Hero) {
+define('custom:views/lead/record/detail', ['views/record/detail', 'custom:lead-hero', 'custom:studio'], function (Dep, Hero, Studio) {
     return class extends Dep {
         afterRender() {
             super.afterRender();
             Hero.mount(this);
-            if (this.el && !this.el.closest('.modal-body')) { this.el.classList.add('ch-split'); }   // vista completa: datos a un lado (4/12) y pestañas de actividad al otro (8/12)
+            if (this.el && !this.el.closest('.modal-body')) { this.el.classList.add('ch-split'); Studio.attach(this, '.record-grid'); }   // vista completa: datos a un lado (4/12) y pestañas de actividad al otro (8/12), cada zona con su propio desplazamiento
             if (this.model.entityType === 'Lead') { this.chDecorate(); }
             // Sin el módulo «Cartera y cobranza» no se muestra el reporte de crédito (deuda, mora, ingresos…)
             if (this.model.entityType === 'Lead') { try { this.hidePanel('targetLists', true); } catch (e) { /* sin esa relación */ } }   // las listas de objetivos (campañas masivas de Espo) no se usan aquí
@@ -28,7 +28,7 @@ define('custom:views/lead/record/detail', ['views/record/detail', 'custom:lead-h
             this.chPaintSide();
             const side = this.el && this.el.querySelector('.side'); if (side && this._chObs) { this._chObs.disconnect(); this._chObs.observe(side, {childList: true, subtree: true}); }
         }
-        onRemove() { if (this._chObs) { this._chObs.disconnect(); } clearTimeout(this._chT); if (super.onRemove) { super.onRemove(); } }
+        onRemove() { Studio.detach(this); if (this._chObs) { this._chObs.disconnect(); } clearTimeout(this._chT); if (super.onRemove) { super.onRemove(); } }
 
         chPaintSide() {
             const root = this.el; if (!root) { return; }

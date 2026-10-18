@@ -3,7 +3,7 @@
  * dirección (con variables como {{identificacion}}), datos a traer (se eligen pulsando sobre la página en la vista previa) y, opcionalmente, qué debe analizar la IA.
  * Luego se usan desde la ficha del lead («Consultar web» en el menú ⋯) o desde una acción de formulario interno. Endpoints: GET CrmHub/webSources?all=1 y POST CrmHub/webSourcesSave.
  */
-define('custom:views/web-sources', ['view', 'custom:ui', 'custom:web-picker'], function (Dep, ChUi, WP) {
+define('custom:views/web-sources', ['view', 'custom:ui', 'custom:web-picker', 'custom:studio'], function (Dep, ChUi, WP, Studio) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const NEW = () => ({id: '', name: 'Nueva consulta', description: '', url: '', rules: [], analyze: '', note: true, active: true});
     const SAMPLE = () => ({id: '', name: 'Validación de un registro público', description: 'Ejemplo: consulta una página con el documento del cliente y pide a la IA una recomendación.', url: 'https://ejemplo.com/consulta?documento={{identificacion}}', rules: [], analyze: '¿La persona aparece con alguna alerta o sanción? ¿Qué recomiendas para atenderla?', note: true, active: true});
@@ -13,6 +13,7 @@ define('custom:views/web-sources', ['view', 'custom:ui', 'custom:web-picker'], f
         data0 = null
         sel = 0
         dirty = false
+        tab = 'query'
 
         setup() {
             this.getHelper().pageTitle.setTitle('Consultas web');
@@ -22,6 +23,8 @@ define('custom:views/web-sources', ['view', 'custom:ui', 'custom:web-picker'], f
 
         afterRender() { this.draw(); }
 
+        onRemove() { Studio.detach(this); if (super.onRemove) { super.onRemove(); } }
+
         draw() {
             const root = this.el && this.el.querySelector('.ch-ifb'); if (!root) { return; }
             const d = this.data0;
@@ -29,12 +32,15 @@ define('custom:views/web-sources', ['view', 'custom:ui', 'custom:web-picker'], f
             if (d.error) { root.innerHTML = '<div class="ch-chat-err">No se pudieron cargar las consultas.</div>'; return; }
             if (!d.canManage) { root.innerHTML = '<div class="ch-chat-err">Solo gerentes, directores y supervisores pueden configurar consultas web.</div>'; return; }
             const list = this.items.map((x, i) => `<div class="ch-ifb-it ${i === this.sel ? 'on' : ''}" data-sel="${i}"><span class="fas fa-globe"></span><div><b>${esc(x.name)}</b><small>${x.active ? '' : 'Inactiva · '}${x.rules.length} dato(s)${x.analyze ? ' · con IA' : ''}</small></div></div>`).join('');
-            root.innerHTML = `<div class="ch-sim-head"><h3><span class="fas fa-globe"></span> Consultas web</h3>
-                <p class="ch-muted">Configura las páginas públicas que tu equipo puede consultar para traer información de un cliente y tomar decisiones: eliges la página, <b>ves la página y pulsas sobre los datos que necesitas</b>, y si quieres la IA los analiza y recomienda. Se usan desde la ficha del lead (menú ⋯ → «Consultar web») o desde una acción de un formulario interno. Solo páginas públicas que muestran su contenido sin JavaScript, captcha ni usuario y clave; respeta los términos de uso de cada sitio.</p></div>
-                <div class="ch-ifb-wrap"><div class="ch-ifb-list">${list || ChUi.empty({kind: 'doc', title: 'Sin consultas', text: 'Crea la primera.', compact: true})}
-                <button class="btn btn-primary btn-sm" data-a="new"><span class="fas fa-plus"></span> Nueva consulta</button> <button class="btn btn-default btn-sm" data-a="sample">Usar ejemplo</button></div>
-                <div class="ch-ifb-ed">${this.items.length ? this.editor(this.items[this.sel]) : '<div class="ch-muted">Crea una consulta para empezar.</div>'}</div></div>
-                <div class="ch-ifb-save"><span class="ch-muted">${this.dirty ? 'Hay cambios sin guardar' : ''}</span><button class="btn btn-primary" data-a="save"><span class="fas fa-floppy-disk"></span> Guardar todo</button></div>`;
+            const cur = this.items[this.sel], secs = cur ? this.editor(cur) : null;
+            const tabs = [['query', 'La consulta'], ['data', 'Datos a traer' + (cur ? ` (${cur.rules.length})` : '')], ['ai', 'Análisis con IA']];
+            const top = (root.querySelector('.ch-studio-content') || {}).scrollTop || 0;
+            root.innerHTML = `<div class="ch-studio"><div class="ch-studio-head"><div><h3><span class="fas fa-globe"></span> Consultas web</h3><p class="ch-muted">Las páginas públicas que tu equipo puede consultar para traer información de un cliente: ves la página, pulsas sobre los datos que necesitas y, si quieres, la IA los analiza y recomienda. Se usan desde la ficha del lead (menú ⋯ → «Consultar web») o desde un formulario interno. Solo páginas que muestran su contenido sin JavaScript, captcha ni usuario y clave; respeta los términos de cada sitio.</p></div>
+                <div class="ch-studio-act">${this.dirty ? '<span class="ch-studio-dirty"><span class="fas fa-circle"></span> Cambios sin guardar</span>' : ''}<button class="btn btn-default btn-sm" data-a="sample">Usar ejemplo</button><button class="btn btn-default btn-sm" data-a="new"><span class="fas fa-plus"></span> Nueva consulta</button><button class="btn btn-primary btn-sm" data-a="save"><span class="fas fa-floppy-disk"></span> Guardar todo</button></div></div>
+                <div class="ch-studio-body"><aside class="ch-studio-list">${list || ChUi.empty({kind: 'doc', title: 'Sin consultas', text: 'Crea la primera.', compact: true})}</aside>
+                <section class="ch-studio-main">${cur ? `<div class="ch-studio-tabs">${tabs.map(([k, l]) => `<button type="button" data-tab="${k}" class="${k === this.tab ? 'on' : ''}">${l}</button>`).join('')}</div><div class="ch-studio-content">${secs[this.tab]}</div>` : '<div class="ch-studio-content ch-muted">Crea una consulta para empezar.</div>'}</section></div></div>`;
+            const c2 = root.querySelector('.ch-studio-content'); if (c2) { c2.scrollTop = top; }
+            Studio.attach(this, '.ch-studio');
             this.bind(root);
         }
 
@@ -42,18 +48,16 @@ define('custom:views/web-sources', ['view', 'custom:ui', 'custom:web-picker'], f
             const rules = x.rules.map((r, j) => `<div class="ch-ifb-row"><input class="form-control input-sm" data-b="rules.${j}.label" value="${esc(r.label)}" placeholder="Qué dato es">
                 <select class="form-control input-sm" data-b="rules.${j}.mode" data-redraw><option value="selector" ${r.mode !== 'regex' && r.mode !== 'text' ? 'selected' : ''}>Selector CSS</option><option value="regex" ${r.mode === 'regex' ? 'selected' : ''}>Expresión regular</option><option value="text" ${r.mode === 'text' ? 'selected' : ''}>Texto de la página</option></select>
                 ${r.mode === 'text' ? '' : `<input class="form-control input-sm" data-b="rules.${j}.expr" value="${esc(r.expr)}" placeholder="${r.mode === 'regex' ? 'Saldo:\\s*([\\d.,]+)' : '.resultado .valor'}">`}<a data-del-r="${j}" title="Quitar"><span class="far fa-trash-can"></span></a></div>`).join('');
-            return `<div class="ch-sim-card"><h4>La consulta</h4>
+            return {query: `<div class="ch-sim-card"><h4>La consulta</h4>
                 <input class="form-control" data-b="name" value="${esc(x.name)}" placeholder="Nombre">
                 <textarea class="form-control" rows="2" data-b="description" placeholder="Para qué sirve (opcional)" style="margin-top:6px">${esc(x.description)}</textarea>
                 <input class="form-control" data-b="url" value="${esc(x.url)}" placeholder="https://ejemplo.com/consulta?documento={{identificacion}}" style="margin-top:6px">
                 <div class="ch-muted">Variables: {{nombre}}, {{identificacion}}, {{telefono}} y {{correo}} del lead.</div>
                 <label class="ch-ifb-ck"><input type="checkbox" data-b="active" ${x.active ? 'checked' : ''}> Activa</label>
                 <label class="ch-ifb-ck"><input type="checkbox" data-b="note" ${x.note !== false ? 'checked' : ''}> Dejar nota en el historial del lead</label>
-                <a class="ch-ifb-del" data-a="del"><span class="far fa-trash-can"></span> Eliminar esta consulta</a></div>
-                <div class="ch-sim-card"><h4>Datos a traer</h4>
+                <a class="ch-ifb-del" data-a="del"><span class="far fa-trash-can"></span> Eliminar esta consulta</a></div>`, data: `<div class="ch-sim-card"><h4>Datos a traer</h4>
                 <div><button class="btn btn-primary btn-sm" data-a="pick"><span class="fas fa-hand-pointer"></span> Ver la página y elegir los datos con clics</button></div>${rules}
-                <button class="btn btn-default btn-xs" data-a="addrule"><span class="fas fa-plus"></span> Añadir dato a mano</button></div>
-                <div class="ch-sim-card"><h4>Análisis con IA (opcional)</h4><textarea class="form-control" rows="3" data-b="analyze" placeholder="Qué debe analizar la IA con lo que dice la página para ayudar a decidir (ej.: ¿el cliente aparece reportado? ¿qué recomiendas?)">${esc(x.analyze)}</textarea></div>`;
+                <button class="btn btn-default btn-xs" data-a="addrule"><span class="fas fa-plus"></span> Añadir dato a mano</button></div>`, ai: `<div class="ch-sim-card"><h4>Análisis con IA (opcional)</h4><textarea class="form-control" rows="3" data-b="analyze" placeholder="Qué debe analizar la IA con lo que dice la página para ayudar a decidir (ej.: ¿el cliente aparece reportado? ¿qué recomiendas?)">${esc(x.analyze)}</textarea></div>`};
         }
 
         set(path, v) {
@@ -70,6 +74,7 @@ define('custom:views/web-sources', ['view', 'custom:ui', 'custom:web-picker'], f
                 if (t.hasAttribute('data-redraw') && e.type === 'change') { this.draw(); }
             };
             root.onclick = e => {
+                const tb = e.target.closest('[data-tab]'); if (tb) { this.tab = tb.dataset.tab; this.draw(); return; }
                 const s = e.target.closest('[data-sel]'); if (s) { this.sel = +s.dataset.sel; this.draw(); return; }
                 const dr = e.target.closest('[data-del-r]'); if (dr) { cur().rules.splice(+dr.dataset.delR, 1); this.dirty = true; this.draw(); return; }
                 const a = e.target.closest('[data-a]'); if (!a) { return; }

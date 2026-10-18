@@ -3,7 +3,7 @@
  * (pestaña de la ficha o botón «Llenar formulario») y qué acciones lanzan (PDF, cambiar estado, tarea, enviar al cliente, copiar a campos del lead)—.
  * Endpoints: GET CrmHub/iforms?all=1 y POST CrmHub/iformsSave. Ruta #CrmHub/formularios.
  */
-define('custom:views/iforms', ['view', 'custom:ui'], function (Dep, ChUi) {
+define('custom:views/iforms', ['view', 'custom:ui', 'custom:studio'], function (Dep, ChUi, Studio) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const LEAD_LABEL = {creditScore: 'Puntaje de crédito', totalDebt: 'Deuda total', overdueDebt: 'Deuda en mora', monthlyIncome: 'Ingresos mensuales', creditorCount: 'Cantidad de acreedores',
         maxDaysOverdue: 'Máx. días de mora', defaultCount: 'Obligaciones castigadas', identificationType: 'Tipo de documento', identification: 'Identificación', processResult: 'Resultado de proceso',
@@ -26,6 +26,7 @@ define('custom:views/iforms', ['view', 'custom:ui'], function (Dep, ChUi) {
         stages = []
         webSources = []
         dirty = false
+        tab = 'general'
 
         setup() {
             this.getHelper().pageTitle.setTitle('Formularios internos');
@@ -37,6 +38,8 @@ define('custom:views/iforms', ['view', 'custom:ui'], function (Dep, ChUi) {
 
         afterRender() { this.draw(); }
 
+        onRemove() { Studio.detach(this); if (super.onRemove) { super.onRemove(); } }
+
         draw() {
             const root = this.el && this.el.querySelector('.ch-ifb'); if (!root) { return; }
             const d = this.data0;
@@ -44,12 +47,16 @@ define('custom:views/iforms', ['view', 'custom:ui'], function (Dep, ChUi) {
             if (d.error) { root.innerHTML = '<div class="ch-chat-err">No se pudieron cargar los formularios.</div>'; return; }
             if (!d.canManage) { root.innerHTML = '<div class="ch-chat-err">Solo gerentes, directores y supervisores pueden diseñar formularios.</div>'; return; }
             const list = this.forms.map((f, i) => `<div class="ch-ifb-it ${i === this.sel ? 'on' : ''}" data-sel="${i}"><span class="fas fa-clipboard-list"></span><div><b>${esc(f.name)}</b><small>${f.active ? '' : 'Inactivo · '}${f.fields.filter(x => x.type !== 'heading').length} campos · ${(f.actions || []).length} acciones</small></div></div>`).join('');
-            root.innerHTML = `<div class="ch-sim-head"><h3><span class="fas fa-clipboard-list"></span> Formularios internos</h3>
-                <p class="ch-muted">Diseña los formularios que tu equipo llena en la gestión de cada lead: elige en qué etapas se ven, dónde aparecen y qué hacen al guardarse (por ejemplo, generar un PDF). Las lecturas de PDF también pueden llenarlos.</p></div>
-                <div class="ch-ifb-wrap"><div class="ch-ifb-list">${list || ChUi.empty({kind: 'doc', title: 'Sin formularios', text: 'Crea el primero.', compact: true})}
-                <button class="btn btn-primary btn-sm" data-a="new"><span class="fas fa-plus"></span> Nuevo formulario</button> <button class="btn btn-default btn-sm" data-a="sample" title="Un ejemplo ya armado para ajustar">Usar ejemplo</button></div>
-                <div class="ch-ifb-ed">${this.forms.length ? this.editor(this.forms[this.sel]) : '<div class="ch-muted">Crea un formulario para empezar.</div>'}</div></div>
-                <div class="ch-ifb-save"><span class="ch-muted">${this.dirty ? 'Hay cambios sin guardar' : ''}</span><button class="btn btn-primary" data-a="save" ${this.forms.length || this.data0.forms.length ? '' : 'disabled'}><span class="fas fa-floppy-disk"></span> Guardar todo</button></div>`;
+            const cur = this.forms[this.sel], secs = cur ? this.editor(cur) : null;
+            const tabs = [['general', 'General'], ['where', 'Dónde se ve'], ['fields', 'Campos' + (cur ? ` (${cur.fields.filter(x => x.type !== 'heading').length})` : '')], ['actions', 'Acciones' + (cur ? ` (${(cur.actions || []).length})` : '')]];
+            if (!tabs.some(t => t[0] === this.tab)) { this.tab = 'general'; }
+            const keep = root.querySelector('.ch-studio-content'), top = keep ? keep.scrollTop : 0;
+            root.innerHTML = `<div class="ch-studio"><div class="ch-studio-head"><div><h3><span class="fas fa-clipboard-list"></span> Formularios internos</h3><p class="ch-muted">Los formularios que tu equipo llena en la gestión de cada lead: en qué etapas se ven, dónde aparecen y qué hacen al guardarse (por ejemplo, generar un PDF).</p></div>
+                <div class="ch-studio-act">${this.dirty ? '<span class="ch-studio-dirty"><span class="fas fa-circle"></span> Cambios sin guardar</span>' : ''}<button class="btn btn-default btn-sm" data-a="sample" title="Un ejemplo ya armado para ajustar">Usar ejemplo</button><button class="btn btn-default btn-sm" data-a="new"><span class="fas fa-plus"></span> Nuevo formulario</button><button class="btn btn-primary btn-sm" data-a="save" ${this.forms.length || this.data0.forms.length ? '' : 'disabled'}><span class="fas fa-floppy-disk"></span> Guardar todo</button></div></div>
+                <div class="ch-studio-body"><aside class="ch-studio-list">${list || ChUi.empty({kind: 'doc', title: 'Sin formularios', text: 'Crea el primero.', compact: true})}</aside>
+                <section class="ch-studio-main">${cur ? `<div class="ch-studio-tabs">${tabs.map(([k, l]) => `<button type="button" data-tab="${k}" class="${k === this.tab ? 'on' : ''}">${l}</button>`).join('')}</div><div class="ch-studio-content">${secs[this.tab]}</div>` : '<div class="ch-studio-content ch-muted">Crea un formulario para empezar.</div>'}</section></div></div>`;
+            const c2 = root.querySelector('.ch-studio-content'); if (c2) { c2.scrollTop = top; }
+            Studio.attach(this, '.ch-studio');
             this.bind(root);
         }
 
@@ -67,18 +74,15 @@ define('custom:views/iforms', ['view', 'custom:ui'], function (Dep, ChUi) {
                 ${['select', 'multiselect'].includes(x.type) ? `<textarea class="form-control input-sm" rows="2" data-opts="${i}" placeholder="Una opción por línea">${esc((x.options || []).join('\n'))}</textarea>` : ''}
                 ${x.type !== 'heading' ? `<input class="form-control input-sm" data-b="fields.${i}.help" value="${esc(x.help)}" placeholder="Ayuda para quien lo llena (opcional)">` : ''}</div>`).join('');
             const acts = (f.actions || []).map((a, i) => this.actionEd(f, a, i, keys)).join('');
-            return `<div class="ch-sim-card"><h4>Datos del formulario</h4>
+            return {general: `<div class="ch-sim-card"><h4>Datos del formulario</h4>
                 <input class="form-control" data-b="name" value="${esc(f.name)}" placeholder="Nombre">
                 <textarea class="form-control" rows="2" data-b="description" placeholder="Descripción para quien lo llena (opcional)" style="margin-top:6px">${esc(f.description)}</textarea>
                 <label class="ch-ifb-ck"><input type="checkbox" data-b="active" ${f.active ? 'checked' : ''}> Activo</label>
                 <label class="ch-ifb-ck"><input type="checkbox" data-b="multiple" ${f.multiple ? 'checked' : ''}> Permitir varias respuestas por lead (por ejemplo, una por visita)</label>
-                <a class="ch-ifb-del" data-a="del"><span class="far fa-trash-can"></span> Eliminar este formulario</a></div>
-                <div class="ch-sim-card"><h4>¿Dónde se ve?</h4><p class="ch-muted">Etapas del lead en las que aparece (sin marcar ninguna = en todas):</p><div class="ch-if-chk">${stageChecks}</div>
+                <a class="ch-ifb-del" data-a="del"><span class="far fa-trash-can"></span> Eliminar este formulario</a></div>`, where: `<div class="ch-sim-card"><h4>¿Dónde se ve?</h4><p class="ch-muted">Etapas del lead en las que aparece (sin marcar ninguna = en todas):</p><div class="ch-if-chk">${stageChecks}</div>
                 <label class="ch-ifb-ck"><input type="checkbox" data-b="tab" ${f.tab ? 'checked' : ''}> Como pestaña en la ficha del lead (panel «Formularios»)</label>
-                <label class="ch-ifb-ck"><input type="checkbox" data-b="button" ${f.button ? 'checked' : ''}> En el botón «Llenar formulario» de la ficha</label></div>
-                <div class="ch-sim-card"><h4>Campos</h4>${fields}<button class="btn btn-default btn-sm" data-a="addf"><span class="fas fa-plus"></span> Añadir campo</button></div>
-                <div class="ch-sim-card"><h4>Acciones</h4><p class="ch-muted">Qué pasa al guardar el formulario o al pulsar un botón en la ficha.</p>${acts}
-                <button class="btn btn-default btn-sm" data-a="adda"><span class="fas fa-plus"></span> Añadir acción</button></div>`;
+                <label class="ch-ifb-ck"><input type="checkbox" data-b="button" ${f.button ? 'checked' : ''}> En el botón «Llenar formulario» de la ficha</label></div>`, fields: `<div class="ch-sim-card"><h4>Campos</h4>${fields}<button class="btn btn-default btn-sm" data-a="addf"><span class="fas fa-plus"></span> Añadir campo</button></div>`, actions: `<div class="ch-sim-card"><h4>Acciones</h4><p class="ch-muted">Qué pasa al guardar el formulario o al pulsar un botón en la ficha.</p>${acts}
+                <button class="btn btn-default btn-sm" data-a="adda"><span class="fas fa-plus"></span> Añadir acción</button></div>`};
         }
 
         actionEd(f, a, i, keys) {
@@ -224,6 +228,7 @@ define('custom:views/iforms', ['view', 'custom:ui'], function (Dep, ChUi) {
                 if (t.dataset.map) { const [i, k] = t.dataset.map.split(':'), c = f().actions[+i].config; c.map = c.map || {}; if (t.value) { c.map[k] = t.value; } else { delete c.map[k]; } this.dirty = true; }
             };
             root.onclick = e => {
+                const tb = e.target.closest('[data-tab]'); if (tb) { this.tab = tb.dataset.tab; this.draw(); return; }
                 const s = e.target.closest('[data-sel]'); if (s) { this.sel = +s.dataset.sel; this.draw(); return; }
                 const mv = e.target.closest('[data-mv]'); if (mv) { const [i, d] = mv.dataset.mv.split(':').map(Number), a = f().fields, j = i + d; if (j >= 0 && j < a.length) { [a[i], a[j]] = [a[j], a[i]]; this.dirty = true; this.draw(); } return; }
                 const df = e.target.closest('[data-del-f]'); if (df) { f().fields.splice(+df.dataset.delF, 1); this.dirty = true; this.draw(); return; }
