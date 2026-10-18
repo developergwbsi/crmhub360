@@ -1390,3 +1390,11 @@ html.ch-noscroll { overflow: hidden !important; }
     /* la lista de notas no tiene un desplazamiento propio dentro de la zona derecha: lo hace la zona completa */
     #main .ch-split .bottom .list-expanded, #main .ch-split .bottom .list-container { max-height: none !important; overflow: visible !important; }
 }
+
+@media (min-width: 1100px) {
+    /* la tarjeta de asignación es una pestaña más de la zona de datos: oculta salvo cuando se elige «Asignación» */
+    #main .ch-split .record-grid > .side { display: none; }
+    #main .ch-split.ch-side-on .record-grid > .left > .middle { display: none; }
+    #main .ch-split.ch-side-on .record-grid > .side { display: block; grid-row: 2; max-height: none; overflow-y: auto; align-self: stretch; }
+}
+@media (min-width: 1100px) { #main .ch-split .middle-tabs { display: flex; flex-wrap: nowrap; } #main .ch-split .middle-tabs .btn { padding: 8px 10px; font-size: 13px; white-space: nowrap; flex: none; } }

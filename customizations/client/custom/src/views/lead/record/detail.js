@@ -10,11 +10,27 @@ define('custom:views/lead/record/detail', ['views/record/detail', 'custom:lead-h
         afterRender() {
             super.afterRender();
             Hero.mount(this);
-            if (this.el && !this.el.closest('.modal-body')) { this.el.classList.add('ch-split'); Studio.attach(this, '.record-grid'); }   // vista completa: datos a un lado (4/12) y pestañas de actividad al otro (8/12), cada zona con su propio desplazamiento
+            if (this.el && !this.el.closest('.modal-body')) { this.el.classList.add('ch-split'); Studio.attach(this, '.record-grid'); this.chSideTab(); }   // vista completa: datos a un lado (4/12) y pestañas de actividad al otro (8/12), cada zona con su propio desplazamiento
             if (this.model.entityType === 'Lead') { this.chDecorate(); }
             // Sin el módulo «Cartera y cobranza» no se muestra el reporte de crédito (deuda, mora, ingresos…)
             if (this.model.entityType === 'Lead') { try { this.hidePanel('targetLists', true); } catch (e) { /* sin esa relación */ } }   // las listas de objetivos (campañas masivas de Espo) no se usan aquí
             if (this.model.entityType === 'Lead' && !this.getConfig().get('crmhubCartera')) { try { this.hidePanel('credit', true); } catch (e) { /* panel inexistente */ } }
+        }
+
+        // En la vista de dos zonas, la tarjeta de asignación (usuario, equipos, creado) pasa a ser una pestaña más junto a Resumen, Detalles y Calificación
+        chSideTab() {
+            const root = this.el, tabs = root.querySelector('.middle-tabs'), side = root.querySelector('.record-grid > .side');
+            if (!tabs || !side || tabs.querySelector('[data-ch-tab="side"]')) { return; }
+            const b = document.createElement('button');
+            b.type = 'button'; b.className = 'btn btn-text btn-wide'; b.dataset.chTab = 'side'; b.textContent = 'Asignación';
+            tabs.appendChild(b);
+            b.addEventListener('click', e => {
+                e.stopPropagation();
+                tabs.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+                b.classList.add('active'); root.classList.add('ch-side-on');
+            });
+            // al elegir cualquiera de las otras pestañas se vuelve a los datos
+            tabs.addEventListener('click', e => { const o = e.target.closest('button'); if (o && o !== b) { root.classList.remove('ch-side-on'); b.classList.remove('active'); } }, true);
         }
 
         // Las celdas de la tarjeta lateral las vuelve a dibujar Espo al cambiar datos: se retocan de nuevo cuando cambia el lead, el comercial virtual o el DOM
