@@ -1943,6 +1943,28 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/websources/run', ['sourceId' => (string) ($d->sourceId ?? ''), 'leadId' => $lead->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 90);
     }
 
+    /** POST /CrmHub/webSession. Gerente, director o supervisor. {op: open|action|close, id?, url?, type?, x?, y?, text?, key?, dy?}: navegador de grabación (Chromium) para armar una consulta web con login y navegación. Hub: /v1/websessions. */
+    public function postActionWebSession(Request $request): \stdClass
+    {
+        if (!$this->canManageForms()) {
+            throw new Forbidden();
+        }
+        $d = $request->getParsedBody();
+        $op = (string) ($d->op ?? '');
+        $id = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($d->id ?? ''));
+        if ($op === 'open') {
+            return (object) $this->hubCall('POST', '/v1/websessions', ['url' => (string) ($d->url ?? '')], 60);
+        }
+        if ($id === '') {
+            throw new BadRequest();
+        }
+        if ($op === 'close') {
+            return (object) $this->hubCall('DELETE', '/v1/websessions/' . $id, null, 20);
+        }
+        return (object) $this->hubCall('POST', '/v1/websessions/' . $id . '/action', ['type' => (string) ($d->type ?? ''), 'x' => (int) ($d->x ?? 0), 'y' => (int) ($d->y ?? 0), 'text' => (string) ($d->text ?? ''),
+            'key' => (string) ($d->key ?? ''), 'url' => (string) ($d->url ?? ''), 'dy' => (int) ($d->dy ?? 0)], 60);
+    }
+
     /** POST /CrmHub/iformWebPreview. Gerente, director o supervisor. {url}: devuelve la página (saneada) para elegir visualmente qué datos traer. Hub: POST /v1/iforms/webpreview. */
     public function postActionIformWebPreview(Request $request): \stdClass
     {

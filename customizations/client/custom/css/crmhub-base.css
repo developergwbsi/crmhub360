@@ -1398,3 +1398,8 @@ html.ch-noscroll { overflow: hidden !important; }
     #main .ch-split.ch-side-on .record-grid > .side { display: block; grid-row: 2; max-height: none; overflow-y: auto; align-self: stretch; }
 }
 @media (min-width: 1100px) { #main .ch-split .middle-tabs { display: flex; flex-wrap: nowrap; } #main .ch-split .middle-tabs .btn { padding: 8px 10px; font-size: 13px; white-space: nowrap; flex: none; } }
+/* Grabador del navegador */
+.ch-rec-mode { display: inline-flex; border: 1px solid var(--ch-line); border-radius: 8px; overflow: hidden; margin-left: 6px; } .ch-rec-mode button { border: 0; background: var(--ch-surface); padding: 5px 10px; font-size: 12.5px; font-weight: 600; color: var(--ch-muted); } .ch-rec-mode button.on { background: var(--ch-primary); color: #fff; }
+.ch-rec-view { position: relative; border: 1px solid var(--ch-line); border-radius: 10px; background: #f1f3f9; overflow: auto; display: flex; align-items: flex-start; justify-content: center; } .ch-rec-view img { width: 100%; height: auto; display: block; cursor: crosshair; user-select: none; }
+.ch-rec-load { position: absolute; top: 8px; right: 8px; background: rgba(20, 28, 60, .8); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 12px; }
+.ch-rec .ch-wp-main { grid-template-columns: 1fr 300px; height: 62vh; }

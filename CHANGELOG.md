@@ -4,6 +4,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Consultas web con navegador: login, navegación y páginas con JavaScript
+- **Nuevo modo «Navegador»** en las consultas web (además de la «página sencilla»): un Chromium propio (contenedor `crmhub-browser` con Playwright, al estilo de lo que se hace en n8n con navegadores aparte) **inicia sesión, hace clic, navega por varias páginas y lee páginas que se dibujan con JavaScript**.
+- **Grabador visual**: en «Flujo de navegación → Grabar el flujo» ves un navegador real dentro del CRM: escribes la dirección, haces clic, escribes usuario y clave, navegas, y cada acción queda grabada como un paso editable (abrir, escribir, clic, tecla, esperar, extraer). En modo «Elegir dato» pulsas lo que quieres traer.
+- **Credenciales protegidas**: el usuario y la clave que escribes al grabar se guardan aparte en el servidor y **no vuelven a mostrarse**; los pasos solo dicen `{{usuario}}` y `{{clave}}` (y se pueden añadir otras credenciales, como un token). También se pueden usar datos del lead (`{{identificacion}}`, `{{nombre}}`…).
+- El flujo se repite igual desde la ficha del lead («Consultar web»), desde una acción de formulario y con el análisis de la IA como antes.
+- **Seguridad**: el navegador solo abre direcciones públicas (cada petición se revisa y se rechazan redes internas y del propio servidor), sin descargas, con tiempo límite y pocas sesiones a la vez. No resuelve captchas ni verificación en dos pasos. Quien configura es responsable de usar solo sitios y cuentas que tenga derecho a automatizar.
+
 ## [1.7.2] - 2026-10-18
 
 ### Ficha y pantallas de diseño con zonas independientes

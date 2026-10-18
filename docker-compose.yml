@@ -63,6 +63,8 @@ services:
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
       MEET_HOST: ${MEET_HOST:-}
+      BROWSER_URL: ${BROWSER_URL:-http://127.0.0.1:8198}
+      BROWSER_TOKEN: ${BROWSER_TOKEN}
 
   # Videollamadas propias: servidor LiveKit. La señal solo escucha en 127.0.0.1 (Apache la publica con SSL en meet.<dominio>);
   # los medios usan 7881/tcp y 50000-50100/udp, que hay que abrir y reenviar hacia este servidor.
@@ -88,6 +90,19 @@ services:
     environment:
       STT_MODEL: ${STT_MODEL:-small}
       STT_THREADS: ${STT_THREADS:-4}
+
+  # Navegador automático (Chromium con Playwright) para las consultas web con login y navegación: grabar un flujo viendo la página y ejecutarlo sin pantalla.
+  # Solo escucha en 127.0.0.1:8198; revisa cada petición para no alcanzar redes privadas; el Hub lo llama con BROWSER_TOKEN.
+  browser:
+    build: ./browser-service
+    container_name: crmhub-browser
+    restart: unless-stopped
+    network_mode: host
+    ipc: host
+    init: true
+    environment:
+      BROWSER_TOKEN: ${BROWSER_TOKEN}
+      BROWSER_PORT: ${BROWSER_PORT:-8198}
 
   # Centro de control: crear/vigilar empresas, restablecer claves y entrar en modo lectura.
   # Solo escucha en 127.0.0.1; Apache lo publica con SSL. Los trabajos privilegiados los ejecuta bin/control-worker.

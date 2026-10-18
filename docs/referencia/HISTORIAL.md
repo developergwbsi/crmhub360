@@ -2,8 +2,9 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.7.1)
+## v1.7.2
 
+- `4659896` 2026-10-17 — Versión 1.7.2
 - `13ac50b` 2026-10-17 — Versión 1.7.2
 - `8fc7163` 2026-10-17 — Documentación
 - `91f9970` 2026-10-17 — Ficha: la tarjeta de asignación pasa a ser la pestaña «Asignación» junto a Calificación

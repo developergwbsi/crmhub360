@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **123** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **124** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -118,6 +118,7 @@ Total: **123** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/thread` | CrmHub.thread | WhatsApp, SMS y Telegram guardan la conversación en el lead de la persona. Cuando ya es cuenta, contacto u oportunidad se sigue usando ese mismo hilo (el lead del que nació); si el registro se creó a mano y no tiene lead, se crea uno de conversación (estado «Converted», fuera de los reportes). |
 | POST | `/CrmHub/twilio/test` | CrmHub.twilioTest | POST /CrmHub/twilio/test. Admin. Hub: POST /v1/twilio/test. */ |
 | POST | `/CrmHub/voice/call` | CrmHub.voiceCall | Click-to-call: la central/proveedor llama primero al teléfono o extensión del asesor y luego lo conecta con el cliente. */ |
+| POST | `/CrmHub/webSession` | CrmHub.webSession | POST /CrmHub/webSession. Gerente, director o supervisor. {op: open/action/close, id?, url?, type?, x?, y?, text?, key?, dy?}: navegador de grabación (Chromium) para armar una consulta web con login y navegación. Hub: /v1/websessions. */ |
 | POST | `/CrmHub/webSourceRun` | CrmHub.webSourceRun | POST /CrmHub/webSourceRun. Usuario con edición del lead. {leadId, sourceId}: consulta la página, deja el resultado en una nota del lead y lo devuelve. Hub: POST /v1/websources/run. */ |
 | GET | `/CrmHub/webSources` | CrmHub.webSources | GET /CrmHub/webSources[?all=1]. Usuario (no API ni portal). Consultas web guardadas (solo activas; con all=1 y permiso de diseño, también las inactivas). Hub: GET /v1/websources. */ |
 | POST | `/CrmHub/webSourcesSave` | CrmHub.webSourcesSave | POST /CrmHub/webSourcesSave. Gerente, director o supervisor. {sources}. Hub: PUT /v1/websources. */ |

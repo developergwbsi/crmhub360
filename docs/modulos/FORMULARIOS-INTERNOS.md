@@ -14,6 +14,10 @@ Gerentes, directores y supervisores (administrador o permiso de asignación) dis
 
 `hub-service/app/webscrape.py` descarga páginas públicas (http/https, sin direcciones internas, 1,5 MB y 20 s como máximo, redirecciones revisadas) y extrae datos por selector CSS, expresión regular o texto (BeautifulSoup). La acción guarda los datos en campos del formulario (sin disparar las acciones «al guardar» para evitar bucles), deja una nota y, si hay pregunta para la IA, guarda su análisis. No ejecuta JavaScript ni resuelve captchas.
 
+## Consultas web con navegador (`mode: browser`)
+
+Servicio `browser-service/` (contenedor `crmhub-browser`, Chromium con Playwright, solo `127.0.0.1:8198`, token `BROWSER_TOKEN`). El Hub (`browser.py`) abre **sesiones de grabación** (`/v1/websessions`: captura de pantalla, clic, escribir, tecla, atrás, desplazar) y **ejecuta flujos** (`/run`: goto, fill, click, press, wait, extract). El navegador revisa cada petición y rechaza redes privadas, loopback y de contenedores; sin descargas; límites de tiempo y de sesiones. Los pasos viven en `web_sources.def.steps`; las credenciales en `def.secrets` (nunca se envían al CRM: solo nombre y «guardada»); en los pasos se escriben como `{{usuario}}`, `{{clave}}`… y se sustituyen al ejecutar. Interfaz: `custom:web-recorder` (grabador) y `custom:views/web-sources`. No resuelve captchas ni 2FA.
+
 ## Lectura de PDF → formulario
 
 Con `autoApply` en el perfil, la lectura se aplica sin pasar por revisión (`documents._work`). Los perfiles de lectura aceptan el destino `form:<id>.<clave>`; al aplicar la lectura (`documents.apply` / `apply_items`) los datos se mezclan con la respuesta del lead (`iforms.merge_entry`, incompleta si faltan obligatorios, marcada como «llenado desde un documento»).

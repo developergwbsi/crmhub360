@@ -1175,6 +1175,47 @@ class WebSourceRunReq(BaseModel):
     userName: str = ""
 
 
+class WebSessionOpenReq(BaseModel):
+    """Abrir un navegador de grabación en una dirección."""
+    url: str = ""
+
+
+class WebSessionActionReq(BaseModel):
+    """Acción en el navegador de grabación: goto, click, probe, type, press, scroll, back, wait."""
+    type: str
+    x: int = 0
+    y: int = 0
+    text: str = ""
+    key: str = ""
+    url: str = ""
+    dy: int = 0
+
+
+@app.post("/v1/websessions")
+async def websession_open(req: WebSessionOpenReq, tenant: dict = Depends(tenant_auth)):
+    from . import browser
+    try:
+        return await browser.open_session(tenant["slug"], req.url.strip()[:600])
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/websessions/{sid}/action")
+async def websession_action(sid: str, req: WebSessionActionReq, tenant: dict = Depends(tenant_auth)):
+    from . import browser
+    try:
+        return await browser.action(tenant["slug"], sid, req.model_dump())
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.delete("/v1/websessions/{sid}")
+async def websession_close(sid: str, tenant: dict = Depends(tenant_auth)):
+    from . import browser
+    await browser.close_session(tenant["slug"], sid)
+    return {"ok": True}
+
+
 @app.get("/v1/websources")
 async def websources_list(all: bool = False, tenant: dict = Depends(tenant_auth)):
     return {"sources": iforms.sources(tenant["slug"], only_active=not all)}

@@ -462,6 +462,14 @@
         }
     },
     {
+        "route": "/CrmHub/webSession",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "webSession"
+        }
+    },
+    {
         "route": "/CrmHub/metricsLeads",
         "method": "get",
         "params": {

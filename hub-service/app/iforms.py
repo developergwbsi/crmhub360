@@ -167,42 +167,108 @@ def save_defs(tenant: str, forms: list, by: str) -> list[dict]:
 
 
 # ---------------- consultas web guardadas (se usan desde el lead o desde una acción de formulario)
-def clean_sources(items: list) -> list[dict]:
+STEP_TYPES = {"goto": "Abrir una página", "fill": "Escribir en un campo", "click": "Hacer clic", "press": "Pulsar una tecla", "wait": "Esperar", "extract": "Extraer un dato"}
+
+
+def clean_sources(items: list, old: dict | None = None) -> list[dict]:
+    """Valida las consultas web. mode «simple»: una página HTML y reglas de extracción. mode «browser»: pasos de navegación (login, clics, páginas) y credenciales guardadas aparte."""
+    old = old or {}
     out, ids = [], set()
     for x in (items or [])[:30]:
         name = str(x.get("name", "")).strip()[:80]
         if len(name) < 2:
             raise ValueError("Cada consulta necesita un nombre.")
-        url = str(x.get("url", "")).strip()[:600]
-        if not re.match(r"^https?://", url):
-            raise ValueError(f"«{name}»: la dirección debe empezar por http:// o https://")
         sid = _slug(x.get("id"), "w" + secrets.token_hex(3))
         while sid in ids:
             sid += "_2"
         ids.add(sid)
-        rules = []
-        for r in (x.get("rules") or [])[:12]:
-            mode = r.get("mode") if r.get("mode") in ("selector", "regex", "text") else "selector"
-            expr = str(r.get("expr", "")).strip()[:300]
-            if mode != "text" and not expr:
-                continue
-            if mode == "regex":
-                try:
-                    re.compile(expr)
-                except re.error:
-                    raise ValueError(f"«{name}»: la expresión «{expr}» no es válida.")
-            rules.append({"label": str(r.get("label", ""))[:80] or expr[:40], "mode": mode, "expr": expr})
+        mode = "browser" if x.get("mode") == "browser" else "simple"
         analyze = str(x.get("analyze", ""))[:600]
-        if not rules and not analyze:
-            raise ValueError(f"«{name}»: indica qué datos traer de la página o qué debe analizar la IA.")
-        out.append({"id": sid, "name": name, "description": str(x.get("description", ""))[:300], "url": url, "rules": rules, "analyze": analyze, "note": x.get("note") is not False, "active": x.get("active") is not False})
+        base = {"id": sid, "name": name, "description": str(x.get("description", ""))[:300], "mode": mode, "analyze": analyze, "note": x.get("note") is not False, "active": x.get("active") is not False}
+        if mode == "simple":
+            url = str(x.get("url", "")).strip()[:600]
+            if not re.match(r"^https?://", url):
+                raise ValueError(f"«{name}»: la dirección debe empezar por http:// o https://")
+            rules = []
+            for r in (x.get("rules") or [])[:12]:
+                m = r.get("mode") if r.get("mode") in ("selector", "regex", "text") else "selector"
+                expr = str(r.get("expr", "")).strip()[:300]
+                if m != "text" and not expr:
+                    continue
+                if m == "regex":
+                    try:
+                        re.compile(expr)
+                    except re.error:
+                        raise ValueError(f"«{name}»: la expresión «{expr}» no es válida.")
+                rules.append({"label": str(r.get("label", ""))[:80] or expr[:40], "mode": m, "expr": expr})
+            if not rules and not analyze:
+                raise ValueError(f"«{name}»: indica qué datos traer de la página o qué debe analizar la IA.")
+            out.append({**base, "url": url, "rules": rules})
+            continue
+        steps = []
+        for st in (x.get("steps") or [])[:60]:
+            t = st.get("type")
+            if t not in STEP_TYPES:
+                continue
+            n = {"type": t}
+            if t == "goto":
+                n["url"] = str(st.get("url", "")).strip()[:600]
+                if not re.match(r"^https?://", n["url"]):
+                    raise ValueError(f"«{name}»: la dirección de «Abrir una página» debe empezar por http:// o https://")
+            elif t in ("fill", "click"):
+                n.update({"selector": str(st.get("selector", "")).strip()[:400], "text": str(st.get("text", "")).strip()[:120], "label": str(st.get("label", "")).strip()[:80]})
+                if not n["selector"] and not n["text"]:
+                    raise ValueError(f"«{name}»: un paso «{STEP_TYPES[t]}» necesita el elemento.")
+                if t == "fill":
+                    n["value"] = str(st.get("value", ""))[:300]
+            elif t == "press":
+                n["key"] = str(st.get("key", "Enter"))[:30] or "Enter"
+            elif t == "wait":
+                n.update({"selector": str(st.get("selector", ""))[:400], "text": str(st.get("text", ""))[:120], "ms": max(0, min(30000, int(st.get("ms") or 1500)))})
+            elif t == "extract":
+                m = st.get("mode") if st.get("mode") in ("selector", "regex", "text") else "selector"
+                expr = str(st.get("expr") or st.get("selector") or "").strip()[:300]
+                if m != "text" and not expr:
+                    continue
+                if m == "regex":
+                    try:
+                        re.compile(expr)
+                    except re.error:
+                        raise ValueError(f"«{name}»: la expresión «{expr}» no es válida.")
+                n.update({"mode": m, "expr": expr, "label": str(st.get("label", ""))[:80] or expr[:40]})
+            steps.append(n)
+        if not any(s_["type"] == "goto" for s_ in steps):
+            raise ValueError(f"«{name}»: el flujo necesita al menos un paso «Abrir una página».")
+        if not any(s_["type"] == "extract" for s_ in steps) and not analyze:
+            raise ValueError(f"«{name}»: añade un paso «Extraer un dato» o indica qué debe analizar la IA.")
+        # credenciales: los valores nuevos reemplazan; los que no se envían se conservan; nunca vuelven al navegador del usuario
+        prev = dict((old.get(sid) or {}).get("secrets") or {})
+        for k, v in (x.get("credentials") or {}).items():
+            k = _slug(k, "")
+            if k and isinstance(v, str) and v != "":
+                prev[k] = v[:300]
+            elif k and v is None:
+                prev.pop(k, None)
+        names = [_slug(k, "") for k in (x.get("credNames") or [])] or list(prev)
+        keep = {k: prev[k] for k in prev if k in names}
+        out.append({**base, "url": "", "rules": [], "steps": steps, "secrets": keep, "credNames": sorted(set(names) | set(keep))})
     return out
+
+
+def public_source(d: dict) -> dict:
+    """La consulta sin valores de credenciales (solo nombre y si están guardadas) y con las reglas de extracción derivadas de los pasos."""
+    o = {k: v for k, v in d.items() if k != "secrets"}
+    sec = d.get("secrets") or {}
+    o["credentials"] = [{"name": n, "set": n in sec} for n in d.get("credNames", [])]
+    if d.get("mode") == "browser":
+        o["rules"] = [{"label": s["label"], "mode": s["mode"], "expr": s["expr"]} for s in d.get("steps", []) if s["type"] == "extract"]
+    return o
 
 
 def sources(tenant: str, only_active: bool = False) -> list[dict]:
     with db.pool.connection() as c:
         rows = c.execute("SELECT def FROM web_sources WHERE tenant=%s ORDER BY (def->>'name')", (tenant,)).fetchall()
-    out = [r["def"] for r in rows]
+    out = [public_source(r["def"]) for r in rows]
     return [d for d in out if d.get("active", True)] if only_active else out
 
 
@@ -213,30 +279,67 @@ def get_source(tenant: str, sid: str) -> dict | None:
 
 
 def save_sources(tenant: str, items: list) -> list[dict]:
-    new = clean_sources(items)
+    with db.pool.connection() as c:
+        old = {r["def"]["id"]: r["def"] for r in c.execute("SELECT def FROM web_sources WHERE tenant=%s", (tenant,)).fetchall()}
+    new = clean_sources(items, old)
     with db.pool.connection() as c:
         c.execute("DELETE FROM web_sources WHERE tenant=%s AND NOT (id = ANY(%s))", (tenant, [d["id"] for d in new]))
         for d in new:
             c.execute("INSERT INTO web_sources (tenant, id, def) VALUES (%s,%s,%s::jsonb) ON CONFLICT (tenant,id) DO UPDATE SET def=EXCLUDED.def, updated_at=now()", (tenant, d["id"], json.dumps(d, ensure_ascii=False)))
-    return new
+    return [public_source(d) for d in new]
+
+
+async def _analyze(tenant: dict, page_text: str, final: str, analyze: str, ctx_text: str, lead_name: str) -> str:
+    from . import llm
+    if len(page_text) < 40:
+        raise ValueError("La página no trae texto que se pueda leer (puede cargar su contenido con JavaScript).")
+    return (await llm.chat_text(tenant, "Eres un analista de una empresa de servicios financieros. Lees información de una página web y ayudas a tomar una decisión sobre un cliente. Responde en español, claro y breve (máximo 8 líneas), "
+                                "separando lo que la página dice de tu recomendación. No inventes datos que no estén en la página.",
+                                f"Cliente: {lead_name}. {ctx_text}\n\nPregunta o criterio: {analyze}\n\nContenido de la página ({final}):\n{page_text[:9000]}")).strip()
 
 
 async def web_fetch(tenant: dict, url_tpl: str, rules: list, analyze: str, vv: dict, ctx_text: str = "", lead_name: str = "") -> dict:
-    """Consulta una página: sustituye las variables de la dirección, extrae los datos y, si hay criterio, pide a la IA un análisis. Devuelve {final, found, analysis}."""
+    """Consulta una página sencilla (HTML): sustituye las variables de la dirección, extrae los datos y, si hay criterio, pide a la IA un análisis. Devuelve {final, found, analysis}."""
     from urllib.parse import quote
-    from . import llm, webscrape
+    from . import webscrape
     url = re.sub(r"\{\{\s*(\w+)\s*\}\}", lambda m: quote(str(vv.get(m.group(1), "")), safe=""), url_tpl)
     final, html = await webscrape.fetch(url)
     found = webscrape.extract(html, rules)
-    analysis = ""
-    if analyze:
-        page = webscrape.text_of(html, 9000)
-        if len(page) < 40:
-            raise ValueError("La página no trae texto que se pueda leer (puede cargar su contenido con JavaScript).")
-        analysis = (await llm.chat_text(tenant, "Eres un analista de una empresa de servicios financieros. Lees información de una página web y ayudas a tomar una decisión sobre un cliente. Responde en español, claro y breve (máximo 8 líneas), "
-                                        "separando lo que la página dice de tu recomendación. No inventes datos que no estén en la página.",
-                                        f"Cliente: {lead_name}. {ctx_text}\n\nPregunta o criterio: {analyze}\n\nContenido de la página ({final}):\n{page}")).strip()
+    analysis = await _analyze(tenant, webscrape.text_of(html, 9000), final, analyze, ctx_text, lead_name) if analyze else ""
     return {"final": final, "found": found, "analysis": analysis}
+
+
+def rules_of(src: dict) -> list[dict]:
+    """Datos que trae una consulta (para dirigirlos a campos): las reglas de la página sencilla o los pasos «Extraer» del flujo con navegador."""
+    if src.get("mode") == "browser":
+        return [{"label": s["label"], "mode": s["mode"], "expr": s["expr"]} for s in src.get("steps", []) if s["type"] == "extract"]
+    return src.get("rules", [])
+
+
+async def fetch_source(tenant: dict, src: dict, vv: dict, ctx_text: str = "", lead_name: str = "") -> dict:
+    """Ejecuta una consulta guardada, sea de página sencilla o de navegador (login, clics y páginas), y devuelve {final, found, analysis}."""
+    if src.get("mode") != "browser":
+        return await web_fetch(tenant, src["url"], src["rules"], src["analyze"], vv, ctx_text, lead_name)
+    from urllib.parse import quote
+    from . import browser
+    sec = src.get("secrets") or {}
+
+    def sub(t: str, enc: bool) -> str:
+        def rep(m):
+            k = m.group(1)
+            v = sec[k] if k in sec else vv.get(k, "")
+            return quote(str(v), safe="") if enc else str(v)
+        return re.sub(r"\{\{\s*(\w+)\s*\}\}", rep, t)
+    steps = []
+    for st in src["steps"]:
+        n = dict(st)
+        for k in ("url", "selector", "text", "value", "expr"):
+            if isinstance(n.get(k), str):
+                n[k] = sub(n[k], k == "url")
+        steps.append(n)
+    r = await browser.run(steps, 75)
+    analysis = await _analyze(tenant, r.get("text", ""), r.get("url", ""), src["analyze"], ctx_text, lead_name) if src.get("analyze") else ""
+    return {"final": r.get("url", ""), "found": r.get("found", {}), "analysis": analysis}
 
 
 async def run_source(tenant: dict, sid: str, lead_id: str, user_name: str) -> dict:
@@ -247,7 +350,7 @@ async def run_source(tenant: dict, sid: str, lead_id: str, user_name: str) -> di
     e = Espo(tenant)
     lead = await e.get(f"Lead/{lead_id}", select="name,identification,phoneNumber,emailAddress")
     vv = {"nombre": lead.get("name") or "", "identificacion": lead.get("identification") or "", "telefono": lead.get("phoneNumber") or "", "correo": lead.get("emailAddress") or ""}
-    r = await web_fetch(tenant, src["url"], src["rules"], src["analyze"], vv, "", lead.get("name") or "")
+    r = await fetch_source(tenant, src, vv, "", lead.get("name") or "")
     if src.get("note", True):
         lines = [f"[Consulta web] {src['name']} · {r['final']} (por {user_name or 'un usuario'})"] + [f"{k}: {v}" for k, v in r["found"].items()] + ([f"Análisis: {r['analysis']}"] if r["analysis"] else [])
         await e.note(lead_id, "\n".join(lines)[:4000])
@@ -497,11 +600,14 @@ async def run_action(tenant: dict, entry_id: int, action_id: str, user_id: str, 
                 src = get_source(slug, c["sourceId"])
                 if not src:
                     raise ValueError("La consulta web elegida ya no existe.")
-                rules = [{"label": r["label"], "mode": r["mode"], "expr": r["expr"], "to": c["map"].get(r["label"], "")} for r in src["rules"]]
-                url_tpl, analyze, analyze_to, note = src["url"], src["analyze"], c.get("analyzeTo", ""), src.get("note", True)
+                rules = [{"label": r["label"], "mode": r["mode"], "expr": r["expr"], "to": c["map"].get(r["label"], "")} for r in rules_of(src)]
+                analyze, analyze_to, note = src["analyze"], c.get("analyzeTo", ""), src.get("note", True)
             else:
                 rules, url_tpl, analyze, analyze_to, note = c["rules"], c["url"], c["analyze"], c["analyzeTo"], c["note"]
-            r = await web_fetch(tenant, url_tpl, rules, analyze, vv, ctx, lead_full.get("name") or "")
+            if c.get("sourceId"):
+                r = await fetch_source(tenant, src, vv, ctx, lead_full.get("name") or "")
+            else:
+                r = await web_fetch(tenant, url_tpl, rules, analyze, vv, ctx, lead_full.get("name") or "")
             found, analysis, final = r["found"], r["analysis"], r["final"]
             newv = {x["to"]: found[x["label"] or x["expr"]] for x in rules if x.get("to") and (x["label"] or x["expr"]) in found}
             if analysis and analyze_to:
