@@ -6,10 +6,10 @@
  */
 define('custom:doc-reader', ['custom:ui', 'custom:tpl'], function (ChUi, Tpl) {
     const esc = v => ChUi.esc(v == null ? '' : v);
-    const TARGET = f => f.to === 'note' ? 'Nota en el historial' : 'Campo del lead';
+    const TARGET = f => f.to === 'note' ? 'Nota en el historial' : String(f.to).indexOf('form:') === 0 ? 'Formulario interno' : 'Campo del lead';
     const FIELD_LABEL = {creditScore: 'Puntaje de crédito', totalDebt: 'Deuda total', overdueDebt: 'Deuda en mora', monthlyIncome: 'Ingresos mensuales', creditorCount: 'Cantidad de acreedores',
         maxDaysOverdue: 'Máx. días de mora', defaultCount: 'Obligaciones castigadas', identificationType: 'Tipo de documento', identification: 'Identificación', processResult: 'Resultado de procesos', description: 'Descripción (añade al final)', creditSummary: 'Resumen financiero', defaultHistory: 'Detalle de obligaciones'};
-    const DEST = [['note', 'Nota en el historial'], ...Object.keys(FIELD_LABEL).map(k => ['field:' + k, 'Campo: ' + FIELD_LABEL[k]])];
+    let DEST = [['note', 'Nota en el historial'], ...Object.keys(FIELD_LABEL).map(k => ['field:' + k, 'Campo: ' + FIELD_LABEL[k]])];
     const ENGINE_LABEL = {internal: 'lectura interna', ai: 'IA'};
 
     // Abre el asistente de lectura: elegir perfil y PDF, leer en segundo plano, revisar y aplicar los datos al lead
@@ -155,6 +155,7 @@ define('custom:doc-reader', ['custom:ui', 'custom:tpl'], function (ChUi, Tpl) {
             }
 
             Espo.Ajax.getRequest('CrmHub/docProfiles').then(r => {
+                DEST = DEST.filter(d => d[0].indexOf('form:') !== 0).concat((r.formTargets || []).map(t => [t.value, t.label]));   // también se puede enviar a un formulario interno
                 profiles = [{id: 'auto', name: 'Detectar los datos automáticamente (recomendado)', auto: true, fields: []}].concat((r.profiles || []).map(p => Object.assign({}, p, {engine: p.engine || (p.id === 'resumen' ? 'ai' : 'internal')})));
                 if (opts.runId) {   // se abre una lectura que ya estaba en curso o lista (desde el indicador)
                     waiting('Recuperando la lectura…'); reading = opts.runId;

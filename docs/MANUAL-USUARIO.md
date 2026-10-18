@@ -30,6 +30,7 @@
 - [9b. Canales de mensajería: varios proveedores por canal](#9b-canales-de-mensajería-varios-proveedores-por-canal)
 - [9c. Comercial virtual: comerciales, entrenamiento y mensajes con opciones](#9c-comercial-virtual-comerciales-entrenamiento-y-mensajes-con-opciones)
 - [9d. Reparto de leads entre personas y comerciales virtuales](#9d-reparto-de-leads-entre-personas-y-comerciales-virtuales)
+- [5g. Formularios internos de gestión](#5g-formularios-internos-de-gestión)
 - [9e. Procesos de leads, copias de leads y lectura de documentos](#9e-procesos-de-leads-copias-de-leads-y-lectura-de-documentos)
 - [10. Preguntas frecuentes](#10-preguntas-frecuentes)
 
@@ -627,6 +628,27 @@ En **Comercial virtual → Mis comerciales → Reparto de leads nuevos** decides
 **Pesos**: con humanos 2 y un comercial virtual 1, de cada 3 leads salen 2 para personas y 1 para el comercial, intercalados. Un peso 0 excluye a ese participante. Solo participan los comerciales **encendidos y en modo automático**. El porcentaje de cada uno se ve mientras editas.
 
 > Si el lead va a un comercial virtual, queda sin asesor humano y el encabezado lo indica; puedes reasignarlo a una persona cuando quieras. La asignación humana se habilita en **Asignación de leads** (casilla *Recibe leads*).
+
+
+## 5g. Formularios internos de gestión
+
+*Visible para: Comercial, Director, Gerente*
+
+Qué son
+
+Formularios que tu empresa diseña para capturar información de la gestión de un lead (una visita, una verificación, una solicitud…). Se llenan **dentro de la ficha del lead**, en el panel **Formularios**, con pestañas para no alargar la página: **Esta etapa** muestra los de la etapa actual del lead y cada formulario con pestaña propia se llena en el mismo sitio. Los que se lanzan desde un botón se abren con **Llenar formulario**.
+
+Llenarlos
+
+Completa los campos (los marcados con ***** son obligatorios) y pulsa **Guardar**; con **Guardar borrador** guardas lo que llevas. Debajo aparecen los botones de acción que haya configurado tu empresa (por ejemplo **Generar PDF**) y los PDF ya generados, que también quedan en el historial del lead. Al guardarse, el formulario puede además crear una tarea, cambiar el estado del lead, copiar respuestas a campos del lead o enviar un mensaje al cliente.
+
+Desde un PDF
+
+Al **leer un documento** (5f) puedes elegir como destino de cada dato un campo de un formulario: queda guardado en el formulario del lead, mezclado con lo que ya estaba, para que lo revises.
+
+Diseñarlos (gerentes, directores y supervisores)
+
+Menú **Formularios internos**: crea el formulario, añade campos (texto, número, monto, fecha, lista, varias opciones, Sí/No, teléfono, correo y títulos de sección), elige **en qué etapas se ve** y **dónde aparece** (pestaña de la ficha y/o botón «Llenar formulario»), y define las **acciones**: generar PDF (con título, datos del cliente y campos que elijas), cambiar el estado, crear una tarea, enviar por correo, WhatsApp o SMS (con los datos del formulario) o copiar respuestas a campos del lead; cada acción puede ser **automática al guardar** o **con un botón**. Pulsa **Guardar todo**. Tip: guarda una vez para que los campos nuevos puedan usarse en las acciones.
 
 
 ## 9e. Procesos de leads, copias de leads y lectura de documentos

@@ -4,6 +4,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Formularios internos de gestión
+- **Nuevo: formularios que la propia empresa diseña** para capturar información de la gestión de cada lead (visitas, verificaciones, solicitudes…). Los crean **gerentes, directores y supervisores** en *Organización → Formularios internos*: campos (texto, número, monto, fecha, listas, Sí/No, teléfono, correo y títulos de sección), obligatorios, **en qué etapas del lead se ven** y **dónde aparecen**.
+- **En la ficha del lead**, nuevo panel **Formularios** con pestañas (sin alargar la página): «Esta etapa» y una pestaña por formulario que se llena ahí mismo; y un botón **Llenar formulario** para los que se lanzan desde un botón.
+- **Acciones configurables** (automáticas al guardar o con un botón): **generar un PDF** con los datos (queda adjunto en la ficha), cambiar el estado del lead, crear una tarea, enviar por correo (con PDF), WhatsApp o SMS, y copiar respuestas a campos del lead.
+- **La lectura de PDF puede llenar formularios**: al revisar un documento, cada dato puede tener como destino un campo de un formulario (también en los perfiles de lectura); queda guardado en el formulario del lead para revisarlo.
+- Cifras escritas a la colombiana («3.500.000») se entienden bien en los campos numéricos y de monto.
+
 ### Videollamada en otra ventana: ficha de cada participante
 - **Con la llamada en una ventana aparte (sin el panel del CRM) ya puedes ver la información de las personas**: en la lista «En la llamada» el anfitrión toca un nombre y aparece su tarjeta (estado, teléfono, correo, empresa, asesor, origen) con «Abrir la ficha en el CRM», que se abre en otra pestaña sin cortar la llamada. Funciona con el lead de la sala, quienes entraron con invitación personal y los invitados de la reunión programada (leads y contactos), ubicándolos por su ficha o por su nombre.
 

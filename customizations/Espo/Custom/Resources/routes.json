@@ -382,6 +382,46 @@
         }
     },
     {
+        "route": "/CrmHub/iforms",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "iforms"
+        }
+    },
+    {
+        "route": "/CrmHub/iformsSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "iformsSave"
+        }
+    },
+    {
+        "route": "/CrmHub/iformEntries",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "iformEntries"
+        }
+    },
+    {
+        "route": "/CrmHub/iformEntry",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "iformEntry"
+        }
+    },
+    {
+        "route": "/CrmHub/iformAction",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "iformAction"
+        }
+    },
+    {
         "route": "/CrmHub/metricsLeads",
         "method": "get",
         "params": {

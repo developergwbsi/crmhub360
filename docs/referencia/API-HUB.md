@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **125** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **131** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -44,6 +44,11 @@ Total: **125** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/docs/run` | `docs_run` | Estado y resultado de una lectura de documento; 404 si no existe. |
 | POST | `/v1/email/send` | `email_send` | Envía un correo como el usuario (nombre, firma y Reply-To personales). 409 si la empresa no tiene el correo del Centro. |
 | GET | `/v1/forms/template/{key}` | `form_template` | Construye una plantilla de formulario de la galería; la usa el editor de formularios de Espo. |
+| GET | `/v1/iforms` | `iforms_list` | Formularios de la empresa (solo los activos, salvo all=true para quien los administra) y los catálogos para diseñarlos. |
+| PUT | `/v1/iforms` | `iforms_save` | — |
+| POST | `/v1/iforms/action` | `iforms_action` | — |
+| GET | `/v1/iforms/entries` | `iforms_entries` | — |
+| POST | `/v1/iforms/entry` | `iforms_entry` | — |
 | POST | `/v1/ingest/{slug}/evolution` | `evo_ingest` | Webhook de Evolution API: registra los mensajes de WhatsApp entrantes. |
 | GET | `/v1/ingest/{slug}/facebook` | `fb_verify` | Verificación del webhook de Facebook Lead Ads (hub.challenge) con el token del tenant. |
 | POST | `/v1/ingest/{slug}/facebook` | `fb_ingest` | Webhook de Facebook Lead Ads: valida la firma de Meta y crea o actualiza los leads. |
@@ -90,6 +95,7 @@ Total: **125** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/public/meet/{code}/chat` | `meet_chat_get` | Historial reciente del chat de la sala (para quien entra tarde). |
 | POST | `/v1/public/meet/{code}/chat` | `meet_chat_post` | Guarda un mensaje del chat (el reparto en vivo va por el canal de datos de la sala). |
 | POST | `/v1/public/meet/{code}/decide` | `meet_decide` | El anfitrión admite o rechaza una solicitud. |
+| GET | `/v1/public/meet/{code}/ficha` | `meet_ficha` | Información del CRM de una persona de la llamada, solo para el anfitrión (clave en h). |
 | POST | `/v1/public/meet/{code}/file` | `meet_file_post` | Sube un archivo para compartirlo en el chat de la sala (hasta 10 MB). |
 | GET | `/v1/public/meet/{code}/file/{fid}` | `meet_file_get` | Descarga o muestra un archivo compartido (las imágenes se ven en línea; lo demás se descarga). |
 | POST | `/v1/public/meet/{code}/invite` | `meet_invite_more` | El anfitrión invita por correo a otra persona a la videollamada en curso. |

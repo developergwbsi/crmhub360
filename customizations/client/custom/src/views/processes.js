@@ -121,7 +121,7 @@ define('custom:views/processes', ['view', 'custom:ui', 'custom:tpl'], function (
         docsHtml() {
             const d = this.docs; if (!d) { return '<div class="ch-muted" style="padding:20px">Cargando…</div>'; }
             if (this.docEdit) {
-                const e = this.docEdit, tg = [['note', 'Nota en el historial'], ...Object.keys(FIELD_LABEL).map(k => ['field:' + k, 'Campo: ' + FIELD_LABEL[k]])];
+                const e = this.docEdit, tg = [['note', 'Nota en el historial'], ...Object.keys(FIELD_LABEL).map(k => ['field:' + k, 'Campo: ' + FIELD_LABEL[k]]), ...((this.docs && this.docs.formTargets) || []).map(t => [t.value, t.label])];
                 return `<div class="ch-sim-card ch-proc-ed"><h4>${e.id ? 'Editar perfil' : 'Nuevo perfil de lectura'}</h4><label>Nombre del documento</label><input data-d="name" maxlength="80" value="${esc(e.name)}" placeholder="Ej.: Certificado laboral">
                     <label>Qué documento es (ayuda a la lectura)</label><input data-d="instructions" maxlength="600" value="${esc(e.instructions)}" placeholder="Ej.: Certificado laboral de una empresa colombiana; montos en pesos">
                     <label class="ch-dz-chk"><input type="checkbox" data-d="recalc" ${e.recalc ? 'checked' : ''}> Volver a calcular la calificación del lead al guardar</label><h5>Datos a extraer</h5>` +

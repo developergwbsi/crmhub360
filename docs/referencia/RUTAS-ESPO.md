@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **113** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **118** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -45,6 +45,11 @@ Total: **113** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/email/send` | CrmHub.emailSend | Envía desde el Hub con el nombre y la firma del usuario; si la empresa no tiene el correo del Centro responde fallback para usar el envío de Espo. */ |
 | GET | `/CrmHub/emailSignature` | CrmHub.emailSignature | GET /CrmHub/emailSignature. Usuario. Firma y nombre del usuario. */ |
 | GET | `/CrmHub/formTemplate` | CrmHub.formTemplate | Un formulario web ya diseñado a partir de una plantilla (se guarda al pulsar «Guardar»). */ |
+| POST | `/CrmHub/iformAction` | CrmHub.iformAction | POST /CrmHub/iformAction. Usuario con edición del lead. {leadId, entryId, actionId}. Ejecuta una acción de botón del formulario. Hub: POST /v1/iforms/action. */ |
+| GET | `/CrmHub/iformEntries` | CrmHub.iformEntries | GET /CrmHub/iformEntries?leadId=. Usuario con lectura del lead. Respuestas de los formularios del lead. Hub: GET /v1/iforms/entries. */ |
+| POST | `/CrmHub/iformEntry` | CrmHub.iformEntry | POST /CrmHub/iformEntry. Usuario con edición del lead. {leadId, formId, values, entryId?, partial?}. Guarda las respuestas y ejecuta las acciones «al guardar». Hub: POST /v1/iforms/entry. */ |
+| GET | `/CrmHub/iforms` | CrmHub.iforms | GET /CrmHub/iforms[?all=1]. Usuario (no API ni portal). Formularios activos y catálogos; con all=1 (solo quien los diseña) incluye los inactivos. Hub: GET /v1/iforms. */ |
+| POST | `/CrmHub/iformsSave` | CrmHub.iformsSave | POST /CrmHub/iformsSave. Gerente, director o supervisor. {forms}. Hub: PUT /v1/iforms. */ |
 | GET | `/CrmHub/integrations` | CrmHub.integrations | GET /CrmHub/integrations. Admin. Hub: GET /v1/tenant/settings. */ |
 | PUT | `/CrmHub/integrations` | CrmHub.integrations | PUT /CrmHub/integrations. Admin. Hub: PUT /v1/tenant/settings (solo claves permitidas). */ |
 | POST | `/CrmHub/integrations/reset-services` | CrmHub.resetServices | POST /CrmHub/integrations/reset-services. Admin. Hub: POST /v1/tenant/settings/reset-services. */ |

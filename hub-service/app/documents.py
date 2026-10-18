@@ -121,7 +121,7 @@ def clean(new: list) -> list[dict]:
                 key += "_2"
             seen.add(key)
             to = str(f.get("to", "note"))
-            if not (to == "note" or (to.startswith("field:") and to[6:] in processes.FIELDS)):
+            if not (to == "note" or (to.startswith("field:") and to[6:] in processes.FIELDS) or re.fullmatch(r"form:[a-z0-9_]+\.[a-z0-9_]+", to)):
                 raise ValueError(f"Destino no válido en «{label}».")
             typ = f.get("type") if f.get("type") in TYPES else "text"
             fields.append({"key": key, "label": label, "type": typ, "to": to, "hint": str(f.get("hint", ""))[:200]})
@@ -159,6 +159,35 @@ async def extract(tenant: dict, lead_id: str, attachment_id: str, profile_id: st
     return {"name": prof["name"], "payload": {"profile": {"id": prof["id"], "name": prof["name"], "fields": prof["fields"]}, "values": values}}
 
 
+async def _to_forms(tenant: dict, lead_id: str, form_vals: dict, agent: str) -> None:
+    """Pasa a los formularios internos los datos leídos del documento (se mezclan con lo ya respondido; quedan para revisar en la ficha)."""
+    from . import iforms
+    for fid, vals in form_vals.items():
+        try:
+            d = iforms.get_def(tenant["slug"], fid)
+            if not d:
+                continue
+            types = {f["key"]: f for f in d["fields"]}
+            ok = {}
+            for k, v in vals.items():
+                f = types.get(k)
+                if not f:
+                    continue
+                if f["type"] == "select":
+                    pick = next((o for o in f["options"] if o.lower() == str(v).strip().lower()), None)
+                    if pick:
+                        ok[k] = pick
+                elif f["type"] == "multiselect":
+                    ok[k] = [o for o in f["options"] if o.lower() in str(v).lower()]
+                elif f["type"] == "bool":
+                    ok[k] = str(v).strip().lower() in ("1", "true", "si", "sí", "yes")
+                else:
+                    ok[k] = v
+            await iforms.merge_entry(tenant, lead_id, fid, ok, "", agent, "documento")
+        except Exception as e:
+            log.warning("formulario desde documento: %s", str(e)[:120])
+
+
 async def apply(tenant: dict, lead_id: str, run_id: int, values: dict, agent: str) -> dict:
     """Guarda en el lead los valores confirmados de una lectura por perfil (campos o notas), deja nota en el flujo, recalifica si el perfil lo pide y marca la lectura como aplicada."""
     with db.pool.connection() as c:
@@ -166,13 +195,16 @@ async def apply(tenant: dict, lead_id: str, run_id: int, values: dict, agent: st
     prof = next((p for p in profiles(tenant) if r and p["id"] == r["profile_id"]), None)
     if not prof:
         raise ValueError("Lectura inexistente.")
-    espo, put, notes = Espo(tenant), {}, []
+    espo, put, notes, form_vals = Espo(tenant), {}, [], {}
     for f in prof["fields"]:
         v = values.get(f["key"])
         if v is None or v == "":
             continue
         if f["to"] == "note":
             notes.append(f'{f["label"]}: {v}')
+        elif f["to"].startswith("form:"):
+            fid, _, fk = f["to"][5:].partition(".")
+            form_vals.setdefault(fid, {})[fk] = v
         else:
             name = f["to"][6:]
             kind = processes.FIELDS[name]
@@ -186,7 +218,8 @@ async def apply(tenant: dict, lead_id: str, run_id: int, values: dict, agent: st
                     put[name + "Currency"] = "COP"
     if put:
         await espo.put(f"Lead/{lead_id}", put)
-    await espo.note(lead_id, f"[Documento] {prof['name']} leído por {agent}" + (" · " + " · ".join(notes) if notes else "") + (f" · {len(put)} campo(s) actualizado(s)" if put else ""))
+    await _to_forms(tenant, lead_id, form_vals, agent)
+    await espo.note(lead_id, f"[Documento] {prof['name']} leído por {agent}" + (" · " + " · ".join(notes) if notes else "") + (f" · {len(put)} campo(s) actualizado(s)" if put else "") + (f" · {sum(len(v) for v in form_vals.values())} dato(s) en formularios" if form_vals else ""))
     if prof.get("recalc"):
         try:
             await qualify.run(tenant, lead_id)
@@ -239,12 +272,15 @@ async def apply_items(tenant: dict, lead_id: str, run_id: int, items: list[dict]
         r = c.execute("SELECT profile_name FROM doc_runs WHERE id=%s AND tenant=%s AND lead_id=%s", (run_id, tenant["slug"], lead_id)).fetchone()
     if not r:
         raise ValueError("Lectura inexistente.")
-    espo, put, notes = Espo(tenant), {}, []
+    espo, put, notes, form_vals = Espo(tenant), {}, [], {}
     for it in items[:40]:
         label, v, to = str(it.get("label") or "")[:80], it.get("value"), str(it.get("to") or "note")
         if v is None or str(v).strip() == "":
             continue
-        if to.startswith("field:") and to[6:] in processes.FIELDS:
+        if to.startswith("form:") and re.fullmatch(r"form:[a-z0-9_]+\.[a-z0-9_]+", to):
+            fid, _, fk = to[5:].partition(".")
+            form_vals.setdefault(fid, {})[fk] = v
+        elif to.startswith("field:") and to[6:] in processes.FIELDS:
             name = to[6:]; kind = processes.FIELDS[name]; val = processes._cast(kind, v)
             if kind == "append":
                 cur = (await espo.get(f"Lead/{lead_id}", select="description")).get("description") or ""
@@ -257,6 +293,7 @@ async def apply_items(tenant: dict, lead_id: str, run_id: int, items: list[dict]
             notes.append(f"{label}: {v}")
     if put:
         await espo.put(f"Lead/{lead_id}", put)
+    await _to_forms(tenant, lead_id, form_vals, agent)
     await espo.note(lead_id, f"[Documento] {r['profile_name']} leído por {agent}" + (" · " + " · ".join(notes) if notes else "") + (f" · {len(put)} campo(s) actualizado(s)" if put else ""))
     try:
         if any(k in put for k in ("monthlyIncome", "totalDebt", "overdueDebt", "creditScore", "creditorCount", "maxDaysOverdue", "defaultCount")):

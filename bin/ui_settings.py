@@ -13,6 +13,7 @@ TABS = [
     "Campaign",
     {"type": "url", "id": "t8", "text": "Organigrama", "url": "#CrmHub/organigrama", "iconClass": "fas fa-sitemap", "aclScope": "Campaign"},
     {"type": "url", "id": "t13", "text": "Mensajes masivos", "url": "#CrmHub/difusion", "iconClass": "fas fa-bullhorn", "aclScope": "Campaign"},
+    {"type": "url", "id": "t21", "text": "Formularios internos", "url": "#CrmHub/formularios", "iconClass": "fas fa-clipboard-list", "aclScope": "Campaign"},
     {"type": "url", "id": "t14", "text": "Simulador", "url": "#CrmHub/simulador", "iconClass": "fas fa-flask-vial"},
     {"type": "url", "id": "t16", "text": "Mis plantillas", "url": "#CrmHub/plantillas", "iconClass": "fas fa-file-lines"},
     {"type": "url", "id": "t15", "text": "Banco de conocimiento", "url": "#CrmHub/conocimiento", "iconClass": "fas fa-brain"},

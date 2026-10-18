@@ -167,5 +167,15 @@
                 "reference": "tasks"
             }
         ]
+    },
+    "bottomPanels": {
+        "detail": [
+            {
+                "name": "chForms",
+                "label": "Formularios",
+                "view": "custom:views/lead/panels/forms",
+                "order": 2
+            }
+        ]
     }
 }

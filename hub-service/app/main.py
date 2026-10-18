@@ -23,7 +23,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +39,7 @@ async def lifespan(_: FastAPI):
     routing.ensure_schema()
     processes.ensure_schema()
     documents.ensure_schema()
+    iforms.ensure_schema()
     agent.ensure_schema()
     monitor.ensure_schema()
     usage.ensure_schema()
@@ -1087,10 +1088,75 @@ class DocRememberReq(BaseModel):
     items: list[dict]
 
 
+# ---------------- formularios internos (diseñados por la empresa; ver iforms.py)
+class IFormsSaveReq(BaseModel):
+    """Definiciones de los formularios internos de la empresa."""
+    forms: list[dict]
+    by: str = ""
+
+
+class IFormEntryReq(BaseModel):
+    """Respuestas de un formulario para un lead."""
+    leadId: str
+    formId: str
+    values: dict = {}
+    entryId: int | None = None
+    userId: str = ""
+    userName: str = ""
+    partial: bool = False
+
+
+class IFormActionReq(BaseModel):
+    """Acción de botón de un formulario sobre una respuesta ya guardada."""
+    entryId: int
+    actionId: str
+    leadId: str = ""
+    userId: str = ""
+    userName: str = ""
+
+
+@app.get("/v1/iforms")
+async def iforms_list(all: bool = False, tenant: dict = Depends(tenant_auth)):
+    """Formularios de la empresa (solo los activos, salvo all=true para quien los administra) y los catálogos para diseñarlos."""
+    from . import documents
+    return {"forms": iforms.defs(tenant["slug"], only_active=not all), "fieldTypes": iforms.FIELD_TYPES, "actionTypes": iforms.ACTION_TYPES, "leadTargets": iforms.LEAD_TARGETS,
+            "docProfiles": [{"id": p["id"], "name": p["name"]} for p in documents.profiles(tenant)]}
+
+
+@app.put("/v1/iforms")
+async def iforms_save(req: IFormsSaveReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return {"forms": iforms.save_defs(tenant["slug"], req.forms, req.by)}
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/v1/iforms/entries")
+async def iforms_entries(leadId: str, tenant: dict = Depends(tenant_auth)):
+    return {"entries": iforms.entries(tenant["slug"], leadId)}
+
+
+@app.post("/v1/iforms/entry")
+async def iforms_entry(req: IFormEntryReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return await iforms.save_entry(tenant, req.leadId, req.formId, req.values, req.entryId, req.userId, req.userName, "manual", req.partial)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/iforms/action")
+async def iforms_action(req: IFormActionReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return await iforms.run_action(tenant, req.entryId, req.actionId, req.userId, req.userName, req.leadId)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
 @app.get("/v1/docs/profiles")
 async def docs_profiles(tenant: dict = Depends(tenant_auth)):
     """Perfiles de lectura de documentos (incluidos los integrados), tipos y campos destino."""
-    return {"profiles": documents.profiles(tenant), "types": documents.TYPES, "targets": list(processes.FIELDS), "max": documents.MAX_PROFILES}
+    ft = [{"value": f"form:{d['id']}.{x['key']}", "label": f"Formulario «{d['name']}» › {x['label']}"} for d in iforms.defs(tenant["slug"], only_active=True) for x in d["fields"] if x["type"] != "heading"]
+    return {"profiles": documents.profiles(tenant), "types": documents.TYPES, "targets": list(processes.FIELDS), "formTargets": ft, "max": documents.MAX_PROFILES}
 
 
 @app.put("/v1/docs/profiles")

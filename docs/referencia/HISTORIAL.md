@@ -2,8 +2,13 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.6.5)
+## Sin publicar (después de v1.6.6)
 
+- `557674c` 2026-10-15 — Videollamada en ventana aparte: el anfitrión ve la ficha del CRM de cada participante desde la lista de la sala
+
+## v1.6.6
+
+- `0017bde` 2026-10-15 — Versión 1.6.6
 - `484ee55` 2026-10-15 — Versión 1.6.6
 - `c76aa47` 2026-10-15 — Videollamada: clic en la lista de la sala abre la ficha del participante; «Abrir en otra ventana» en el menú de la sala
 

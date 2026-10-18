@@ -1888,6 +1888,58 @@ class CrmHub
         return $lead;
     }
 
+    // ---------- Formularios internos (Hub: /v1/iforms*; diseñan gerentes, directores y supervisores)
+    /** Quien puede diseñar formularios: administrador o con permiso de asignación (gerente, director, supervisor). */
+    private function canManageForms(): bool
+    {
+        return $this->assignmentLevel() !== 'no';
+    }
+
+    /** GET /CrmHub/iforms[?all=1]. Usuario (no API ni portal). Formularios activos y catálogos; con all=1 (solo quien los diseña) incluye los inactivos. Hub: GET /v1/iforms. */
+    public function getActionIforms(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $all = $request->getQueryParam('all') && $this->canManageForms();
+        $r = $this->hubCall('GET', '/v1/iforms?all=' . ($all ? 'true' : 'false'), null, 10);
+        $r['canManage'] = $this->canManageForms();
+        return (object) $r;
+    }
+
+    /** POST /CrmHub/iformsSave. Gerente, director o supervisor. {forms}. Hub: PUT /v1/iforms. */
+    public function postActionIformsSave(Request $request): \stdClass
+    {
+        if (!$this->canManageForms()) {
+            throw new Forbidden();
+        }
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('PUT', '/v1/iforms', ['forms' => json_decode(json_encode($d->forms ?? []), true), 'by' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 30);
+    }
+
+    /** GET /CrmHub/iformEntries?leadId=. Usuario con lectura del lead. Respuestas de los formularios del lead. Hub: GET /v1/iforms/entries. */
+    public function getActionIformEntries(Request $request): \stdClass
+    {
+        $lead = $this->docLead((string) $request->getQueryParam('leadId'), false);
+        return (object) $this->hubCall('GET', '/v1/iforms/entries?leadId=' . urlencode($lead->getId()), null, 10);
+    }
+
+    /** POST /CrmHub/iformEntry. Usuario con edición del lead. {leadId, formId, values, entryId?, partial?}. Guarda las respuestas y ejecuta las acciones «al guardar». Hub: POST /v1/iforms/entry. */
+    public function postActionIformEntry(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->docLead((string) ($d->leadId ?? ''), true);
+        return (object) $this->hubCall('POST', '/v1/iforms/entry', ['leadId' => $lead->getId(), 'formId' => (string) ($d->formId ?? ''), 'values' => json_decode(json_encode($d->values ?? []), true) ?: new \stdClass(),
+            'entryId' => !empty($d->entryId) ? (int) $d->entryId : null, 'partial' => !empty($d->partial), 'userId' => $this->user->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 90);
+    }
+
+    /** POST /CrmHub/iformAction. Usuario con edición del lead. {leadId, entryId, actionId}. Ejecuta una acción de botón del formulario. Hub: POST /v1/iforms/action. */
+    public function postActionIformAction(Request $request): \stdClass
+    {
+        $d = $request->getParsedBody();
+        $lead = $this->docLead((string) ($d->leadId ?? ''), true);
+        return (object) $this->hubCall('POST', '/v1/iforms/action', ['entryId' => (int) ($d->entryId ?? 0), 'actionId' => (string) ($d->actionId ?? ''), 'leadId' => $lead->getId(),
+            'userId' => $this->user->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 90);
+    }
+
     /** GET /CrmHub/docProfiles. Usuario (no API ni portal). Hub: GET /v1/docs/profiles. */
     public function getActionDocProfiles(Request $request): \stdClass
     {
