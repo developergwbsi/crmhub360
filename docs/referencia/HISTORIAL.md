@@ -2,6 +2,11 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
+## Sin publicar (después de v1.7.2)
+
+- `d3a6576` 2026-10-19 — Versión 1.8.0
+- `ceec7e9` 2026-10-17 — Consultas web con navegador (Playwright): grabador visual, login y navegación, credenciales protegidas, ejecución sin pantalla
+
 ## v1.7.2
 
 - `4659896` 2026-10-17 — Versión 1.7.2
