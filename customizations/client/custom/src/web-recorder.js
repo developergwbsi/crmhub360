@@ -43,10 +43,11 @@ define('custom:web-recorder', ['custom:ui'], function (ChUi) {
             const typeBox = info => {
                 cand.innerHTML = `<div class="ch-wp-c"><div class="ch-muted">Campo para escribir</div><b>${esc(info.label || info.selector)}</b>
                     <select class="form-control input-sm" data-as>${VAR_OPTS.map(([k, l]) => `<option value="${k}" ${info.isPassword && k === 'clave' ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
-                    <input class="form-control input-sm" data-val type="${info.isPassword ? 'password' : 'text'}" placeholder="Escribe el texto (una vez, para grabar)" autocomplete="off">
+                    <div class="ch-pw"><input class="form-control input-sm" data-val type="${info.isPassword ? 'password' : 'text'}" placeholder="Escribe el texto (una vez, para grabar)" autocomplete="off"><button type="button" class="ch-pw-eye" data-eye title="Mostrar u ocultar lo que escribes"><span class="far fa-eye"></span></button></div>
                     <div class="ch-muted" style="font-size:11.5px">Si es credencial, el valor se guarda protegido y no queda en el paso: el paso solo dice {{usuario}} o {{clave}}.</div>
                     <button class="btn btn-primary btn-xs" data-write><span class="fas fa-keyboard"></span> Escribir y grabar</button></div>`;
                 cand.querySelector('[data-val]').focus();
+                cand.querySelector('[data-eye]').onclick = () => { const v = cand.querySelector('[data-val]'), show = v.type === 'password'; v.type = show ? 'text' : 'password'; cand.querySelector('[data-eye] span').className = show ? 'far fa-eye-slash' : 'far fa-eye'; v.focus(); };
                 cand.querySelector('[data-write]').onclick = () => {
                     const as = cand.querySelector('[data-as]').value, val = cand.querySelector('[data-val]').value; if (!val) { return; }
                     cand.innerHTML = '<div class="ch-muted">Escribiendo…</div>';

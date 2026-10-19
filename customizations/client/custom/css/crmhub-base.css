@@ -1468,3 +1468,5 @@ html.ch-noscroll { overflow: hidden !important; }
 .ch-wg-grid > li.hidden, .ch-wg-grid > li[style*="display: none"] { display: none !important; }
 .ch-wg-ill { border-radius: 10px; padding: 8px 6px 2px; } .ch-wg-grid a.add { font-size: 14.5px; font-weight: 700; color: var(--ch-ink); } .ch-wg-grid a.add::after { content: ''; position: absolute; inset: 0; border-radius: 14px; }
 .ch-wg-desc { color: var(--ch-muted); line-height: 1.4; font-size: 12.5px; }
+/* Campo de clave con ojo para mostrar u ocultar */
+.ch-pw { position: relative; display: block; } .ch-pw .form-control { padding-right: 36px; } .ch-pw-eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: 0; background: none; color: var(--ch-muted); width: 30px; height: 26px; border-radius: 6px; } .ch-pw-eye:hover { color: var(--ch-primary); background: var(--ch-soft, #eef1f8); }
