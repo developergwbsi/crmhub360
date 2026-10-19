@@ -77,8 +77,8 @@ class MeetInvite
             }
         }
         foreach ($found as &$r) {
-            $lead = $r['scope'] === 'Lead';
-            $r['channels'] = ['email' => $r['email'] !== '', 'whatsapp' => $lead && $r['phone'] !== '', 'sms' => $lead && $r['phone'] !== '', 'telegram' => $lead];
+            $lead = $r['scope'] === 'Lead';   // contactos y cuentas escriben por WhatsApp y SMS a través de su hilo de conversación (un lead de conversación)
+            $r['channels'] = ['email' => $r['email'] !== '', 'whatsapp' => $r['phone'] !== '', 'sms' => $r['phone'] !== '', 'telegram' => $lead];
         }
         return array_values($found);
     }
@@ -136,7 +136,7 @@ class MeetInvite
     {
         try {
             if (empty($r['channels'][$channel])) {
-                return ['ok' => false, 'error' => $channel === 'email' ? 'No tiene correo en su ficha.' : 'No disponible (necesita ser un lead con teléfono).'];
+                return ['ok' => false, 'error' => $channel === 'email' ? 'No tiene correo en su ficha.' : ($channel === 'telegram' ? 'Telegram solo está disponible para leads que ya escribieron por ahí.' : 'No tiene teléfono en su ficha.')];
             }
             if (!$meeting->get('videoLink')) {
                 return ['ok' => false, 'error' => 'La reunión necesita una videollamada creada.'];
@@ -147,7 +147,15 @@ class MeetInvite
             }
             $text = $this->text($meeting, $channel, $kind, explode(' ', trim($r['name']))[0] ?? '');
             $me = (string) ($this->user->get('name') ?: $this->user->get('userName'));
-            $body = ['leadId' => $r['id'], 'text' => $text, 'agent' => $me];
+            $leadId = $r['id'];
+            if ($r['scope'] !== 'Lead') {
+                $rec = $this->em->getEntityById($r['scope'], $r['id']);
+                if (!$rec) {
+                    return ['ok' => false, 'error' => 'No se encontró el registro.'];
+                }
+                $leadId = (new LeadThread($this->em, $this->user))->resolve($r['scope'], $rec)['leadId'];
+            }
+            $body = ['leadId' => $leadId, 'text' => $text, 'agent' => $me];
             if ($channel !== 'telegram') {
                 $body += ['userId' => $this->user->getId(), 'phone' => null, 'lineId' => null];
             }

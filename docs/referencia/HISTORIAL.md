@@ -2,8 +2,13 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.10.5)
+## Sin publicar (después de v1.10.6)
 
+- `680ee9c` 2026-10-19 — La publicación de una versión incluye el archivo VERSION (para mostrarlo en Acerca de)
+
+## v1.10.6
+
+- `255a967` 2026-10-19 — Versión 1.10.6
 - `55a1d27` 2026-10-19 — Versión 1.10.6
 - `0f12578` 2026-10-19 — Página Acerca de de Crm Hub 360 con DigitalAlliance Hub y el aviso legal de EspoCRM; la versión publicada queda en version.json
 

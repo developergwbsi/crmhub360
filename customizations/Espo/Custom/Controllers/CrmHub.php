@@ -1730,30 +1730,8 @@ class CrmHub
         if (!$rec || !$this->acl->checkEntityRead($rec)) {
             throw new Forbidden();
         }
-        $account = $scope === 'Account' ? $rec : ($rec->get('accountId') ? $this->em->getEntityById('Account', (string) $rec->get('accountId')) : null);
-        $phone = trim((string) $rec->get('phoneNumber')) ?: trim((string) ($account?->get('phoneNumber') ?? ''));
-        $email = trim((string) $rec->get('emailAddress')) ?: trim((string) ($account?->get('emailAddress') ?? ''));
-        $col = ['Account' => 'createdAccountId', 'Contact' => 'createdContactId', 'Opportunity' => 'createdOpportunityId'][$scope];
-        $repo = $this->em->getRDBRepository('Lead');
-        $lead = $repo->where([$col => $rec->getId()])->findOne();
-        if (!$lead && $account) {
-            $lead = $repo->where(['createdAccountId' => $account->getId()])->findOne();
-        }
-        if (!$lead && $phone !== '') {
-            $lead = $repo->where(['phoneNumber' => $phone])->findOne();
-        }
-        if (!$lead) {
-            $name = trim((string) $rec->get('name'));
-            [$first, $last] = array_pad(preg_split('/\s+/', $name, 2) ?: [], 2, '');
-            $lead = $this->em->createEntity('Lead', array_filter([
-                'firstName' => $last !== '' ? $first : null, 'lastName' => $last !== '' ? $last : ($first ?: 'Cliente'),
-                'phoneNumber' => $phone ?: null, 'emailAddress' => $email ?: null, 'status' => 'Converted', 'isThread' => true,
-                'assignedUserId' => $rec->get('assignedUserId') ?: $this->user->getId(), $col => $rec->getId(),
-                'description' => 'Conversación de ' . ['Account' => 'la cuenta', 'Contact' => 'el contacto', 'Opportunity' => 'la oportunidad'][$scope] . ' «' . $name . '» (creado automáticamente).',
-            ], fn ($v) => $v !== null));
-        }
-        return (object) ['leadId' => $lead->getId(), 'phone' => $phone ?: (string) $lead->get('phoneNumber'), 'email' => $email ?: (string) $lead->get('emailAddress'),
-            'name' => (string) ($rec->get('name') ?: $lead->get('name')), 'telegramUsername' => (string) $lead->get('telegramUsername'), 'telegramChatId' => (string) $lead->get('telegramChatId')];
+        $t = (new \Espo\Custom\Services\LeadThread($this->em, $this->user))->resolve($scope, $rec);
+        return (object) $t;
     }
 
     // ---------- Plantillas personales de cada usuario (hasta 10 por canal) ----------
