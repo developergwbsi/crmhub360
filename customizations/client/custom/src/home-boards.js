@@ -100,11 +100,12 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render'], function (ChUi, 
             if (!pins.length) { host.dataset.state = 'none'; host.innerHTML = ''; return; }
             host.dataset.state = show.length ? 'some' : 'none';
             host.innerHTML = '<div class="ch-hb-top"><span><span class="fas fa-thumbtack"></span> Mis tableros</span><button type="button" class="btn btn-default btn-xs" data-a="manage"><span class="fas fa-sliders"></span> Administrar</button></div>' +
-                show.map(p => `<section class="ch-hb" data-id="${esc(p.id)}"><div class="ch-hb-head"><h4>${esc(p.name)}</h4><small>${esc(vig(p))}</small><button type="button" class="ch-hb-x" data-a="rm" title="Quitar de mi escritorio"><span class="fas fa-xmark"></span></button></div><div class="ch-hb-body"><div class="grid-stack"></div></div></section>`).join('') +
+                show.map(p => `<section class="ch-hb" data-id="${esc(p.id)}"><div class="ch-hb-head"><h4>${esc(p.name)}</h4><small>${esc(vig(p))}</small><button type="button" class="ch-hb-x" data-a="edit" title="${p.mine ? 'Editar este tablero' : 'Abrir en Reportes y tableros'}"><span class="fas ${p.mine ? 'fa-pen' : 'fa-arrow-up-right-from-square'}"></span></button><button type="button" class="ch-hb-x" data-a="rm" title="Quitar de mi escritorio"><span class="fas fa-xmark"></span></button></div><div class="ch-hb-body"><div class="grid-stack"></div></div></section>`).join('') +
                 (show.length ? '' : '<div class="ch-muted" style="padding:6px 2px">Ninguno de tus tableros fijados está vigente hoy.</div>');
             host.onclick = e => {
                 const b = e.target.closest('[data-a]'); if (!b) { return; }
                 if (b.dataset.a === 'manage') { manage(host, pins, go); }
+                else if (b.dataset.a === 'edit') { const id = b.closest('.ch-hb').dataset.id, p = pins.find(x => x.id === id); try { sessionStorage.setItem('chBiOpen', JSON.stringify({id, edit: !!(p && p.mine)})); } catch (x) { /* nada */ } location.hash = '#CrmHub/reportes'; }
                 else if (b.dataset.a === 'rm') { const id = b.closest('.ch-hb').dataset.id, p = pins.find(x => x.id === id); ChUi.confirm({title: 'Quitar del escritorio', ok: 'Quitar', html: `<b>${esc(p.name)}</b> dejará de verse en Inicio. El tablero no se elimina: sigue en «Reportes y tableros».`}).then(y => { if (y) { Espo.Ajax.postRequest('CrmHub/biUnpin', {id}).then(go); } }); }
             };
             if (!show.length) { return; }

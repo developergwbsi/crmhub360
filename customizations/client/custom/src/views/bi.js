@@ -26,7 +26,15 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
         canPublish = false
         reports = {}   // cache de definiciones de reportes para los tableros
 
-        setup() { this.getHelper().pageTitle.setTitle('Reportes y tableros'); this.load(); }
+        setup() { this.getHelper().pageTitle.setTitle('Reportes y tableros'); this.load(() => this.openPending()); }
+
+        // viene del escritorio (Inicio): abre ese tablero y, si es mío, directo en edición
+        openPending() {
+            let o = null; try { o = JSON.parse(sessionStorage.getItem('chBiOpen') || 'null'); sessionStorage.removeItem('chBiOpen'); } catch (e) { /* nada */ }
+            if (!o || !o.id) { return; }
+            Espo.Ajax.getRequest('CrmHub/biItem', {id: o.id}).then(r => { this.cur = Object.assign({}, r, {dirty: false, editing: !!(o.edit && r.mine)}); this.draw(); })
+                .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo abrir el tablero.'); });
+        }
         afterRender() { this.draw(); }
         onRemove() { this.destroyGrid(); Studio.detach(this); if (super.onRemove) { super.onRemove(); } }
 

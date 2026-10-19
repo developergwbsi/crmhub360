@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **Editar un tablero desde el escritorio.** Cada tablero fijado en Inicio trae un lápiz: abre «Reportes y tableros» con ese tablero ya en modo edición (añadir reportes, mover, cambiar tamaños). Si el tablero es de otra persona, el botón lo abre para verlo o copiarlo.
+
 ## [1.10.1] - 2026-10-19
 
 ### Añadido

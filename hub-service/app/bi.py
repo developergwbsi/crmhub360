@@ -188,7 +188,7 @@ def pins(tenant: str, user: str, teams: list[str]) -> list[dict]:
     vis = {i["id"]: i for i in items(tenant, user, teams) if i["kind"] == "dashboard"}
     with db.pool.connection() as c:
         rows = c.execute("SELECT item_id, date_from, date_to, pos FROM bi_pins WHERE tenant=%s AND user_id=%s ORDER BY pos, item_id", (tenant, user)).fetchall()
-    return [{"id": r["item_id"], "name": vis[r["item_id"]]["name"], "from": r["date_from"].isoformat() if r["date_from"] else "", "to": r["date_to"].isoformat() if r["date_to"] else ""}
+    return [{"id": r["item_id"], "name": vis[r["item_id"]]["name"], "mine": vis[r["item_id"]]["mine"], "from": r["date_from"].isoformat() if r["date_from"] else "", "to": r["date_to"].isoformat() if r["date_to"] else ""}
             for r in rows if r["item_id"] in vis]
 
 
