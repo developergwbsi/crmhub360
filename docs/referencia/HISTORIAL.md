@@ -2,8 +2,20 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.8.0)
+## Sin publicar (después de v1.9.0)
 
+- `eeccc08` 2026-10-19 — Versión 1.9.1
+- `7597849` 2026-10-19 — Botón «Ver en el manual» con panel lateral por página; secciones nuevas del manual; espacio entre tarjetas de tableros; corrige remove() de la vista de reportes
+- `daaa91c` 2026-10-19 — Consultas web: ojo para mostrar u ocultar la clave al grabar y en las credenciales
+- `895f5d2` 2026-10-19 — Añadir widget: tarjetas con dibujo y descripción en lugar de una lista
+- `cd9fc1b` 2026-10-19 — Escritorio: «Añadir caja» pasa a «Añadir widget»
+- `d7e0fd3` 2026-10-19 — BI: plantillas de tableros gerenciales, color y tipo por tarjeta, vista previa más grande, fechas de reuniones/llamadas/tareas
+- `18d49eb` 2026-10-19 — Escritorio vacío: aviso con acciones para empezar a armarlo en lugar de pantalla en blanco
+- `a7a34d3` 2026-10-19 — Menú lateral con desplazamiento propio; confirmaciones centradas con fondo; diálogos del navegador sustituidos por los del CRM
+
+## v1.9.0
+
+- `f9d14c9` 2026-10-19 — Versión 1.9.0
 - `7fa1199` 2026-10-19 — Versión 1.9.0
 - `c2e2364` 2026-10-19 — Reportes y tableros (BI): constructor de reportes, gráficas, tableros con cuadrícula, compartir y datos de formularios
 - `7c083fd` 2026-10-19 — Formularios: campos de cálculo con fórmulas y plan de pagos (amortización) en pantalla, Hub y PDF

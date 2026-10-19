@@ -31,6 +31,9 @@
 - [9c. Comercial virtual: comerciales, entrenamiento y mensajes con opciones](#9c-comercial-virtual-comerciales-entrenamiento-y-mensajes-con-opciones)
 - [9d. Reparto de leads entre personas y comerciales virtuales](#9d-reparto-de-leads-entre-personas-y-comerciales-virtuales)
 - [5g. Formularios internos de gestión](#5g-formularios-internos-de-gestión)
+- [5h. Escritorio (Inicio) y widgets](#5h-escritorio-inicio-y-widgets)
+- [5i. Reportes y tableros](#5i-reportes-y-tableros)
+- [5j. Consultas web (con login y navegación)](#5j-consultas-web-con-login-y-navegación)
 - [9e. Procesos de leads, copias de leads y lectura de documentos](#9e-procesos-de-leads-copias-de-leads-y-lectura-de-documentos)
 - [10. Preguntas frecuentes](#10-preguntas-frecuentes)
 
@@ -642,6 +645,10 @@ Llenarlos
 
 Completa los campos (los marcados con ***** son obligatorios) y pulsa **Guardar**; con **Guardar borrador** guardas lo que llevas. Debajo aparecen los botones de acción que haya configurado tu empresa (por ejemplo **Generar PDF**) y los PDF ya generados, que también quedan en el historial del lead. Al guardarse, el formulario puede además crear una tarea, cambiar el estado del lead, copiar respuestas a campos del lead o enviar un mensaje al cliente.
 
+Cálculos y plan de pagos
+
+Al diseñar un formulario puedes añadir campos de **Cálculo** (una fórmula con otros campos: suma, resta, multiplicación, división, porcentajes, `REDONDEAR`, `SI`, `MIN`, `MAX`, `CUOTA`…) y un campo de **Plan de pagos** que arma la tabla de cuotas (cuota, interés, capital y saldo con fechas) a partir del valor a financiar, la tasa y el número de cuotas. Se calculan mientras escribes y salen en el PDF.
+
 Consultar una página web
 
 Una acción del formulario puede **consultar una página pública** (por ejemplo, un registro o un directorio), traer los datos que definiste a campos del formulario (al diseñarla, **ves la página y pulsas con el cursor** sobre cada dato que quieres, sin escribir selectores) y, si lo pediste, pedirle a la IA que **analice lo que dice la página y recomiende** para ayudarte a decidir. El resultado queda en el formulario y en una nota del lead. Funciona con páginas que muestran su contenido directamente (no con las que exigen usuario, clave o captcha).
@@ -657,6 +664,65 @@ Al **leer un documento** (5f) puedes elegir como destino de cada dato un campo d
 Diseñarlos (gerentes, directores y supervisores)
 
 Menú **Formularios internos**: crea el formulario, añade campos (texto, número, monto, fecha, lista, varias opciones, Sí/No, teléfono, correo y títulos de sección), elige **en qué etapas se ve** y **dónde aparece** (pestaña de la ficha y/o botón «Llenar formulario»), y define las **acciones**: generar PDF (con título, datos del cliente y campos que elijas), cambiar el estado, crear una tarea, enviar por correo, WhatsApp o SMS (con los datos del formulario) o copiar respuestas a campos del lead; cada acción puede ser **automática al guardar** o **con un botón**. Pulsa **Guardar todo**. Tip: guarda una vez para que los campos nuevos puedan usarse en las acciones.
+
+
+## 5h. Escritorio (Inicio) y widgets
+
+*Visible para: Comercial, Director, Gerente*
+
+Tu escritorio
+
+**Inicio** es tu escritorio: pestañas (por ejemplo «Panel gerencial» y «Mi día») con **widgets**, que son cajas con información: tus leads, tareas, actividades, calendario, el panel de indicadores y más.
+
+Añadir widgets
+
+Pulsa los tres puntos de arriba a la derecha → **Añadir widget**. Verás **tarjetas** con un dibujo de lo que aparecerá y una descripción; elige una y se agrega. Con **Editar escritorio** cambias el nombre y el orden de las pestañas. Si un escritorio queda sin widgets, verás un aviso con los botones para empezar a armarlo.
+
+Mover y quitar
+
+Arrastra un widget para cambiarlo de sitio y estira sus bordes para cambiar el tamaño; el engranaje de cada widget abre sus opciones y la X lo quita. Todo se guarda solo y es solo tuyo.
+
+
+## 5i. Reportes y tableros
+
+*Visible para: Comercial, Director, Gerente*
+
+Qué son
+
+El menú **Reportes y tableros** es tu espacio para analizar la información sin límites: armas **reportes** (una tabla o gráfica con los datos que elijas) y los juntas en **tableros**. Todo queda guardado y es tuyo; puedes compartirlo con tu equipo.
+
+Armar un reporte
+
+**Nuevo reporte** y sigue los pasos: **1 · Datos** (leads, contactos, cuentas, oportunidades, tareas, reuniones, llamadas o las respuestas de un formulario interno), **2 · Filtros** (estado, fechas, montos, texto…), **3 · Agrupar** (por estado, asesor, origen, campaña, día, semana, mes o año, y un segundo criterio opcional), **4 · Medir** (cantidad, suma, promedio, mínimo o máximo) y **5 · Cómo verlo** (tabla, barras, líneas, áreas, circular, anillo o cifra grande). Arriba ves la **vista previa** mientras lo armas; si aún no eliges «Agrupar», solo verás una cifra. Pulsa **Guardar**.
+
+Armar un tablero
+
+**Nuevo tablero** te deja empezar con una **plantilla gerencial ya armada** (Gerencial comercial, Actividad del equipo, Cartera y cobranza, Oportunidades y ventas) o en blanco. En un tablero añade **Reporte**, **Texto** o **Imagen**, arrastra las tarjetas para acomodarlas y estira sus bordes para el tamaño. El engranaje de cada tarjeta cambia su **título, color y tipo de gráfica**; la X la quita. Guarda al terminar.
+
+Compartir y permisos
+
+Elige «Compartir»: solo tú, tu equipo o (gerentes y supervisores) toda la empresa, en solo lectura. Cada persona ve los datos según su propio acceso: un asesor solo ve lo suyo o de su equipo, aunque el tablero sea compartido. Con **Copiar** haces una copia propia de un reporte o tablero ajeno para modificarla.
+
+
+## 5j. Consultas web (con login y navegación)
+
+*Visible para: Director, Gerente*
+
+Para qué sirven
+
+Una **consulta web** trae información de una página para ayudar a decidir sobre un cliente (y, si quieres, la IA la analiza y recomienda). Se configuran en **Consultas web** (gerentes, directores y supervisores) y se usan desde la ficha del lead (menú ⋯ → **Consultar web**) o desde una acción de un formulario interno. El resultado queda en una nota del lead.
+
+Dos tipos
+
+**Página sencilla**: lee el HTML de una dirección pública (puedes usar variables como \{{identificacion}}); eliges los datos **viendo la página y pulsando sobre ellos**. **Navegador**: un navegador real inicia sesión con usuario y clave, navega por varias páginas y lee también las que cargan con JavaScript.
+
+Grabar un flujo con login
+
+En **Nueva con navegador → Flujo de navegación → Grabar el flujo** ves el navegador dentro del CRM: escribe la dirección, haz clic, escribe tu usuario y clave (hay un **ojo** para ver lo que escribes), navega hasta la página y cambia a **Elegir dato** para marcar lo que quieres traer. Cada acción queda como un paso que puedes editar. El usuario y la clave se guardan **protegidos** aparte y no vuelven a mostrarse; los pasos solo dicen \{{usuario}} y \{{clave}}.
+
+Límites
+
+Solo páginas y cuentas que tengas derecho a automatizar, con permisos mínimos y respetando los términos del sitio. No funciona con captcha ni verificación en dos pasos, y no abre direcciones internas del servidor.
 
 
 ## 9e. Procesos de leads, copias de leads y lectura de documentos
