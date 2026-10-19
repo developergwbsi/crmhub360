@@ -2,6 +2,11 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
+## Sin publicar (después de v1.10.3)
+
+- `bbb86ca` 2026-10-19 — Versión 1.10.4
+- `51367d4` 2026-10-19 — Tableros fijados por pestaña del escritorio y posición arriba/al final
+
 ## v1.10.3
 
 - `704bb32` 2026-10-19 — Versión 1.10.3
