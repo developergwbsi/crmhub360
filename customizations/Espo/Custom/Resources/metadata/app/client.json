@@ -1,4 +1,9 @@
 {
-    "cssList": ["client/custom/css/crmhub-login.css"],
-    "scriptList": ["client/custom/src/crmhub-boot.js"]
+    "cssList": [
+        "client/custom/css/crmhub-login.css"
+    ],
+    "scriptList": [
+        "client/custom/src/crmhub-preload.js",
+        "client/custom/src/crmhub-boot.js"
+    ]
 }

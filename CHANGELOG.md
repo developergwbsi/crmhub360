@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **Pantalla de carga general.** Es lo primero que se pinta al abrir la plataforma (con el nombre de la empresa, y en modo claro u oscuro según tu preferencia) y se quita sola cuando todo terminó de cargar. Al pasar de una página a otra, el área de contenido muestra la misma pantalla de carga (dejando visible el menú) hasta que la página nueva esté lista.
+
 ## [1.10.2] - 2026-10-19
 
 ### Añadido
