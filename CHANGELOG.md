@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.10.4] - 2026-10-19
+
 ### Corregido
 - **Los tableros fijados salían en todas las pestañas del escritorio** (por ejemplo, el del Panel gerencial también aparecía en «Mi día»). Ahora, al fijar un tablero eliges **en qué pestaña** va (o «en todas») y **dónde**: arriba, antes de los widgets, o **al final**, después de ellos. Al cambiar de pestaña se muestran solo los de esa pestaña; cada pestaña sigue configurándose con sus propios widgets, igual que la principal. «Administrar» muestra la pestaña y la posición de cada tablero.
 
