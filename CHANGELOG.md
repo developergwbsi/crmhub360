@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Cambiado
+- **Página «Acerca de»** (menú de usuario → Acerca): ahora presenta **Crm Hub 360**, su versión instalada y que la desarrolla **DigitalAlliance Hub** (con enlace a digitalalliancehub.site). Se conserva el aviso legal del software libre en que se basa (EspoCRM, licencia GNU AGPL v3), porque esa licencia lo exige.
+
 ## [1.10.5] - 2026-10-19
 
 ### Añadido

@@ -124,7 +124,8 @@ install_custom() { # slug
   # versión de la app: cambia cuando cambia cualquier archivo; el navegador la compara para avisar de una nueva versión
   local ver; ver="$(cd "$SRC/customizations" && find . -type f -not -name version.json | sort | xargs md5sum | md5sum | cut -c1-12)"
   PREV_VERSION="$(docker exec "$c" cat /var/www/html/client/custom/version.json 2>/dev/null | jq -r .version 2>/dev/null || true)"; NEW_VERSION="$ver"
-  docker exec "$c" sh -c "printf '{\"version\":\"$ver\",\"built\":\"$(date -u +%FT%TZ)\"}' > /var/www/html/client/custom/version.json && chown www-data:www-data /var/www/html/client/custom/version.json"
+  local rel; rel="$(tr -d '[:space:]' < "$SRC/VERSION" 2>/dev/null || true)"
+  docker exec "$c" sh -c "printf '{\"version\":\"$ver\",\"release\":\"$rel\",\"built\":\"$(date -u +%FT%TZ)\"}' > /var/www/html/client/custom/version.json && chown www-data:www-data /var/www/html/client/custom/version.json"
   docker exec -u www-data "$c" php command.php rebuild >/dev/null
   docker exec -u www-data "$c" php command.php clear-cache >/dev/null
 }

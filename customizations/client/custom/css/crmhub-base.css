@@ -1575,3 +1575,13 @@ body:has(.list-kanban) #footer, body:has(.ch-studio) #footer { position: fixed; 
 body:has(.list-kanban) #footer a, body:has(.ch-studio) #footer a { pointer-events: auto; }
 body:has(.list-kanban) #footer .credit, body:has(.ch-studio) #footer .credit { margin: 0; line-height: 16px; }
 body:has(.list-kanban) #content, body:has(.ch-studio) #content { padding-bottom: 6px !important; min-height: 0 !important; }
+
+/* ---- Acerca de ---- */
+.ch-about { max-width: 820px; }
+.ch-ab-card { display: flex; gap: 20px; align-items: center; background: var(--ch-surface); border: 1px solid var(--ch-line); border-radius: 14px; padding: 22px 24px; margin-bottom: 16px; }
+.ch-ab-col { flex-direction: column; align-items: flex-start; gap: 4px; }
+.ch-ab-col h4 { margin: 0 0 6px; } .ch-ab-col p { margin: 0 0 8px; color: var(--ch-ink); }
+.ch-ab-logo { width: 72px; height: 72px; flex: none; border-radius: 20px; background: linear-gradient(135deg, var(--ch-primary, #4f63e8), #7c8cff); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 38px; font-weight: 800; }
+.ch-ab-main h2 { margin: 0 0 6px; font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+.ch-ab-lead { margin: 0 0 8px; color: var(--ch-muted); } .ch-ab-ver { margin: 0; color: var(--ch-muted); font-size: 13px; }
+.ch-ab-legal { font-size: 13px; } .ch-ab-legal p { color: var(--ch-muted); }
