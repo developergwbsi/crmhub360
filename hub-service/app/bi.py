@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS bi_items (tenant TEXT NOT NULL, id TEXT NOT NULL, kin
     def JSONB NOT NULL DEFAULT '{}', share TEXT NOT NULL DEFAULT 'none', teams TEXT[] NOT NULL DEFAULT '{}', updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant, id));
 CREATE INDEX IF NOT EXISTS bi_items_owner ON bi_items (tenant, owner);
 CREATE TABLE IF NOT EXISTS bi_pins (tenant TEXT NOT NULL, user_id TEXT NOT NULL, item_id TEXT NOT NULL, date_from DATE, date_to DATE, pos INT NOT NULL DEFAULT 0, PRIMARY KEY (tenant, user_id, item_id));
+ALTER TABLE bi_pins ADD COLUMN IF NOT EXISTS tab TEXT NOT NULL DEFAULT '';
+ALTER TABLE bi_pins ADD COLUMN IF NOT EXISTS place TEXT NOT NULL DEFAULT 'top';
 """
 MAX_DEF = 300_000
 KINDS = ("report", "dashboard")
@@ -187,12 +189,12 @@ def pins(tenant: str, user: str, teams: list[str]) -> list[dict]:
     """Tableros fijados por el usuario que aún puede ver (con nombre y vigencia), en el orden en que los acomodó."""
     vis = {i["id"]: i for i in items(tenant, user, teams) if i["kind"] == "dashboard"}
     with db.pool.connection() as c:
-        rows = c.execute("SELECT item_id, date_from, date_to, pos FROM bi_pins WHERE tenant=%s AND user_id=%s ORDER BY pos, item_id", (tenant, user)).fetchall()
-    return [{"id": r["item_id"], "name": vis[r["item_id"]]["name"], "mine": vis[r["item_id"]]["mine"], "from": r["date_from"].isoformat() if r["date_from"] else "", "to": r["date_to"].isoformat() if r["date_to"] else ""}
+        rows = c.execute("SELECT item_id, date_from, date_to, pos, tab, place FROM bi_pins WHERE tenant=%s AND user_id=%s ORDER BY pos, item_id", (tenant, user)).fetchall()
+    return [{"id": r["item_id"], "name": vis[r["item_id"]]["name"], "mine": vis[r["item_id"]]["mine"], "tab": r["tab"], "place": r["place"], "from": r["date_from"].isoformat() if r["date_from"] else "", "to": r["date_to"].isoformat() if r["date_to"] else ""}
             for r in rows if r["item_id"] in vis]
 
 
-def pin_set(tenant: str, user: str, teams: list[str], iid: str, date_from, date_to) -> dict:
+def pin_set(tenant: str, user: str, teams: list[str], iid: str, date_from, date_to, tab: str = "", place: str = "top") -> dict:
     df, dt = _date(date_from), _date(date_to)
     if df and dt and dt < df:
         raise ValueError("La fecha final no puede ser anterior a la inicial.")
@@ -200,8 +202,8 @@ def pin_set(tenant: str, user: str, teams: list[str], iid: str, date_from, date_
         raise PermissionError("No tienes acceso a ese tablero.")
     with db.pool.connection() as c:
         n = c.execute("SELECT COALESCE(max(pos), -1) + 1 n FROM bi_pins WHERE tenant=%s AND user_id=%s", (tenant, user)).fetchone()["n"]
-        c.execute("INSERT INTO bi_pins (tenant, user_id, item_id, date_from, date_to, pos) VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (tenant, user_id, item_id) DO UPDATE SET date_from=EXCLUDED.date_from, date_to=EXCLUDED.date_to",
-                  (tenant, user, iid, df, dt, n))
+        c.execute("INSERT INTO bi_pins (tenant, user_id, item_id, date_from, date_to, pos, tab, place) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (tenant, user_id, item_id) DO UPDATE SET date_from=EXCLUDED.date_from, date_to=EXCLUDED.date_to, tab=EXCLUDED.tab, place=EXCLUDED.place",
+                  (tenant, user, iid, df, dt, n, (tab or "")[:60], "bottom" if place == "bottom" else "top"))
     return {"ok": True}
 
 

@@ -1108,5 +1108,13 @@
             "controller": "CrmHub",
             "action": "biPinMove"
         }
+    },
+    {
+        "route": "/CrmHub/homeTabs",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "homeTabs"
+        }
     }
 ]

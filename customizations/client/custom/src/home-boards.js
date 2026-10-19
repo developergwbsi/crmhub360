@@ -13,7 +13,11 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render'], function (ChUi, 
     const err = xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error((xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || 'No se pudo completar.'); };
 
     // Diálogo para fijar un tablero (o cambiar su vigencia). → true si se guardó
+    const curTab = () => { const a = document.querySelector('.home-content .dashboard-tabs .active'); return a ? a.textContent.trim() : ''; };
     function pinDialog(id, name, cur) {
+        return Espo.Ajax.getRequest('CrmHub/homeTabs').then(r => r.tabs || [], () => []).then(tabs => dialog(id, name, cur, tabs));
+    }
+    function dialog(id, name, cur, tabs) {
         return new Promise(resolve => {
             const back = document.createElement('div'); back.className = 'ch-dlg-back'; const box = document.createElement('div'); box.className = 'ch-dlg'; back.appendChild(box); document.body.appendChild(back);
             const close = v => { document.removeEventListener('keydown', onKey, true); back.remove(); resolve(v); };
@@ -24,6 +28,8 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render'], function (ChUi, 
                 `<label class="ch-hb-opt"><input type="radio" name="hb" value="always" ${dated ? '' : 'checked'}> <b>Siempre</b> <small>hasta que lo quites</small></label>` +
                 `<label class="ch-hb-opt"><input type="radio" name="hb" value="range" ${dated ? 'checked' : ''}> <b>Solo por un tiempo</b> <small>entre dos fechas; luego deja de mostrarse solo</small></label>` +
                 `<div class="ch-hb-dates" ${dated ? '' : 'hidden'}><label>Desde<input type="date" class="form-control" data-f="from" value="${esc(cur && cur.from || '')}"></label><label>Hasta<input type="date" class="form-control" data-f="to" value="${esc(cur && cur.to || '')}"></label></div>` +
+                (tabs.length > 1 ? `<label class="ch-dlg-label">¿En qué pestaña del escritorio?</label><select class="form-control" data-f="tab"><option value="">En todas las pestañas</option>${tabs.map(t => `<option value="${esc(t)}" ${(cur ? cur.tab === t : curTab() === t) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>` : '') +
+                `<label class="ch-dlg-label" style="margin-top:10px">¿Dónde?</label><select class="form-control" data-f="place"><option value="top" ${cur && cur.place === 'bottom' ? '' : 'selected'}>Arriba, antes de los widgets</option><option value="bottom" ${cur && cur.place === 'bottom' ? 'selected' : ''}>Al final, después de los widgets</option></select>` +
                 `<div class="ch-dlg-err" hidden></div></div><div class="ch-dlg-foot"><button type="button" class="btn btn-default" data-a="no">Cancelar</button><button type="button" class="btn btn-primary" data-a="ok">Guardar</button></div>`;
             const q = s => box.querySelector(s), dates = q('.ch-hb-dates');
             box.addEventListener('change', e => { if (e.target.name === 'hb') { dates.hidden = e.target.value !== 'range'; } });
@@ -31,7 +37,7 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render'], function (ChUi, 
             q('[data-a="ok"]').onclick = () => {
                 const range = box.querySelector('input[name=hb]:checked').value === 'range', from = range ? q('[data-f=from]').value : '', to = range ? q('[data-f=to]').value : '';
                 if (range && !from && !to) { const e = q('.ch-dlg-err'); e.hidden = false; e.textContent = 'Elige al menos una fecha, o deja «Siempre».'; return; }
-                Espo.Ajax.postRequest('CrmHub/biPin', {id, dateFrom: from, dateTo: to}).then(() => { Espo.Ui.success('Listo: lo verás en Inicio.'); close(true); }).catch(xhr => { err(xhr); });
+                Espo.Ajax.postRequest('CrmHub/biPin', {id, dateFrom: from, dateTo: to, tab: q('[data-f=tab]') ? q('[data-f=tab]').value : '', place: q('[data-f=place]').value}).then(() => { Espo.Ui.success('Listo: lo verás en Inicio.'); close(true); }).catch(xhr => { err(xhr); });
             };
             requestAnimationFrame(() => back.classList.add('in'));
         });
@@ -64,7 +70,7 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render'], function (ChUi, 
         const today = ymd(new Date());
         ChUi.panel({title: 'Tableros de mi escritorio', icon: 'fas fa-thumbtack', mount: (body, close) => {
             const paint = () => {
-                body.innerHTML = (pins.length ? '<div class="ch-hb-list">' + pins.map((p, i) => `<div class="ch-hb-row" data-id="${esc(p.id)}"><div><b>${esc(p.name)}</b><small>${esc(vig(p))}${active(p, today) ? '' : ' · <em>no se muestra hoy</em>'}</small></div>` +
+                body.innerHTML = (pins.length ? '<div class="ch-hb-list">' + pins.map((p, i) => `<div class="ch-hb-row" data-id="${esc(p.id)}"><div><b>${esc(p.name)}</b><small>${esc(vig(p))} · ${p.tab ? 'Pestaña «' + esc(p.tab) + '»' : 'Todas las pestañas'} · ${p.place === 'bottom' ? 'al final' : 'arriba'}${active(p, today) ? '' : ' · <em>no se muestra hoy</em>'}</small></div>` +
                     `<span><button type="button" data-a="up" title="Subir" ${i ? '' : 'disabled'}><span class="fas fa-arrow-up"></span></button><button type="button" data-a="down" title="Bajar" ${i < pins.length - 1 ? '' : 'disabled'}><span class="fas fa-arrow-down"></span></button>` +
                     `<button type="button" data-a="edit" title="Cambiar fechas"><span class="far fa-calendar"></span></button><button type="button" data-a="rm" title="Quitar del escritorio"><span class="fas fa-trash"></span></button></span></div>`).join('') + '</div>' : '<p class="ch-muted">No tienes tableros fijados.</p>') +
                     '<p style="margin-top:12px"><button type="button" class="btn btn-default" data-a="add"><span class="fas fa-plus"></span> Añadir otro tablero</button> <a class="btn btn-link" href="#CrmHub/reportes" data-a="go">Crear un tablero nuevo</a></p>';
@@ -91,32 +97,49 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render'], function (ChUi, 
     }
 
     // Pinta los tableros fijados dentro de `host` (div que el arranque pone encima de los widgets de Inicio)
-    function mount(host) {
-        const token = (host._tok = (host._tok || 0) + 1);
-        const go = () => Espo.Ajax.getRequest('CrmHub/biPins').then(async r => {
+    // una vez por sesión de página se piden los tableros fijados; al cambiar de pestaña solo se vuelve a dibujar
+    function mount(host, refetch) {
+        const go = () => (refetch || !host._pins ? Espo.Ajax.getRequest('CrmHub/biPins').then(r => { host._pins = r.pins || []; }) : Promise.resolve()).then(() => draw2(host, go))
+            .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } host.dataset.state = 'none'; });
+        host._go = go; go();
+    }
+    const tabOf = () => curTab();
+    const tabsDom = () => [].map.call(document.querySelectorAll('.home-content .dashboard-tabs button'), x => x.textContent.trim());
+    function draw2(host, go) {
+        const token = (host._tok = (host._tok || 0) + 1), tab = tabOf(), refetchGo = () => { host._pins = null; return go(); };
+        host.dataset.tab = tab;
+        return (async () => {
             if (host._tok !== token || !document.body.contains(host)) { return; }
-            const pins = r.pins || [], today = ymd(new Date()), show = pins.filter(p => active(p, today));
+            // abajo: un segundo contenedor después de los widgets (para los tableros fijados «al final»)
+            let low = host.parentNode.querySelector(':scope > .ch-home-boards-b');
+            if (!low) { low = document.createElement('div'); low.className = 'ch-home-boards-b'; const g = host.parentNode.querySelector('.dashlets'); (g || host).insertAdjacentElement('afterend', low); }
+            const pins = host._pins || [], today = ymd(new Date()), names = tabsDom();
+            const inTab = p => !p.tab || !names.length || p.tab === tab || !names.includes(p.tab);   // sin pestaña, o su pestaña ya no existe → se ve en la actual
+            const show = pins.filter(p => active(p, today) && inTab(p));
             grids.forEach(g => { try { g.destroy(false); } catch (e) { /* ya no existe */ } }); grids = [];
-            if (!pins.length) { host.dataset.state = 'none'; host.innerHTML = ''; return; }
+            if (!pins.length) { host.dataset.state = 'none'; host.innerHTML = ''; low.innerHTML = ''; return; }
             host.dataset.state = show.length ? 'some' : 'none';
-            host.innerHTML = '<div class="ch-hb-top"><span><span class="fas fa-thumbtack"></span> Mis tableros</span><button type="button" class="btn btn-default btn-xs" data-a="manage"><span class="fas fa-sliders"></span> Administrar</button></div>' +
-                show.map(p => `<section class="ch-hb" data-id="${esc(p.id)}"><div class="ch-hb-head"><h4>${esc(p.name)}</h4><small>${esc(vig(p))}</small><button type="button" class="ch-hb-x" data-a="edit" title="${p.mine ? 'Editar este tablero' : 'Abrir en Reportes y tableros'}"><span class="fas ${p.mine ? 'fa-pen' : 'fa-arrow-up-right-from-square'}"></span></button><button type="button" class="ch-hb-x" data-a="rm" title="Quitar de mi escritorio"><span class="fas fa-xmark"></span></button></div><div class="ch-hb-body"><div class="grid-stack"></div></div></section>`).join('') +
-                (show.length ? '' : '<div class="ch-muted" style="padding:6px 2px">Ninguno de tus tableros fijados está vigente hoy.</div>');
-            host.onclick = e => {
+            const sec = p => `<section class="ch-hb" data-id="${esc(p.id)}"><div class="ch-hb-head"><h4>${esc(p.name)}</h4><small>${esc(vig(p))}</small><button type="button" class="ch-hb-x" data-a="edit" title="${p.mine ? 'Editar este tablero' : 'Abrir en Reportes y tableros'}"><span class="fas ${p.mine ? 'fa-pen' : 'fa-arrow-up-right-from-square'}"></span></button><button type="button" class="ch-hb-x" data-a="rm" title="Quitar de mi escritorio"><span class="fas fa-xmark"></span></button></div><div class="ch-hb-body"><div class="grid-stack"></div></div></section>`;
+            const topList = show.filter(p => p.place !== 'bottom'), lowList = show.filter(p => p.place === 'bottom');
+            const bar = '<div class="ch-hb-top"><span><span class="fas fa-thumbtack"></span> Mis tableros</span><button type="button" class="btn btn-default btn-xs" data-a="manage"><span class="fas fa-sliders"></span> Administrar</button></div>';
+            host.innerHTML = (topList.length || !lowList.length ? bar : '') + topList.map(sec).join('') + (show.length ? '' : '<div class="ch-muted" style="padding:6px 2px">No hay tableros fijados en esta pestaña.</div>');
+            low.innerHTML = (!topList.length && lowList.length ? bar : '') + lowList.map(sec).join('');
+            const click = e => {
                 const b = e.target.closest('[data-a]'); if (!b) { return; }
-                if (b.dataset.a === 'manage') { manage(host, pins, go); }
-                else if (b.dataset.a === 'edit') { const id = b.closest('.ch-hb').dataset.id, p = pins.find(x => x.id === id); try { sessionStorage.setItem('chBiOpen', JSON.stringify({id, edit: !!(p && p.mine)})); } catch (x) { /* nada */ } location.hash = '#CrmHub/reportes'; }
-                else if (b.dataset.a === 'rm') { const id = b.closest('.ch-hb').dataset.id, p = pins.find(x => x.id === id); ChUi.confirm({title: 'Quitar del escritorio', ok: 'Quitar', html: `<b>${esc(p.name)}</b> dejará de verse en Inicio. El tablero no se elimina: sigue en «Reportes y tableros».`}).then(y => { if (y) { Espo.Ajax.postRequest('CrmHub/biUnpin', {id}).then(go); } }); }
+                if (b.dataset.a === 'manage') { manage(host, pins, refetchGo); return; }
+                const sc = b.closest('.ch-hb'); if (!sc) { return; } const id = sc.dataset.id, p = pins.find(x => x.id === id);
+                if (b.dataset.a === 'edit') { try { sessionStorage.setItem('chBiOpen', JSON.stringify({id, edit: !!(p && p.mine)})); } catch (x) { /* nada */ } location.hash = '#CrmHub/reportes'; }
+                else if (b.dataset.a === 'rm') { ChUi.confirm({title: 'Quitar del escritorio', ok: 'Quitar', html: `<b>${esc(p.name)}</b> dejará de verse en Inicio. El tablero no se elimina: sigue en «Reportes y tableros».`}).then(y => { if (y) { Espo.Ajax.postRequest('CrmHub/biUnpin', {id}).then(refetchGo); } }); }
             };
+            host.onclick = click; low.onclick = click;
             if (!show.length) { return; }
             if (!meta) { try { meta = (await Espo.Ajax.getRequest('CrmHub/biItems')).sources || []; } catch (x) { meta = []; } }
             for (const p of show) {
-                const wrap = host.querySelector(`.ch-hb[data-id="${p.id}"]`);
+                const wrap = document.querySelector(`.home-content .ch-hb[data-id="${p.id}"]`);
                 Espo.Ajax.getRequest('CrmHub/biItem', {id: p.id}).then(it => { if (wrap && host._tok === token) { draw(wrap, p, it.def || {}, meta); } }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } if (wrap) { wrap.querySelector('.ch-hb-body').innerHTML = '<div class="ch-muted" style="padding:14px">No se pudo abrir este tablero.</div>'; } });
             }
-        }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } host.dataset.state = 'none'; });
-        go();
+        })();
     }
 
-    return {mount, pinDialog};
+    return {mount, pinDialog, refresh: host => { if (host._go) { host._pins ? draw2(host, host._go) : host._go(); } }, syncTab: host => { if (host.dataset.tab !== tabOf() && host._pins) { draw2(host, host._go); } }};
 });

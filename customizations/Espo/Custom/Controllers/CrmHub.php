@@ -2026,7 +2026,26 @@ class CrmHub
         $this->simGuard();
         $d = $request->getParsedBody();
         return (object) $this->hubCall('PUT', '/v1/bi/pin', ['id' => preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($d->id ?? '')), 'userId' => $this->user->getId(), 'teams' => $this->user->getLinkMultipleIdList('teams'),
-            'dateFrom' => (string) ($d->dateFrom ?? ''), 'dateTo' => (string) ($d->dateTo ?? '')], 15);
+            'dateFrom' => (string) ($d->dateFrom ?? ''), 'dateTo' => (string) ($d->dateTo ?? ''), 'tab' => (string) ($d->tab ?? ''), 'place' => (string) ($d->place ?? 'top')], 15);
+    }
+
+    /** GET /CrmHub/homeTabs. Usuario. Nombres de las pestañas de su escritorio (Inicio), para elegir en cuál fijar un tablero. */
+    public function getActionHomeTabs(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $prefs = $this->em->getEntityById('Preferences', $this->user->getId());
+        $layout = $prefs ? $prefs->get('dashboardLayout') : null;
+        if (empty($layout)) {
+            $layout = $this->config->get('dashboardLayout');
+        }
+        $names = [];
+        foreach ((array) $layout as $t) {
+            $n = is_object($t) ? ($t->name ?? '') : ($t['name'] ?? '');
+            if ($n !== '') {
+                $names[] = (string) $n;
+            }
+        }
+        return (object) ['tabs' => array_values(array_unique($names))];
     }
 
     /** POST /CrmHub/biUnpin. Usuario. {id}. Quita un tablero de su escritorio (no lo elimina). Hub: DELETE /v1/bi/pin. */

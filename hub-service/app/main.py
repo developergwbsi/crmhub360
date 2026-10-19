@@ -1247,6 +1247,8 @@ class BiPinReq(BaseModel):
     teams: list[str] = []
     dateFrom: str = ""
     dateTo: str = ""
+    tab: str = ""
+    place: str = "top"
     up: bool = True
 
 
@@ -1258,7 +1260,7 @@ async def bi_pins(userId: str, teams: str = "", tenant: dict = Depends(tenant_au
 @app.put("/v1/bi/pin")
 async def bi_pin(req: BiPinReq, tenant: dict = Depends(tenant_auth)):
     try:
-        return bi.pin_set(tenant["slug"], req.userId, req.teams, req.id, req.dateFrom, req.dateTo)
+        return bi.pin_set(tenant["slug"], req.userId, req.teams, req.id, req.dateFrom, req.dateTo, req.tab, req.place)
     except ValueError as e:
         raise HTTPException(422, str(e))
     except PermissionError as e:

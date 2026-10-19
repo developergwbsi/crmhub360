@@ -1550,3 +1550,4 @@ html.ch-noscroll { overflow: hidden !important; }
 .ch-hb-row small { display: block; color: var(--ch-muted); }
 .ch-hb-row button { border: 0; background: transparent; color: var(--ch-muted); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; }
 .ch-hb-row button:hover:not(:disabled) { background: color-mix(in srgb, var(--ch-ink) 8%, transparent); color: var(--ch-ink); } .ch-hb-row button:disabled { opacity: .3; cursor: default; }
+.ch-home-boards-b { margin-top: 18px; } .ch-home-boards-b:empty { display: none; }

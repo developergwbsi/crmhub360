@@ -555,7 +555,12 @@
         var cur = home && home.querySelector(':scope > .ch-home-boards');
         if (!home || !isHome) { return; }
         var grid = home.querySelector('.dashlets');
-        if (cur || !grid || !window.Espo || !Espo.loader || !document.querySelector('#navbar .navbar-right')) { return; }
+        if (cur) {   // al cambiar de pestaña del escritorio (Panel gerencial / Mi día) se muestran los tableros de esa pestaña
+            var act = home.querySelector('.dashboard-tabs .active'), nm = act ? act.textContent.trim() : '';
+            if (cur.dataset.state !== 'loading' && cur.dataset.tab !== undefined && cur.dataset.tab !== nm) { Espo.loader.require('custom:home-boards', function (m) { m.syncTab(cur); }); }
+            return;
+        }
+        if (!grid || !window.Espo || !Espo.loader || !document.querySelector('#navbar .navbar-right')) { return; }
         var host = document.createElement('div'); host.className = 'ch-home-boards'; host.dataset.state = 'loading';
         grid.insertAdjacentElement('beforebegin', host);
         Espo.loader.require('custom:home-boards', function (m) { m.mount(host); });
