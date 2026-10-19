@@ -2,6 +2,13 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
+## Sin publicar (después de v1.10.4)
+
+- `79e6c23` 2026-10-19 — Versión 1.10.5
+- `03f9ca6` 2026-10-19 — Quita el scroll de página innecesario: el alto del menú lateral ya no alarga las páginas
+- `c406645` 2026-10-19 — Más espacio a la derecha del avatar del encabezado
+- `d29df06` 2026-10-19 — Buscador del menú lateral (Ctrl K), avatar como botón del menú de usuario e icono de Acerca
+
 ## v1.10.4
 
 - `73af302` 2026-10-19 — Versión 1.10.4
