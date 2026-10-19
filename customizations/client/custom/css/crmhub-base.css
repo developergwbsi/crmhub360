@@ -1567,3 +1567,11 @@ body.minimized:not(.side-menu-opened) .ch-nav-search { display: none; }
 #nav-menu-dropdown.ch-has-avatar { display: flex; align-items: center; padding: 0 8px !important; width: auto; min-width: 0; }
 #nav-menu-dropdown.ch-has-avatar:hover .ch-hdr-avatar, .menu-container.open #nav-menu-dropdown .ch-hdr-avatar { box-shadow: 0 0 0 2px var(--ch-primary, #4f63e8); }
 #navbar .navbar-right > li.menu-container { margin-right: 14px; }
+
+/* El menú lateral hace su propio scroll: la plataforma ya no alarga la página hasta la altura total del menú (eso dejaba scroll en todas las páginas aunque no hiciera falta) */
+body[data-navbar=side] { min-height: 0 !important; }
+/* En las páginas que ocupan toda la pantalla (tablero de leads, reportes) el crédito del pie va flotando en la esquina para no sumar altura y provocar un scroll de la página que no hace falta */
+body:has(.list-kanban) #footer, body:has(.ch-studio) #footer { position: fixed; right: 10px; bottom: 0; margin: 0; padding: 0; z-index: 1; pointer-events: none; background: transparent; }
+body:has(.list-kanban) #footer a, body:has(.ch-studio) #footer a { pointer-events: auto; }
+body:has(.list-kanban) #footer .credit, body:has(.ch-studio) #footer .credit { margin: 0; line-height: 16px; }
+body:has(.list-kanban) #content, body:has(.ch-studio) #content { padding-bottom: 6px !important; min-height: 0 !important; }

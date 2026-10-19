@@ -9,6 +9,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - **Tu foto en el encabezado**: el botón del menú de usuario (arriba a la derecha) ahora es tu avatar; al pulsarlo se abre el desplegable de opciones (perfil, Administración, Preferencias, Acerca, Salir).
 
 ### Corregido
+- **Scroll innecesario en casi todas las páginas.** La plataforma alargaba la página hasta la altura total del menú lateral, así que casi siempre aparecía la barra de desplazamiento aunque no hiciera falta (por ejemplo, en Leads). Ahora la barra solo aparece cuando la página tiene más contenido que la pantalla. En el tablero de Leads y en Reportes, el crédito del pie pasó a una esquina para no sumar altura.
 - La opción **Acerca** del menú de usuario no tenía icono.
 
 ## [1.10.4] - 2026-10-19
