@@ -548,6 +548,60 @@
 
     // El «Sin datos» nativo de EspoCRM (listas, paneles, ventanas) se cambia por la ilustración.
     // Escritorio (Inicio) sin widgets: en vez de una pantalla en blanco, un aviso con las formas de empezar a armarlo
+
+    // Buscador rápido del menú lateral: filtra las opciones al escribir (sin tildes ni mayúsculas); Enter abre la primera; Esc limpia
+    function navSearch() {
+        var left = document.querySelector('#navbar .navbar-left-container'), tabs = left && left.querySelector('ul.tabs');
+        if (!tabs) { return; }
+        var box = tabs.querySelector(':scope > .ch-nav-search');
+        if (!box) {
+            box = el('<li class="ch-nav-search"><span class="fas fa-search"></span><input type="search" placeholder="Buscar en el menú" autocomplete="off" spellcheck="false" aria-label="Buscar en el menú"><kbd>Ctrl K</kbd></li>');
+            tabs.insertBefore(box, tabs.firstChild);
+            var inp = box.querySelector('input');
+            var norm = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); };
+            var apply = function () {
+                var q = norm(inp.value), group = null, shown = 0;
+                var items = [].slice.call(tabs.querySelectorAll(':scope > li:not(.ch-nav-search):not(.ch-nav-none)'));
+                items.forEach(function (li) {
+                    if (li.classList.contains('tab-divider')) { li._chHits = 0; group = li; li.style.display = q ? 'none' : ''; return; }
+                    var lbl = li.querySelector('.full-label'), ok = !q || norm(lbl ? lbl.textContent : li.textContent).indexOf(q) >= 0;
+                    li.style.display = ok ? '' : 'none';
+                    if (ok && q) { shown++; if (group) { group.style.display = ''; } }
+                });
+                var none = tabs.querySelector(':scope > .ch-nav-none');
+                if (q && !shown) { if (!none) { none = el('<li class="ch-nav-none">Nada coincide con «<b></b>»</li>'); tabs.appendChild(none); } none.querySelector('b').textContent = inp.value.trim(); } else if (none) { none.remove(); }
+            };
+            inp.addEventListener('input', apply);
+            inp.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') { inp.value = ''; apply(); inp.blur(); }
+                else if (e.key === 'Enter') { var a = [].slice.call(tabs.querySelectorAll(':scope > li.tab:not(.tab-divider)')).filter(function (li) { return li.style.display !== 'none'; })[0]; a = a && a.querySelector('a'); if (a) { a.click(); inp.value = ''; apply(); inp.blur(); } }
+            });
+            document.addEventListener('keydown', function (e) {
+                if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k' && document.getElementById('navbar')) {
+                    e.preventDefault();
+                    if (document.body.classList.contains('minimized')) { var sm = document.querySelector('#navbar .side-menu-button'); if (sm && !document.body.classList.contains('side-menu-opened')) { sm.click(); } }
+                    setTimeout(function () { inp.focus(); inp.select(); }, 30);
+                }
+            });
+        }
+    }
+
+    // Menú de usuario (arriba a la derecha): foto de la persona como botón del menú y el icono que le faltaba a «Acerca»
+    function userMenu() {
+        var tg = document.getElementById('nav-menu-dropdown');
+        if (!tg) { return; }
+        if (!tg.querySelector('.ch-hdr-avatar')) {
+            var me = document.querySelector('.menu-container a[href^="#User/view/"]'), id = me && me.getAttribute('href').split('/').pop();
+            if (id) {
+                var nm = me.textContent.trim();
+                tg.classList.add('ch-has-avatar'); tg.setAttribute('title', nm ? nm + ' · menú' : 'Menú');
+                tg.appendChild(el('<img class="ch-hdr-avatar" alt="" draggable="false" src="?entryPoint=avatar&size=small&id=' + encodeURIComponent(id) + '">'));
+            }
+        }
+        var ab = document.querySelector('.menu-container a[data-name="about"]');
+        if (ab && !ab.querySelector('.item-icon')) { ab.insertBefore(el('<span class="item-icon fas fa-circle-info"></span>'), ab.firstChild); }
+    }
+
     // Tableros que el usuario fijó en su escritorio (siempre o por fechas): se dibujan arriba de los widgets
     function paintHomeBoards() {
         var home = document.querySelector('.home-content');
@@ -738,7 +792,7 @@
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); decorateEmpty(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); decorateEmpty(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });
