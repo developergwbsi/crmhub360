@@ -4,6 +4,8 @@
 
 ## Sin publicar (después de v1.8.0)
 
+- `7fa1199` 2026-10-19 — Versión 1.9.0
+- `c2e2364` 2026-10-19 — Reportes y tableros (BI): constructor de reportes, gráficas, tableros con cuadrícula, compartir y datos de formularios
 - `7c083fd` 2026-10-19 — Formularios: campos de cálculo con fórmulas y plan de pagos (amortización) en pantalla, Hub y PDF
 
 ## v1.8.0
