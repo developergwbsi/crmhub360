@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.10.0)
+## Sin publicar (después de v1.10.1)
 
+- `c84eb68` 2026-10-19 — Versión 1.10.2
+- `6e05bba` 2026-10-19 — Editar un tablero fijado desde el escritorio
+
+## v1.10.1
+
+- `30e4396` 2026-10-19 — Versión 1.10.1
 - `f1709ce` 2026-10-19 — Versión 1.10.1
 - `aa7bc9d` 2026-10-19 — Tableros fijados en el escritorio: siempre o por fechas, varios, ordenar y quitar
 
