@@ -1447,3 +1447,4 @@ html.ch-noscroll { overflow: hidden !important; }
 .dialog-confirm .modal-body { padding: 26px 26px 12px; font-size: 15px; line-height: 1.55; text-align: center; color: var(--ch-ink); }
 .dialog-confirm .modal-footer { padding: 14px 20px 20px; background: transparent; border: 0; display: flex; gap: 10px; justify-content: center; flex-direction: row-reverse; }
 .dialog-confirm .modal-footer .btn-group { display: flex; gap: 10px; float: none !important; } .dialog-confirm .modal-footer .btn { min-width: 110px; }
+.ch-home-empty { max-width: 640px; margin: 40px auto 0; text-align: center; padding: 0 16px; } .ch-home-empty-act { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }

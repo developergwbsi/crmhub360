@@ -534,6 +534,30 @@
     window.ChEmpty = {html: emptyHtml, kinds: Object.keys(ART)};
 
     // El «Sin datos» nativo de EspoCRM (listas, paneles, ventanas) se cambia por la ilustración.
+    // Escritorio (Inicio) sin cajas: en vez de una pantalla en blanco, un aviso con las formas de empezar a armarlo
+    function paintHomeEmpty() {
+        var home = document.querySelector('.home-content');
+        var old = home && home.querySelector(':scope > .ch-home-empty');
+        var isHome = /^#?(Home)?$/.test(location.hash) || /^#Home\b/.test(location.hash);
+        if (!home || !isHome) { if (old) { old.remove(); } return; }
+        var grid = home.querySelector('.dashlets');
+        var has = !!(grid && grid.querySelector('.grid-stack-item'));
+        if (has) { if (old) { old.remove(); } return; }
+        if (old || !grid || !window.ChEmpty) { return; }
+        var box = document.createElement('div');
+        box.className = 'ch-home-empty';
+        box.innerHTML = window.ChEmpty.html({kind: 'box', title: 'Este escritorio está vacío', text: 'Añade cajas con la información que quieres ver al entrar (leads, tareas, actividad…) o arma tus propios reportes y tableros con gráficas.'}) +
+            '<div class="ch-home-empty-act"><button type="button" class="btn btn-primary" data-ch-he="add"><span class="fas fa-plus"></span> Añadir una caja</button>' +
+            '<a class="btn btn-default" href="#CrmHub/reportes"><span class="fas fa-chart-pie"></span> Crear un reporte o tablero</a>' +
+            '<button type="button" class="btn btn-default" data-ch-he="edit"><span class="fas fa-pencil-alt"></span> Editar escritorio</button></div>';
+        box.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-ch-he]'); if (!b) { return; }
+            var a = document.querySelector('.dashboard-buttons [data-action="' + (b.dataset.chHe === 'add' ? 'addDashlet' : 'editTabs') + '"]');
+            if (a) { a.click(); }
+        });
+        grid.insertAdjacentElement('afterend', box);
+    }
+
     function decorateEmpty() {
         var nodes = document.querySelectorAll('.no-data:not([data-ch-empty])');
         for (var i = 0; i < nodes.length; i++) {
@@ -631,7 +655,7 @@
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); decorateEmpty(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); decorateEmpty(); paintHomeEmpty(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });

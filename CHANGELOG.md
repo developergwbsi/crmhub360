@@ -6,6 +6,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Menú lateral que se desplaza y confirmaciones bien visibles
 - **El menú lateral se puede recorrer con la rueda**: como las páginas ya no arrastran el menú, este tiene ahora su propio desplazamiento y puedes llegar a todas las opciones (antes la rueda movía la página y el menú no avanzaba).
+- **Escritorio (Inicio) vacío con aviso**: si borras todas las cajas de un escritorio ya no queda la pantalla en blanco: aparece «Este escritorio está vacío» con los botones **Añadir una caja**, **Crear un reporte o tablero** y **Editar escritorio** para empezar a armarlo ahí mismo.
 - **La ventana de confirmación (al eliminar, etc.) aparece centrada y con fondo oscuro**, bien visible; antes quedaba pegada arriba, sin fondo y se confundía con la barra del navegador. Las pocas preguntas que usaban el cuadro del navegador (cambios sin guardar en reportes, salir o cambiar de videollamada, nombre de una credencial) usan ahora el mismo diseño.
 
 ## [1.9.0] - 2026-10-19
