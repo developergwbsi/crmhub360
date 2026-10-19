@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.10.0] - 2026-10-19
+
 ### Añadido
 - **Grabaciones de pantalla y de videollamadas.** Nuevo menú **Grabaciones**: ahí quedan los videos, que se pueden **ver, descargar, renombrar, compartir con un enlace** (que se puede quitar) y eliminar.
   - **Grabar la pantalla del CRM** (capacitaciones, explicaciones): círculo rojo de la barra superior. El navegador pide qué compartir (pestaña, ventana o pantalla); barra flotante con tiempo, **pausa** y **detener** que sigue al cambiar de página.
