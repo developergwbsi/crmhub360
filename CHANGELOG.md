@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.9.1] - 2026-10-19
+
 ### Tableros gerenciales ya armados y vista previa de reportes más clara
 - En el escritorio de Inicio, «Añadir caja» pasa a llamarse **«Añadir widget»** (menú del escritorio y aviso de escritorio vacío).
 - **«Añadir widget» ahora muestra tarjetas** (en vez de una lista de nombres): cada widget tiene un dibujo que representa lo que se verá (calendario, embudo, barras, anillo, lista de registros, indicadores…) y una descripción de para qué sirve; el buscador sigue filtrando.
