@@ -558,6 +558,57 @@
         grid.insertAdjacentElement('afterend', box);
     }
 
+    // «Añadir widget»: en vez de una lista de nombres, tarjetas con un dibujo que representa lo que se verá y una descripción
+    var WG = {
+        Calendar: ['calendar', '#4f63e8', 'Tu agenda por mes, semana o día con reuniones, llamadas y tareas.'],
+        SalesPipeline: ['funnel', '#8b5cf6', 'Cuánto vale tu embudo: el valor de las oportunidades en cada etapa.'],
+        Stream: ['stream', '#0ea5e9', 'Lo último que pasa en tus registros y en los que sigues.'],
+        Iframe: ['window', '#64748b', 'Muestra una página web dentro de tu escritorio.'],
+        Records: ['list', '#4f63e8', 'Lista de los registros que elijas (leads, cuentas, oportunidades…) con tus filtros.'],
+        Emails: ['inbox', '#f59e0b', 'Tus últimos correos recibidos.'],
+        Calls: ['list', '#2fa36b', 'Tus llamadas próximas y recientes.'],
+        Opportunities: ['list', '#8b5cf6', 'Tus oportunidades abiertas.'],
+        Leads: ['list', '#4f63e8', 'Tus leads más recientes.'],
+        Activities: ['stream', '#14b8a6', 'Tus próximas reuniones, llamadas y tareas.'],
+        Meetings: ['calendar', '#14b8a6', 'Tus próximas reuniones.'],
+        Tasks: ['check', '#f59e0b', 'Tus tareas pendientes.'],
+        Cases: ['list', '#ef5b5b', 'Tus tickets abiertos.'],
+        Memo: ['note', '#f59e0b', 'Un bloc de notas para escribir recordatorios.'],
+        OpportunitiesByStage: ['bars', '#8b5cf6', 'Gráfica de barras: oportunidades por etapa.'],
+        OpportunitiesByLeadSource: ['donut', '#0ea5e9', 'Gráfica de anillo: de dónde llegan tus oportunidades.'],
+        CrmHubPanel: ['kpis', '#4f63e8', 'Indicadores de captación y cartera con embudo, origen y desempeño por asesor.']
+    };
+    function wgArt(t, c) {
+        var bar = function (x, h) { return '<rect x="' + x + '" y="' + (62 - h) + '" width="12" height="' + h + '" rx="2" fill="' + c + '"/>'; };
+        var body = {
+            list: [0, 1, 2, 3].map(function (i) { return '<circle cx="18" cy="' + (18 + i * 14) + '" r="4" fill="' + c + '"/><rect x="28" y="' + (15 + i * 14) + '" width="' + (70 - i * 8) + '" height="6" rx="3" fill="' + c + '" opacity=".35"/>'; }).join(''),
+            check: [0, 1, 2].map(function (i) { return '<rect x="14" y="' + (13 + i * 17) + '" width="11" height="11" rx="3" fill="none" stroke="' + c + '" stroke-width="2"/>' + (i < 2 ? '<path d="M17 ' + (19 + i * 17) + 'l3 3 5-6" stroke="' + c + '" stroke-width="2" fill="none"/>' : '') + '<rect x="32" y="' + (16 + i * 17) + '" width="' + (74 - i * 10) + '" height="6" rx="3" fill="' + c + '" opacity=".35"/>'; }).join(''),
+            calendar: '<rect x="14" y="10" width="92" height="56" rx="6" fill="none" stroke="' + c + '" stroke-width="2"/><rect x="14" y="10" width="92" height="14" rx="6" fill="' + c + '"/>' + [0, 1, 2, 3, 4].map(function (i) { return [0, 1].map(function (j) { return '<rect x="' + (22 + i * 17) + '" y="' + (31 + j * 15) + '" width="11" height="9" rx="2" fill="' + c + '" opacity="' + ((i + j) % 3 === 0 ? 1 : .3) + '"/>'; }).join(''); }).join(''),
+            bars: bar(20, 22) + bar(40, 38) + bar(60, 30) + bar(80, 46),
+            donut: '<circle cx="60" cy="38" r="22" fill="none" stroke="' + c + '" stroke-opacity=".25" stroke-width="12"/><path d="M60 16a22 22 0 0 1 21 28" fill="none" stroke="' + c + '" stroke-width="12"/><path d="M82 46a22 22 0 0 1-20 14" fill="none" stroke="#f59e0b" stroke-width="12"/>',
+            funnel: '<path d="M16 12h88l-14 16H30z" fill="' + c + '"/><path d="M30 32h60l-10 14H40z" fill="' + c + '" opacity=".65"/><path d="M40 50h40l-8 14H48z" fill="' + c + '" opacity=".4"/>',
+            stream: [0, 1, 2].map(function (i) { return '<circle cx="20" cy="' + (16 + i * 20) + '" r="5" fill="' + c + '"/><rect x="32" y="' + (11 + i * 20) + '" width="' + (66 - i * 8) + '" height="7" rx="3" fill="' + c + '" opacity=".4"/><rect x="32" y="' + (22 + i * 20) + '" width="' + (46 - i * 6) + '" height="5" rx="2.5" fill="' + c + '" opacity=".22"/>'; }).join('') + '<path d="M20 22v14M20 42v14" stroke="' + c + '" stroke-opacity=".3" stroke-width="2"/>',
+            kpis: [0, 1, 2].map(function (i) { return '<rect x="' + (10 + i * 34) + '" y="10" width="30" height="22" rx="4" fill="' + c + '" opacity="' + (1 - i * .25) + '"/>'; }).join('') + bar(18, 18) + bar(38, 26) + bar(58, 14) + bar(78, 22),
+            inbox: '<rect x="14" y="14" width="92" height="50" rx="6" fill="none" stroke="' + c + '" stroke-width="2"/><path d="M14 22l46 22 46-22" fill="none" stroke="' + c + '" stroke-width="2"/>',
+            note: '<rect x="22" y="8" width="76" height="60" rx="5" fill="' + c + '" opacity=".2"/>' + [0, 1, 2, 3].map(function (i) { return '<rect x="32" y="' + (20 + i * 11) + '" width="' + (56 - (i % 2) * 14) + '" height="5" rx="2.5" fill="' + c + '"/>'; }).join(''),
+            window: '<rect x="14" y="10" width="92" height="56" rx="6" fill="none" stroke="' + c + '" stroke-width="2"/><path d="M14 24h92" stroke="' + c + '" stroke-width="2"/><circle cx="22" cy="17" r="2.5" fill="' + c + '"/><circle cx="30" cy="17" r="2.5" fill="' + c + '" opacity=".6"/>'
+        }[t] || '';
+        return '<svg viewBox="0 0 120 76" width="100%" height="76" aria-hidden="true">' + body + '</svg>';
+    }
+    function decorateWidgets() {
+        var lists = document.querySelectorAll('.modal .array-add-list-group:not([data-ch-wg])');
+        for (var i = 0; i < lists.length; i++) {
+            var ul = lists[i], items = ul.querySelectorAll('li[data-name]');
+            if (!items.length || !ul.querySelector('li[data-name="Records"], li[data-name="Stream"], li[data-name="Calendar"], li[data-name="CrmHubPanel"]')) { continue; }   // solo la lista de widgets del escritorio
+            ul.setAttribute('data-ch-wg', '1'); ul.classList.add('ch-wg-grid');
+            for (var j = 0; j < items.length; j++) {
+                var li = items[j], d = WG[li.getAttribute('data-name')] || ['list', '#64748b', 'Widget del escritorio.'];
+                li.insertAdjacentHTML('afterbegin', '<div class="ch-wg-ill" style="background:' + d[1] + '14">' + wgArt(d[0], d[1]) + '</div>');
+                li.insertAdjacentHTML('beforeend', '<small class="ch-wg-desc">' + d[2] + '</small>');
+            }
+        }
+    }
+
     function decorateEmpty() {
         var nodes = document.querySelectorAll('.no-data:not([data-ch-empty])');
         for (var i = 0; i < nodes.length; i++) {
@@ -655,7 +706,7 @@
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); decorateEmpty(); paintHomeEmpty(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); decorateEmpty(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });

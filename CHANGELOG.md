@@ -6,6 +6,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Tableros gerenciales ya armados y vista previa de reportes más clara
 - En el escritorio de Inicio, «Añadir caja» pasa a llamarse **«Añadir widget»** (menú del escritorio y aviso de escritorio vacío).
+- **«Añadir widget» ahora muestra tarjetas** (en vez de una lista de nombres): cada widget tiene un dibujo que representa lo que se verá (calendario, embudo, barras, anillo, lista de registros, indicadores…) y una descripción de para qué sirve; el buscador sigue filtrando.
 - **Plantillas de tableros gerenciales**: al crear un tablero eliges uno ya construido —**Gerencial comercial**, **Actividad del equipo**, **Cartera y cobranza** u **Oportunidades y ventas**— con mezcla de indicadores, barras, líneas, áreas, anillos y tablas. Se crean sus reportes (quedan tuyos) y el tablero, y los ajustas: **cambias colores, títulos y tipo de gráfica de cada tarjeta, quitas tarjetas o añades más**, y lo guardas. También se puede empezar en blanco.
 - **Color y tipo de cada tarjeta** (engranaje de la tarjeta): paleta de colores o uno propio, y «cómo verlo» (tabla, barras, líneas, circular…) sin tocar el reporte.
 - **Vista previa del reporte**: ahora ocupa todo el ancho arriba y las opciones quedan debajo en columnas (antes la gráfica quedaba diminuta); la gráfica se ajusta al espacio y, si aún no eliges «Agrupar», avisa qué falta para verla. Los totales de dinero de los indicadores se muestran abreviados ($ 200 M).

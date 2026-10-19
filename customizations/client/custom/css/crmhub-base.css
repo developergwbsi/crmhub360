@@ -1461,3 +1461,10 @@ html.ch-noscroll { overflow: hidden !important; }
 }
 @media (max-width: 1100px) { .ch-bi-split { grid-template-rows: none; } .ch-bi-cfg { display: block; } }
 .ch-w-head b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; } .ch-w .ch-bi-kpi .v { font-size: 34px; } .ch-w .ch-bi-kpi { min-height: 70px; }
+/* Añadir widget: tarjetas con dibujo y descripción (no una lista de nombres) */
+.ch-wg-grid.list-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; border: 0; box-shadow: none; background: transparent; padding: 4px 2px; }
+.ch-wg-grid > li.list-group-item { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 10px 10px 14px; border: 1px solid var(--ch-line) !important; border-radius: 14px !important; background: var(--ch-surface); cursor: pointer; transition: box-shadow .15s, border-color .15s, transform .15s; margin: 0 !important; }
+.ch-wg-grid > li.list-group-item:hover { border-color: var(--ch-primary) !important; box-shadow: 0 8px 22px rgba(16, 24, 40, .14); transform: translateY(-2px); }
+.ch-wg-grid > li.hidden, .ch-wg-grid > li[style*="display: none"] { display: none !important; }
+.ch-wg-ill { border-radius: 10px; padding: 8px 6px 2px; } .ch-wg-grid a.add { font-size: 14.5px; font-weight: 700; color: var(--ch-ink); } .ch-wg-grid a.add::after { content: ''; position: absolute; inset: 0; border-radius: 14px; }
+.ch-wg-desc { color: var(--ch-muted); line-height: 1.4; font-size: 12.5px; }
