@@ -76,3 +76,8 @@ Cada persona oye al otro en su idioma original; lo que se traduce es el **texto*
 - Idiomas: español, inglés, portugués, francés, alemán e italiano (`meet.LANG_NAME`; la voz a texto es multilingüe). Cada participante publica `speak` y `read` como atributos de LiveKit; quien habla traduce a los idiomas de lectura presentes (máx. 3, `to=` en `/stt`). La traducción usa el motor de IA de la empresa si es de la nube (`llm.chat_text`) y, si falla o es local, el traductor es↔en del servicio de voz.
 - Servicio de voz: `docker compose up -d stt`; modelos de traducción: `stt-service/convert_models.sh` (una vez; quedan en el volumen `crmhub_stt_models`). Variables: `STT_MODEL` (tiny/base/small/medium), `STT_THREADS`.
 - Límites: el Hub procesa como máximo 2 frases a la vez y descarta las que excedan una cola de 4, para no saturar la CPU (el servidor no tiene GPU).
+
+
+## Grabaciones
+
+El anfitrión puede grabar la llamada (botón ⏺ o «⋮ → Grabar la videollamada»); también hay grabación de pantalla del CRM (círculo rojo de la barra superior). El navegador graba con `MediaRecorder` (pantalla/pestaña + audio opcional: voces de los demás y/o micrófono; por defecto sin audio) y sube el video por partes a `POST /v1/public/meet/_/rec/{id}/chunk` con una llave HMAC de 6 h (`recordings.py`); no pasa por el CRM. Al terminar, `ffmpeg -c copy` agrega duración e índice. Los archivos viven en el volumen `crmhub_recordings` (`/recordings/<empresa>/<id>.webm`), tabla `recordings`. Se ven en el menú **Grabaciones** (`#CrmHub/grabaciones`); reproducir y descargar usan llaves de 4 h; compartir crea `https://meet.<dominio>/r/<token>` (se puede revocar). Los participantes reciben un aviso (mensaje de datos `rec` de LiveKit) mientras se graba.

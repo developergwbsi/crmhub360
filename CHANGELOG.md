@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **Grabaciones de pantalla y de videollamadas.** Nuevo menú **Grabaciones**: ahí quedan los videos, que se pueden **ver, descargar, renombrar, compartir con un enlace** (que se puede quitar) y eliminar.
+  - **Grabar la pantalla del CRM** (capacitaciones, explicaciones): círculo rojo de la barra superior. El navegador pide qué compartir (pestaña, ventana o pantalla); barra flotante con tiempo, **pausa** y **detener** que sigue al cambiar de página.
+  - **Grabar una videollamada**: el anfitrión usa el botón ⏺ de la llamada. Todos los participantes ven el aviso «Se está grabando».
+  - En ambos casos se elige **con o sin audio**: audio de la pestaña/llamada y/o micrófono; **por defecto sin audio** (todo apagado).
+  - El video se sube por partes al Hub (no pasa por el CRM) y se corrige con ffmpeg para que se pueda adelantar. Cada empresa tiene un límite de espacio (40 GB). Cada persona ve las suyas; con alcance «todos» se ven las de la empresa.
+  - Requiere reconstruir el Hub (`docker compose up -d --build hub-service`): lleva ffmpeg y un volumen nuevo (`crmhub_recordings`).
+
 ## [1.9.1] - 2026-10-19
 
 ### Tableros gerenciales ya armados y vista previa de reportes más clara

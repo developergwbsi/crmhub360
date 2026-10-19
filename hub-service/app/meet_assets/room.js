@@ -203,8 +203,72 @@ $('rxp').onclick = function (e) { var b = e.target.closest('button'); if (!b) { 
 var hand = false;
 $('bh').onclick = function () { hand = !hand; $('bh').classList.toggle('act', hand); try { room.localParticipant.setAttributes({hand: hand ? '1' : ''}); } catch (e) { /* nada */ } var t = $('t-me'); if (t) { t.classList.toggle('hand', hand); } renderPeople(); };
 
+/* ---------------- grabación de la videollamada (solo el anfitrión; todos ven el aviso) ----------------
+   Se graba la pestaña con el navegador (MediaRecorder) y se sube por partes al Hub; queda en «Grabaciones» del CRM. Audio opcional: voces de los demás y/o micrófono propio (por defecto, sin audio). */
+var rec = null, recSeenAt = 0;
+function recSeen(m) {
+  var b = $('recbanner'); recSeenAt = Date.now();
+  if (m.on) { b.textContent = 'Se está grabando esta videollamada' + (m.n ? ' · ' + m.n : ''); b.classList.remove('hide'); if (!m.hb) { toast('⏺ ' + (m.n || 'El anfitrión') + ' empezó a grabar la videollamada.', 6000); } }
+  else { b.classList.add('hide'); toast('La grabación terminó.', 4000); }
+}
+setInterval(function () { if (!rec && recSeenAt && Date.now() - recSeenAt > 45000) { $('recbanner').classList.add('hide'); recSeenAt = 0; } }, 5000);
+function recAnnounce(on, hb) { try { room.localParticipant.publishData(enc({k: 'rec', on: on, n: J.name, hb: !!hb}), {reliable: true}); } catch (e) { /* sin conexión */ } }
+function recClick() { if (rec) { recStop(); } else { hidePops('recp'); $('rec-msg').textContent = ''; $('recp').classList.remove('hide'); } }
+$('brec').onclick = function (e) { e.stopPropagation(); recClick(); };
+function recMime() { var l = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4']; for (var i = 0; i < l.length; i++) { try { if (MediaRecorder.isTypeSupported(l[i])) { return l[i]; } } catch (e) { /* nada */ } } return ''; }
+$('rec-go').onclick = function () {
+  if (rec) { return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia || !window.MediaRecorder) { $('rec-msg').textContent = 'Este navegador no puede grabar. Usa Chrome o Edge de escritorio.'; return; }
+  var wantCall = $('rec-call').checked, wantMic = $('rec-mic').checked, mime = recMime();
+  navigator.mediaDevices.getDisplayMedia({video: {frameRate: {ideal: 24, max: 30}}, audio: false, preferCurrentTab: true, selfBrowserSurface: 'include'}).then(function (display) {
+    var ctx = null, dest = null, srcs = {}, tracks = [];
+    function addAudio(t, id) { if (!ctx || srcs[id] || !t) { return; } try { srcs[id] = ctx.createMediaStreamSource(new MediaStream([t])); srcs[id].connect(dest); } catch (e) { /* pista no válida */ } }
+    if (wantCall || wantMic) { var AC = window.AudioContext || window.webkitAudioContext; ctx = new AC(); dest = ctx.createMediaStreamDestination(); if (ctx.state === 'suspended') { ctx.resume(); } tracks = dest.stream.getAudioTracks(); }
+    function sync() {
+      if (!ctx) { return; }
+      if (wantCall) { room.remoteParticipants.forEach(function (p) { p.trackPublications.forEach(function (pb) { if (pb.kind === 'audio' && pb.track && pb.track.mediaStreamTrack) { addAudio(pb.track.mediaStreamTrack, pb.trackSid); } }); }); }
+      if (wantMic) { room.localParticipant.trackPublications.forEach(function (pb) { if (pb.source === 'microphone' && pb.track && pb.track.mediaStreamTrack) { addAudio(pb.track.mediaStreamTrack, 'mic'); } }); }
+    }
+    sync();
+    return post('rec/start', {host: HK, audio: tracks.length > 0, mime: mime.split(';')[0] || 'video/webm', name: J.name}).then(function (r) { return r.json().then(function (j) { if (!r.ok) { throw new Error(j.detail || 'No se pudo iniciar la grabación.'); } return j; }); }).then(function (up) {
+      var out = new MediaStream(display.getVideoTracks().concat(tracks)), mr = new MediaRecorder(out, mime ? {mimeType: mime, videoBitsPerSecond: 2500000, audioBitsPerSecond: 96000} : {});
+      rec = {mr: mr, up: up, display: display, ctx: ctx, seq: 0, queue: [], pumping: false, t0: Date.now(), sync: sync, hb: null, timer: null};
+      mr.ondataavailable = function (e) { if (rec && e.data && e.data.size) { rec.queue.push(e.data); recPump(); } };
+      mr.start(4000);
+      display.getVideoTracks()[0].addEventListener('ended', function () { recStop(); });
+      rec.sync2 = setInterval(sync, 3000); recAnnounce(true); rec.hb = setInterval(function () { recAnnounce(true, true); }, 15000);
+      $('brec').classList.add('on'); $('brec').title = 'Detener la grabación';
+      $('recbanner').textContent = 'Grabando la videollamada · 0:00'; $('recbanner').classList.remove('hide'); recSeenAt = 0;
+      rec.timer = setInterval(function () { var s = Math.floor((Date.now() - rec.t0) / 1000); $('recbanner').textContent = 'Grabando la videollamada · ' + Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }, 1000);
+      hidePops();
+    }).catch(function (e) { display.getTracks().forEach(function (t) { t.stop(); }); try { ctx && ctx.close(); } catch (x) { /* nada */ } $('rec-msg').textContent = e.message || 'No se pudo iniciar la grabación.'; });
+  }).catch(function () { /* canceló el selector */ });
+};
+function recPump() {
+  if (!rec || rec.pumping) { return; } rec.pumping = true; var cur = rec;
+  (function next() {
+    if (!cur.queue.length) { cur.pumping = false; return; }
+    fetch(cur.up.url + '/chunk?seq=' + cur.seq, {method: 'POST', headers: {'X-Rec-Key': cur.up.key, 'Content-Type': 'application/octet-stream'}, body: cur.queue[0]}).then(function (r) {
+      if (r.status === 403 || r.status === 404 || r.status === 422) { cur.queue = []; cur.dead = true; cur.pumping = false; return; }
+      if (!r.ok) { throw new Error('http'); } cur.queue.shift(); cur.seq++; next();
+    }).catch(function () { setTimeout(next, 3000); });
+  })();
+}
+function recStop() {
+  var cur = rec; if (!cur || cur.stopping) { return; } cur.stopping = true;
+  clearInterval(cur.timer); clearInterval(cur.hb); clearInterval(cur.sync2);
+  $('recbanner').textContent = 'Guardando la grabación…';
+  new Promise(function (res) { cur.mr.onstop = res; try { cur.mr.stop(); } catch (e) { res(); } }).then(function () {
+    return new Promise(function (res) { var n = 0; (function w() { if ((!cur.queue.length && !cur.pumping) || cur.dead || n++ > 1500) { res(); } else { setTimeout(w, 300); } })(); });
+  }).then(function () {
+    cur.display.getTracks().forEach(function (t) { t.stop(); }); try { cur.ctx && cur.ctx.close(); } catch (e) { /* nada */ }
+    return fetch(cur.up.url + '/finish', {method: 'POST', headers: {'X-Rec-Key': cur.up.key, 'Content-Type': 'application/json'}, body: JSON.stringify({duration: Math.round((Date.now() - cur.t0) / 1000)})}).then(function (r) { return r.json(); });
+  }).then(function (j) { toast(j.ok ? '✅ Grabación guardada en «Grabaciones» del CRM.' : 'La grabación quedó vacía y no se guardó.', 7000); }, function () { toast('No se pudo terminar de guardar la grabación.', 7000); })
+    .then(function () { rec = null; $('brec').classList.remove('on'); $('brec').title = 'Grabar la videollamada'; $('recbanner').classList.add('hide'); if (room) { recAnnounce(false); } });
+}
+
 /* ---------------- ventanitas ---------------- */
-var POPS = ['rxp', 'lgp', 'more', 'bgp', 'devp', 'invp'];
+var POPS = ['rxp', 'lgp', 'more', 'bgp', 'devp', 'invp', 'recp'];
 function hidePops(except) { POPS.forEach(function (p) { if (p !== except) { $(p).classList.add('hide'); } }); }
 function pop(id) { var el = $(id), was = !el.classList.contains('hide'); hidePops(); if (!was) { el.classList.remove('hide'); } }
 document.addEventListener('click', function (e) { if (!e.target.closest('.pop') && !e.target.closest('#bar') && !e.target.closest('#langb')) { hidePops(); } });
@@ -290,13 +354,14 @@ $('invsend').onclick = function () { var to = $('invto').value.trim(); if (!to) 
 var locked = false;
 function buildMore() {
   var h = '<button data-a="bg">🖼️ Fondos y efectos</button><button data-a="dev">⚙️ Audio y video</button><button data-a="lay">' + (layoutMode === 'speaker' ? '▦ Vista de cuadrícula' : '👤 Vista de orador') + '</button><button data-a="full">⛶ Pantalla completa</button><button data-a="inv">➕ Invitar a más personas</button>' + (window.parent !== window ? '<button data-a="pop">↗ Abrir en otra ventana</button>' : '');
-  if (J.host) { h += '<hr><div class="hl">Anfitrión</div><button data-a="muteall">🔇 Silenciar a todos</button><button data-a="lock">' + (locked ? '🔓 Desbloquear la sala' : '🔒 Bloquear la sala') + '</button><button data-a="end">⛔ Terminar para todos</button>'; }
+  if (J.host) { h += '<hr><div class="hl">Anfitrión</div><button data-a="rec">' + (rec ? '⏹ Detener la grabación' : '⏺ Grabar la videollamada') + '</button><button data-a="muteall">🔇 Silenciar a todos</button><button data-a="lock">' + (locked ? '🔓 Desbloquear la sala' : '🔒 Bloquear la sala') + '</button><button data-a="end">⛔ Terminar para todos</button>'; }
   $('more').innerHTML = h;
 }
 $('bmore').onclick = function (e) { e.stopPropagation(); buildMore(); pop('more'); };
 $('more').onclick = function (e) {
   var b = e.target.closest('button'); if (!b) { return; } var a = b.dataset.a;
-  if (a === 'bg') { hidePops('bgp'); buildBgs(); $('bgp').classList.remove('hide'); }
+  if (a === 'rec') { recClick(); }
+  else if (a === 'bg') { hidePops('bgp'); buildBgs(); $('bgp').classList.remove('hide'); }
   else if (a === 'dev') { hidePops('devp'); fillDevices(); $('devp').classList.remove('hide'); }
   else if (a === 'lay') { layoutMode = layoutMode === 'speaker' ? 'grid' : 'speaker'; hidePops(); relayout(); toast(layoutMode === 'speaker' ? 'Vista de orador' : 'Vista de cuadrícula', 1800); }
   else if (a === 'full') { hidePops(); (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(function () { /* sin permiso */ }); }
@@ -355,15 +420,17 @@ $('sp2').onchange = applyLang; $('rd2').onchange = applyLang;
 $('bcc').onclick = function (e) { e.stopPropagation(); pop('lgp'); }; $('langb').onclick = function (e) { e.stopPropagation(); pop('lgp'); };
 
 /* ---------------- conexión a la sala ---------------- */
-function leave() { try { if (room) { room.disconnect(); } } catch (e) { /* nada */ } try { parent.postMessage({k: 'ch-meet', ev: 'left'}, '*'); } catch (e) { /* nada */ } }
+function leave() { if (rec) { recStop(); var n = 0; (function w() { if (!rec || n++ > 300) { leave2(); } else { setTimeout(w, 300); } })(); return; } leave2(); }
+function leave2() { try { if (room) { room.disconnect(); } } catch (e) { /* nada */ } try { parent.postMessage({k: 'ch-meet', ev: 'left'}, '*'); } catch (e) { /* nada */ } }
 function startRoom(j) {
-  j.speak = $('sp').value; j.read = $('rd').value; J = j; subsShow = j.read !== 'off'; locked = !!j.locked;
+  j.speak = $('sp').value; j.read = $('rd').value; J = j; subsShow = j.read !== 'off'; locked = !!j.locked; if (j.host) { $('brec').classList.remove('hide'); }
   room = new L.Room({adaptiveStream: true, dynacast: true, audioCaptureDefaults: {noiseSuppression: true, echoCancellation: true, autoGainControl: true}});
   var E = L.RoomEvent;
   room.on(E.DataReceived, function (payload, p) {
     try { var m = JSON.parse(new TextDecoder().decode(payload));
       if (m.k === 'sub' && subsShow) { showLine(m.n || (p && p.name) || '', m, false); }
       else if (m.k === 'chat' && m.m) { addMsg(m.m, false); }
+      else if (m.k === 'rec') { recSeen(m); }
       else if (m.k === 'react') { float(m.e, m.n || (p && p.name) || ''); } } catch (e) { /* mensaje ajeno */ }
   });
   room.on(E.LocalTrackPublished, function (pub) {

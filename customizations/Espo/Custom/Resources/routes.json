@@ -1036,5 +1036,45 @@
             "controller": "CrmHub",
             "action": "agentDispatchSave"
         }
+    },
+    {
+        "route": "/CrmHub/recList",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "recList"
+        }
+    },
+    {
+        "route": "/CrmHub/recStart",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "recStart"
+        }
+    },
+    {
+        "route": "/CrmHub/recUpdate",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "recUpdate"
+        }
+    },
+    {
+        "route": "/CrmHub/recDelete",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "recDelete"
+        }
+    },
+    {
+        "route": "/CrmHub/recPlay",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "recPlay"
+        }
     }
 ]

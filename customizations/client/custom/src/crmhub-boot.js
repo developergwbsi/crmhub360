@@ -68,6 +68,8 @@
     document.addEventListener('click', function (e) {
         var b = e.target.closest && e.target.closest('[data-ch-manual]');
         if (b && window.Espo && Espo.loader) { e.preventDefault(); Espo.loader.require('custom:manual-help', function (m) { m.open(); }); }
+        var r = e.target.closest && e.target.closest('[data-ch-rec]');
+        if (r && window.Espo && Espo.loader) { e.preventDefault(); Espo.loader.require('custom:recorder', function (m) { if (m.active()) { m.stop(); } else { m.open(); } }); }
     });
 
     function ensureTools() {
@@ -79,6 +81,9 @@
             var f = document.getElementById('ch-float-tools'); if (f) { f.remove(); }
             if (!bar.querySelector('[data-ch-manual]')) {
                 bar.insertBefore(el('<li class="ch-tools-li"><a role="button" tabindex="0" class="ch-tool ch-tool-manual" data-ch-manual title="Ver esta página en el manual"><span class="fas fa-book-open"></span></a></li>'), bar.firstElementChild);
+            }
+            if (!bar.querySelector('[data-ch-rec]')) {
+                bar.insertBefore(el('<li class="ch-tools-li"><a role="button" tabindex="0" class="ch-tool ch-tool-rec" data-ch-rec title="Grabar la pantalla (capacitaciones y explicaciones)"><span class="fas fa-circle-dot"></span></a></li>'), bar.firstElementChild.nextSibling);
             }
             if (!bar.querySelector('[data-ch-theme-toggle]')) {
                 var li = el('<li class="ch-tools-li">' + toggleButton() + '<a role="button" tabindex="0" class="ch-tool" data-ch-push style="display:none"><span class="fas fa-bullhorn"></span></a><a role="button" tabindex="0" class="ch-tool ch-install" data-ch-install title="Instalar la aplicación" style="display:none"><span class="fas fa-download"></span></a></li>');

@@ -9,7 +9,7 @@ define('custom:manual-help', ['custom:ui'], function (ChUi) {
     const MAP = [
         [/^$|^Home/, 'escritorio'], [/^Lead\/(view|edit|create)/, 'leads'], [/^Lead/, 'pipeline'], [/^(Account|Contact|Opportunity)/, 'leads'],
         [/^(Task|Meeting|Call|Calendar)/, 'actividades'], [/^Email/, 'contacto'], [/^CrmHub\/mensajes/, 'contacto'], [/^Campaign/, 'organizacion'], [/^CrmHub\/organigrama/, 'organizacion'],
-        [/^CrmHub\/difusion/, 'masivos'], [/^CrmHub\/(simulador|conocimiento)/, 'simulador'], [/^CrmHub\/plantillas/, 'plantillas'], [/^CrmHub\/reportes/, 'reportes'], [/^CrmHub\/consultasWeb/, 'consultasweb'],
+        [/^CrmHub\/difusion/, 'masivos'], [/^CrmHub\/(simulador|conocimiento)/, 'simulador'], [/^CrmHub\/plantillas/, 'plantillas'], [/^CrmHub\/reportes/, 'reportes'], [/^CrmHub\/grabaciones/, 'grabaciones'], [/^CrmHub\/consultasWeb/, 'consultasweb'],
         [/^CrmHub\/formularios/, 'formint'], [/^CrmHub\/(procesos|copiasLeads)/, 'procesos'], [/^CrmHub\/agente/, 'comercialvirtual'], [/^CrmHub\/asignacion/, 'asignacion'], [/^CrmHub\/pipeline/, 'config'],
         [/^CrmHub\/leadSet/, 'leads'], [/^(Integrations|CrmHub\/integrations)/, 'configcomm'], [/^(Team|User|Role)/, 'roles'], [/^Admin/, 'admin'], [/^Preferences/, 'app'],
     ];

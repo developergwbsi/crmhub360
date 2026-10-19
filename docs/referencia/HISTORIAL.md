@@ -2,8 +2,9 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.9.0)
+## v1.9.1
 
+- `dc40e8b` 2026-10-19 — Versión 1.9.1
 - `eeccc08` 2026-10-19 — Versión 1.9.1
 - `7597849` 2026-10-19 — Botón «Ver en el manual» con panel lateral por página; secciones nuevas del manual; espacio entre tarjetas de tableros; corrige remove() de la vista de reportes
 - `daaa91c` 2026-10-19 — Consultas web: ojo para mostrar u ocultar la clave al grabar y en las credenciales

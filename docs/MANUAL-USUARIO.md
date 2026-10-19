@@ -34,6 +34,7 @@
 - [5h. Escritorio (Inicio) y widgets](#5h-escritorio-inicio-y-widgets)
 - [5i. Reportes y tableros](#5i-reportes-y-tableros)
 - [5j. Consultas web (con login y navegación)](#5j-consultas-web-con-login-y-navegación)
+- [5k. Grabaciones (pantalla y videollamadas)](#5k-grabaciones-pantalla-y-videollamadas)
 - [9e. Procesos de leads, copias de leads y lectura de documentos](#9e-procesos-de-leads-copias-de-leads-y-lectura-de-documentos)
 - [10. Preguntas frecuentes](#10-preguntas-frecuentes)
 
@@ -723,6 +724,37 @@ En **Nueva con navegador → Flujo de navegación → Grabar el flujo** ves el n
 Límites
 
 Solo páginas y cuentas que tengas derecho a automatizar, con permisos mínimos y respetando los términos del sitio. No funciona con captcha ni verificación en dos pasos, y no abre direcciones internas del servidor.
+
+
+## 5k. Grabaciones (pantalla y videollamadas)
+
+*Visible para: Comercial, Director, Gerente*
+
+Para qué sirven
+
+Para **capacitar o explicar un proceso**: grabas lo que haces en el CRM (o una videollamada) y queda un video que puedes ver, descargar o compartir con un enlace. Están en el menú **Grabaciones**.
+
+Grabar la pantalla
+
+1. Pulsa el **círculo rojo** de la barra superior (o **Grabar pantalla** en la página Grabaciones).
+2. Escribe un título (opcional) y elige el audio: **audio de la pestaña o del sistema** y/o tu **micrófono**. Por defecto las dos opciones están **desactivadas** (se graba sin audio).
+3. El navegador te pregunta qué compartir: **esta pestaña**, una ventana o toda la pantalla. Si quieres el audio de la pestaña, marca «compartir audio» en ese selector.
+4. Aparece una barra roja abajo con el tiempo, **Pausar** y **Detener**. Puedes navegar por el CRM mientras grabas; la barra te sigue.
+5. Al detener, el video se guarda en **Grabaciones**.
+
+Grabar una videollamada
+
+Solo el **anfitrión** puede grabarla: botón **⏺** de la barra de la llamada (o «⋮ → Grabar la videollamada»). Elige si quieres grabar el **audio de la llamada** (las voces de los demás) y/o **tu micrófono**; por defecto se graba sin audio. Todos los participantes ven un aviso rojo «Se está grabando esta videollamada». Para terminar, pulsa de nuevo el botón.
+
+Ver, descargar y compartir
+
+- **Ver**: pulsa la miniatura. **Descargar**: el icono de la flecha.
+- **Compartir**: crea un enlace que cualquiera con el enlace puede abrir (ver y descargar) sin entrar al CRM. Puedes **dejar de compartir** cuando quieras y el enlace deja de funcionar.
+- Cada persona ve sus grabaciones; quien tiene alcance «todos» ve las de toda la empresa.
+
+**Ojo:**
+
+solo se graba lo que compartes. Avisa a las personas antes de grabarlas y no compartas el enlace con quien no deba verlo.
 
 
 ## 9e. Procesos de leads, copias de leads y lectura de documentos

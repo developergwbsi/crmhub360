@@ -14,6 +14,8 @@ volumes:
     name: crmhub_pg
   crmhub_stt_models:
     name: crmhub_stt_models
+  crmhub_recordings:
+    name: crmhub_recordings
 
 services:
   postgres:
@@ -65,6 +67,9 @@ services:
       MEET_HOST: ${MEET_HOST:-}
       BROWSER_URL: ${BROWSER_URL:-http://127.0.0.1:8198}
       BROWSER_TOKEN: ${BROWSER_TOKEN}
+      RECORDINGS_DIR: /recordings
+    volumes:
+      - crmhub_recordings:/recordings
 
   # Videollamadas propias: servidor LiveKit. La señal solo escucha en 127.0.0.1 (Apache la publica con SSL en meet.<dominio>);
   # los medios usan 7881/tcp y 50000-50100/udp, que hay que abrir y reenviar hacia este servidor.

@@ -12,18 +12,19 @@ import asyncio
 import hmac
 import json
 import logging
+from datetime import datetime
 import os
 import secrets
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import BackgroundTasks, Body, Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel
 
 import httpx
 
-from . import bi, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +42,7 @@ async def lifespan(_: FastAPI):
     documents.ensure_schema()
     iforms.ensure_schema()
     bi.ensure_schema()
+    recordings.ensure_schema()
     agent.ensure_schema()
     monitor.ensure_schema()
     usage.ensure_schema()
@@ -2073,6 +2075,157 @@ def meet_end(code: str, tenant: dict = Depends(tenant_auth)):
 
 
 _MEET_HEADERS = {"Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "Permissions-Policy": "camera=(self), microphone=(self), display-capture=(self)"}
+
+
+# ---------------- grabaciones de pantalla y de videollamadas
+_REC_CORS = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type, X-Rec-Key", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Cache-Control": "no-store"}
+
+
+class RecStartReq(BaseModel):
+    """Empieza una grabación de pantalla del CRM (la hace un usuario)."""
+    title: str = ""
+    userId: str
+    userName: str = ""
+    audio: bool = False
+    mime: str = "video/webm"
+
+
+class RecUpdateReq(BaseModel):
+    """Renombrar o compartir/dejar de compartir una grabación."""
+    userId: str
+    manager: bool = False
+    title: str | None = None
+    share: bool | None = None
+
+
+class RecFinishReq(BaseModel):
+    duration: int = 0
+
+
+class RecRoomStartReq(BaseModel):
+    """El anfitrión empieza a grabar la videollamada."""
+    host: str
+    audio: bool = False
+    mime: str = "video/webm"
+    name: str = ""
+
+
+@app.post("/v1/rec/start")
+def rec_start(req: RecStartReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return recordings.start(tenant["slug"], "screen", req.title, req.userId, req.userName, req.audio, req.mime)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.get("/v1/rec")
+def rec_list(userId: str, all: bool = False, tenant: dict = Depends(tenant_auth)):
+    return recordings.listing(tenant["slug"], userId, all)
+
+
+@app.post("/v1/rec/{rid}/update")
+def rec_update(rid: str, req: RecUpdateReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return recordings.update(tenant["slug"], rid, req.userId, req.manager, req.title, req.share)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+
+
+@app.delete("/v1/rec/{rid}")
+def rec_delete(rid: str, userId: str, manager: bool = False, tenant: dict = Depends(tenant_auth)):
+    try:
+        return {"ok": recordings.delete(tenant["slug"], rid, userId, manager)}
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+
+
+@app.get("/v1/rec/{rid}/play")
+def rec_play(rid: str, userId: str, manager: bool = False, tenant: dict = Depends(tenant_auth)):
+    try:
+        return recordings.play_info(tenant["slug"], rid, userId, manager)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.post("/v1/public/meet/{code}/rec/start")
+def rec_room_start(code: str, req: RecRoomStartReq):
+    """Solo el anfitrión de una sala vigente puede grabarla. La grabación queda en la empresa dueña de la sala, a nombre de quien creó la sala."""
+    r = meet.room(code)
+    if not r or not meet._is_host(r, req.host):
+        raise HTTPException(403, "Solo el anfitrión puede grabar la videollamada.")
+    try:
+        t = (r["title"] or "Videollamada")
+        return JSONResponse(recordings.start(r["tenant"], "call", t, r["created_by"] or "", r["host_name"] or req.name, req.audio, req.mime, code), headers=_REC_CORS)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.options("/v1/public/meet/_/rec/{rid}")
+@app.options("/v1/public/meet/_/rec/{rid}/{what}")
+def rec_options(rid: str, what: str = ""):
+    return Response(status_code=204, headers=_REC_CORS)
+
+
+@app.post("/v1/public/meet/_/rec/{rid}/chunk")
+async def rec_chunk(rid: str, request: Request, seq: int = 0, x_rec_key: str = Header("")):
+    try:
+        return JSONResponse(recordings.chunk(rid, x_rec_key, seq, await request.body()), headers=_REC_CORS)
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/public/meet/_/rec/{rid}/finish")
+def rec_finish(rid: str, req: RecFinishReq, x_rec_key: str = Header("")):
+    try:
+        return JSONResponse(recordings.finish(rid, x_rec_key, req.duration), headers=_REC_CORS)
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+
+
+def _rec_file(rid: str, k: str, share: str, dl: bool):
+    f = recordings.file_for(rid, k, share)
+    if not f:
+        raise HTTPException(404, "La grabación no existe o el enlace venció.")
+    h = {"Cache-Control": "private, max-age=300", "X-Content-Type-Options": "nosniff", "Access-Control-Allow-Origin": "*"}
+    return FileResponse(f[0], media_type=f[1], filename=f[2] if dl else None, content_disposition_type="attachment" if dl else "inline", headers=h)
+
+
+@app.get("/v1/public/meet/_/rec/{rid}/file")
+def rec_file(rid: str, k: str = "", dl: int = 0):
+    """Reproduce o descarga una grabación con una llave de corta vida (la entrega el CRM al usuario con acceso)."""
+    return _rec_file(rid, k, "", bool(dl))
+
+
+@app.get("/v1/public/meet/r/{token}", response_class=HTMLResponse)
+def rec_share_page(token: str):
+    """Página pública de una grabación compartida (https://meet.<dominio>/r/<enlace>)."""
+    r = recordings.share_row(token)
+    if not r:
+        return HTMLResponse("<!doctype html><meta charset=utf-8><title>Grabación</title><body style='font-family:sans-serif;padding:40px'><h2>Esta grabación ya no está compartida.</h2>", 404, _MEET_HEADERS)
+    import html as _h
+    t = _h.escape(r["title"])
+    page = ("<!doctype html><html lang=es><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=robots content=noindex><title>" + t + "</title>"
+            "<style>body{margin:0;background:#0f1420;color:#e8ecf5;font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh}"
+            "main{width:min(1100px,94vw);padding:24px 0}h1{font-size:20px;margin:0 0 4px}p{color:#8a93a8;margin:0 0 14px;font-size:14px}video{width:100%;max-height:78vh;background:#000;border-radius:10px}"
+            "a.b{display:inline-block;margin-top:14px;background:#3b6df0;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600}</style></head><body><main>"
+            "<h1>" + t + "</h1><p>Grabada el " + r["created_at"].strftime("%d/%m/%Y %H:%M") + (" por " + _h.escape(r["owner_name"]) if r["owner_name"] else "") + "</p>"
+            "<video controls playsinline preload=metadata src='" + token + "/video'></video><br><a class=b href='" + token + "/video?dl=1'>Descargar video</a></main></body></html>")
+    return HTMLResponse(page, 200, {**_MEET_HEADERS, "Content-Security-Policy": "default-src 'none'; media-src 'self'; style-src 'unsafe-inline'"})
+
+
+@app.get("/v1/public/meet/r/{token}/video")
+def rec_share_video(token: str, dl: int = 0):
+    return _rec_file("", "", token, bool(dl))
 
 
 @app.get("/v1/public/meet/_/assets/{name:path}")

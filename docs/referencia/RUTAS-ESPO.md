@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **129** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **134** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -105,6 +105,11 @@ Total: **129** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/push/test` | CrmHub.pushTest | Envía una notificación de prueba a los dispositivos del propio usuario. */ |
 | POST | `/CrmHub/push/unsubscribe` | CrmHub.pushUnsubscribe | POST /CrmHub/push/unsubscribe. Usuario. Hub: POST /v1/push/unsubscribe. */ |
 | POST | `/CrmHub/reassign` | CrmHub.reassign | POST /CrmHub/reassign. Usuarios con permiso de asignación y edición del registro. */ |
+| POST | `/CrmHub/recDelete` | CrmHub.recDelete | POST /CrmHub/recDelete. Usuario dueño (o con alcance «todos»). {id}. Hub: DELETE /v1/rec/{id}. */ |
+| GET | `/CrmHub/recList` | CrmHub.recList | GET /CrmHub/recList. Usuario (no API ni portal). Sus grabaciones; quien tiene alcance «todos» ve las de toda la empresa. Hub: GET /v1/rec. */ |
+| GET | `/CrmHub/recPlay` | CrmHub.recPlay | GET /CrmHub/recPlay?id=. Usuario dueño (o con alcance «todos»). Direcciones de reproducción y descarga (vencen en 4 horas). Hub: GET /v1/rec/{id}/play. */ |
+| POST | `/CrmHub/recStart` | CrmHub.recStart | POST /CrmHub/recStart. Usuario. {title?, audio?, mime?}. Crea la grabación y devuelve la dirección y llave para subir el video. Hub: POST /v1/rec/start. */ |
+| POST | `/CrmHub/recUpdate` | CrmHub.recUpdate | POST /CrmHub/recUpdate. Usuario dueño (o con alcance «todos»). {id, title?, share?}. Hub: POST /v1/rec/{id}/update. */ |
 | GET | `/CrmHub/simConfig` | CrmHub.simConfig | GET /CrmHub/simConfig. Usuario (no API ni portal). Hub: GET /v1/sim/config. */ |
 | POST | `/CrmHub/simDelete` | CrmHub.simDelete | POST /CrmHub/simDelete. Usuario (no API ni portal). Hub: GET y DELETE /v1/sim/runs/{id}. */ |
 | GET | `/CrmHub/simRun` | CrmHub.simRun | GET /CrmHub/simRun. Usuario (no API ni portal). Hub: GET /v1/sim/runs/{id}. */ |

@@ -14,6 +14,7 @@ TABS = [
     {"type": "url", "id": "t8", "text": "Organigrama", "url": "#CrmHub/organigrama", "iconClass": "fas fa-sitemap", "aclScope": "Campaign"},
     {"type": "url", "id": "t13", "text": "Mensajes masivos", "url": "#CrmHub/difusion", "iconClass": "fas fa-bullhorn", "aclScope": "Campaign"},
     {"type": "url", "id": "t23", "text": "Reportes y tableros", "url": "#CrmHub/reportes", "iconClass": "fas fa-chart-pie"},
+    {"type": "url", "id": "t24", "text": "Grabaciones", "url": "#CrmHub/grabaciones", "iconClass": "fas fa-circle-dot"},
     {"type": "url", "id": "t21", "text": "Formularios internos", "url": "#CrmHub/formularios", "iconClass": "fas fa-clipboard-list", "aclScope": "Campaign"},
     {"type": "url", "id": "t22", "text": "Consultas web", "url": "#CrmHub/consultasWeb", "iconClass": "fas fa-globe", "aclScope": "Campaign"},
     {"type": "url", "id": "t14", "text": "Simulador", "url": "#CrmHub/simulador", "iconClass": "fas fa-flask-vial"},

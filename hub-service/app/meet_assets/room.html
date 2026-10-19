@@ -5,13 +5,13 @@
 <div id="lf"><p id="hi" class="hide" style="font-size:17px;font-weight:600;margin:0 0 10px"></p><video id="prev" autoplay playsinline muted></video><input id="nm" type="text" placeholder="Tu nombre" maxlength="60" autocomplete="name">
 <div class="row"><button class="tg" id="tm">🎤 Micrófono: activado</button><button class="tg" id="tc">📷 Cámara: activada</button></div>
 <div id="lgs" class="hide"><div class="lg"><span>Yo hablo en</span><select id="sp"><option value="es">Español</option><option value="en">English</option><option value="pt">Português</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="it">Italiano</option></select></div><div class="lg"><span>Quiero leer los subtítulos en</span><select id="rd"><option value="es">Español</option><option value="en">English</option><option value="pt">Português</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="it">Italiano</option><option value="off">Sin subtítulos</option></select></div></div>
-<button class="go" id="go">Unirme a la videollamada</button><div id="err"></div><div id="note">Esta sala puede mostrar subtítulos en vivo. El audio no se graba ni se guarda; el texto de la conversación se usa para generar un resumen de la reunión para el asesor.</div></div>
+<button class="go" id="go">Unirme a la videollamada</button><div id="err"></div><div id="note">Esta sala puede mostrar subtítulos en vivo. El audio no se graba salvo que el anfitrión active una grabación (todos verán un aviso); el texto de la conversación se usa para generar un resumen de la reunión para el asesor.</div></div>
 <div id="wr" class="hide"><div class="sp"></div><p id="wrt" style="margin:14px 0 4px;font-weight:600"></p><p style="color:var(--mut);font-size:14px;margin:0 0 14px">No cierres esta ventana: entrarás en cuanto te den acceso.</p><button class="tg" id="wrx">Cancelar</button></div></div></div>
 
 <div id="room" class="hide">
   <div id="top"><span id="ttl"></span><span class="tr"><span id="clock" title="Tiempo que lleva la llamada">⏱ 0:00</span><button id="langb" class="pill hide" title="Idioma en que hablas y en el que lees los subtítulos">Subtítulos</button><span id="cnt"></span></span></div>
   <div id="main">
-    <div id="stage"><div id="grid"></div><div id="subs"></div><div id="wait">Esperando a la otra persona…</div><div id="rx"></div><div id="toast"></div></div>
+    <div id="stage"><div id="recbanner" class="hide"></div><div id="grid"></div><div id="subs"></div><div id="wait">Esperando a la otra persona…</div><div id="rx"></div><div id="toast"></div></div>
     <aside id="side" class="hide">
       <div class="stabs"><button data-t="people" class="on">Personas <b id="pbadge" class="hide">0</b></button><button data-t="chat">Chat <b id="cbadge" class="hide">0</b></button><button id="sx" title="Cerrar">✕</button></div>
       <div id="p-people" class="pane">
@@ -27,6 +27,7 @@
     <button class="cb" id="bm" title="Micrófono">🎤</button><button class="cb" id="bc" title="Cámara">📷</button><button class="cb" id="bs" title="Compartir pantalla">🖥️</button>
     <button class="cb" id="bh" title="Levantar la mano">✋</button><button class="cb" id="br" title="Reacciones">😀</button>
     <button class="cb hide on" id="bcc" title="Subtítulos">CC</button>
+    <button class="cb hide" id="brec" title="Grabar la videollamada">⏺</button>
     <button class="cb" id="bmore" title="Más opciones">⋮</button>
     <button class="cb" id="bp" title="Personas">👥<b id="pcount">1</b></button><button class="cb" id="bch" title="Chat de la llamada">💬<b id="cdot" class="hide"></b></button>
     <button class="cb end" id="be" title="Salir de la llamada">📞</button>
@@ -34,6 +35,10 @@
   <div id="rxp" class="pop hide"><button>👍</button><button>👏</button><button>❤️</button><button>😂</button><button>😮</button><button>🎉</button></div>
   <div id="lgp" class="pop hide"><h4>Subtítulos en vivo</h4><div class="lg"><span>Yo hablo en</span><select id="sp2"><option value="es">Español</option><option value="en">English</option><option value="pt">Português</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="it">Italiano</option></select></div><div class="lg"><span>Leer los subtítulos en</span><select id="rd2"><option value="es">Español</option><option value="en">English</option><option value="pt">Português</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="it">Italiano</option><option value="off">Sin subtítulos</option></select></div></div>
   <div id="more" class="pop hide"></div>
+  <div id="recp" class="pop wide hide"><h4>Grabar la videollamada</h4><p class="mut" style="margin:0 0 10px">El navegador te pedirá qué compartir: elige <b>esta pestaña</b> para grabar la videollamada tal como la ves. Todos los participantes verán el aviso de que se está grabando. La grabación queda en <b>Grabaciones</b> del CRM.</p>
+    <label class="chk"><input type="checkbox" id="rec-call"> 🔊 Grabar el <b>audio de la llamada</b> (las voces de los demás)</label>
+    <label class="chk"><input type="checkbox" id="rec-mic"> 🎤 Grabar <b>mi micrófono</b></label>
+    <p class="mut" style="margin:8px 0 12px">Por defecto se graba sin audio.</p><button class="mini big" id="rec-go" style="background:#e5484d;color:#fff">⏺ Empezar a grabar</button><div id="rec-msg" class="mut"></div></div>
   <div id="bgp" class="pop wide hide"><h4>Fondos y efectos</h4><div id="bgl"></div><div id="bgm" class="mut"></div></div>
   <div id="devp" class="pop wide hide"><h4>Audio y video</h4><div class="lg"><span>Micrófono</span><select id="d-mic"></select></div><div class="lg"><span>Cámara</span><select id="d-cam"></select></div><div class="lg"><span>Altavoces</span><select id="d-spk"></select></div></div>
   <div id="invp" class="pop wide hide"><h4>Invitar a más personas</h4><p class="mut">Cada persona que entre con este enlace te pedirá acceso y tú decides si la admites.</p>

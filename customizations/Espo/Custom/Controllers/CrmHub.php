@@ -2287,4 +2287,58 @@ class CrmHub
         $body = !empty($d->kind) ? ['kind' => (string) $d->kind, 'model' => (string) ($d->model ?? ''), 'base_url' => (string) ($d->base_url ?? ''), 'api_key' => (string) ($d->api_key ?? ''), 'workspace_id' => (string) ($d->workspace_id ?? '')] : null;
         return (object) $this->hubCall('POST', '/v1/ai/test', $body, 150);
     }
+    // ---------- Grabaciones de pantalla y de videollamadas (Hub: /v1/rec*; el video se sube y se reproduce directo con el Hub, con llaves de corta vida)
+    private function recManager(): bool
+    {
+        return $this->assignmentLevel() === 'all';
+    }
+
+    /** GET /CrmHub/recList. Usuario (no API ni portal). Sus grabaciones; quien tiene alcance «todos» ve las de toda la empresa. Hub: GET /v1/rec. */
+    public function getActionRecList(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $r = $this->hubCall('GET', '/v1/rec?userId=' . urlencode($this->user->getId()) . '&all=' . ($this->recManager() ? 'true' : 'false'), null, 15);
+        $r['me'] = $this->user->getId();
+        $r['manager'] = $this->recManager();
+        return (object) $r;
+    }
+
+    /** POST /CrmHub/recStart. Usuario. {title?, audio?, mime?}. Crea la grabación y devuelve la dirección y llave para subir el video. Hub: POST /v1/rec/start. */
+    public function postActionRecStart(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/rec/start', ['title' => (string) ($d->title ?? ''), 'userId' => $this->user->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName')),
+            'audio' => !empty($d->audio), 'mime' => (string) ($d->mime ?? 'video/webm')], 20);
+    }
+
+    /** POST /CrmHub/recUpdate. Usuario dueño (o con alcance «todos»). {id, title?, share?}. Hub: POST /v1/rec/{id}/update. */
+    public function postActionRecUpdate(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        $b = ['userId' => $this->user->getId(), 'manager' => $this->recManager()];
+        if (isset($d->title)) {
+            $b['title'] = (string) $d->title;
+        }
+        if (isset($d->share)) {
+            $b['share'] = (bool) $d->share;
+        }
+        return (object) $this->hubCall('POST', '/v1/rec/' . rawurlencode((string) ($d->id ?? '')) . '/update', $b, 15);
+    }
+
+    /** POST /CrmHub/recDelete. Usuario dueño (o con alcance «todos»). {id}. Hub: DELETE /v1/rec/{id}. */
+    public function postActionRecDelete(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('DELETE', '/v1/rec/' . rawurlencode((string) ($d->id ?? '')) . '?userId=' . urlencode($this->user->getId()) . '&manager=' . ($this->recManager() ? 'true' : 'false'), null, 15);
+    }
+
+    /** GET /CrmHub/recPlay?id=. Usuario dueño (o con alcance «todos»). Direcciones de reproducción y descarga (vencen en 4 horas). Hub: GET /v1/rec/{id}/play. */
+    public function getActionRecPlay(Request $request): \stdClass
+    {
+        $this->simGuard();
+        return (object) $this->hubCall('GET', '/v1/rec/' . rawurlencode((string) $request->getQueryParam('id')) . '/play?userId=' . urlencode($this->user->getId()) . '&manager=' . ($this->recManager() ? 'true' : 'false'), null, 15);
+    }
 }

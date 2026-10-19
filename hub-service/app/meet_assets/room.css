@@ -72,3 +72,7 @@ body:not(.framed) .pr[data-pid] { cursor: pointer; } body:not(.framed) .pr[data-
 #fcard.hide { display: none; } #fcard .fh { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; } #fcard .fh b { flex: 1; font-size: 15px; } #fcard .fx { border: 0; background: none; font-size: 16px; color: #5d6678; }
 #fcard .fr { font-size: 13.5px; padding: 3px 0; word-break: break-word; } #fcard .fa { margin-top: 8px; } #fcard .fa a { font-weight: 600; color: #3a52e0; }
 @media (max-width: 700px) { #fcard { right: 12px; left: 12px; width: auto; } }
+
+#recbanner{position:absolute;top:10px;left:10px;z-index:6;background:#3a1218;border:1px solid #e5484d;color:#ffd7da;border-radius:999px;padding:5px 12px;font-size:13px;display:flex;align-items:center;gap:8px}
+#recbanner::before{content:"";width:9px;height:9px;border-radius:50%;background:#e5484d;animation:rb 1.2s infinite}@keyframes rb{50%{opacity:.3}}
+#brec.on{background:#e5484d;color:#fff}.chk{display:block;margin:6px 0;font-size:14px;cursor:pointer}

@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **144** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **155** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -97,6 +97,11 @@ Total: **144** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/processes/test` | `proc_test` | Prueba una definición contra un lead real (o datos de ejemplo) sin guardar nada en el lead. |
 | GET | `/v1/public/meet/_/assets/{name:path}` | `meet_asset` | Archivos estáticos de la sala: página (js y css), fondos virtuales y segmentación de persona (alojados aquí, sin servicios de terceros). |
 | GET | `/v1/public/meet/_/lk.js` | `meet_js` | Cliente de LiveKit para la página de la videollamada. |
+| POST | `/v1/public/meet/_/rec/{rid}/chunk` | `rec_chunk` | — |
+| GET | `/v1/public/meet/_/rec/{rid}/file` | `rec_file` | Reproduce o descarga una grabación con una llave de corta vida (la entrega el CRM al usuario con acceso). |
+| POST | `/v1/public/meet/_/rec/{rid}/finish` | `rec_finish` | — |
+| GET | `/v1/public/meet/r/{token}` | `rec_share_page` | Página pública de una grabación compartida (https://meet.<dominio>/r/<enlace>). |
+| GET | `/v1/public/meet/r/{token}/video` | `rec_share_video` | — |
 | GET | `/v1/public/meet/{code}` | `meet_page` | Página pública de la videollamada (se publica en https://meet.<dominio>/<código>). Puede incrustarse en el CRM de la empresa (el asesor la ve sin salir de la ficha). |
 | POST | `/v1/public/meet/{code}/admin` | `meet_admin` | Controles del anfitrión: silenciar, quitar, bloquear la sala o terminar la llamada. |
 | GET | `/v1/public/meet/{code}/chat` | `meet_chat_get` | Historial reciente del chat de la sala (para quien entra tarde). |
@@ -110,6 +115,7 @@ Total: **144** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/public/meet/{code}/knock` | `meet_knock` | El invitado pide entrar: espera a que el anfitrión lo admita (y se le avisa al anfitrión aunque no esté dentro). |
 | GET | `/v1/public/meet/{code}/knock/{kid}` | `meet_knock_status` | Estado de la solicitud; admitido trae la credencial de entrada. |
 | GET | `/v1/public/meet/{code}/pending` | `meet_pending` | Solicitudes esperando al anfitrión (requiere su clave). |
+| POST | `/v1/public/meet/{code}/rec/start` | `rec_room_start` | Solo el anfitrión de una sala vigente puede grabarla. La grabación queda en la empresa dueña de la sala, a nombre de quien creó la sala. |
 | POST | `/v1/public/meet/{code}/stt` | `meet_subtitle` | Subtítulo de un enunciado de audio (WAV 16 kHz mono): lo transcribe y traduce con IA local. No guarda nada. |
 | POST | `/v1/public/meet/{code}/token` | `meet_token` | Credencial para entrar a la sala con LiveKit. |
 | GET | `/v1/public/{slug}/forms/{form_slug}` | `form_page` | Página pública HTML de un formulario web (se publica en /f/<slug>); 404 si no existe. |
@@ -119,6 +125,11 @@ Total: **144** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/push/send` | `push_send` | Envía una notificación push a usuarios del tenant. |
 | POST | `/v1/push/subscribe` | `push_subscribe` | Registra la suscripción push de un usuario. |
 | POST | `/v1/push/unsubscribe` | `push_unsubscribe` | Elimina una suscripción push. |
+| GET | `/v1/rec` | `rec_list` | — |
+| POST | `/v1/rec/start` | `rec_start` | — |
+| DELETE | `/v1/rec/{rid}` | `rec_delete` | — |
+| GET | `/v1/rec/{rid}/play` | `rec_play` | — |
+| POST | `/v1/rec/{rid}/update` | `rec_update` | — |
 | GET | `/v1/sim/config` | `sim_config` | Verificación de configuración y pasos disponibles del simulador. |
 | GET | `/v1/sim/runs` | `sim_list` | Lista las simulaciones del tenant (opcionalmente de un usuario). |
 | POST | `/v1/sim/runs` | `sim_start` | Inicia una simulación del proceso comercial y devuelve su id. |
