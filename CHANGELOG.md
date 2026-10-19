@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.10.1] - 2026-10-19
+
 ### Añadido
 - **Tableros en el escritorio (Inicio).** Antes, al guardar un tablero de «Reportes y tableros», el escritorio seguía vacío. Ahora cada usuario puede **fijar** los tableros que quiera ver al entrar: botón **«Ver en mi escritorio»** en el tablero (y, al guardar un tablero nuevo, el sistema pregunta si lo quieres en Inicio). Se pueden fijar **siempre o solo entre dos fechas** (luego dejan de mostrarse solos), tener **varios**, **subirlos o bajarlos** y **quitarlos** (con la X del tablero o desde «Administrar»); quitarlo del escritorio no lo elimina.
 
