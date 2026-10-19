@@ -2,6 +2,11 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
+## Sin publicar (después de v1.10.2)
+
+- `c417b70` 2026-10-19 — Versión 1.10.3
+- `5fa4352` 2026-10-19 — Pantalla de carga general al abrir la plataforma y al cambiar de página
+
 ## v1.10.2
 
 - `0f9acf6` 2026-10-19 — Versión 1.10.2
