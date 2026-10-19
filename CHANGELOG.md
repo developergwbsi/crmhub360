@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.9.0] - 2026-10-19
+
 ### Reportes y tableros: un «Power BI» dentro de la plataforma
 - **Nuevo menú «Reportes y tableros»** (para todos los usuarios): cada quien arma y guarda **sus propios reportes y tableros**, sin límite de cantidad.
 - **Reportes**: eliges los datos (leads, contactos, cuentas, oportunidades, tareas, reuniones, llamadas y **las respuestas de tus formularios internos**, incluidos sus cálculos y montos), pones filtros (por estado, fechas, montos, texto…), **agrupas** (por estado, asesor, origen, campaña, día/semana/mes/año…, y además divides por un segundo criterio), eliges qué **medir** (cantidad, suma, promedio, mínimo, máximo) y cómo verlo: **tabla, barras, barras horizontales o apiladas, líneas, áreas, circular, anillo o indicador (cifra grande)**. Ves el resultado al instante mientras lo armas.
