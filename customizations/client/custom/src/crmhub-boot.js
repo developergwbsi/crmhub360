@@ -534,7 +534,7 @@
     window.ChEmpty = {html: emptyHtml, kinds: Object.keys(ART)};
 
     // El «Sin datos» nativo de EspoCRM (listas, paneles, ventanas) se cambia por la ilustración.
-    // Escritorio (Inicio) sin cajas: en vez de una pantalla en blanco, un aviso con las formas de empezar a armarlo
+    // Escritorio (Inicio) sin widgets: en vez de una pantalla en blanco, un aviso con las formas de empezar a armarlo
     function paintHomeEmpty() {
         var home = document.querySelector('.home-content');
         var old = home && home.querySelector(':scope > .ch-home-empty');
@@ -546,8 +546,8 @@
         if (old || !grid || !window.ChEmpty) { return; }
         var box = document.createElement('div');
         box.className = 'ch-home-empty';
-        box.innerHTML = window.ChEmpty.html({kind: 'box', title: 'Este escritorio está vacío', text: 'Añade cajas con la información que quieres ver al entrar (leads, tareas, actividad…) o arma tus propios reportes y tableros con gráficas.'}) +
-            '<div class="ch-home-empty-act"><button type="button" class="btn btn-primary" data-ch-he="add"><span class="fas fa-plus"></span> Añadir una caja</button>' +
+        box.innerHTML = window.ChEmpty.html({kind: 'box', title: 'Este escritorio está vacío', text: 'Añade widgets con la información que quieres ver al entrar (leads, tareas, actividad…) o arma tus propios reportes y tableros con gráficas.'}) +
+            '<div class="ch-home-empty-act"><button type="button" class="btn btn-primary" data-ch-he="add"><span class="fas fa-plus"></span> Añadir un widget</button>' +
             '<a class="btn btn-default" href="#CrmHub/reportes"><span class="fas fa-chart-pie"></span> Crear un reporte o tablero</a>' +
             '<button type="button" class="btn btn-default" data-ch-he="edit"><span class="fas fa-pencil-alt"></span> Editar escritorio</button></div>';
         box.addEventListener('click', function (e) {

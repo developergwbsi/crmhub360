@@ -18,7 +18,8 @@
         "WhatsApp": "WhatsApp",
         "Telegram": "Telegram",
         "Invitar por Telegram": "Invitar por Telegram",
-        "SMS": "SMS"
+        "SMS": "SMS",
+        "Add Dashlet": "Añadir widget"
     },
     "massActions": {
         "reassign": "Reasignar"
