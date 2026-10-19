@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Formularios con cálculos y plan de pagos
+- **Campos de cálculo**: un campo puede ser una **fórmula** con otros campos del formulario (suma, resta, multiplicación, división, potencia, porcentajes, paréntesis y funciones como `REDONDEAR`, `SI`, `MIN`, `MAX`, `SUMA`, `PROMEDIO`, `ABS` y `CUOTA`). Se calcula en pantalla mientras se escribe, se vuelve a calcular en el servidor al guardar y sale en el PDF; se puede formatear como número, monto, porcentaje o entero. Al diseñar, los campos se insertan en la fórmula con un clic y se valida que esté bien escrita.
+- **Plan de pagos**: campo que arma la **tabla de amortización** (cuota, interés, capital y saldo de cada cuota, con fechas) a partir del valor a financiar, la tasa y el número de cuotas —cada uno puede ser un campo o una fórmula—. Métodos: cuota fija (sistema francés), abono fijo a capital, interés simple y sin interés; cuotas mensuales, quincenales o semanales; tasa por periodo o anual; fecha de la primera cuota tomada de un campo. Se ve completo en el formulario y **sale en el PDF**; el resumen (cuota, total, intereses) también se puede usar en mensajes y en acciones.
+
 ## [1.8.0] - 2026-10-19
 
 ### Consultas web con navegador: login, navegación y páginas con JavaScript

@@ -72,6 +72,7 @@ define('custom:views/iforms', ['view', 'custom:ui', 'custom:studio'], function (
                 <select class="form-control input-sm" data-b="fields.${i}.width"><option value="full" ${x.width !== 'half' ? 'selected' : ''}>Ancho completo</option><option value="half" ${x.width === 'half' ? 'selected' : ''}>Media columna</option></select>` : ''}
                 <a data-mv="${i}:-1" title="Subir"><span class="fas fa-arrow-up"></span></a><a data-mv="${i}:1" title="Bajar"><span class="fas fa-arrow-down"></span></a><a data-del-f="${i}" title="Quitar"><span class="far fa-trash-can"></span></a></div>
                 ${['select', 'multiselect'].includes(x.type) ? `<textarea class="form-control input-sm" rows="2" data-opts="${i}" placeholder="Una opción por línea">${esc((x.options || []).join('\n'))}</textarea>` : ''}
+                ${x.type === 'calc' ? this.calcEd(f, x, i) : x.type === 'plan' ? this.planEd(f, x, i) : ''}
                 ${x.type !== 'heading' ? `<input class="form-control input-sm" data-b="fields.${i}.help" value="${esc(x.help)}" placeholder="Ayuda para quien lo llena (opcional)">` : ''}</div>`).join('');
             const acts = (f.actions || []).map((a, i) => this.actionEd(f, a, i, keys)).join('');
             return {general: `<div class="ch-sim-card"><h4>Datos del formulario</h4>
@@ -83,6 +84,29 @@ define('custom:views/iforms', ['view', 'custom:ui', 'custom:studio'], function (
                 <label class="ch-ifb-ck"><input type="checkbox" data-b="tab" ${f.tab ? 'checked' : ''}> Como pestaña en la ficha del lead (panel «Formularios»)</label>
                 <label class="ch-ifb-ck"><input type="checkbox" data-b="button" ${f.button ? 'checked' : ''}> En el botón «Llenar formulario» de la ficha</label></div>`, fields: `<div class="ch-sim-card"><h4>Campos</h4>${fields}<button class="btn btn-default btn-sm" data-a="addf"><span class="fas fa-plus"></span> Añadir campo</button></div>`, actions: `<div class="ch-sim-card"><h4>Acciones</h4><p class="ch-muted">Qué pasa al guardar el formulario o al pulsar un botón en la ficha.</p>${acts}
                 <button class="btn btn-default btn-sm" data-a="adda"><span class="fas fa-plus"></span> Añadir acción</button></div>`};
+        }
+
+        // claves de los campos que se pueden usar en fórmulas (se insertan con un clic en el cuadro enfocado)
+        chips(f, self) { const ks = f.fields.filter(k => !['heading', 'plan'].includes(k.type) && k.key !== self); return ks.length ? `<div class="ch-ifb-chips">${ks.map(k => `<button type="button" class="ch-ifb-chip" data-ins="${esc(k.key)}" title="${esc(k.label)}">${esc(k.key)}</button>`).join('')}</div>` : ''; }
+
+        calcEd(f, x, i) {
+            const p = `fields.${i}.`;
+            return `<input class="form-control input-sm" data-fx data-b="${p}formula" value="${esc(x.formula)}" placeholder="Fórmula, p. ej.: valor * (1 - descuento / 100)">${this.chips(f, x.key)}
+                <div class="ch-ifb-row"><select class="form-control input-sm" data-b="${p}format">${this.opt([['number', 'Número'], ['money', 'Monto ($)'], ['percent', 'Porcentaje'], ['integer', 'Entero']], x.format || 'number')}</select>
+                <label class="ch-ifb-ck">Decimales <input type="number" min="0" max="6" class="form-control input-sm" style="width:70px;display:inline-block" data-b="${p}decimals" value="${esc(x.decimals || 0)}"></label></div>
+                <div class="ch-muted">Suma, resta, multiplica (*), divide (/), potencia (^), % pospuesto y paréntesis. Funciones: REDONDEAR(x; d), SI(condición; sí; no), MIN, MAX, SUMA, PROMEDIO, ABS, CUOTA(tasa%; cuotas; valor). Separa con «;» si usas coma decimal.</div>`;
+        }
+
+        planEd(f, x, i) {
+            const p = `fields.${i}.plan.`, pl = x.plan || {};
+            const dates = f.fields.filter(k => k.type === 'date');
+            return `<div class="ch-muted">Cada dato puede ser un campo (por su clave), un número o una fórmula.</div>
+                <div class="ch-ifb-row"><input class="form-control input-sm" data-fx data-b="${p}principal" value="${esc(pl.principal)}" placeholder="Valor a financiar (ej.: precio - cuota_inicial)"><input class="form-control input-sm" data-fx data-b="${p}rate" value="${esc(pl.rate)}" placeholder="Tasa % (ej.: 1.8)"><input class="form-control input-sm" data-fx data-b="${p}periods" value="${esc(pl.periods)}" placeholder="N.º de cuotas (ej.: 12)"></div>${this.chips(f, x.key)}
+                <div class="ch-ifb-row"><select class="form-control input-sm" data-b="${p}rateType">${this.opt([['mensual', 'La tasa es por periodo (cada cuota)'], ['anual', 'La tasa es anual (nominal)']], pl.rateType || 'mensual')}</select>
+                <select class="form-control input-sm" data-b="${p}method">${this.opt([['frances', 'Cuota fija (sistema francés)'], ['aleman', 'Abono fijo a capital (cuota decreciente)'], ['simple', 'Interés simple (cuota fija)'], ['sininteres', 'Sin interés']], pl.method || 'frances')}</select>
+                <select class="form-control input-sm" data-b="${p}freq">${this.opt([['mensual', 'Cuotas mensuales'], ['quincenal', 'Cuotas quincenales'], ['semanal', 'Cuotas semanales']], pl.freq || 'mensual')}</select>
+                <select class="form-control input-sm" data-b="${p}startField"><option value="">Primera cuota: un periodo después de hoy</option>${dates.map(k => `<option value="${esc(k.key)}" ${pl.startField === k.key ? 'selected' : ''}>Primera cuota el día de: ${esc(k.label)}</option>`).join('')}</select>
+                <select class="form-control input-sm" data-b="${p}decimals">${this.opt([['0', 'Sin decimales'], ['2', '2 decimales']], String(pl.decimals || 0))}</select></div>`;
         }
 
         actionEd(f, a, i, keys) {
@@ -220,14 +244,16 @@ define('custom:views/iforms', ['view', 'custom:ui', 'custom:studio'], function (
             const f = () => this.forms[this.sel];
             root.onchange = root.oninput = e => {
                 const t = e.target, b = t.dataset.b;
-                if (b) { this.set(b, t.type === 'checkbox' ? t.checked : t.type === 'number' ? +t.value : t.value); if (/^fields\.\d+\.label$/.test(b)) { this.syncKeys(f()); } if (t.hasAttribute('data-redraw') && e.type === 'change') { if (t.dataset.b.endsWith('.type') && t.dataset.b.startsWith('actions.')) { const i = +t.dataset.b.split('.')[1]; f().actions[i].config = {}; } this.draw(); } return; }
+                if (b) { this.set(b, t.type === 'checkbox' ? t.checked : t.type === 'number' ? +t.value : t.value); if (/^fields\.\d+\.label$/.test(b)) { this.syncKeys(f()); } if (/^fields\.\d+\.type$/.test(b)) { const fl = f().fields[+b.split('.')[1]]; if (fl.type === 'plan' && !fl.plan) { fl.plan = {principal: '', rate: '', periods: '', method: 'frances', rateType: 'mensual', freq: 'mensual', startField: '', decimals: 0}; } if (fl.type === 'calc' && !fl.formula) { fl.formula = ''; fl.format = 'number'; fl.decimals = 0; } } if (t.hasAttribute('data-redraw') && e.type === 'change') { if (t.dataset.b.endsWith('.type') && t.dataset.b.startsWith('actions.')) { const i = +t.dataset.b.split('.')[1]; f().actions[i].config = {}; } this.draw(); } return; }
                 if (t.dataset.st) { const s = f().stages, i = s.indexOf(t.dataset.st); if (t.checked && i < 0) { s.push(t.dataset.st); } else if (!t.checked && i >= 0) { s.splice(i, 1); } this.dirty = true; return; }
                 if (t.dataset.opts) { f().fields[+t.dataset.opts].options = t.value.split('\n').map(x => x.trim()).filter(Boolean); this.dirty = true; return; }
                 if (t.dataset.pf) { const [i, k] = t.dataset.pf.split(':'), c = f().actions[+i].config, fk = f().fields.find(x => (x.key || x.label) === k); const key = fk && fk.key; if (!key) { return; } c.fields = c.fields || []; const j = c.fields.indexOf(key); if (t.checked && j < 0) { c.fields.push(key); } else if (!t.checked && j >= 0) { c.fields.splice(j, 1); } this.dirty = true; return; }
                 if (t.dataset.wmap) { const idx = t.dataset.wmap.indexOf(':'), i = +t.dataset.wmap.slice(0, idx), lbl = t.dataset.wmap.slice(idx + 1), c = f().actions[i].config; c.map = c.map || {}; if (t.value) { c.map[lbl] = t.value; } else { delete c.map[lbl]; } this.dirty = true; return; }
                 if (t.dataset.map) { const [i, k] = t.dataset.map.split(':'), c = f().actions[+i].config; c.map = c.map || {}; if (t.value) { c.map[k] = t.value; } else { delete c.map[k]; } this.dirty = true; }
             };
+            root.addEventListener('focusin', e => { if (e.target.dataset && e.target.dataset.fx !== undefined) { this._fx = e.target; } });
             root.onclick = e => {
+                const ins = e.target.closest('[data-ins]'); if (ins) { const t = this._fx && root.contains(this._fx) ? this._fx : ins.closest('.ch-ifb-fld').querySelector('[data-fx]'); if (t) { const a = t.selectionStart == null ? t.value.length : t.selectionStart, b = t.selectionEnd == null ? a : t.selectionEnd; t.value = t.value.slice(0, a) + ins.dataset.ins + t.value.slice(b); t.focus(); t.selectionStart = t.selectionEnd = a + ins.dataset.ins.length; t.dispatchEvent(new Event('input', {bubbles: true})); } return; }
                 const tb = e.target.closest('[data-tab]'); if (tb) { this.tab = tb.dataset.tab; this.draw(); return; }
                 const s = e.target.closest('[data-sel]'); if (s) { this.sel = +s.dataset.sel; this.draw(); return; }
                 const mv = e.target.closest('[data-mv]'); if (mv) { const [i, d] = mv.dataset.mv.split(':').map(Number), a = f().fields, j = i + d; if (j >= 0 && j < a.length) { [a[i], a[j]] = [a[j], a[i]]; this.dirty = true; this.draw(); } return; }

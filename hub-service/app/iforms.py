@@ -9,7 +9,7 @@ import re
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from . import db, processes
+from . import db, formula, processes
 from .espo import Espo
 
 log = logging.getLogger("hub.iforms")
@@ -25,7 +25,8 @@ CREATE INDEX IF NOT EXISTS iform_runs_entry ON iform_runs (tenant, entry_id, id 
 CREATE TABLE IF NOT EXISTS web_sources (tenant TEXT NOT NULL, id TEXT NOT NULL, def JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant, id));
 """
 FIELD_TYPES = {"heading": "Título de sección", "text": "Texto corto", "textarea": "Texto largo", "number": "Número", "money": "Monto", "date": "Fecha", "select": "Lista (una opción)",
-               "multiselect": "Lista (varias opciones)", "bool": "Sí / No", "phone": "Teléfono", "email": "Correo"}
+               "multiselect": "Lista (varias opciones)", "bool": "Sí / No", "phone": "Teléfono", "email": "Correo",
+               "calc": "Cálculo (fórmula)", "plan": "Plan de pagos (cuotas)"}
 ACTION_TYPES = {"web": "Consultar una página web", "pdf": "Generar PDF", "status": "Cambiar el estado del lead", "task": "Crear una tarea", "send": "Enviar al cliente", "setfields": "Copiar respuestas a campos del lead"}
 LEAD_TARGETS = list(processes.FIELDS)
 MAX_FORMS, MAX_FIELDS, MAX_ACTIONS = 30, 60, 8
@@ -83,11 +84,33 @@ def clean(forms: list) -> list[dict]:
             opts = [str(o).strip()[:80] for o in (x.get("options") or []) if str(o).strip()][:40] if typ in ("select", "multiselect") else []
             if typ in ("select", "multiselect") and not opts:
                 raise ValueError(f"«{name}»: la lista «{label}» necesita opciones.")
-            fields.append({"key": key, "label": label, "type": typ, "required": bool(x.get("required")) and typ != "heading", "options": opts, "help": str(x.get("help", ""))[:200],
-                           "width": "half" if x.get("width") == "half" else "full"})
+            fld = {"key": key, "label": label, "type": typ, "required": bool(x.get("required")) and typ not in ("heading", "calc", "plan"), "options": opts, "help": str(x.get("help", ""))[:200],
+                   "width": "half" if x.get("width") == "half" else "full"}
+            if typ == "calc":
+                fld.update({"formula": str(x.get("formula", "")).strip()[:400], "format": x.get("format") if x.get("format") in ("number", "money", "percent", "integer") else "number", "decimals": max(0, min(6, int(x.get("decimals") or 0)))})
+            elif typ == "plan":
+                pl = x.get("plan") or {}
+                fld["plan"] = {k: str(pl.get(k, "")).strip()[:300] for k in ("principal", "rate", "periods")}
+                fld["plan"].update({"method": pl.get("method") if pl.get("method") in ("frances", "aleman", "simple", "sininteres") else "frances", "rateType": "anual" if pl.get("rateType") == "anual" else "mensual",
+                                    "freq": pl.get("freq") if pl.get("freq") in ("mensual", "quincenal", "semanal") else "mensual", "startField": str(pl.get("startField", ""))[:40], "decimals": max(0, min(2, int(pl.get("decimals") or 0)))})
+            fields.append(fld)
         if not [x for x in fields if x["type"] != "heading"]:
             raise ValueError(f"«{name}»: añade al menos un campo.")
         fkeys = {x["key"] for x in fields}
+        inputs = {x["key"] for x in fields if x["type"] not in ("heading", "plan")}
+        for x in fields:
+            try:
+                if x["type"] == "calc":
+                    if not x["formula"]:
+                        raise formula.FormulaError("escribe la fórmula.")
+                    formula.validate(x["formula"], inputs - {x["key"]})
+                elif x["type"] == "plan":
+                    for k, lab in (("principal", "valor a financiar"), ("rate", "tasa"), ("periods", "número de cuotas")):
+                        if not x["plan"][k]:
+                            raise formula.FormulaError(f"indica el {lab}.")
+                        formula.validate(x["plan"][k], inputs)
+            except formula.FormulaError as e:
+                raise ValueError(f"«{name}» · «{x['label']}»: {e}")
         actions = []
         for a in (f.get("actions") or [])[:MAX_ACTIONS]:
             typ = a.get("type")
@@ -362,7 +385,7 @@ def _check(d: dict, values: dict) -> tuple[dict, bool, list[str]]:
     """Normaliza las respuestas según los campos del formulario. Devuelve (valores, completo, faltantes)."""
     out, missing = {}, []
     for f in d["fields"]:
-        if f["type"] == "heading":
+        if f["type"] in ("heading", "calc", "plan"):
             continue
         v = values.get(f["key"])
         if f["type"] == "bool":
@@ -383,7 +406,69 @@ def _check(d: dict, values: dict) -> tuple[dict, bool, list[str]]:
             missing.append(f["label"])
         if not empty:
             out[f["key"]] = v
+    compute(d, out)
     return out, not missing, missing
+
+
+def _env(d: dict, vals: dict) -> dict:
+    env = {}
+    for f in d["fields"]:
+        v = vals.get(f["key"])
+        if f["type"] in ("number", "money", "calc") and isinstance(v, (int, float)):
+            env[f["key"]] = float(v)
+        elif f["type"] == "bool" and v is not None:
+            env[f["key"]] = 1.0 if v else 0.0
+        elif f["type"] in ("number", "money", "calc"):
+            env[f["key"]] = 0.0
+    return env
+
+
+def compute(d: dict, vals: dict) -> None:
+    """Calcula en `vals` los campos de fórmula (en el orden en que dependen unos de otros) y el resumen de cada plan de pagos. Un error de cálculo deja el campo vacío."""
+    calcs = [f for f in d["fields"] if f["type"] == "calc"]
+    for _ in range(len(calcs) + 1):
+        changed = False
+        for f in calcs:
+            try:
+                v = formula.evaluate(f["formula"], _env(d, vals))
+                v = round(v, f.get("decimals", 0)) if f.get("decimals") else float(round(v)) if f.get("format") in ("integer", "money") and not f.get("decimals") else v
+            except formula.FormulaError:
+                v = None
+            if v is None:
+                if f["key"] in vals:
+                    vals.pop(f["key"])
+                    changed = True
+            elif vals.get(f["key"]) != v:
+                vals[f["key"]] = v
+                changed = True
+        if not changed:
+            break
+    for f in d["fields"]:
+        if f["type"] == "plan":
+            sch = plan_schedule(d, f, vals)
+            if sch:
+                vals[f["key"]] = {"firstPay": sch["firstPay"], "total": sch["total"], "interest": sch["interest"], "n": sch["n"]}
+            else:
+                vals.pop(f["key"], None)
+
+
+def plan_schedule(d: dict, f: dict, vals: dict) -> dict | None:
+    """Tabla de amortización de un campo «plan de pagos» con los valores del formulario; None si faltan datos o hay error."""
+    from datetime import date as _d
+    pl, env = f["plan"], _env(d, vals)
+    try:
+        principal = formula.evaluate(pl["principal"], env)
+        rate = formula.evaluate(pl["rate"], env)
+        n = int(round(formula.evaluate(pl["periods"], env)))
+        start = None
+        sv = vals.get(pl.get("startField") or "")
+        if isinstance(sv, str) and re.match(r"^\d{4}-\d{2}-\d{2}", sv):
+            start = _d.fromisoformat(sv[:10])
+        if principal <= 0 or n <= 0:
+            return None
+        return formula.schedule(principal, rate, n, pl["method"], pl["rateType"], pl["freq"], start, pl.get("decimals", 0), first_is_start=start is not None)
+    except (formula.FormulaError, ValueError):
+        return None
 
 
 def entries(tenant: str, lead_id: str) -> list[dict]:
@@ -449,9 +534,25 @@ async def merge_entry(tenant: dict, lead_id: str, form_id: str, values: dict, us
 
 
 # ---------------- acciones
+def _money(x: float, dec: int = 0) -> str:
+    t = f"{abs(x):,.{dec}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return ("-" if x < 0 else "") + "$ " + t
+
+
 def _fmt(f: dict, v) -> str:
     if v is None or v == "" or v == []:
         return "—"
+    if f["type"] == "plan" and isinstance(v, dict):
+        return f"{v['n']} cuotas de {_money(v['firstPay'], f['plan'].get('decimals', 0))} · total {_money(v['total'], f['plan'].get('decimals', 0))} · intereses {_money(v['interest'], f['plan'].get('decimals', 0))}"
+    if f["type"] == "calc":
+        fm, dec = f.get("format", "number"), f.get("decimals", 0)
+        if fm == "money":
+            return _money(float(v), dec)
+        if fm == "percent":
+            return f"{float(v) * 100:,.{dec}f}".replace(",", "X").replace(".", ",").replace("X", ".") + " %"
+        if fm == "integer":
+            return f"{int(round(float(v))):,}".replace(",", ".")
+        return f"{float(v):,.{dec}f}".replace(",", "X").replace(".", ",").replace("X", ".")
     if f["type"] == "bool":
         return "Sí" if v else "No"
     if f["type"] == "multiselect":
@@ -539,6 +640,20 @@ def render_pdf(tenant: dict, d: dict, entry: dict, lead: dict, cfg: dict, logo: 
         if want and f["key"] not in want:
             continue
         block.append([Paragraph(esc(f["label"]), lab), Paragraph(esc(_fmt(f, entry["values"].get(f["key"]))).replace("\n", "<br/>"), cell)])
+        if f["type"] == "plan":
+            sch = plan_schedule(d, f, entry["values"])
+            if sch:
+                flush()
+                dec = f["plan"].get("decimals", 0)
+                data = [[Paragraph(f"<b>{h}</b>", cell) for h in ("N.º", "Fecha", "Cuota", "Interés", "Capital", "Saldo")]]
+                for r in sch["rows"][:240]:
+                    dd = r["date"].split("-")
+                    data.append([str(r["n"]), f"{dd[2]}/{dd[1]}/{dd[0]}", _money(r["pay"], dec), _money(r["interest"], dec), _money(r["capital"], dec), _money(r["balance"], dec)])
+                data.append([Paragraph("<b>Total</b>", cell), "", Paragraph(f"<b>{_money(sch['total'], dec)}</b>", cell), Paragraph(f"<b>{_money(sch['interest'], dec)}</b>", cell), "", ""])
+                pt = Table(data, colWidths=[1.3 * cm, 2.4 * cm, 3.1 * cm, 3.1 * cm, 3.1 * cm, 3.1 * cm], repeatRows=1)
+                pt.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#eef1fb")), ("FONTSIZE", (0, 0), (-1, -1), 8.5), ("ALIGN", (2, 0), (-1, -1), "RIGHT"), ("LINEBELOW", (0, 0), (-1, -1), 0.3, colors.HexColor("#e6e9f2")),
+                                        ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2), ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#f6f8fd"))]))
+                story.extend([Spacer(1, 6), pt, Spacer(1, 8)])
     flush()
     if cfg.get("signature"):
         sig = Table([["", ""], [Paragraph("Firma del cliente", sub), Paragraph("Firma del asesor", sub)]], colWidths=[8.5 * cm, 8.5 * cm], rowHeights=[1.8 * cm, 0.6 * cm])
