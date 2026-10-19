@@ -3,7 +3,7 @@
  * Reporte = origen + filtros + agrupar + medir + tipo de gráfica (tabla, barras, líneas, circular, indicador…). Tablero = reportes, textos e imágenes en una cuadrícula que se acomoda y se guarda.
  * Se pueden compartir con el equipo o con toda la empresa (solo lectura). Endpoints: GET CrmHub/biItems, GET biItem, POST biSave, POST biDelete y POST biRun.
  */
-define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:studio'], function (Dep, ChUi, R, Studio) {
+define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:studio', 'custom:bi-templates'], function (Dep, ChUi, R, Studio, TPL) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const uid = () => 'w' + Math.random().toString(36).slice(2, 9);
     const OPS = {
@@ -90,7 +90,31 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
             this.draw();
         }
 
-        newDash() { this.cur = {kind: 'dashboard', id: null, name: 'Nuevo tablero', share: 'none', mine: true, dirty: true, editing: true, def: {widgets: []}}; this.draw(); }
+        newDash() {
+            const blank = () => { this.cur = {kind: 'dashboard', id: null, name: 'Nuevo tablero', share: 'none', mine: true, dirty: true, editing: true, def: {widgets: []}}; this.draw(); };
+            ChUi.panel({title: 'Nuevo tablero: ¿con qué empiezas?', icon: 'fas fa-table-cells-large', close: 'Cancelar', mount: (body, close) => {
+                body.classList.add('ch-tpl-body');
+                body.innerHTML = '<p class="ch-muted">Elige un tablero ya armado (con gráficas, tablas e indicadores) y ajústalo: cambia colores y títulos, quita tarjetas o añade más. O empieza en blanco.</p><div class="ch-tpl-grid">' +
+                    `<div class="ch-tpl" data-t=""><div class="ic"><span class="far fa-square-plus"></span></div><b>En blanco</b><small>Tú decides qué mostrar.</small></div>` + TPL.list.map(t => `<div class="ch-tpl" data-t="${esc(t.id)}"><div class="ic" style="background:${esc(t.color)}1f;color:${esc(t.color)}"><span class="${esc(t.icon)}"></span></div><b>${esc(t.name)}</b><small>${esc(t.desc)}</small><div class="ch-tpl-meta">${t.reports.length} reportes · ${t.widgets.length} tarjetas</div></div>`).join('') + '</div>';
+                body.onclick = e => { const c = e.target.closest('[data-t]'); if (!c) { return; } close(true); if (!c.dataset.t) { blank(); } else { this.fromTemplate(TPL.list.find(t => t.id === c.dataset.t)); } };
+            }});
+        }
+
+        // crea los reportes de la plantilla (quedan guardados como del usuario) y el tablero con sus tarjetas, listo para ajustar
+        fromTemplate(t) {
+            Espo.Ui.notify('Armando tu tablero…');
+            const ids = [];
+            const next = i => {
+                if (i >= t.reports.length) { return Promise.resolve(); }
+                const r = t.reports[i];
+                return Espo.Ajax.postRequest('CrmHub/biSave', {kind: 'report', name: r.name, share: 'none', definition: r.def}).then(x => { ids[i] = x.id; return next(i + 1); });
+            };
+            next(0).then(() => {
+                const widgets = t.widgets.map(w => Object.assign({id: uid()}, w.type === 'report' ? {type: 'report', reportId: ids[w.rep], title: w.title, color: w.color, chart: w.chart} : {type: w.type, text: w.text, size: w.size, align: w.align}, {x: w.x, y: w.y, w: w.w, h: w.h}));
+                Espo.Ui.notify(false);
+                this.load(() => { this.cur = {kind: 'dashboard', id: null, name: t.name, share: 'none', mine: true, dirty: true, editing: true, def: {widgets}}; this.draw(); Espo.Ui.success('Tablero listo: ajústalo y guárdalo.'); });
+            }).catch(xhr => { Espo.Ui.notify(false); if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo armar el tablero.'); });
+        }
 
         bind(root) {
             root.onclick = e => {
@@ -172,7 +196,7 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
         preview() {
             const el = this.el && this.el.querySelector('[data-view]'); if (!el || !this.cur) { return; }
             const def = this.cur.def; el.innerHTML = '<div class="ch-muted ch-bi-empty">Calculando…</div>';
-            this.runDef(def).then(r => R.draw(el, def, r, this.ctxFor(def.source))).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } el.innerHTML = '<div class="ch-chat-err">' + esc((xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || 'No se pudo calcular el reporte.') + '</div>'; });
+            this.runDef(def).then(r => R.draw(el, def, r, Object.assign({preview: true}, this.ctxFor(def.source)))).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } el.innerHTML = '<div class="ch-chat-err">' + esc((xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || 'No se pudo calcular el reporte.') + '</div>'; });
         }
 
         // ---------- tableros
@@ -191,7 +215,7 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
             R.loadLibs(true).then(() => {
                 if (!this.el || !this.el.contains(el) || this.cur !== c) { return; }
                 this.grid = window.GridStack.init({column: 12, cellHeight: 76, margin: 6, float: false, disableDrag: !ed, disableResize: !ed, handle: '.ch-w-head', animate: true}, el);
-                (c.def.widgets || []).forEach(w => this.grid.addWidget({id: w.id, x: w.x, y: w.y, w: w.w || 4, h: w.h || 4, minW: 2, minH: 2, content: this.widgetShell(w, ed)}));
+                (c.def.widgets || []).forEach(w => this.grid.addWidget({id: w.id, x: w.x, y: w.y, w: w.w || 4, h: w.h || 4, minW: 2, minH: w.type === 'text' ? 1 : 2, content: this.widgetShell(w, ed)}));
                 this.grid.on('change', () => { c.def.widgets.forEach(w => { const n = this.grid.engine.nodes.find(x => x.id === w.id); if (n) { w.x = n.x; w.y = n.y; w.w = n.w; w.h = n.h; } }); c.dirty = true; });
                 (c.def.widgets || []).forEach(w => this.fillWidget(w));
             });
@@ -199,7 +223,7 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
 
         widgetShell(w, ed) {
             const tools = ed ? `<span class="ch-w-tools"><a data-a="wcfg" data-id="${esc(w.id)}" title="Configurar"><span class="fas fa-gear"></span></a><a data-a="wdel" data-id="${esc(w.id)}" title="Quitar"><span class="fas fa-xmark"></span></a></span>` : '';
-            return `<div class="ch-w ch-w-${w.type}" data-w="${esc(w.id)}"><div class="ch-w-head"><b data-wt>${esc(w.title || (w.type === 'report' ? 'Reporte' : ''))}</b>${tools}</div><div class="ch-w-body" data-wb></div></div>`;
+            return `<div class="ch-w ch-w-${w.type}" data-w="${esc(w.id)}" ${w.color ? `style="border-top:3px solid ${esc(w.color)}"` : ''}><div class="ch-w-head"><b data-wt>${esc(w.title || (w.type === 'report' ? 'Reporte' : ''))}</b>${tools}</div><div class="ch-w-body" data-wb></div></div>`;
         }
 
         fillWidget(w) {
@@ -209,7 +233,7 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
             if (!w.reportId) { box.innerHTML = '<div class="ch-muted ch-bi-empty">Elige un reporte</div>'; return; }
             box.innerHTML = '<div class="ch-muted ch-bi-empty">Calculando…</div>';
             const get = this.reports[w.reportId] ? Promise.resolve(this.reports[w.reportId]) : Espo.Ajax.getRequest('CrmHub/biItem', {id: w.reportId}).then(r => (this.reports[w.reportId] = r));
-            get.then(rep => { const t = this.el.querySelector(`[data-w="${w.id}"] [data-wt]`); if (t && !w.title) { t.textContent = rep.name; } return this.runDef(rep.def).then(res => R.draw(box, rep.def, res, this.ctxFor(rep.def.source))); })
+            get.then(rep => { const t = this.el.querySelector(`[data-w="${w.id}"] [data-wt]`); if (t && !w.title) { t.textContent = rep.name; } const def = Object.assign({}, rep.def, w.chart ? {chart: w.chart} : {}); return this.runDef(def).then(res => R.draw(box, def, res, Object.assign({color: w.color}, this.ctxFor(def.source)))); })
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } box.innerHTML = '<div class="ch-muted ch-bi-empty">No disponible (¿se eliminó o ya no tienes acceso?).</div>'; });
         }
 
@@ -232,9 +256,16 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
                 body.oninput = body.onchange = () => { w.text = body.querySelector('[data-t]').value; w.size = +body.querySelector('[data-s]').value || 16; w.align = body.querySelector('[data-al]').value; this.cur.dirty = true; }; }}).then(() => this.fillWidget(w));
         }
 
+        // título, color y tipo de gráfica de una tarjeta de reporte
         titleDialog(w) {
-            ChUi.panel({title: 'Título del reporte en el tablero', icon: 'fas fa-gear', close: 'Listo', mount: body => { body.innerHTML = `<input class="form-control" data-t value="${esc(w.title || '')}" placeholder="Por defecto, el nombre del reporte">`; body.oninput = () => { w.title = body.querySelector('[data-t]').value; this.cur.dirty = true; }; }})
-                .then(() => { const t = this.el.querySelector(`[data-w="${w.id}"] [data-wt]`); if (t) { t.textContent = w.title || (this.reports[w.reportId] || {}).name || 'Reporte'; } });
+            const sw = R.PALETTE.map(c => `<button type="button" class="ch-sw ${w.color === c ? 'on' : ''}" data-col="${c}" style="background:${c}" title="${c}"></button>`).join('');
+            ChUi.panel({title: 'Configurar la tarjeta', icon: 'fas fa-gear', close: 'Listo', mount: body => {
+                body.innerHTML = `<label class="ch-dlg-label">Título</label><input class="form-control" data-t value="${esc(w.title || '')}" placeholder="Por defecto, el nombre del reporte">
+                    <label class="ch-dlg-label" style="margin-top:10px">Color</label><div class="ch-sws">${sw}<button type="button" class="ch-sw none ${!w.color ? 'on' : ''}" data-col="" title="Automático">A</button><input type="color" data-cc value="${esc(w.color || '#4f63e8')}" title="Otro color"></div>
+                    <label class="ch-dlg-label" style="margin-top:10px">Cómo verlo</label><select class="form-control" data-ch><option value="">Como está en el reporte</option>${R.CHARTS.map(([k, l]) => `<option value="${k}" ${w.chart === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+                body.oninput = body.onchange = e => { w.title = body.querySelector('[data-t]').value; w.chart = body.querySelector('[data-ch]').value || undefined; if (e.target.dataset.cc !== undefined) { w.color = e.target.value; } this.cur.dirty = true; };
+                body.onclick = e => { const c = e.target.closest('[data-col]'); if (!c) { return; } w.color = c.dataset.col || undefined; body.querySelectorAll('.ch-sw').forEach(x => x.classList.toggle('on', x === c)); this.cur.dirty = true; };
+            }}).then(() => { this.draw(); });
         }
 
         imageDialog(w, isNew) {

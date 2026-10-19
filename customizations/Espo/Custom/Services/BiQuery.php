@@ -20,10 +20,16 @@ use Espo\ORM\EntityManager;
 class BiQuery
 {
     public const ENTITIES = ['Lead', 'Contact', 'Account', 'Opportunity', 'Task', 'Meeting', 'Call'];
-    private const FILTER_TYPES = ['enum', 'varchar', 'bool', 'int', 'float', 'currency', 'date', 'datetime', 'link', 'url', 'email', 'phone'];
+    private const FILTER_TYPES = ['enum', 'varchar', 'bool', 'int', 'float', 'currency', 'date', 'datetime', 'datetimeOptional', 'link', 'url', 'email', 'phone'];
     private const GROUP_TYPES = ['enum', 'varchar', 'bool', 'date', 'datetime', 'link', 'int'];
     private const MEASURE_TYPES = ['int', 'float', 'currency'];
     private const FNS = ['count' => 'COUNT', 'sum' => 'SUM', 'avg' => 'AVG', 'min' => 'MIN', 'max' => 'MAX'];
+
+    /** Los campos «fecha y hora opcional» (inicio de reuniones y llamadas, vencimiento de tareas) se tratan como fecha y hora. */
+    private static function norm(string $t): string
+    {
+        return $t === 'datetimeOptional' ? 'datetime' : $t;
+    }
 
     public function __construct(private User $user, private Acl $acl, private EntityManager $em, private SelectBuilderFactory $sbf, private Metadata $metadata, private Language $language, private Config $config) {}
 
@@ -37,8 +43,8 @@ class BiQuery
             }
             $fields = [];
             foreach ((array) $this->metadata->get("entityDefs.$e.fields", []) as $name => $d) {
-                $t = $d['type'] ?? '';
-                if (!empty($d['disabled']) || !empty($d['utility']) || !empty($d['notStorable']) && $t !== 'link' || !in_array($t, self::FILTER_TYPES, true) || !$this->acl->checkField($e, $name, 'read')) {
+                $t = self::norm((string) ($d['type'] ?? ''));
+                if (!empty($d['disabled']) || !empty($d['utility']) || !empty($d['notStorable']) && $t !== 'link' || !in_array($t, array_merge(self::FILTER_TYPES, ['datetime']), true) || !$this->acl->checkField($e, $name, 'read')) {
                     continue;
                 }
                 $opts = $t === 'enum' ? array_values(array_filter((array) ($d['options'] ?? []), fn ($o) => $o !== '')) : [];
@@ -115,7 +121,7 @@ class BiQuery
         foreach ($groups as $i => $g) {
             $name = (string) ($g['field'] ?? '');
             $d = $this->fieldDef($e, $name);
-            $t = $d['type'] ?? '';
+            $t = self::norm((string) ($d['type'] ?? ''));
             if (!in_array($t, self::GROUP_TYPES, true)) {
                 throw new BadRequest('Ese campo no se puede usar para agrupar.');
             }
@@ -145,7 +151,7 @@ class BiQuery
             }
             $name = (string) ($m['field'] ?? '');
             $d = $this->fieldDef($e, $name);
-            if (!in_array($d['type'] ?? '', self::MEASURE_TYPES, true)) {
+            if (!in_array(self::norm((string) ($d['type'] ?? '')), self::MEASURE_TYPES, true)) {
                 throw new BadRequest('Ese campo no se puede sumar ni promediar.');
             }
             $select[] = [$fn . ':(' . $name . ')', 'm' . ($i + 1)];
@@ -153,7 +159,7 @@ class BiQuery
         $builder->select($select);
         if ($group) {
             $builder->group($group);
-            $t1 = (string) $this->metadata->get("entityDefs.$e.fields." . ($groups[0]['field'] ?? '') . '.type');
+            $t1 = self::norm((string) $this->metadata->get("entityDefs.$e.fields." . ($groups[0]['field'] ?? '') . '.type'));
             if (in_array($t1, ['date', 'datetime'], true)) {
                 $builder->order($group[0], 'ASC');
             } else {

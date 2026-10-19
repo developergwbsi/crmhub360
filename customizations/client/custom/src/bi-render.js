@@ -33,34 +33,39 @@ define('custom:bi-render', ['custom:ui'], function (ChUi) {
     }
 
     function measureLabel(m, ctx) { return m.label || (m.fn === 'count' ? 'Cantidad' : (FNS.find(f => f[0] === m.fn) || [])[1] + ' de ' + ctx.fieldLabel(m.field)); }
-    function fmt(m, ctx, v) { if (v == null) { return '—'; } return m.fn !== 'count' && ctx.fieldType(m.field) === 'currency' ? money(v) : nf.format(v); }
-    function xLabel(def, v) { return v; }
+    const moneyShort = v => { const a = Math.abs(v), nf1 = new Intl.NumberFormat('es-CO', {maximumFractionDigits: 1}); return (v < 0 ? '-' : '') + '$ ' + (a >= 1e9 ? nf1.format(a / 1e9) + ' MM' : a >= 1e6 ? nf1.format(a / 1e6) + ' M' : a >= 1e4 ? nf1.format(a / 1e3) + ' mil' : new Intl.NumberFormat('es-CO', {maximumFractionDigits: 0}).format(a)); };
+    function fmt(m, ctx, v, short) { if (v == null) { return '—'; } return m.fn !== 'count' && ctx.fieldType(m.field) === 'currency' ? (short ? moneyShort(v) : money(v)) : nf.format(v); }
+    const xLabel = v => (typeof v === 'string' && /^\d{4}\/\d{1,2}$/.test(v)) ? v.replace('/', ' · S') : v;   // semanas: 2026 · S42
 
     function table(el, def, rows, ctx) {
         const groups = def.groups || [], ms = def.measures && def.measures.length ? def.measures : [{fn: 'count'}];
         const head = groups.map(g => `<th>${esc(ctx.fieldLabel(g.field))}</th>`).concat(ms.map(m => `<th class="num">${esc(measureLabel(m, ctx))}</th>`)).join('');
-        const body = rows.map(r => '<tr>' + groups.map((g, i) => `<td>${esc(r['g' + (i + 1)])}</td>`).concat(ms.map((m, i) => `<td class="num">${esc(fmt(m, ctx, r['m' + (i + 1)]))}</td>`)).join('') + '</tr>').join('');
+        const body = rows.map(r => '<tr>' + groups.map((g, i) => `<td>${esc(xLabel(r['g' + (i + 1)]))}</td>`).concat(ms.map((m, i) => `<td class="num">${esc(fmt(m, ctx, r['m' + (i + 1)]))}</td>`)).join('') + '</tr>').join('');
         el.innerHTML = `<div class="ch-bi-tbl"><table class="table"><thead><tr>${head}</tr></thead><tbody>${body || `<tr><td colspan="${groups.length + ms.length}" class="ch-muted">Sin datos con estos filtros.</td></tr>`}</tbody></table></div>`;
     }
+
+    const palette = c => c ? [c].concat(PALETTE.filter(x => x.toLowerCase() !== String(c).toLowerCase())) : PALETTE;
 
     function kpi(el, def, rows, ctx) {
         const m = (def.measures && def.measures[0]) || {fn: 'count'};
         const vals = rows.map(r => r.m1).filter(v => v != null);
         const v = !vals.length ? 0 : m.fn === 'min' ? Math.min(...vals) : m.fn === 'max' ? Math.max(...vals) : m.fn === 'avg' ? vals.reduce((a, b) => a + b, 0) / vals.length : vals.reduce((a, b) => a + b, 0);
-        el.innerHTML = `<div class="ch-bi-kpi"><div class="v">${esc(fmt(m, ctx, v))}</div><div class="l">${esc(measureLabel(m, ctx))}</div></div>`;
+        el.innerHTML = `<div class="ch-bi-kpi"><div class="v" title="${esc(fmt(m, ctx, v))}" ${ctx.color ? `style="color:${esc(ctx.color)}"` : ''}>${esc(fmt(m, ctx, v, true))}</div><div class="l">${esc(measureLabel(m, ctx))}</div>${ctx.hint ? `<div class="ch-bi-hint">${esc(ctx.hint)}</div>` : ''}</div>`;
     }
 
     function chart(el, def, rows, ctx) {
         const type = def.chart, groups = def.groups || [], ms = def.measures && def.measures.length ? def.measures : [{fn: 'count'}];
-        if (!groups.length) { kpi(el, def, rows, ctx); return Promise.resolve(); }
+        if (!groups.length) { kpi(el, def, rows, Object.assign({}, ctx, {hint: ctx.preview ? 'Para ver esta gráfica, elige en «3 · Agrupar» cómo dividir los datos (por estado, asesor, mes…).' : ''})); return Promise.resolve(); }
+        const PAL = palette(ctx.color);
         let labels, datasets;
         if (groups.length === 2) {
             labels = [...new Set(rows.map(r => r.g1))]; const series = [...new Set(rows.map(r => r.g2))];
-            datasets = series.map((s, i) => ({label: String(s), data: labels.map(l => { const r = rows.find(x => x.g1 === l && x.g2 === s); return r ? r.m1 : 0; }), backgroundColor: PALETTE[i % PALETTE.length], borderColor: PALETTE[i % PALETTE.length]}));
+            datasets = series.map((s, i) => ({label: String(s), data: labels.map(l => { const r = rows.find(x => x.g1 === l && x.g2 === s); return r ? r.m1 : 0; }), backgroundColor: PAL[i % PAL.length], borderColor: PAL[i % PAL.length]}));
         } else {
             labels = rows.map(r => r.g1);
-            datasets = ms.map((m, i) => ({label: measureLabel(m, ctx), data: rows.map(r => r['m' + (i + 1)]), backgroundColor: ['pie', 'doughnut'].includes(type) ? rows.map((x, j) => PALETTE[j % PALETTE.length]) : PALETTE[i % PALETTE.length], borderColor: PALETTE[i % PALETTE.length]}));
+            datasets = ms.map((m, i) => ({label: measureLabel(m, ctx), data: rows.map(r => r['m' + (i + 1)]), backgroundColor: ['pie', 'doughnut'].includes(type) ? rows.map((x, j) => PAL[j % PAL.length]) : PAL[i % PAL.length], borderColor: PAL[i % PAL.length]}));
         }
+        labels = labels.map(xLabel);
         el.innerHTML = '<div class="ch-bi-cv"><canvas></canvas></div>';
         return loadLibs(false).then(() => {
             const cv = el.querySelector('canvas'); if (!cv) { return; }
