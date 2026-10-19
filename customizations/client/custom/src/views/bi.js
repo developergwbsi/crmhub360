@@ -70,7 +70,8 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
         }
 
         open(id) {
-            if (this.cur && this.cur.dirty && !window.confirm('Hay cambios sin guardar. ¿Descartarlos?')) { return; }
+            if (this.cur && this.cur.dirty && !this._okDiscard) { ChUi.confirm({title: 'Cambios sin guardar', text: 'Hay cambios sin guardar. ¿Descartarlos y abrir otro?', ok: 'Descartar', cancel: 'Seguir editando'}).then(y => { if (y) { this._okDiscard = true; this.open(id); } }); return; }
+            this._okDiscard = false;
             Espo.Ajax.getRequest('CrmHub/biItem', {id}).then(r => { this.cur = Object.assign({}, r, {dirty: false, editing: false}); this.draw(); })
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo abrir.'); });
         }

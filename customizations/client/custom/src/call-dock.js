@@ -182,7 +182,8 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
         // ref: la ficha del cliente de la llamada ({s: 'Lead', l: id}); así su información está a un clic aunque aún no haya entrado
         open(u, name, ref, refName) {
             if (el && roomOf(u) === roomOf(url)) { setMode('side'); return; }
-            if (el && !window.confirm('Ya estás en una videollamada. ¿Salir de ella y entrar a esta?')) { return; }
+            if (el && !API._ok) { ChUi.confirm({title: 'Videollamada en curso', text: 'Ya estás en una videollamada. ¿Salir de ella y entrar a esta?', ok: 'Cambiar de llamada'}).then(y => { if (y) { API._ok = true; API.open(u, name, ref, refName); } }); return; }
+            API._ok = false;
             API.close();
             url = u; title = name || 'Videollamada'; t0 = Date.now(); people = []; links = {}; roomRef = ref && ref.l ? ref : null; roomName = refName || ''; openedAt = Date.now() - 5000;
             el = document.createElement('div'); el.id = 'ch-dock';
@@ -201,7 +202,7 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
                 const b = e.target.closest('[data-d]');
                 if (!b) { if (e.target.closest('.ch-dock-pill-bar')) { setMode('side'); } return; }
                 const k = b.dataset.d;
-                if (k === 'end') { if (window.confirm('¿Salir de la videollamada? Si el cliente sigue dentro, podrás volver a entrar desde la ficha («Videollamadas»). Al terminar la llamada se te mostrará un resumen.')) { endCall(); } }
+                if (k === 'end') { ChUi.confirm({title: 'Salir de la videollamada', text: '¿Salir de la videollamada? Si el cliente sigue dentro, podrás volver a entrar desde la ficha («Videollamadas»). Al terminar la llamada se te mostrará un resumen.', ok: 'Salir', danger: true}).then(y => { if (y) { endCall(); } }); }
                 else if (k === 'min') { setMode(mode === 'pill' ? 'side' : 'pill'); }
                 else if (k === 'size') { setMode(mode === 'full' ? 'side' : 'full'); }
                 else if (k === 'inv') { invitePanel(); }
