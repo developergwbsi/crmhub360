@@ -66,6 +66,7 @@ cmd_release_publish() {
   local d="$ROOT/releases/$id"; mkdir -p "$d/bin"
   cp -a "$ROOT/customizations" "$d/customizations"
   cp -a "$ROOT/bin/seed_tenant.py" "$ROOT/bin/ui_settings.py" "$d/bin/"
+  cp -a "$ROOT/VERSION" "$d/VERSION" 2>/dev/null || true
   sql "UPDATE control_releases SET is_current=FALSE"
   sql "INSERT INTO control_releases (id,note,commit_ref,is_current) VALUES ('$id','$note','$ref',TRUE)"
   echo "Base de producción publicada: $id ($ref)"
