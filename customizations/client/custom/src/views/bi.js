@@ -76,7 +76,7 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo abrir.'); });
         }
 
-        remove() {
+        removeItem() {
             ChUi.confirm({title: 'Eliminar', text: `Se elimina «${this.cur.name}» para siempre.`, ok: 'Eliminar', danger: true}).then(y => {
                 if (!y) { return; }
                 if (!this.cur.id) { this.cur = null; this.draw(); return; }
@@ -123,7 +123,7 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
                 const k = a.dataset.a;
                 if (k === 'newrep') { this.newReport(); } else if (k === 'newdash') { this.newDash(); }
                 else if (k === 'save') { this.save(); }
-                else if (k === 'del') { this.remove(); }
+                else if (k === 'del') { this.removeItem(); }
                 else if (k === 'edit') { this.cur.editing = true; this.draw(); }
                 else if (k === 'cancel') { if (!this.cur.id) { this.cur = null; this.draw(); } else if (this.cur.dirty) { this.cur.dirty = false; this.open(this.cur.id); } else { this.cur.editing = false; this.draw(); } }
                 else if (k === 'dup') { this.cur = Object.assign({}, this.cur, {id: null, name: this.cur.name + ' (copia)', mine: true, share: 'none', dirty: true, editing: true, def: JSON.parse(JSON.stringify(this.cur.def))}); this.draw(); }
@@ -214,7 +214,7 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
             const c = this.cur, el = root.querySelector('.grid-stack'), ed = c.mine && c.editing;
             R.loadLibs(true).then(() => {
                 if (!this.el || !this.el.contains(el) || this.cur !== c) { return; }
-                this.grid = window.GridStack.init({column: 12, cellHeight: 76, margin: 6, float: false, disableDrag: !ed, disableResize: !ed, handle: '.ch-w-head', animate: true}, el);
+                this.grid = window.GridStack.init({column: 12, cellHeight: 76, margin: 12, float: false, disableDrag: !ed, disableResize: !ed, handle: '.ch-w-head', animate: true}, el);
                 (c.def.widgets || []).forEach(w => this.grid.addWidget({id: w.id, x: w.x, y: w.y, w: w.w || 4, h: w.h || 4, minW: 2, minH: w.type === 'text' ? 1 : 2, content: this.widgetShell(w, ed)}));
                 this.grid.on('change', () => { c.def.widgets.forEach(w => { const n = this.grid.engine.nodes.find(x => x.id === w.id); if (n) { w.x = n.x; w.y = n.y; w.w = n.w; w.h = n.h; } }); c.dirty = true; });
                 (c.def.widgets || []).forEach(w => this.fillWidget(w));

@@ -65,6 +65,11 @@
         return '<a role="button" tabindex="0" class="ch-tool" data-ch-theme-toggle><span class="fas fa-moon"></span></a>';
     }
 
+    document.addEventListener('click', function (e) {
+        var b = e.target.closest && e.target.closest('[data-ch-manual]');
+        if (b && window.Espo && Espo.loader) { e.preventDefault(); Espo.loader.require('custom:manual-help', function (m) { m.open(); }); }
+    });
+
     function ensureTools() {
         var bar = document.querySelector('#navbar .navbar-right');
         var login = document.querySelector('.crmhub-login');
@@ -72,6 +77,9 @@
         // Dentro de la app: en la barra superior. En el login (sin barra): flotante arriba a la derecha.
         if (bar) {
             var f = document.getElementById('ch-float-tools'); if (f) { f.remove(); }
+            if (!bar.querySelector('[data-ch-manual]')) {
+                bar.insertBefore(el('<li class="ch-tools-li"><a role="button" tabindex="0" class="ch-tool ch-tool-manual" data-ch-manual title="Ver esta página en el manual"><span class="fas fa-book-open"></span></a></li>'), bar.firstElementChild);
+            }
             if (!bar.querySelector('[data-ch-theme-toggle]')) {
                 var li = el('<li class="ch-tools-li">' + toggleButton() + '<a role="button" tabindex="0" class="ch-tool" data-ch-push style="display:none"><span class="fas fa-bullhorn"></span></a><a role="button" tabindex="0" class="ch-tool ch-install" data-ch-install title="Instalar la aplicación" style="display:none"><span class="fas fa-download"></span></a></li>');
                 var anchor = bar.querySelector('li.notifications-badge-container') || bar.firstElementChild;

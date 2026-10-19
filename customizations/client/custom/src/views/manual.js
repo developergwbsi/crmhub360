@@ -42,7 +42,12 @@ define('custom:views/manual', ['view'], function (Dep) {
 
         afterRender() {
             super.afterRender();
-            if (this.who) { this.applyRole(); }
+            if (this.who) {
+                this.applyRole();
+                let id = null; try { id = sessionStorage.getItem('chManualSection'); sessionStorage.removeItem('chManualSection'); } catch (e) { /* nada */ }
+                const el = id && this.$el.find('#ch-m-' + id)[0];
+                if (el && el.style.display !== 'none') { setTimeout(() => { el.scrollIntoView({behavior: 'smooth', block: 'start'}); el.classList.add('ch-m-focus'); }, 150); }   // viene del botón «Ir a la página del manual»
+            }
         }
 
         events = {
