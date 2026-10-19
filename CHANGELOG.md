@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.10.5] - 2026-10-19
+
 ### Añadido
 - **Buscador del menú lateral**: caja «Buscar en el menú» arriba de las opciones; filtra mientras escribes (sin importar tildes ni mayúsculas), **Enter** abre la primera coincidencia y **Esc** la limpia. Atajo **Ctrl + K** para ir directo a la caja desde cualquier página.
 - **Tu foto en el encabezado**: el botón del menú de usuario (arriba a la derecha) ahora es tu avatar; al pulsarlo se abre el desplegable de opciones (perfil, Administración, Preferencias, Acerca, Salir).
