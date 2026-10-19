@@ -9,6 +9,7 @@ use Espo\Core\Exceptions\Forbidden;
 use Espo\Core\Select\SelectBuilderFactory;
 use Espo\Core\Utils\Config;
 use Espo\Core\Utils\Config\ConfigWriter;
+use Espo\Core\Utils\Language;
 use Espo\Core\Utils\Metadata;
 use Espo\Custom\Services\HubClient;
 use Espo\Custom\Services\LeadAssigner;
@@ -35,7 +36,8 @@ class CrmHub
         private EntityManager $em,
         private SelectBuilderFactory $selectBuilderFactory,
         private Metadata $metadata,
-        private ConfigWriter $configWriter
+        private ConfigWriter $configWriter,
+        private Language $language
     ) {}
 
     /** Exige administrador; si no, 403. */
@@ -1963,6 +1965,64 @@ class CrmHub
         }
         return (object) $this->hubCall('POST', '/v1/websessions/' . $id . '/action', ['type' => (string) ($d->type ?? ''), 'x' => (int) ($d->x ?? 0), 'y' => (int) ($d->y ?? 0), 'text' => (string) ($d->text ?? ''),
             'key' => (string) ($d->key ?? ''), 'url' => (string) ($d->url ?? ''), 'dy' => (int) ($d->dy ?? 0)], 60);
+    }
+
+    // ---------- Reportes y tableros (BI): cada usuario arma y guarda los suyos (Hub: /v1/bi/*; datos del CRM con sus permisos)
+    private function biQuery(): \Espo\Custom\Services\BiQuery
+    {
+        $this->simGuard();
+        return new \Espo\Custom\Services\BiQuery($this->user, $this->acl, $this->em, $this->selectBuilderFactory, $this->metadata, $this->language, $this->config);
+    }
+
+    private function biWho(): string
+    {
+        return 'userId=' . urlencode($this->user->getId()) . '&teams=' . urlencode(implode(',', $this->user->getLinkMultipleIdList('teams')));
+    }
+
+    /** GET /CrmHub/biItems. Usuario. Reportes y tableros propios o compartidos con él, y los datos (CRM y formularios) con los que puede armarlos. */
+    public function getActionBiItems(Request $request): \stdClass
+    {
+        $q = $this->biQuery();
+        $r = $this->hubCall('GET', '/v1/bi/items?' . $this->biWho(), null, 15);
+        return (object) ['items' => $r['items'] ?? [], 'sources' => array_merge($q->meta(), $r['forms'] ?? []), 'canPublish' => $this->canManageForms()];
+    }
+
+    /** GET /CrmHub/biItem?id=. Usuario con acceso. Definición completa de un reporte o tablero. */
+    public function getActionBiItem(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $id = preg_replace('/[^A-Za-z0-9_-]/', '', (string) $request->getQueryParam('id'));
+        return (object) $this->hubCall('GET', '/v1/bi/item?id=' . $id . '&' . $this->biWho(), null, 15);
+    }
+
+    /** POST /CrmHub/biSave. Usuario. {id?, kind, name, definition, share}. Guarda un reporte o tablero (solo su dueño o un gerente lo cambia). Hub: PUT /v1/bi/item. */
+    public function postActionBiSave(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('PUT', '/v1/bi/item', ['id' => !empty($d->id) ? (string) $d->id : null, 'kind' => (string) ($d->kind ?? ''), 'name' => (string) ($d->name ?? ''), 'definition' => json_decode(json_encode($d->definition ?? new \stdClass()), true) ?: new \stdClass(),
+            'share' => (string) ($d->share ?? 'none'), 'userId' => $this->user->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName')), 'teams' => $this->user->getLinkMultipleIdList('teams'), 'manager' => $this->canManageForms()], 20);
+    }
+
+    /** POST /CrmHub/biDelete. Usuario. {id}. Hub: DELETE /v1/bi/item. */
+    public function postActionBiDelete(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        $id = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($d->id ?? ''));
+        return (object) $this->hubCall('DELETE', '/v1/bi/item?id=' . $id . '&userId=' . urlencode($this->user->getId()) . '&manager=' . ($this->canManageForms() ? 'true' : 'false'), null, 15);
+    }
+
+    /** POST /CrmHub/biRun. Usuario. {source, filters, groups, measures, limit}. Resultado del reporte con los permisos del usuario (CRM) o sobre un formulario interno (Hub). */
+    public function postActionBiRun(Request $request): \stdClass
+    {
+        $q = $this->biQuery();
+        $d = json_decode(json_encode($request->getParsedBody()), true) ?: [];
+        $src = (string) ($d['source'] ?? '');
+        if (str_starts_with($src, 'form:')) {
+            return (object) $this->hubCall('POST', '/v1/bi/formquery', ['formId' => substr($src, 5), 'query' => $d, 'leadIds' => $q->visibleLeadIds()], 60);
+        }
+        return (object) $q->run($d);
     }
 
     /** POST /CrmHub/iformWebPreview. Gerente, director o supervisor. {url}: devuelve la página (saneada) para elegir visualmente qué datos traer. Hub: POST /v1/iforms/webpreview. */

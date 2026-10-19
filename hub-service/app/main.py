@@ -23,7 +23,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -40,6 +40,7 @@ async def lifespan(_: FastAPI):
     processes.ensure_schema()
     documents.ensure_schema()
     iforms.ensure_schema()
+    bi.ensure_schema()
     agent.ensure_schema()
     monitor.ensure_schema()
     usage.ensure_schema()
@@ -1214,6 +1215,66 @@ async def websession_close(sid: str, tenant: dict = Depends(tenant_auth)):
     from . import browser
     await browser.close_session(tenant["slug"], sid)
     return {"ok": True}
+
+
+# ---------------- reportes y tableros (BI)
+class BiItemReq(BaseModel):
+    """Reporte o tablero de un usuario."""
+    id: str | None = None
+    kind: str
+    name: str
+    definition: dict = {}
+    share: str = "none"
+    userId: str
+    userName: str = ""
+    teams: list[str] = []
+    manager: bool = False
+
+
+class BiFormQueryReq(BaseModel):
+    """Consulta sobre las respuestas de un formulario interno."""
+    formId: str
+    query: dict
+    leadIds: list[str] | None = None
+
+
+@app.get("/v1/bi/items")
+async def bi_items(userId: str, teams: str = "", tenant: dict = Depends(tenant_auth)):
+    return {"items": bi.items(tenant["slug"], userId, [t for t in teams.split(",") if t]), "forms": bi.form_meta(tenant["slug"])}
+
+
+@app.get("/v1/bi/item")
+async def bi_item(id: str, userId: str, teams: str = "", tenant: dict = Depends(tenant_auth)):
+    r = bi.get_item(tenant["slug"], id, userId, [t for t in teams.split(",") if t])
+    if not r:
+        raise HTTPException(404, "No existe o no tienes acceso.")
+    return r
+
+
+@app.put("/v1/bi/item")
+async def bi_save(req: BiItemReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return bi.save_item(tenant["slug"], req.id, req.kind, req.name, req.definition, req.share, req.userId, req.userName, req.teams, req.manager)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+
+
+@app.delete("/v1/bi/item")
+async def bi_delete(id: str, userId: str, manager: bool = False, tenant: dict = Depends(tenant_auth)):
+    try:
+        return {"ok": bi.delete_item(tenant["slug"], id, userId, manager)}
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+
+
+@app.post("/v1/bi/formquery")
+async def bi_formquery(req: BiFormQueryReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return bi.form_query(tenant["slug"], req.formId, req.query, req.leadIds)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
 
 
 @app.get("/v1/websources")

@@ -11,6 +11,10 @@ define('custom:controllers/crm-hub', ['controller'], function (Dep) {
             this.main('custom:views/manual', {});
         }
 
+        actionReportes() {
+            this.main('custom:views/bi', {});
+        }
+
         actionConsultasWeb() {
             this.main('custom:views/web-sources', {});
         }

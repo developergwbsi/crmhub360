@@ -4,6 +4,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Reportes y tableros: un «Power BI» dentro de la plataforma
+- **Nuevo menú «Reportes y tableros»** (para todos los usuarios): cada quien arma y guarda **sus propios reportes y tableros**, sin límite de cantidad.
+- **Reportes**: eliges los datos (leads, contactos, cuentas, oportunidades, tareas, reuniones, llamadas y **las respuestas de tus formularios internos**, incluidos sus cálculos y montos), pones filtros (por estado, fechas, montos, texto…), **agrupas** (por estado, asesor, origen, campaña, día/semana/mes/año…, y además divides por un segundo criterio), eliges qué **medir** (cantidad, suma, promedio, mínimo, máximo) y cómo verlo: **tabla, barras, barras horizontales o apiladas, líneas, áreas, circular, anillo o indicador (cifra grande)**. Ves el resultado al instante mientras lo armas.
+- **Tableros**: reúnes reportes, **textos** (títulos y notas) e **imágenes** en una cuadrícula que **acomodas arrastrando y cambias de tamaño**; queda guardado tal como lo dejaste y se actualiza con los datos al abrirlo.
+- **Compartir**: personales por defecto; se pueden compartir con tu equipo o (gerentes y supervisores) con toda la empresa, en solo lectura; cualquiera puede hacerse una copia propia para modificarla.
+- **Permisos**: los datos de cada reporte se calculan con el acceso del usuario que lo mira (un asesor solo ve lo suyo o de su equipo, aunque el tablero sea compartido).
+
 ### Formularios con cálculos y plan de pagos
 - **Campos de cálculo**: un campo puede ser una **fórmula** con otros campos del formulario (suma, resta, multiplicación, división, potencia, porcentajes, paréntesis y funciones como `REDONDEAR`, `SI`, `MIN`, `MAX`, `SUMA`, `PROMEDIO`, `ABS` y `CUOTA`). Se calcula en pantalla mientras se escribe, se vuelve a calcular en el servidor al guardar y sale en el PDF; se puede formatear como número, monto, porcentaje o entero. Al diseñar, los campos se insertan en la fórmula con un clic y se valida que esté bien escrita.
 - **Plan de pagos**: campo que arma la **tabla de amortización** (cuota, interés, capital y saldo de cada cuota, con fechas) a partir del valor a financiar, la tasa y el número de cuotas —cada uno puede ser un campo o una fórmula—. Métodos: cuota fija (sistema francés), abono fijo a capital, interés simple y sin interés; cuotas mensuales, quincenales o semanales; tasa por periodo o anual; fecha de la primera cuota tomada de un campo. Se ve completo en el formulario y **sale en el PDF**; el resumen (cuota, total, intereses) también se puede usar en mensajes y en acciones.

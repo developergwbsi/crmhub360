@@ -470,6 +470,46 @@
         }
     },
     {
+        "route": "/CrmHub/biItems",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "biItems"
+        }
+    },
+    {
+        "route": "/CrmHub/biItem",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "biItem"
+        }
+    },
+    {
+        "route": "/CrmHub/biSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "biSave"
+        }
+    },
+    {
+        "route": "/CrmHub/biDelete",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "biDelete"
+        }
+    },
+    {
+        "route": "/CrmHub/biRun",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "biRun"
+        }
+    },
+    {
         "route": "/CrmHub/metricsLeads",
         "method": "get",
         "params": {

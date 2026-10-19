@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **139** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **144** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -28,6 +28,11 @@ Total: **139** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | PUT | `/v1/ai/own` | `ai_own_save` | Guarda el motor de IA propio (solo si el tenant está en modo «own»); una clave vacía conserva la actual. |
 | POST | `/v1/ai/test` | `ai_test` | Prueba el motor que usa la empresa (o, si se envía un borrador del propio, ese). |
 | POST | `/v1/assistant/{action}` | `assist` | Ejecuta una acción del asistente IA (resumen, respuesta, etc.) sobre un lead y devuelve el texto; lo llama la interfaz de Espo. |
+| POST | `/v1/bi/formquery` | `bi_formquery` | — |
+| DELETE | `/v1/bi/item` | `bi_delete` | — |
+| GET | `/v1/bi/item` | `bi_item` | — |
+| PUT | `/v1/bi/item` | `bi_save` | — |
+| GET | `/v1/bi/items` | `bi_items` | — |
 | GET | `/v1/broadcasts` | `bc_list` | Lista las campañas de mensajes masivos del tenant y el estado, límites y política de cada canal. |
 | POST | `/v1/broadcasts` | `bc_create` | Crea una campaña masiva (con inicio programado de hasta 14 días); la procesa el worker de broadcast. |
 | GET | `/v1/broadcasts/{bid}` | `bc_detail` | Detalle de una campaña, con sus fechas como texto; 404 si no existe. |

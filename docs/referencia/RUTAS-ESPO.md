@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **124** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **129** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -25,6 +25,11 @@ Total: **124** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/assignment` | CrmHub.assignment | GET /CrmHub/assignment. Admin. Configuración de asignación automática. */ |
 | PUT | `/CrmHub/assignment` | CrmHub.assignment | PUT /CrmHub/assignment. Admin. Guarda la configuración de asignación automática. */ |
 | POST | `/CrmHub/autoAssign` | CrmHub.autoAssign | POST /CrmHub/autoAssign. Quien tiene permiso de asignación. {ids}: reparte esos leads sin asesor con el mismo balanceo del reparto automático (por campaña o grupo general). */ |
+| POST | `/CrmHub/biDelete` | CrmHub.biDelete | POST /CrmHub/biDelete. Usuario. {id}. Hub: DELETE /v1/bi/item. */ |
+| GET | `/CrmHub/biItem` | CrmHub.biItem | GET /CrmHub/biItem?id=. Usuario con acceso. Definición completa de un reporte o tablero. */ |
+| GET | `/CrmHub/biItems` | CrmHub.biItems | GET /CrmHub/biItems. Usuario. Reportes y tableros propios o compartidos con él, y los datos (CRM y formularios) con los que puede armarlos. */ |
+| POST | `/CrmHub/biRun` | CrmHub.biRun | POST /CrmHub/biRun. Usuario. {source, filters, groups, measures, limit}. Resultado del reporte con los permisos del usuario (CRM) o sobre un formulario interno (Hub). */ |
+| POST | `/CrmHub/biSave` | CrmHub.biSave | POST /CrmHub/biSave. Usuario. {id?, kind, name, definition, share}. Guarda un reporte o tablero (solo su dueño o un gerente lo cambia). Hub: PUT /v1/bi/item. */ |
 | POST | `/CrmHub/broadcast` | CrmHub.broadcastCreate | POST /CrmHub/broadcast. Usuario con permiso de masivos. Hub: POST /v1/broadcasts. */ |
 | POST | `/CrmHub/broadcast/audience` | CrmHub.broadcastAudience | POST /CrmHub/broadcast/audience. Usuario con permiso de masivos. Calcula la audiencia. */ |
 | GET | `/CrmHub/broadcasts` | CrmHub.broadcasts | GET /CrmHub/broadcasts. Usuario con permiso de masivos. Hub: GET /v1/broadcasts. */ |
