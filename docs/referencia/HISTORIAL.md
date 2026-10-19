@@ -2,8 +2,9 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.9.1)
+## v1.10.0
 
+- `8abc74d` 2026-10-19 — Versión 1.10.0
 - `d7e1228` 2026-10-19 — Versión 1.10.0
 - `7230cf7` 2026-10-19 — Grabaciones de pantalla y de videollamadas: grabar con o sin audio, ver, descargar y compartir
 

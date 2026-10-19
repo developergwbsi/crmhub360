@@ -548,13 +548,27 @@
 
     // El «Sin datos» nativo de EspoCRM (listas, paneles, ventanas) se cambia por la ilustración.
     // Escritorio (Inicio) sin widgets: en vez de una pantalla en blanco, un aviso con las formas de empezar a armarlo
+    // Tableros que el usuario fijó en su escritorio (siempre o por fechas): se dibujan arriba de los widgets
+    function paintHomeBoards() {
+        var home = document.querySelector('.home-content');
+        var isHome = /^#?(Home)?$/.test(location.hash) || /^#Home\b/.test(location.hash);
+        var cur = home && home.querySelector(':scope > .ch-home-boards');
+        if (!home || !isHome) { return; }
+        var grid = home.querySelector('.dashlets');
+        if (cur || !grid || !window.Espo || !Espo.loader || !document.querySelector('#navbar .navbar-right')) { return; }
+        var host = document.createElement('div'); host.className = 'ch-home-boards'; host.dataset.state = 'loading';
+        grid.insertAdjacentElement('beforebegin', host);
+        Espo.loader.require('custom:home-boards', function (m) { m.mount(host); });
+    }
+
     function paintHomeEmpty() {
         var home = document.querySelector('.home-content');
         var old = home && home.querySelector(':scope > .ch-home-empty');
         var isHome = /^#?(Home)?$/.test(location.hash) || /^#Home\b/.test(location.hash);
         if (!home || !isHome) { if (old) { old.remove(); } return; }
         var grid = home.querySelector('.dashlets');
-        var has = !!(grid && grid.querySelector('.grid-stack-item'));
+        var hb = home.querySelector(':scope > .ch-home-boards');
+        var has = !!(grid && grid.querySelector('.grid-stack-item')) || !!(hb && hb.dataset.state !== 'none');
         if (has) { if (old) { old.remove(); } return; }
         if (old || !grid || !window.ChEmpty) { return; }
         var box = document.createElement('div');
@@ -719,7 +733,7 @@
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); decorateEmpty(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); decorateEmpty(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });

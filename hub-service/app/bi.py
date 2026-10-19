@@ -12,6 +12,7 @@ SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS bi_items (tenant TEXT NOT NULL, id TEXT NOT NULL, kind TEXT NOT NULL, owner TEXT NOT NULL, owner_name TEXT NOT NULL DEFAULT '', name TEXT NOT NULL,
     def JSONB NOT NULL DEFAULT '{}', share TEXT NOT NULL DEFAULT 'none', teams TEXT[] NOT NULL DEFAULT '{}', updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant, id));
 CREATE INDEX IF NOT EXISTS bi_items_owner ON bi_items (tenant, owner);
+CREATE TABLE IF NOT EXISTS bi_pins (tenant TEXT NOT NULL, user_id TEXT NOT NULL, item_id TEXT NOT NULL, date_from DATE, date_to DATE, pos INT NOT NULL DEFAULT 0, PRIMARY KEY (tenant, user_id, item_id));
 """
 MAX_DEF = 300_000
 KINDS = ("report", "dashboard")
@@ -76,6 +77,7 @@ def delete_item(tenant: str, iid: str, user: str, is_manager: bool) -> bool:
         if r["owner"] != user and not is_manager:
             raise PermissionError("Solo quien lo creó puede eliminarlo.")
         c.execute("DELETE FROM bi_items WHERE tenant=%s AND id=%s", (tenant, iid))
+        c.execute("DELETE FROM bi_pins WHERE tenant=%s AND item_id=%s", (tenant, iid))
     return True
 
 
@@ -169,3 +171,53 @@ def form_query(tenant: str, form_id: str, q: dict, lead_ids: list[str] | None) -
     if groups:
         out.sort(key=lambda r: (str(r.get("g1")), str(r.get("g2"))) if groups[0].get("bucket") else (-(r.get("m1") or 0), str(r.get("g1"))))
     return {"rows": out[: int(q.get("limit") or 500)]}
+
+
+# ---------- tableros fijados en el escritorio (Inicio) de cada usuario: siempre o entre dos fechas; puede tener varios y quitarlos cuando quiera
+def _date(v):
+    if not v:
+        return None
+    try:
+        return datetime.strptime(str(v)[:10], "%Y-%m-%d").date()
+    except ValueError:
+        raise ValueError("La fecha no es válida.")
+
+
+def pins(tenant: str, user: str, teams: list[str]) -> list[dict]:
+    """Tableros fijados por el usuario que aún puede ver (con nombre y vigencia), en el orden en que los acomodó."""
+    vis = {i["id"]: i for i in items(tenant, user, teams) if i["kind"] == "dashboard"}
+    with db.pool.connection() as c:
+        rows = c.execute("SELECT item_id, date_from, date_to, pos FROM bi_pins WHERE tenant=%s AND user_id=%s ORDER BY pos, item_id", (tenant, user)).fetchall()
+    return [{"id": r["item_id"], "name": vis[r["item_id"]]["name"], "from": r["date_from"].isoformat() if r["date_from"] else "", "to": r["date_to"].isoformat() if r["date_to"] else ""}
+            for r in rows if r["item_id"] in vis]
+
+
+def pin_set(tenant: str, user: str, teams: list[str], iid: str, date_from, date_to) -> dict:
+    df, dt = _date(date_from), _date(date_to)
+    if df and dt and dt < df:
+        raise ValueError("La fecha final no puede ser anterior a la inicial.")
+    if not get_item(tenant, iid, user, teams) or get_item(tenant, iid, user, teams)["kind"] != "dashboard":
+        raise PermissionError("No tienes acceso a ese tablero.")
+    with db.pool.connection() as c:
+        n = c.execute("SELECT COALESCE(max(pos), -1) + 1 n FROM bi_pins WHERE tenant=%s AND user_id=%s", (tenant, user)).fetchone()["n"]
+        c.execute("INSERT INTO bi_pins (tenant, user_id, item_id, date_from, date_to, pos) VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (tenant, user_id, item_id) DO UPDATE SET date_from=EXCLUDED.date_from, date_to=EXCLUDED.date_to",
+                  (tenant, user, iid, df, dt, n))
+    return {"ok": True}
+
+
+def pin_del(tenant: str, user: str, iid: str) -> bool:
+    with db.pool.connection() as c:
+        return c.execute("DELETE FROM bi_pins WHERE tenant=%s AND user_id=%s AND item_id=%s", (tenant, user, iid)).rowcount > 0
+
+
+def pin_move(tenant: str, user: str, iid: str, up: bool) -> bool:
+    with db.pool.connection() as c:
+        rows = [r["item_id"] for r in c.execute("SELECT item_id FROM bi_pins WHERE tenant=%s AND user_id=%s ORDER BY pos, item_id", (tenant, user)).fetchall()]
+        if iid not in rows:
+            return False
+        i = rows.index(iid); j = i - 1 if up else i + 1
+        if 0 <= j < len(rows):
+            rows[i], rows[j] = rows[j], rows[i]
+        for k, r in enumerate(rows):
+            c.execute("UPDATE bi_pins SET pos=%s WHERE tenant=%s AND user_id=%s AND item_id=%s", (k, tenant, user, r))
+    return True

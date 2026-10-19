@@ -1076,5 +1076,37 @@
             "controller": "CrmHub",
             "action": "recPlay"
         }
+    },
+    {
+        "route": "/CrmHub/biPins",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "biPins"
+        }
+    },
+    {
+        "route": "/CrmHub/biPin",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "biPin"
+        }
+    },
+    {
+        "route": "/CrmHub/biUnpin",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "biUnpin"
+        }
+    },
+    {
+        "route": "/CrmHub/biPinMove",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "biPinMove"
+        }
     }
 ]

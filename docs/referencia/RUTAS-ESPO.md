@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **134** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **138** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -28,8 +28,12 @@ Total: **134** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/biDelete` | CrmHub.biDelete | POST /CrmHub/biDelete. Usuario. {id}. Hub: DELETE /v1/bi/item. */ |
 | GET | `/CrmHub/biItem` | CrmHub.biItem | GET /CrmHub/biItem?id=. Usuario con acceso. Definición completa de un reporte o tablero. */ |
 | GET | `/CrmHub/biItems` | CrmHub.biItems | GET /CrmHub/biItems. Usuario. Reportes y tableros propios o compartidos con él, y los datos (CRM y formularios) con los que puede armarlos. */ |
+| POST | `/CrmHub/biPin` | CrmHub.biPin | POST /CrmHub/biPin. Usuario. {id, dateFrom?, dateTo?}. Fija (o cambia la vigencia de) un tablero en su escritorio. Hub: PUT /v1/bi/pin. */ |
+| POST | `/CrmHub/biPinMove` | CrmHub.biPinMove | POST /CrmHub/biPinMove. Usuario. {id, up}. Sube o baja un tablero en el orden de su escritorio. Hub: POST /v1/bi/pinmove. */ |
+| GET | `/CrmHub/biPins` | CrmHub.biPins | GET /CrmHub/biPins. Usuario. Tableros que fijó en su escritorio (Inicio), con su vigencia. Hub: GET /v1/bi/pins. */ |
 | POST | `/CrmHub/biRun` | CrmHub.biRun | POST /CrmHub/biRun. Usuario. {source, filters, groups, measures, limit}. Resultado del reporte con los permisos del usuario (CRM) o sobre un formulario interno (Hub). */ |
 | POST | `/CrmHub/biSave` | CrmHub.biSave | POST /CrmHub/biSave. Usuario. {id?, kind, name, definition, share}. Guarda un reporte o tablero (solo su dueño o un gerente lo cambia). Hub: PUT /v1/bi/item. */ |
+| POST | `/CrmHub/biUnpin` | CrmHub.biUnpin | POST /CrmHub/biUnpin. Usuario. {id}. Quita un tablero de su escritorio (no lo elimina). Hub: DELETE /v1/bi/pin. */ |
 | POST | `/CrmHub/broadcast` | CrmHub.broadcastCreate | POST /CrmHub/broadcast. Usuario con permiso de masivos. Hub: POST /v1/broadcasts. */ |
 | POST | `/CrmHub/broadcast/audience` | CrmHub.broadcastAudience | POST /CrmHub/broadcast/audience. Usuario con permiso de masivos. Calcula la audiencia. */ |
 | GET | `/CrmHub/broadcasts` | CrmHub.broadcasts | GET /CrmHub/broadcasts. Usuario con permiso de masivos. Hub: GET /v1/broadcasts. */ |

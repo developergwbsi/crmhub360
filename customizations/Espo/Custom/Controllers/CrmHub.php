@@ -2013,6 +2013,38 @@ class CrmHub
         return (object) $this->hubCall('DELETE', '/v1/bi/item?id=' . $id . '&userId=' . urlencode($this->user->getId()) . '&manager=' . ($this->canManageForms() ? 'true' : 'false'), null, 15);
     }
 
+    /** GET /CrmHub/biPins. Usuario. Tableros que fijó en su escritorio (Inicio), con su vigencia. Hub: GET /v1/bi/pins. */
+    public function getActionBiPins(Request $request): \stdClass
+    {
+        $this->simGuard();
+        return (object) $this->hubCall('GET', '/v1/bi/pins?' . $this->biWho(), null, 15);
+    }
+
+    /** POST /CrmHub/biPin. Usuario. {id, dateFrom?, dateTo?}. Fija (o cambia la vigencia de) un tablero en su escritorio. Hub: PUT /v1/bi/pin. */
+    public function postActionBiPin(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('PUT', '/v1/bi/pin', ['id' => preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($d->id ?? '')), 'userId' => $this->user->getId(), 'teams' => $this->user->getLinkMultipleIdList('teams'),
+            'dateFrom' => (string) ($d->dateFrom ?? ''), 'dateTo' => (string) ($d->dateTo ?? '')], 15);
+    }
+
+    /** POST /CrmHub/biUnpin. Usuario. {id}. Quita un tablero de su escritorio (no lo elimina). Hub: DELETE /v1/bi/pin. */
+    public function postActionBiUnpin(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('DELETE', '/v1/bi/pin?id=' . preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($d->id ?? '')) . '&userId=' . urlencode($this->user->getId()), null, 15);
+    }
+
+    /** POST /CrmHub/biPinMove. Usuario. {id, up}. Sube o baja un tablero en el orden de su escritorio. Hub: POST /v1/bi/pinmove. */
+    public function postActionBiPinMove(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/bi/pinmove', ['id' => preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($d->id ?? '')), 'userId' => $this->user->getId(), 'up' => !empty($d->up)], 15);
+    }
+
     /** POST /CrmHub/biRun. Usuario. {source, filters, groups, measures, limit}. Resultado del reporte con los permisos del usuario (CRM) o sobre un formulario interno (Hub). */
     public function postActionBiRun(Request $request): \stdClass
     {

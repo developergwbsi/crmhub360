@@ -1240,6 +1240,41 @@ class BiFormQueryReq(BaseModel):
     leadIds: list[str] | None = None
 
 
+class BiPinReq(BaseModel):
+    """Fijar un tablero en el escritorio de un usuario (siempre o entre fechas), quitarlo o moverlo."""
+    id: str
+    userId: str
+    teams: list[str] = []
+    dateFrom: str = ""
+    dateTo: str = ""
+    up: bool = True
+
+
+@app.get("/v1/bi/pins")
+async def bi_pins(userId: str, teams: str = "", tenant: dict = Depends(tenant_auth)):
+    return {"pins": bi.pins(tenant["slug"], userId, [t for t in teams.split(",") if t])}
+
+
+@app.put("/v1/bi/pin")
+async def bi_pin(req: BiPinReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return bi.pin_set(tenant["slug"], req.userId, req.teams, req.id, req.dateFrom, req.dateTo)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+
+
+@app.delete("/v1/bi/pin")
+async def bi_unpin(id: str, userId: str, tenant: dict = Depends(tenant_auth)):
+    return {"ok": bi.pin_del(tenant["slug"], userId, id)}
+
+
+@app.post("/v1/bi/pinmove")
+async def bi_pinmove(req: BiPinReq, tenant: dict = Depends(tenant_auth)):
+    return {"ok": bi.pin_move(tenant["slug"], req.userId, req.id, req.up)}
+
+
 @app.get("/v1/bi/items")
 async def bi_items(userId: str, teams: str = "", tenant: dict = Depends(tenant_auth)):
     return {"items": bi.items(tenant["slug"], userId, [t for t in teams.split(",") if t]), "forms": bi.form_meta(tenant["slug"])}

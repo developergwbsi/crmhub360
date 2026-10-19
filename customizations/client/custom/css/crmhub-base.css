@@ -1528,3 +1528,25 @@ html.ch-noscroll { overflow: hidden !important; }
 .ch-rc-video { width: 100%; max-height: 62vh; background: #000; border-radius: 8px; }
 .ch-rc-link { display: flex; gap: 8px; }
 .ch-dlg:has(.ch-rc-video) { max-width: 920px; width: 92vw; }
+
+/* ---- Tableros fijados en el escritorio (Inicio) ---- */
+.ch-home-boards { margin-bottom: 18px; }
+.ch-home-boards[data-state="loading"], .ch-home-boards[data-state="none"]:empty { display: none; }
+.ch-hb-top { display: flex; align-items: center; justify-content: space-between; margin: 0 0 8px; font-weight: 650; color: var(--ch-ink); }
+.ch-hb { background: var(--ch-surface); border: 1px solid var(--ch-line); border-radius: 14px; padding: 10px 12px 12px; margin-bottom: 16px; }
+.ch-hb-head { display: flex; align-items: baseline; gap: 10px; padding: 2px 4px 8px; }
+.ch-hb-head h4 { margin: 0; font-size: 16px; }
+.ch-hb-head small { color: var(--ch-muted); flex: 1; }
+.ch-hb-x { border: 0; background: transparent; color: var(--ch-muted); width: 28px; height: 28px; border-radius: 8px; cursor: pointer; }
+.ch-hb-x:hover { background: color-mix(in srgb, var(--ch-ink) 8%, transparent); color: var(--ch-ink); }
+.ch-hb .grid-stack-item-content { overflow: visible !important; }
+.ch-hb-opt { display: flex; gap: 8px; align-items: baseline; margin: 8px 0; font-weight: 400; cursor: pointer; flex-wrap: wrap; }
+.ch-hb-opt small { color: var(--ch-muted); }
+.ch-hb-dates { display: flex; gap: 12px; margin: 6px 0 0 24px; }
+.ch-hb-dates label { flex: 1; font-weight: 600; font-size: 12px; }
+.ch-hb-list { display: flex; flex-direction: column; gap: 8px; }
+.ch-hb-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--ch-line); border-radius: 10px; padding: 8px 12px; }
+.ch-hb-row.pick { cursor: pointer; } .ch-hb-row.pick:hover { border-color: var(--ch-primary); }
+.ch-hb-row small { display: block; color: var(--ch-muted); }
+.ch-hb-row button { border: 0; background: transparent; color: var(--ch-muted); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; }
+.ch-hb-row button:hover:not(:disabled) { background: color-mix(in srgb, var(--ch-ink) 8%, transparent); color: var(--ch-ink); } .ch-hb-row button:disabled { opacity: .3; cursor: default; }

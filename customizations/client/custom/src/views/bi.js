@@ -31,7 +31,8 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
         onRemove() { this.destroyGrid(); Studio.detach(this); if (super.onRemove) { super.onRemove(); } }
 
         load(then) {
-            Espo.Ajax.getRequest('CrmHub/biItems').then(r => { this.items = r.items || []; this.sources = r.sources || []; this.canPublish = !!r.canPublish; this.loaded = true; this.draw(); if (then) { then(); } })
+            Espo.Ajax.getRequest('CrmHub/biPins').then(r => { this.pins = {}; (r.pins || []).forEach(p => { this.pins[p.id] = p; }); }, () => { this.pins = {}; })
+                .then(() => Espo.Ajax.getRequest('CrmHub/biItems')).then(r => { this.items = r.items || []; this.sources = r.sources || []; this.canPublish = !!r.canPublish; this.loaded = true; this.draw(); if (then) { then(); } })
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } this.loaded = 'error'; this.draw(); });
         }
 
@@ -64,8 +65,10 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
 
         save() {
             const c = this.cur;
+            const isNew = !c.id;
             return Espo.Ajax.postRequest('CrmHub/biSave', {id: c.id, kind: c.kind, name: c.name, definition: c.def, share: c.share}).then(r => {
-                c.id = r.id; c.dirty = false; c.editing = false; Espo.Ui.success('Guardado'); this.load(() => { this.cur = c; this.draw(); });
+                c.id = r.id; c.dirty = false; c.editing = false; Espo.Ui.success('Guardado');
+                this.load(() => { this.cur = c; this.draw(); if (isNew && c.kind === 'dashboard') { ChUi.confirm({title: 'Tablero guardado', text: '¿Quieres verlo en tu escritorio (Inicio), para tenerlo siempre a la mano?', ok: 'Sí, ponerlo', cancel: 'Ahora no'}).then(y => { if (y) { this.pinCur(); } }); } });
             }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error((xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || 'No se pudo guardar'); });
         }
 
@@ -158,7 +161,7 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
             const bucket = (g, i) => g && ['date', 'datetime'].includes((this.fld(d.source, g.field) || {}).type) ? `<select class="form-control input-sm" data-p="groups.${i}.bucket" ${dis}>${BUCKETS.map(([k, l]) => `<option value="${k}" ${(g.bucket || 'month') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>` : '';
             const ms = (d.measures || []).map((m, i) => `<div class="ch-ifb-row"><select class="form-control input-sm" data-p="measures.${i}.fn" ${dis} data-redraw>${R.FNS.map(([k, l]) => `<option value="${k}" ${k === m.fn ? 'selected' : ''}>${l}</option>`).join('')}</select>${m.fn === 'count' ? '' : F(['int', 'float', 'currency'], m.field, `data-p="measures.${i}.field"`, 'Campo…')}<input class="form-control input-sm" data-p="measures.${i}.label" value="${esc(m.label || '')}" placeholder="Nombre en el reporte (opcional)" ${dis}>${ro || (d.measures || []).length < 2 ? '' : `<a data-a="delm" data-i="${i}"><span class="far fa-trash-can"></span></a>`}</div>`).join('');
             return `<div class="ch-bi-bar"><input class="form-control input-sm ch-bi-name" data-c="name" value="${esc(c.name)}" ${c.mine && c.editing ? '' : 'disabled'} placeholder="Nombre del reporte">${c.mine ? this.shareSel(!c.editing) : `<span class="ch-muted">De ${esc(c.ownerName)}</span>`}
-                <span class="ch-bi-btns">${c.mine ? (c.editing ? '<button class="btn btn-default btn-sm" data-a="cancel">Cancelar</button><button class="btn btn-primary btn-sm" data-a="save"><span class="fas fa-floppy-disk"></span> Guardar</button>' : '<button class="btn btn-default btn-sm" data-a="edit"><span class="fas fa-pen"></span> Editar</button>') + (c.id ? '<button class="btn btn-default btn-sm" data-a="del" title="Eliminar"><span class="far fa-trash-can"></span></button>' : '') : ''}<button class="btn btn-default btn-sm" data-a="dup" title="Hacer una copia propia"><span class="far fa-copy"></span></button><button class="btn btn-default btn-sm" data-a="refresh" title="Actualizar"><span class="fas fa-rotate"></span></button></span></div>
+                <span class="ch-bi-btns">${c.mine ? (c.editing ? '<button class="btn btn-default btn-sm" data-a="cancel">Cancelar</button><button class="btn btn-primary btn-sm" data-a="save"><span class="fas fa-floppy-disk"></span> Guardar</button>' : '<button class="btn btn-default btn-sm" data-a="edit"><span class="fas fa-pen"></span> Editar</button>') + (c.id ? '<button class="btn btn-default btn-sm" data-a="del" title="Eliminar"><span class="far fa-trash-can"></span></button>' : '') : ''}<button class="btn btn-default btn-sm" data-a="dup" title="Hacer una copia propia"><span class="far fa-copy"></span></button>${!ed && c.id ? `<button class="btn btn-${(this.pins || {})[c.id] ? 'primary' : 'default'} btn-sm" data-a="pin" title="Ver este tablero arriba, en Inicio"><span class="fas fa-thumbtack"></span> ${(this.pins || {})[c.id] ? 'En mi escritorio' : 'Ver en mi escritorio'}</button>` : ''}<button class="btn btn-default btn-sm" data-a="refresh" title="Actualizar"><span class="fas fa-rotate"></span></button></span></div>
                 <div class="ch-bi-split"><div class="ch-bi-cfg">
                 <div class="ch-sim-card"><h4>1 · Datos</h4><select class="form-control input-sm" data-p="source" ${dis} data-redraw>${this.sources.map(x => `<option value="${esc(x.id)}" ${x.id === d.source ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></div>
                 <div class="ch-sim-card"><h4>2 · Filtros</h4>${filters || '<div class="ch-muted">Sin filtros: usa todos los datos que puedes ver.</div>'}${ro ? '' : '<button class="btn btn-default btn-xs" data-a="addf"><span class="fas fa-plus"></span> Añadir filtro</button>'}</div>
@@ -241,8 +244,15 @@ define('custom:views/bi', ['view', 'custom:ui', 'custom:bi-render', 'custom:stud
 
         addWidget(w) { const c = this.cur; w.id = uid(); w.x = (w.w || 4) >= 12 ? 0 : (((c.def.widgets || []).filter(x => x.type === 'report').length % 2) * 6); w.y = 999; c.def.widgets = c.def.widgets || []; c.def.widgets.push(w); c.dirty = true; this.draw(); }
 
+        // fijar el tablero en el escritorio (Inicio): siempre o por fechas
+        pinCur() {
+            const c = this.cur;
+            return new Promise(res => Espo.loader.require('custom:home-boards', m => m.pinDialog(c.id, c.name, (this.pins || {})[c.id]).then(ok => { if (ok) { this.load(() => { this.cur = c; this.draw(); }); } res(ok); })));
+        }
+
         onDashAction(k, a) {
             const c = this.cur, ws = c.def.widgets || [];
+            if (k === 'pin') { this.pinCur(); return; }
             if (k === 'addrepw') { const reps = this.items.filter(i => i.kind === 'report'); if (!reps.length) { Espo.Ui.warning('Primero crea un reporte.'); return; }
                 ChUi.panel({title: 'Añadir un reporte al tablero', icon: 'fas fa-chart-column', close: 'Cancelar', mount: (body, close) => { body.innerHTML = reps.map(r => `<div class="ch-fp-card" data-id="${esc(r.id)}"><span class="fas fa-chart-column"></span><div><b>${esc(r.name)}</b><small>${r.mine ? 'Mío' : 'De ' + esc(r.ownerName)}</small></div></div>`).join(''); body.onclick = e => { const x = e.target.closest('[data-id]'); if (x) { close(true); this.addWidget({type: 'report', reportId: x.dataset.id, w: 6, h: 5}); } }; }}); }
             else if (k === 'addtext') { this.addWidget({type: 'text', text: 'Escribe aquí un título o una nota', size: 20, align: 'left', w: 12, h: 1}); }

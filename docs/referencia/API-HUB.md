@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **155** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **159** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -33,6 +33,10 @@ Total: **155** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/bi/item` | `bi_item` | — |
 | PUT | `/v1/bi/item` | `bi_save` | — |
 | GET | `/v1/bi/items` | `bi_items` | — |
+| DELETE | `/v1/bi/pin` | `bi_unpin` | — |
+| PUT | `/v1/bi/pin` | `bi_pin` | — |
+| POST | `/v1/bi/pinmove` | `bi_pinmove` | — |
+| GET | `/v1/bi/pins` | `bi_pins` | — |
 | GET | `/v1/broadcasts` | `bc_list` | Lista las campañas de mensajes masivos del tenant y el estado, límites y política de cada canal. |
 | POST | `/v1/broadcasts` | `bc_create` | Crea una campaña masiva (con inicio programado de hasta 14 días); la procesa el worker de broadcast. |
 | GET | `/v1/broadcasts/{bid}` | `bc_detail` | Detalle de una campaña, con sus fechas como texto; 404 si no existe. |
