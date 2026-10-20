@@ -4,6 +4,9 @@
 
 ## Sin publicar (después de v1.10.6)
 
+- `9b9fd18` 2026-10-19 — Versión 1.10.7
+- `ef4dd32` 2026-10-19 — El panel del manual se reubica en la sección de la página nueva al navegar
+- `0cfc3c8` 2026-10-19 — Ficha completa del participante en panel lateral desde la videollamada; campaña de los formularios de captación elegida de una lista
 - `c41f01e` 2026-10-19 — Arregla el pie oculto de las ventanas (sin Guardar) en fichas con paneles divididos y el envío por WhatsApp/SMS a contactos y cuentas
 - `680ee9c` 2026-10-19 — La publicación de una versión incluye el archivo VERSION (para mostrarlo en Acerca de)
 
