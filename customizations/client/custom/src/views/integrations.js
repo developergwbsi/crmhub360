@@ -18,6 +18,10 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
         setup() {
             this.getHelper().pageTitle.setTitle('Integraciones');
             this.load();
+            // campañas del CRM para elegir a cuál pertenece cada formulario (si el usuario no puede verlas queda el campo de texto)
+            Espo.Ajax.getRequest('Campaign', {maxSize: 200, select: 'name,status,type', orderBy: 'createdAt', order: 'desc'})
+                .then(r => { this.campaigns = r.list || []; if (this.forms) { this.renderForms(); } })
+                .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } this.campaigns = null; });
         }
 
         load(keepLocal) {
@@ -404,6 +408,15 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                     : `<input class="form-control" ${at('value')} value="${esc(c.value)}" placeholder="valor">`;
                 return sel + op + val;
             };
+            const stLbl = {Planning: 'Planeada', Active: 'Activa', Inactive: 'Inactiva', Complete: 'Completada'};
+            const campaignPick = (i, cur) => {
+                if (!Array.isArray(this.campaigns)) { return inp(i, 'campaign', cur, 'Nombre exacto de la campaña. Se liga al lead y define quién lo atiende'); }
+                const known = this.campaigns.some(c => c.name === cur);
+                return `<select class="form-control" data-fbind="campaign" data-i="${i}"><option value="">Sin campaña</option>` +
+                    this.campaigns.map(c => `<option value="${esc(c.name)}" ${c.name === cur ? 'selected' : ''}>${esc(c.name)}${c.status ? ' · ' + esc(stLbl[c.status] || c.status) : ''}</option>`).join('') +
+                    (cur && !known ? `<option value="${esc(cur)}" selected>${esc(cur)} (no existe en tus campañas)</option>` : '') + '</select>' +
+                    `<div class="ch-small ch-muted">${this.campaigns.length ? 'Los leads de este formulario quedan ligados a la campaña elegida y se atienden como ella lo define.' : 'Aún no tienes campañas.'} <a href="#Campaign/create">Crear una campaña</a></div>`;
+            };
             const inp = (i, w, v, ph) => `<input class="form-control" data-fbind="${w}" data-i="${i}" value="${esc(v)}" ${ph ? `placeholder="${esc(ph)}"` : ''}>`;
             const html = this.forms.map((f, i) => {
                 const url = this.formUrl(f);
@@ -474,7 +487,7 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                     <div class="ch-cols2">
                         <div><label>Texto del botón</label>${inp(i, 'button', f.button)}</div>
                         <div><label>Origen del lead</label>${inp(i, 'source', f.source)}</div>
-                        <div><label>Campaña (nombre exacto, opcional)</label>${inp(i, 'campaign', f.campaign, 'Se liga al lead y define quién lo atiende')}</div>
+                        <div><label>Campaña (opcional)</label>${campaignPick(i, f.campaign)}</div>
                         <div><label>Redirigir tras enviar (URL, opcional)</label>${inp(i, 'redirect_url', f.redirect_url, 'https://…')}</div>
                     </div>
                     <label>Mensaje de éxito</label>${inp(i, 'success_message', f.success_message)}

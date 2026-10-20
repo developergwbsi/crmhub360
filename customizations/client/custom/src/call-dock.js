@@ -60,6 +60,16 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
 
     function closeCard() { if (card) { card.remove(); card = null; } }
 
+    // la ficha completa del cliente en el panel lateral del CRM (la misma de las listas), sin salir de la página ni cortar la llamada; el panel de la llamada se acomoda a su lado
+    let drawer = null;
+    function closeDrawer() { if (drawer) { try { drawer.close(); } catch (e) { /* ya cerrado */ } drawer = null; } }
+    function openRecord(r) {
+        const ctx = window.ChViewCtx; if (!ctx || !r) { return false; }
+        closeDrawer();
+        ctx.factory.create('custom:views/modals/lead-drawer', {scope: r.s, entityType: r.s, id: r.l}, v => { drawer = v; v.render(); });
+        return true;
+    }
+
     // tarjeta con los datos del cliente (o buscador para vincular a quien no tiene ficha); se abre sobre el panel de la llamada
     function openCard(pid, anchor) {
         closeCard();
@@ -68,6 +78,7 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
         el.appendChild(card);
         const r = p.room ? roomRef : refOf(p);
         if (!r) { return linkSearch(p); }
+        if (openRecord(r)) { closeCard(); return; }
         card.innerHTML = '<span class="spin">Cargando…</span>';
         Espo.Ajax.getRequest(r.s + '/' + r.l).then(d => {
             if (!card) { return; }
@@ -219,7 +230,7 @@ define('custom:call-dock', ['custom:split', 'custom:ui'], function (Split, ChUi)
             clearTimeout(popTimer); popTimer = setTimeout(() => { Espo.Ui.notify(false); Espo.Ui.warning('La otra ventana no se conectó; la llamada sigue aquí.'); }, 25000);
         },
         close() {
-            clearInterval(timer); clearTimeout(popTimer); closeCard(); people = []; links = {};
+            clearInterval(timer); clearTimeout(popTimer); closeCard(); closeDrawer(); people = []; links = {};
             if (counted) { counted = false; Split.close('call'); }
             if (el) { el.remove(); el = null; url = ''; }
         },

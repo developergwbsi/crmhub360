@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Cambiado
+- **Información del participante en la videollamada.** Al pulsar a un participante (o al cliente de la llamada), ya no sale el cuadro pequeño con 4 datos y el enlace «ver en el CRM»: se abre **la ficha completa en el panel lateral**, la misma de las listas (datos, agenda, gestión, historial, formularios, botones para llamar, escribir y agendar), **sin salir de la página y sin cortar la llamada**. El panel de la llamada se acomoda a su lado y la ficha **se queda abierta hasta que la cierres** con la X.
+- **Formularios web de captación: la campaña ahora se elige de una lista** con tus campañas del CRM (con su estado), en vez de escribir su nombre exacto. Incluye un enlace para crear una campaña nueva.
+
 ### Corregido
 - **No aparecía «Guardar» al crear una reunión (cita, videollamada, llamada o tarea) desde la ficha de un lead o contacto.** Una regla de estilos ocultaba también el pie de las ventanas emergentes, que es donde están los botones Guardar y Cancelar. Ya aparecen en todas las ventanas.
 - **Enviar por WhatsApp o SMS a un contacto o cuenta que no es un lead.** Si el contacto no tenía teléfono cuando se abrió su conversación y se lo agregaron después, el sistema decía que «el lead no tiene teléfono». Ahora el teléfono y el correo se actualizan en la conversación al abrirla. Además, la invitación a una reunión con un contacto o cuenta ya se puede enviar por WhatsApp y SMS (antes solo para leads).

@@ -4,6 +4,7 @@
 
 ## Sin publicar (después de v1.10.6)
 
+- `c41f01e` 2026-10-19 — Arregla el pie oculto de las ventanas (sin Guardar) en fichas con paneles divididos y el envío por WhatsApp/SMS a contactos y cuentas
 - `680ee9c` 2026-10-19 — La publicación de una versión incluye el archivo VERSION (para mostrarlo en Acerca de)
 
 ## v1.10.6

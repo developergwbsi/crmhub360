@@ -549,6 +549,16 @@
     // El «Sin datos» nativo de EspoCRM (listas, paneles, ventanas) se cambia por la ilustración.
     // Escritorio (Inicio) sin widgets: en vez de una pantalla en blanco, un aviso con las formas de empezar a armarlo
 
+    // Guarda la fábrica de vistas de Espo para poder abrir paneles (p. ej. la ficha del cliente desde la videollamada) desde código que no es una vista
+    function captureViewCtx() {
+        if (window.ChViewCtx || captureViewCtx.on || !window.Espo || !Espo.loader) { return; }
+        captureViewCtx.on = true;
+        Espo.loader.require('view', function (V) {
+            var C = V.default || V, o = C.prototype.setup;
+            C.prototype.setup = function () { if (!window.ChViewCtx && this._factory) { window.ChViewCtx = {factory: this._factory, helper: this._helper}; } return o.apply(this, arguments); };
+        });
+    }
+
     // Buscador rápido del menú lateral: filtra las opciones al escribir (sin tildes ni mayúsculas); Enter abre la primera; Esc limpia
     function navSearch() {
         var left = document.querySelector('#navbar .navbar-left-container'), tabs = left && left.querySelector('ul.tabs');
@@ -792,7 +802,7 @@
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); decorateEmpty(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); decorateEmpty(); captureViewCtx(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });
