@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.10.7] - 2026-10-19
+
 ### Corregido
 - **El panel del manual de usuario se quedaba mostrando la sección de la página anterior** al navegar con el panel abierto. Ahora se reinicia solo en la sección de la página nueva (y se cierra si pasas a la página del manual).
 
