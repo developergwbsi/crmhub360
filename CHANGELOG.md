@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Corregido
+- **El panel del manual de usuario se quedaba mostrando la sección de la página anterior** al navegar con el panel abierto. Ahora se reinicia solo en la sección de la página nueva (y se cierra si pasas a la página del manual).
+
 ### Cambiado
 - **Información del participante en la videollamada.** Al pulsar a un participante (o al cliente de la llamada), ya no sale el cuadro pequeño con 4 datos y el enlace «ver en el CRM»: se abre **la ficha completa en el panel lateral**, la misma de las listas (datos, agenda, gestión, historial, formularios, botones para llamar, escribir y agendar), **sin salir de la página y sin cortar la llamada**. El panel de la llamada se acomoda a su lado y la ficha **se queda abierta hasta que la cierres** con la X.
 - **Formularios web de captación: la campaña ahora se elige de una lista** con tus campañas del CRM (con su estado), en vez de escribir su nombre exacto. Incluye un enlace para crear una campaña nueva.

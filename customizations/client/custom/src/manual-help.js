@@ -42,7 +42,8 @@ define('custom:manual-help', ['custom:ui'], function (ChUi) {
 
     function open(forceSection) {
         const target = forceSection || sectionFor(location.hash);
-        close();
+        const old = document.getElementById('ch-mdrawer'); if (old) { old.remove(); }   // se reemplaza al instante (sin la animación de cerrar)
+        document.removeEventListener('keydown', onKey, true);
         const d = document.createElement('div'); d.id = 'ch-mdrawer'; d.className = 'ch-mdrawer';
         d.innerHTML = '<div class="ch-md-head"><span class="fas fa-book-open"></span><b>Manual de usuario</b><span class="ch-md-sec" data-sec></span><button type="button" class="ch-md-close" data-x title="Cerrar"><span class="fas fa-xmark"></span></button></div>' +
             '<div class="ch-md-bar"><button type="button" class="btn btn-primary btn-sm" data-full><span class="fas fa-up-right-from-square"></span> Ir a la página del manual</button></div><div class="ch-md-body"><div class="ch-muted" style="padding:20px">Cargando el manual…</div></div>';
@@ -62,6 +63,12 @@ define('custom:manual-help', ['custom:ui'], function (ChUi) {
             d.querySelector('[data-full]').onclick = () => { try { sessionStorage.setItem('chManualSection', id); } catch (e) { /* sin sessionStorage */ } close(); if (/^#?CrmHub\/manual/.test(location.hash)) { location.reload(); } else { location.hash = '#CrmHub/manual'; } };
         }).catch(() => { const b = d.querySelector('.ch-md-body'); if (b) { b.innerHTML = '<div class="ch-chat-err">No se pudo cargar el manual.</div>'; } });
     }
+
+    // si el panel sigue abierto al pasar a otra página, se reinicia en la sección de la página nueva (en la página del manual se cierra)
+    window.addEventListener('hashchange', () => {
+        if (!document.getElementById('ch-mdrawer')) { return; }
+        if (/^#?CrmHub\/manual/.test(location.hash)) { close(); } else { open(); }
+    });
 
     return {open, close, sectionFor};
 });
