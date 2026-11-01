@@ -6,7 +6,7 @@ from psycopg.types.json import Jsonb
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from . import compliance, db, llm, mailout, push, routing, sms, whatsapp
+from . import compliance, db, llm, mailout, prospects, push, routing, sms, whatsapp
 from .espo import Espo
 
 log = logging.getLogger("hub.agent")
@@ -919,6 +919,14 @@ def _quota_ok(tenant: dict, cfg: dict) -> bool:
 async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: str, subject: str, owner: str | None, menu: dict | None = None, proactive: bool = False) -> None:
     """Envía el mensaje por el canal elegido (WhatsApp con o sin menú, SMS o correo) respetando una pausa de 12 s entre envíos del mismo tenant."""
     persona, lead_id = cfg["persona"]["name"], lead["id"]
+    cold = proactive and prospects.is_cold(tenant["slug"], lead_id)
+    if cold and channel != "email":
+        raise ValueError("Contacto hallado por el buscador: por WhatsApp o SMS solo se escribe a quien dio permiso. Usa el correo con remitente propio para frío.")
+    if cold:   # correo en frío: solo por un remitente aparte (settings.mailout_cold), nunca por el proveedor transaccional (Resend…)
+        mc = (tenant.get("settings") or {}).get("mailout_cold")
+        if not mc or not mc.get("host"):
+            raise ValueError("Falta el remitente de correo en frío (buzón real en un dominio aparte). Mientras tanto la propuesta queda sin enviar.")
+        tenant = {**tenant, "settings": {**(tenant.get("settings") or {}), "mailout": mc}}
     gap = 12 - (time.time() - _last_send.get(tenant["slug"], 0))
     if gap > 0:
         await asyncio.sleep(gap)   # ritmo suave: no se envía una ráfaga de mensajes desde la misma línea
@@ -1133,7 +1141,7 @@ async def step(tenant: dict, row: dict) -> None:
             first_response = int((now - datetime.strptime(lead["createdAt"][:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)).total_seconds())
         except Exception:
             pass
-    if cfg["approval"] and not dry:   # una persona aprueba cada mensaje antes de que salga
+    if (cfg["approval"] or (kind in ("first", "followup") and prospects.is_cold(slug, lead_id))) and not dry:   # una persona aprueba cada mensaje antes de que salga (siempre, si el contacto lo halló el buscador)
         ev = log_event(slug, lead_id, "proposal", lead_name=lname, channel=channel, title={"first": "Primer contacto propuesto", "followup": "Seguimiento propuesto", "reply": "Respuesta propuesta"}[kind] + (f" (con opciones: {menu['name']})" if menu else "") + " · pendiente de aprobación", detail=message, reason=reason,
                        data={"kind": kind, "menu": menu["id"] if menu else "", "subject": d.get("subject") or "", "new_status": ns, "summary": summary, "attempts": row["attempts"], "first_response": first_response,
                              **({"variant": variant["id"], "step": step_idx} if variant else {})})

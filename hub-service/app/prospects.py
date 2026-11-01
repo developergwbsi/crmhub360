@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS prospects (
     email TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '', country TEXT NOT NULL DEFAULT '', industry TEXT NOT NULL DEFAULT '', segment TEXT NOT NULL DEFAULT '', niche TEXT NOT NULL DEFAULT '',
     score INT, rules_score INT, status TEXT NOT NULL DEFAULT 'new', reason TEXT NOT NULL DEFAULT '', lead_id TEXT, enrichment JSONB NOT NULL DEFAULT '{}', raw JSONB NOT NULL DEFAULT '{}',
     campaign TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
+ALTER TABLE prospects ADD COLUMN IF NOT EXISTS origin TEXT NOT NULL DEFAULT 'import';
 CREATE INDEX IF NOT EXISTS prospects_tenant ON prospects (tenant, status, created_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS prospects_email ON prospects (tenant, email) WHERE email <> '' AND status <> 'rejected';
 CREATE UNIQUE INDEX IF NOT EXISTS prospects_phone ON prospects (tenant, phone) WHERE phone <> '' AND status <> 'rejected';
@@ -235,7 +236,8 @@ async def promote(tenant: dict, ids: list[int] | None = None, limit: int | None 
                 _mark(r["id"], "rejected", "Está en la lista de no contactar"); out["skipped"] += 1; continue
             en = r["enrichment"] or {}
             desc = "\n".join(x for x in [f"Empresa: {r['company']}" if r["company"] else "", f"Cargo: {r['title']}" if r["title"] else "", f"Sector: {r['industry']}" if r["industry"] else "",
-                                          f"Dolor probable: {en['pain']}" if en.get("pain") else "", f"Puntaje de ajuste: {r['score']}/100" if r["score"] is not None else "", f"Lote: {r['batch']}"] if x)
+                                          f"Dolor probable: {en['pain']}" if en.get("pain") else "", f"Puntaje de ajuste: {r['score']}/100" if r["score"] is not None else "", f"Lote: {r['batch']}",
+                                          (f"Hallado por el buscador. Fuente pública: {(r['raw'] or {}).get('fuente_url', '')}" if r.get("origin") == "finder" else "")] if x)
             extra = {"description": desc, "preferredChannel": "Correo" if r["email"] else "WhatsApp", **({"accountName": r["company"]} if r["company"] else {})}
             lead_id = await ingest.upsert_lead(tenant, name=r["name"], phone=r["phone"] or None, email=r["email"] or None, source="Prospección IA", extra=extra, campaign=r["campaign"] or cfg["campaign"] or None)
             _mark(r["id"], "imported", "", lead_id)
@@ -273,6 +275,15 @@ def _allocate(rows: list[dict], n: int, tenant: dict) -> list[dict]:
         out.append(by[k].pop(0))
         taken[k] += 1
     return out
+
+
+def is_cold(slug: str, lead_id: str) -> bool:
+    """¿Este lead lo encontró el buscador en internet (nadie pidió que lo contactaran)? Esos contactos nunca salen por WhatsApp/SMS ni por el proveedor transaccional."""
+    try:
+        with db.pool.connection() as c:
+            return bool(c.execute("SELECT 1 FROM prospects WHERE tenant=%s AND lead_id=%s AND origin='finder' LIMIT 1", (slug, lead_id)).fetchone())
+    except Exception:
+        return True   # ante la duda, tratarlo como frío (más restrictivo)
 
 
 def _mark(pid: int, status: str, reason: str = "", lead_id: str | None = None) -> None:

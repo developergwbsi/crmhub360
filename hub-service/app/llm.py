@@ -198,3 +198,31 @@ async def test(cfg: dict) -> dict:
     async with gate:
         out, tin, tout = await fn(cfg, "Responde en español.", "Di 'listo' en el campo respuesta.", schema, 40, 0)
     return {"ok": True, "seconds": round(time.time() - t0, 1), "answer": str(out.get("respuesta", ""))[:60], "tokens": [tin, tout]}
+
+
+async def web_search(tenant: dict | None, system: str, user: str, max_uses: int = 5, max_tokens: int = 4000) -> str:
+    """Investiga en internet con la herramienta de búsqueda web de Anthropic y devuelve el informe en texto (con las direcciones de las fuentes).
+    Solo con un motor Anthropic; el costo son los tokens más el cargo por búsqueda de Anthropic."""
+    cfg = resolve(tenant)
+    if cfg["kind"] != "anthropic" or not cfg["api_key"]:
+        raise RuntimeError("La búsqueda web de Claude necesita un motor de IA de Anthropic con su clave configurada.")
+    base = (cfg["base_url"] or DEFAULT_URL["anthropic"]).rstrip("/")
+    headers = {"x-api-key": cfg["api_key"], "anthropic-version": "2023-06-01", "content-type": "application/json", **({"anthropic-workspace-id": cfg["workspace_id"]} if cfg.get("workspace_id") else {})}
+    msgs = [{"role": "user", "content": user}]
+    tin = tout = 0
+    text = ""
+    async with REMOTE_SEM:
+        for _ in range(4):   # «pause_turn»: el servidor pausó una búsqueda larga; se reanuda con lo que ya hizo
+            body = {"model": cfg["model"] or "claude-haiku-5-5", "max_tokens": max_tokens, "system": system, "messages": msgs,
+                    "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": max_uses}]}
+            j = await _post(cfg, f"{base}/v1/messages", headers, body, timeout=240)
+            u = j.get("usage") or {}
+            tin += u.get("input_tokens", 0); tout += u.get("output_tokens", 0)
+            blocks = j.get("content", [])
+            text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text").strip()
+            if j.get("stop_reason") != "pause_turn":
+                break
+            msgs = [*msgs, {"role": "assistant", "content": blocks}]
+    if tenant:
+        _usage(tenant["slug"], cfg, 1, tin, tout)
+    return text

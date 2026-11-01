@@ -24,7 +24,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, compliance, growth, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, compliance, finder, growth, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -2371,6 +2371,32 @@ class ProspectIdsReq(BaseModel):
 @app.get("/v1/prospects")
 def prospects_list(status: str = "", batch: str = "", q: str = "", tenant: dict = Depends(tenant_auth)):
     return {**prospects.listing(tenant["slug"], status, batch, q), "icp": prospects.icp(tenant)}
+
+
+@app.get("/v1/finder")
+def finder_get(tenant: dict = Depends(tenant_auth)):
+    """Estado del buscador de prospectos: licencia, configuración y última pasada."""
+    return {**finder.config(tenant), "licensed": finder.licensed(tenant), "name": "buscador_" + tenant["slug"]}
+
+
+@app.put("/v1/finder")
+def finder_save(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    """Activa o ajusta el buscador (tope diario y enfoque). Requiere que la licencia lo incluya."""
+    if not finder.licensed(tenant):
+        raise HTTPException(403, "El buscador no está incluido en la licencia de esta empresa.")
+    finder._save(tenant["slug"], {"enabled": bool(body.get("enabled")), "daily_limit": max(1, min(100, int(body.get("daily_limit") or 20))), "focus": str(body.get("focus") or "")[:600]})
+    return finder.config(db.get_tenant(tenant["slug"]))
+
+
+@app.post("/v1/finder/run")
+async def finder_run(body: dict = Body(default={}), tenant: dict = Depends(tenant_auth)):
+    """Una pasada de búsqueda en internet (solo guarda prospectos con fuente pública; no envía nada)."""
+    try:
+        return await finder.run(tenant, int(body.get("limit") or 0) or None)
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo completar la búsqueda: {str(e)[:200]}")
 
 
 @app.put("/v1/prospects/icp")
