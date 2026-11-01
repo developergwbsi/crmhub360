@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **175** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **176** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -151,6 +151,7 @@ Total: **175** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/searchConfig` | CrmHub.searchConfig | GET /CrmHub/searchConfig. Admin. Buscador web de la empresa. Hub: GET /v1/search-config. */ |
 | POST | `/CrmHub/searchConfigSave` | CrmHub.searchConfigSave | POST /CrmHub/searchConfigSave. Admin. {engine, api_key, cx}. Hub: PUT /v1/search-config. */ |
 | POST | `/CrmHub/searchConfigTest` | CrmHub.searchConfigTest | POST /CrmHub/searchConfigTest. Admin. Prueba el buscador con una consulta real. Hub: POST /v1/search-config/test. */ |
+| POST | `/CrmHub/senderAddress` | CrmHub.senderAddress | Solo el usuario API del Hub. {userId, address}: registra la dirección remitente del comercial virtual como una de las direcciones de ese usuario, así los correos que envía el comercial virtual salen en «Enviados» (y no en la «Bandeja de entrada»). */ |
 | GET | `/CrmHub/simConfig` | CrmHub.simConfig | GET /CrmHub/simConfig. Usuario (no API ni portal). Hub: GET /v1/sim/config. */ |
 | POST | `/CrmHub/simDelete` | CrmHub.simDelete | POST /CrmHub/simDelete. Usuario (no API ni portal). Hub: GET y DELETE /v1/sim/runs/{id}. */ |
 | GET | `/CrmHub/simRun` | CrmHub.simRun | GET /CrmHub/simRun. Usuario (no API ni portal). Hub: GET /v1/sim/runs/{id}. */ |

@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.17.1)
+## Sin publicar (después de v1.18.0)
 
+- `a38f832` 2026-11-01 — Versión 1.18.1
+- `8dc2139` 2026-11-01 — Los correos del comercial virtual salen en «Enviados» del CRM: el remitente se registra como dirección del usuario
+
+## v1.18.0
+
+- `bae8e59` 2026-11-01 — Versión 1.18.0
 - `ed34535` 2026-11-01 — Versión 1.18.0
 - `7b47aa1` 2026-11-01 — Validación de correos (buzón existente) antes de escribir, rebotes que detienen al comercial virtual, y correo guardado en el CRM con adjuntos y enlaces pulsables
 - `e996014` 2026-11-01 — Prospectos: el lead toma el nombre de la empresa cuando el contacto es un buzón genérico
