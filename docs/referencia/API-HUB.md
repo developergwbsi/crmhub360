@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **188** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **193** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -111,11 +111,15 @@ Total: **188** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/meet/rooms/{code}/summary` | `meet_summary_get` | Resumen de la reunión de una sala, posterior a `since` (milisegundos); 204 sin cuerpo si aún no está listo. |
 | GET | `/v1/meet/status` | `meet_status` | Servicio de videollamadas habilitado a la empresa: off / video / video_subs. |
 | GET | `/v1/meet/waiting` | `meet_waiting` | Salas con clientes esperando (de toda la empresa); el CRM filtra las del usuario. |
+| POST | `/v1/pipeline/run` | `pipeline_run` | Una pasada completa ahora mismo: busca, califica y pasa los mejores al comercial virtual. |
 | GET | `/v1/process/runs` | `proc_runs` | Historial de ejecuciones de procesos (de un lead o del tenant). |
 | POST | `/v1/process/trigger` | `proc_trigger` | Lo llama el CRM al guardar un lead: ejecuta los procesos (manual en el acto; si no, tras 1,5 s en segundo plano) y, si el lead es nuevo, da de alta al comercial virtual. |
 | GET | `/v1/processes` | `proc_list` | Procesos configurados, campos disponibles, máximo y catálogo. |
 | PUT | `/v1/processes` | `proc_save` | Valida y guarda los procesos del tenant (settings.processes). |
 | POST | `/v1/processes/test` | `proc_test` | Prueba una definición contra un lead real (o datos de ejemplo) sin guardar nada en el lead. |
+| GET | `/v1/proposals` | `proposals_list` | Material (presentaciones, propuestas) que los agentes pueden enviar. |
+| POST | `/v1/proposals/seed` | `proposals_seed` | Crea (o actualiza) las presentaciones estándar de los productos de la empresa. |
+| PUT | `/v1/proposals/{slug}/active` | `proposals_active` | — |
 | GET | `/v1/prospects` | `prospects_list` | — |
 | POST | `/v1/prospects/delete` | `prospects_delete` | — |
 | POST | `/v1/prospects/enrich` | `prospects_enrich` | — |
@@ -128,6 +132,7 @@ Total: **188** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/public/meet/_/rec/{rid}/chunk` | `rec_chunk` | — |
 | GET | `/v1/public/meet/_/rec/{rid}/file` | `rec_file` | Reproduce o descarga una grabación con una llave de corta vida (la entrega el CRM al usuario con acceso). |
 | POST | `/v1/public/meet/_/rec/{rid}/finish` | `rec_finish` | — |
+| GET | `/v1/public/meet/p/{tenant}/{slug}` | `proposal_page` | Página pública de una presentación (https://meet.<dominio>/p/<empresa>/<producto>): HTML autocontenido, sin scripts. |
 | GET | `/v1/public/meet/r/{token}` | `rec_share_page` | Página pública de una grabación compartida (https://meet.<dominio>/r/<enlace>). |
 | GET | `/v1/public/meet/r/{token}/video` | `rec_share_video` | — |
 | GET | `/v1/public/meet/u/{token}` | `unsub_page` | Página de baja de un correo (https://meet.<dominio>/u/<enlace>): pide confirmar con un botón (los antivirus abren los enlaces sin querer). |

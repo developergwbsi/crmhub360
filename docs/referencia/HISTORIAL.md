@@ -2,8 +2,15 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.13.1)
+## Sin publicar (después de v1.14.0)
 
+- `2db89c3` 2026-11-01 — Versión 1.15.0
+- `318677c` 2026-11-01 — Cadena comercial autónoma: calificador, ciclo diario, autonomía con frenos, propuestas con ilustraciones y correo a cualquier hora
+- `b16f6fa` 2026-11-01 — Correo propio: limpia espacios invisibles de las contraseñas y avisa de caracteres no ASCII
+
+## v1.14.0
+
+- `07f98f6` 2026-11-01 — Versión 1.14.0
 - `3e73639` 2026-11-01 — Versión 1.14.0
 - `b638ddf` 2026-11-01 — Buscadores web por empresa: Serper, Brave y Google con clave propia o prestada, y pantalla Integraciones → Buscadores
 - `56e4817` 2026-11-01 — Correo propio por empresa: principal y en frío, con buzón IMAP, prueba de conexión y modo propio o prestado

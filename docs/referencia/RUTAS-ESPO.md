@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **165** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **166** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -116,6 +116,7 @@ Total: **165** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/outboundStats` | CrmHub.outboundStats | GET /CrmHub/outboundStats?days=. Envíos y respuestas por variante de la secuencia saliente. Hub: GET /v1/agent/outbound/stats. */ |
 | GET | `/CrmHub/pipeline` | CrmHub.pipeline | Lo lee cualquier usuario autenticado (incluido el usuario API del Hub). */ |
 | PUT | `/CrmHub/pipeline` | CrmHub.pipeline | PUT /CrmHub/pipeline. Admin. Guarda los estados del pipeline. */ |
+| POST | `/CrmHub/pipelineRun` | CrmHub.pipelineRun | POST /CrmHub/pipelineRun. Admin. Ciclo completo: buscador → calificador → comercial virtual. Hub: POST /v1/pipeline/run. */ |
 | POST | `/CrmHub/processRun` | CrmHub.processRun | Ejecuta de nuevo los procesos de un lead (quien puede editar el lead). */ |
 | GET | `/CrmHub/processRuns` | CrmHub.processRuns | GET /CrmHub/processRuns. Lectura del lead (o admin sin lead). Hub: GET /v1/process/runs. */ |
 | POST | `/CrmHub/processTest` | CrmHub.processTest | POST /CrmHub/processTest. Admin. Hub: POST /v1/processes/test. */ |
