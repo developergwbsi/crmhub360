@@ -65,7 +65,7 @@ El paso de la cadencia y la variante usada se guardan en `agent_leads` / `agent_
 | F0 Cumplimiento | Hecha | `compliance.py` (no contactar, consentimiento, bajas, horarios legales, enlace de baja, cuotas), `ingest.apply_optout` |
 | F1 Prospectos | Hecha | `prospects.py`, menú **Prospección** (`views/prospects.js`) |
 | F2 Salida y variantes | Hecha | `agent.py` (`outbound`, `pick_variant`, `form_problems`), plantilla Meta en `whatsapp.send_template` |
-| F3 Cierre | Pendiente | |
+| F3 Cierre | Hecha | `agent.py` (`closer`, `free_slots`, `_book_demo`, `funnel`), pestaña «Secuencia y resultados» |
 | F4 Optimización diaria | Pendiente (las métricas por variante ya se registran) | |
 | F5 Panel en el Centro de control | Pendiente | |
 | F6 Entregabilidad (DNS, calentamiento) | Parcial: cuota diaria por remitente; falta SPF/DKIM/DMARC y calentamiento por tramos | |

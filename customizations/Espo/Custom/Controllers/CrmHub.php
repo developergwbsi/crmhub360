@@ -2435,6 +2435,13 @@ class CrmHub
         return (object) $this->hubCall('GET', '/v1/agent/outbound/stats?days=' . (int) ($request->getQueryParam('days') ?: 30), null, 20);
     }
 
+    /** GET /CrmHub/outboundFunnel?days=. Embudo de la prospección (contactados, respondieron, demos, escalados, intención). Hub: GET /v1/agent/funnel. */
+    public function getActionOutboundFunnel(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        return (object) $this->hubCall('GET', '/v1/agent/funnel?days=' . (int) ($request->getQueryParam('days') ?: 30), null, 20);
+    }
+
     /** GET /CrmHub/dnc. Lista de no contactar. Hub: GET /v1/compliance/dnc. */
     public function getActionDnc(Request $request): \stdClass
     {

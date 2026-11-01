@@ -773,6 +773,10 @@ Paso a paso
 3. **Pasar al CRM los mejores**: crea los leads (hasta el tope diario) y el comercial virtual saliente empieza a contactarlos.
 4. **Secuencia y resultados** (administradores): activa la prospección saliente, define las variantes de cada paso (primer contacto, seguimiento a las 72 horas y último intento a los 5 días) y mira cuál responde mejor. Las que mejor responden se envían más.
 
+Cierre: de la respuesta a la demo
+
+Cuando un prospecto responde, el comercial virtual **entiende qué quiere** (interesado, pide demo, duda de precio, compara con otro, tiene poco tiempo, pide información o no le interesa) y lo ve en la ficha del lead como **«Intención»** con un puntaje de 0 a 100. Responde con un guion de objeciones enfocado en **retorno de inversión, facilidad de uso y tener todo en un solo lugar** (puedes cambiar el guion en «Secuencia y resultados → Cierre»). Cuando el cliente muestra interés le propone 2 o 3 horarios libres de la agenda de quien da la demo; al elegir uno, **la reunión con videollamada se crea sola**, se la confirma por el mismo canal con el enlace, el lead pasa a «Calificado» y se avisa al anfitrión. Si hay descuentos, negociación o algo delicado, pasa a una persona. En la pestaña **Prospectos** ves el embudo: contactados, respondieron, demos agendadas y pasados a una persona.
+
 Reglas que se cumplen solas
 
 - **Horarios legales por país** (Colombia: lunes a viernes 7:00 a 19:00 y sábados 8:00 a 15:00; domingos no). Fuera de horario, el mensaje espera.

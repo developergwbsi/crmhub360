@@ -2387,6 +2387,12 @@ def prospects_delete(req: ProspectIdsReq, tenant: dict = Depends(tenant_auth)):
     return {"deleted": prospects.remove(tenant["slug"], req.ids)}
 
 
+@app.get("/v1/agent/funnel")
+def agent_funnel(days: int = 30, tenant: dict = Depends(tenant_auth)):
+    """Embudo de la prospección: contactados, respondieron, demos agendadas, escalados e intención de los leads."""
+    return agent.funnel(tenant["slug"], max(1, min(days, 365)))
+
+
 @app.get("/v1/agent/outbound/stats")
 def outbound_stats(days: int = 30, tenant: dict = Depends(tenant_auth)):
     """Envíos y respuestas por variante de cada paso de la secuencia saliente."""

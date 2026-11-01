@@ -1196,5 +1196,13 @@
             "controller": "CrmHub",
             "action": "dncRemove"
         }
+    },
+    {
+        "route": "/CrmHub/outboundFunnel",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "outboundFunnel"
+        }
     }
 ]

@@ -2,8 +2,9 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.10.7)
+## v1.11.0
 
+- `c751f53` 2026-11-01 — Versión 1.11.0
 - `8592b3c` 2026-11-01 — Versión 1.11.0
 - `f2c315a` 2026-11-01 — Plan del motor comercial: decisiones y estado
 - `3402737` 2026-11-01 — Motor comercial: prospección saliente (prospectos, ICP, secuencia con variantes A/B) y cumplimiento (no contactar, horarios legales, baja de un clic, cuotas)

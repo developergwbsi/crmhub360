@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **171** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **172** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -15,6 +15,7 @@ Total: **171** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | PUT | `/v1/agent/config` | `agent_config_save` | Guarda el entrenamiento de un comercial virtual; el modo automático exige licencia (403). |
 | PUT | `/v1/agent/dispatch` | `agent_dispatch_save` | Guarda el modo de reparto de leads y los pesos (0 a 100) por atendedor. |
 | POST | `/v1/agent/dispatch/pick` | `agent_dispatch_pick` | Lo consulta el CRM al llegar un lead nuevo: ¿lo atiende una persona, un comercial virtual o ambos? |
+| GET | `/v1/agent/funnel` | `agent_funnel` | Embudo de la prospección: contactados, respondieron, demos agendadas, escalados e intención de los leads. |
 | GET | `/v1/agent/lead` | `agent_lead` | Estado del comercial virtual sobre un lead, para la ficha del CRM. |
 | POST | `/v1/agent/lead/action` | `agent_lead_action` | Intervención humana sobre un lead (pausar, tomar control, cambiar de comercial, reanudar); devuelve el estado nuevo. |
 | POST | `/v1/agent/menu-test` | `agent_menu_test` | Envía un menú del entrenamiento a un número de prueba para ver cómo lo recibe el cliente. |
