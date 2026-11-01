@@ -2,6 +2,11 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
+## Sin publicar (después de v1.11.1)
+
+- `d9c086c` 2026-11-01 — Versión 1.11.2
+- `b73fe01` 2026-11-01 — Motor comercial F4: optimización diaria (variantes, estilo por canal, nichos) con historial y reversión
+
 ## v1.11.1
 
 - `40425ef` 2026-11-01 — Versión 1.11.1
