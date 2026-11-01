@@ -238,6 +238,7 @@ async def promote(tenant: dict, ids: list[int] | None = None, limit: int | None 
             desc = "\n".join(x for x in [f"Empresa: {r['company']}" if r["company"] else "", f"Cargo: {r['title']}" if r["title"] else "", f"Sector: {r['industry']}" if r["industry"] else "",
                                           f"Dolor probable: {en['pain']}" if en.get("pain") else "", f"Puntaje de ajuste: {r['score']}/100" if r["score"] is not None else "", f"Lote: {r['batch']}",
                                           (f"Hallado por el buscador. Fuente pública: {(r['raw'] or {}).get('fuente_url', '')}" if r.get("origin") == "finder" else ""),
+                                          (f"Oferta indicada por el equipo: {(r['raw'] or {}).get('oferta')} como producto principal de este contacto." if (r.get("raw") or {}).get("oferta") else ""),
                                           (f"Producto recomendado por el calificador: {(en.get('qualifier') or {}).get('product', '')} (grado {(en.get('qualifier') or {}).get('grade', '')}). Ángulo: {(en.get('qualifier') or {}).get('angle', '')}" if en.get("qualifier") else "")] if x)
             extra = {"description": desc, "preferredChannel": "Correo" if r["email"] else "WhatsApp", **({"accountName": r["company"]} if r["company"] else {})}
             lead_id = await ingest.upsert_lead(tenant, name=r["name"], phone=r["phone"] or None, email=r["email"] or None, source="Prospección IA", extra=extra, campaign=r["campaign"] or cfg["campaign"] or None)

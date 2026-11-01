@@ -579,8 +579,8 @@ def form_problems(channel: str, message: str, subject: str) -> list[str]:
             out.append("el asunto no debe llevar palabras típicas de spam (" + ", ".join(bad[:3]) + ")")
         if _words(message) >= 120:
             out.append("el cuerpo debe tener menos de 120 palabras")
-        if len(re.findall(r"https?://", message)) > 1:
-            out.append("solo un llamado a la acción (un enlace)")
+        if len([u for u in re.findall(r"https?://\S+", message) if "wa.me/" not in u]) > 1:   # un solo enlace de material; el de WhatsApp puede acompañarlo
+            out.append("solo un llamado a la acción (un enlace de material; el de WhatsApp puede acompañarlo)")
     elif channel == "whatsapp":
         if len([p for p in re.split(r"\n+", message) if p.strip()]) > 3:
             out.append("máximo 3 párrafos cortos")
@@ -610,7 +610,7 @@ def hard_fix(channel: str, message: str, subject: str) -> tuple[str, str]:
 
 
 OUTBOUND_RULES = {"whatsapp": "WhatsApp: como máximo 3 párrafos CORTOS, conversacional, profesional pero humano, y termina con UNA pregunta fácil de contestar (de baja fricción).",
-                  "email": "Correo: ASUNTO de 2 a 4 palabras (como si fuera una comunicación interna, sin signos de exclamación ni palabras de spam), cuerpo de MENOS de 120 palabras y UN solo llamado a la acción."}
+                  "email": "Correo: ASUNTO de 2 a 4 palabras (como si fuera una comunicación interna, sin signos de exclamación ni palabras de spam), cuerpo de MENOS de 120 palabras y UN solo llamado a la acción (un único enlace de material; el de WhatsApp puede acompañarlo)."}
 
 
 # ---------------- cierre: horarios libres y demo agendada

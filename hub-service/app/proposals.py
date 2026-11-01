@@ -90,9 +90,9 @@ def catalog_text(tenant: str) -> str:
         return ""
     lines = "\n".join(f"- {c['title']} ({c['kind']}): {c['url']} — {c['summary']}" for c in cat)
     return ("\n\nMATERIAL QUE PUEDES COMPARTIR (usa SOLO estos enlaces, tal cual; no inventes otros):\n" + lines +
-            "\nCuándo usarlo: en el PRIMER correo incluye SIEMPRE el enlace de Crm Hub 360 (es el producto que más se impulsa), con una frase como «Aquí puedes ver cómo funciona». "
-            "Si el lead trae un «producto recomendado» distinto (Gestor360, Core360), menciónalo en una frase y puedes añadir su enlace como segundo. "
-            "Si pide información, una propuesta o una demo, envía el enlace correspondiente y propón dos horarios para una videollamada de 15 minutos. Nunca des precios ni prometas resultados.")
+            "\nCuándo usarlo: en el PRIMER correo incluye UN SOLO enlace de material (menos enlaces llegan mejor): si la ficha trae «Oferta indicada por el equipo», el de ese producto; si no, el de Crm Hub 360, el que más se impulsa. "
+            "Preséntalo con una frase como «Aquí puedes ver cómo funciona». Si el lead trae un «producto recomendado» distinto, menciónalo en una frase SIN enlace. El PDF del material se adjunta solo; no digas que lo enviarás aparte. "
+            "Si la persona pide información, una propuesta o una demo, envía el enlace correspondiente y propón dos horarios para una videollamada de 15 minutos. Nunca des precios ni prometas resultados.")
 
 
 NBSP = "\u00a0"
@@ -309,6 +309,22 @@ def _svg_flow() -> str:
     return o + "</svg>"
 
 
+def _svg_plant() -> str:
+    mq = [("Extrusora 1", "#16a34a", "En marcha"), ("Termoformadora 2", "#16a34a", "En marcha"), ("Impresora 3", "#f59e0b", "Parada"), ("Laminadora 4", "#16a34a", "En marcha")]
+    o = '<svg viewBox="0 0 800 300" role="img" aria-label="Tablero de planta en tiempo real"><rect width="800" height="300" rx="14" fill="#0f172a"/><text x="24" y="34" font-size="15" font-weight="700" fill="#fff" font-family="sans-serif">Tablero de planta · en tiempo real</text>'
+    o += '<circle cx="740" cy="29" r="6" fill="#22c55e"/><text x="728" y="33" text-anchor="end" font-size="12" fill="#94a3b8" font-family="sans-serif">conectado</text>'
+    for i, (n, col, st) in enumerate(mq):
+        x = 20 + i * 192
+        o += f'<rect x="{x}" y="56" width="176" height="150" rx="12" fill="#1e293b" stroke="{col}" stroke-width="2"/><circle cx="{x + 20}" cy="80" r="7" fill="{col}"/><text x="{x + 36}" y="85" font-size="13" font-weight="700" fill="#fff" font-family="sans-serif">{n}</text>'
+        o += f'<text x="{x + 16}" y="112" font-size="11" fill="#94a3b8" font-family="sans-serif">{st}</text><rect x="{x + 16}" y="124" width="144" height="10" rx="5" fill="#334155"/><rect x="{x + 16}" y="124" width="{[120, 96, 40, 110][i]}" height="10" rx="5" fill="{col}"/>'
+        o += f'<text x="{x + 16}" y="160" font-size="11" fill="#94a3b8" font-family="sans-serif">Unidades</text><rect x="{x + 16}" y="168" width="90" height="12" rx="4" fill="#334155"/><rect x="{x + 16}" y="188" width="60" height="8" rx="4" fill="#475569"/>'
+    labels = ["Turno A · operarios", "Producción vs. meta", "Alarmas y paradas", "Eficiencia (OEE)"]
+    for i, t in enumerate(labels):
+        x = 20 + i * 192
+        o += f'<rect x="{x}" y="220" width="176" height="62" rx="12" fill="#1e293b"/><text x="{x + 14}" y="245" font-size="12" font-weight="600" fill="#e2e8f0" font-family="sans-serif">{t}</text><rect x="{x + 14}" y="256" width="{[110, 130, 70, 100][i]}" height="10" rx="5" fill="#6366f1"/>'
+    return o + "</svg>"
+
+
 def _cards(items: list[tuple[str, str, str]]) -> str:
     return '<div class="grid">' + "".join(f'<div class="card"><div class="ic">{_h.escape(i)}</div><h3>{_h.escape(t)}</h3><p>{_h.escape(d)}</p></div>' for i, t, d in items) + "</div>"
 
@@ -401,15 +417,28 @@ def default_pages(company: str, wa: str) -> list[dict]:
                         ("M", "Hecha a tu medida", "Cada negocio la personaliza con su propia identidad: marca, colores y frase.")])
               + '<h2>Se conecta con tus otras plataformas</h2><p class="lead">Gestor360 se integra con otras plataformas a través de <b>APIs</b>, además de WhatsApp Business, pagos en línea y notificaciones automáticas, y se sincroniza con <b>Core360</b>.</p>'
               '<p class="lead">Y junto con <b>Crm Hub 360</b>, además de ordenar tu operación, consigues clientes nuevos y los atiendes automáticamente: el CRM busca, califica y conversa por ti, y Gestor360 organiza el servicio.</p>')
-    core = (f'<h2>El ERP para fabricar y distribuir</h2><p class="lead">Core360 es la plataforma de gestión empresarial de {_h.escape(company)} para manufactura y distribución: toda la cadena de abastecimiento en un solo sistema.</p>'
-            f'<div class="fig">{_svg_chain()}<div class="cap">De la compra a la factura, con una única fuente de verdad.</div></div>'
-            + _cards([("C", "Compras", "Requisiciones, órdenes con aprobación, recepción contra la orden y alertas de reposición."),
-                      ("I", "Inventarios y almacenes", "Existencias por almacén, ubicación y lote, con valoración FIFO o costo promedio y control de vencimientos."),
-                      ("P", "Producción", "Listas de materiales, órdenes de producción con consumo de componentes y planeación de materiales (MRP)."),
-                      ("V", "Ventas y distribución", "Cotizaciones, pedidos con reserva de stock, entregas y seguimiento de envíos."),
-                      ("F", "Finanzas y facturación electrónica", "Cuentas por cobrar y pagar, libro mayor y factura electrónica ante la DIAN."),
-                      ("A", "Conexión con otras plataformas", "API con llaves y webhooks firmados para integrarlo con tus sistemas.")])
-            + '<h2 id="como">Se contrata por módulos</h2><p class="lead">Empiezas con la base y sumas lo que necesitas: calidad, mantenimiento o proyectos son módulos opcionales. Y con <b>Crm Hub 360</b> conectas tu operación con la búsqueda y atención de clientes.</p>')
+    core = (f'<h2>El ERP para fabricar y distribuir</h2><p class="lead">Core360 es la plataforma de gestión empresarial de {_h.escape(company)} para manufactura y distribución: compras, ventas, producción, inventario y materias primas, hasta la fábrica conectada, en un solo sistema.</p>'
+            f'<div class="fig">{_svg_chain()}<div class="cap">De la compra de la materia prima a la factura, con una única fuente de verdad.</div></div>'
+            + _cards([("C", "Compras", "Requisiciones, órdenes de compra con límite de aprobación, recepción contra la orden, alertas de reposición y facturas de proveedor con conciliación a tres vías."),
+                      ("M", "Materias primas e inventarios", "Existencias por almacén, ubicación y lote, con control de vencimientos y valoración FIFO o costo promedio. Es la base de compras, producción y ventas."),
+                      ("P", "Producción", "Listas de materiales de varios niveles, órdenes de producción con consumo de componentes, rendimiento y merma, y planeación de materiales (MRP)."),
+                      ("V", "Ventas y distribución", "Cotizaciones, pedidos con reserva de stock, picking, entregas y envíos con transportadora y seguimiento."),
+                      ("T", "Trazabilidad", "Sigue cada lote y cada documento, desde la materia prima hasta el cliente, y la gestión de tus vendedores."),
+                      ("F", "Facturación electrónica", "Factura electrónica ante la DIAN, con perfil fiscal, resoluciones de numeración y trazabilidad de cada documento.")])
+            + '<h2>Tu planta, conectada y en tiempo real</h2><p class="lead">Con el módulo de <b>automatización industrial</b>, tus máquinas se conectan a Core360 y ves la producción <b>mientras ocurre</b>, sin esperar los reportes del turno.</p>'
+            f'<div class="fig">{_svg_plant()}<div class="cap">Tablero de planta con el estado de las máquinas (ilustración).</div></div>'
+            + _cards([("1", "Integración con tus máquinas", "Se conectan por una pasarela de borde con los protocolos industriales más usados (REST, MQTT, OPC UA y Modbus)."),
+                      ("2", "Producción en tiempo real", "Estados, contadores y alarmas de cada máquina, paradas y arranques, y confirmación automática de la producción."),
+                      ("3", "Tablero andon y OEE", "El tablero de planta muestra disponibilidad, rendimiento y calidad, y avisa cuando una máquina se detiene."),
+                      ("4", "Turnos y operarios", "Calendario de turnos y terminal de planta para que cada operario registre su trabajo."),
+                      ("5", "Revisión humana de excepciones", "Lo que la máquina no puede resolver pasa a una cola para que una persona lo revise."),
+                      ("6", "Mantenimiento", "Equipos, avisos de falla desde el piso, órdenes de mantenimiento y planes preventivos.")])
+            + '<h2>Finanzas y contabilidad, si lo deseas</h2><p class="lead">Core360 lleva las finanzas de tu operación —cuentas por cobrar y pagar, libro mayor, conciliación y cierre contable—, y <b>se integra con tu sistema de contabilidad</b> si prefieres mantener el que ya usas.</p>'
+            + _cards([("$", "Finanzas", "Facturación de clientes, cuentas por cobrar y pagar, pagos y conciliación, y reportes financieros."),
+                      ("K", "Control de costos", "Centros de costos, presupuesto contra real, costeo estándar y rentabilidad."),
+                      ("Q", "Calidad", "Planes de inspección, no conformidades, acciones correctivas y calificación de proveedores."),
+                      ("A", "API e integraciones", "API externa con llaves y webhooks firmados, para conectarlo con tus otras plataformas.")])
+            + '<h2 id="como">Se contrata por módulos</h2><p class="lead">Empiezas con la base, siempre incluida —datos maestros, materiales, clientes, proveedores, sedes y usuarios—, y sumas solo lo que necesitas: producción, automatización, calidad, mantenimiento, proyectos o costos. Y con <b>Crm Hub 360</b> conectas tu operación con la búsqueda y atención de clientes.</p>')
     return [
         {"slug": "crm-hub-360", "title": "Crm Hub 360: tu CRM con IA que busca y atiende clientes", "product": "crm_hub_360", "kind": "presentación",
          "summary": "Presentación del CRM con comercial virtual y motor que busca clientes (producto principal).",
@@ -418,8 +447,8 @@ def default_pages(company: str, wa: str) -> list[dict]:
          "summary": "Plataforma de gestión para negocios de servicios y ventas con sedes: vehículos, salud y belleza, panaderías, ferreterías y otras líneas.",
          "html": _shell(company, "Gestor360", "Para negocios de servicios", "Tu negocio, <u>bajo control</u> en una sola plataforma", "Agenda, servicios, productos, nómina, inventario y clientes, con una app hecha a la medida de tu línea de negocio.", gestor, wa, "Conoce Gestor360", "Agenda una demostración de 15 minutos por videollamada, sin compromiso.")},
         {"slug": "core360", "title": "Core360: ERP para manufactura y distribución", "product": "core360", "kind": "presentación",
-         "summary": "ERP con compras, inventarios, producción, ventas, finanzas y facturación electrónica.",
-         "html": _shell(company, "Core360", "ERP para manufactura y distribución", "Toda tu cadena de abastecimiento, <u>bajo control</u>", "Compras, inventarios, producción, ventas y facturación electrónica en un solo sistema.", core, wa, "Conoce Core360", "Agenda una demostración de 15 minutos por videollamada, sin compromiso.")},
+         "summary": "ERP para manufactura y distribución: compras, ventas, producción, inventario y materias primas, planta conectada en tiempo real, turnos, finanzas y facturación electrónica.",
+         "html": _shell(company, "Core360", "ERP para manufactura y distribución", "Toda tu cadena de abastecimiento, <u>bajo control</u>", "Compras, ventas, producción, inventario, materias primas y planta conectada en tiempo real, en un solo sistema.", core, wa, "Conoce Core360", "Agenda una demostración de 15 minutos por videollamada, sin compromiso.")},
     ]
 
 
@@ -485,13 +514,17 @@ def brochures(company: str, wa: str) -> dict:
                                 ("Mensajería y campañas", "WhatsApp, correo y SMS."), ("Varias sedes", "Branding propio y vista consolidada.")])
                   + '<h2>Se conecta con tus otras plataformas</h2><p class="lead">Integración con otras plataformas a través de APIs, WhatsApp Business, pagos en línea y notificaciones; se sincroniza con Core360. Con Crm Hub 360, además de ordenar tu operación, consigues clientes nuevos.</p>', "Conoce Gestor360")
     core = _bro(company, wa, "ERP para manufactura y distribución", "Toda tu cadena de abastecimiento, bajo control",
-                "Compras, inventarios, producción, ventas y facturación electrónica en un solo sistema.",
-                f'<h2>El ERP para fabricar y distribuir</h2><p class="lead">Core360 es la plataforma de gestión empresarial de {_h.escape(company)}.</p><div class="fig">{_svg_chain()}<div class="cap">De la compra a la factura, con una única fuente de verdad.</div></div>'
-                + _bro_cards([("Compras", "Requisiciones, órdenes con aprobación y recepción contra la orden."), ("Inventarios y almacenes", "Por almacén, ubicación y lote; FIFO o costo promedio."), ("Producción", "Listas de materiales, órdenes y planeación (MRP)."),
-                              ("Ventas y distribución", "Cotizaciones, pedidos con reserva de stock y envíos."), ("Finanzas y facturación", "Cuentas por cobrar y pagar, libro mayor y DIAN."), ("Conexión con otras plataformas", "API con llaves y webhooks firmados.")]),
-                '<h2>Se contrata por módulos</h2><p class="lead">Empiezas con la base y sumas lo que necesitas: calidad, mantenimiento o proyectos son módulos opcionales.</p>'
-                + _bro_cards([("Calidad", "Planes de inspección, no conformidades y calificación de proveedores."), ("Mantenimiento", "Equipos, órdenes y planes preventivos."), ("Proyectos", "Gantt, horas, presupuesto y facturación por hitos."), ("Costos", "Centros de costos y rentabilidad.")])
-                + '<p class="lead">Y con <b>Crm Hub 360</b> conectas tu operación con la búsqueda y atención de clientes.</p>', "Conoce Core360")
+                "Compras, ventas, producción, inventario, materias primas y planta conectada en tiempo real, en un solo sistema.",
+                f'<h2>El ERP para fabricar y distribuir</h2><p class="lead">Core360 es la plataforma de gestión empresarial de {_h.escape(company)}.</p><div class="fig">{_svg_chain()}<div class="cap">De la compra de la materia prima a la factura, con una única fuente de verdad.</div></div>'
+                + _bro_cards([("Compras", "Requisiciones, órdenes con aprobación y recepción contra la orden."), ("Materias primas e inventarios", "Por almacén, ubicación y lote; vencimientos; FIFO o costo promedio."), ("Producción", "Listas de materiales, órdenes, rendimiento, merma y planeación (MRP)."),
+                              ("Ventas y distribución", "Cotizaciones, pedidos con reserva de stock, picking y envíos."), ("Trazabilidad", "De cada lote y documento, y de la gestión de tus vendedores."), ("Facturación electrónica", "Ante la DIAN, con trazabilidad de cada documento.")])
+,
+                '<h2>Tu planta, conectada y en tiempo real</h2><p class="lead">Con automatización industrial, tus máquinas se conectan a Core360 y ves la producción mientras ocurre.</p>'
+                + f'<div class="fig">{_svg_plant()}<div class="cap">Planta conectada, en tiempo real (ilustración).</div></div>'
+                + _bro_cards([("Integración con máquinas", "Pasarela de borde con REST, MQTT, OPC UA y Modbus."), ("Producción en tiempo real", "Estados, contadores, alarmas y confirmación automática."), ("Tablero andon y OEE", "Disponibilidad, rendimiento y calidad, con avisos de paradas."),
+                              ("Turnos y operarios", "Calendario de turnos y terminal de planta."), ("Mantenimiento", "Avisos de falla, órdenes y planes preventivos."), ("Calidad", "Inspecciones, no conformidades y proveedores.")])
+                + '<h2>Finanzas y contabilidad, si lo deseas</h2><p class="lead">Cuentas por cobrar y pagar, libro mayor, conciliación y cierre contable; y se integra con tu sistema de contabilidad si prefieres el que ya usas. API y webhooks para conectarlo con tus otras plataformas.</p>'
+                '<h2>Se contrata por módulos</h2><p class="lead">Empiezas con la base y sumas lo que necesitas. Y con <b>Crm Hub 360</b> conectas tu operación con la búsqueda y atención de clientes.</p>', "Conoce Core360")
     return {"crm-hub-360": crm, "gestor360": gestor, "core360": core}
 
 

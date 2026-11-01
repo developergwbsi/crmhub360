@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Cambiado
+- **Core360 (presentación y brochure)** reescritos con todo el producto: compras, materias primas e inventarios, producción, ventas y distribución, trazabilidad, facturación electrónica, **planta conectada en tiempo real** (máquinas por REST, MQTT, OPC UA y Modbus, producción en tiempo real, tablero andon y OEE, turnos y operarios), mantenimiento, calidad, finanzas y contabilidad (con integración a tu sistema contable si se desea), costos, API, y contratación por módulos. Incluye una ilustración del tablero de planta.
+- El correo en frío lleva **un solo enlace de material** (el de la «Oferta indicada por el equipo» o, por defecto, Crm Hub 360), su PDF adjunto y, si se quiere, el enlace de WhatsApp.
+- Un prospecto puede llevar una **oferta indicada por el equipo** (campo `oferta`), que pasa a la ficha del lead y manda sobre el producto recomendado.
+
 ### Añadido
 - **Favicon genérico de DigitalAlliance Hub** en todos los enlaces públicos que enviamos (presentaciones, salas de videollamada, grabaciones, bajas y formularios), con rutas `/favicon.svg` y `/favicon.ico` en el dominio de las salas.
 
