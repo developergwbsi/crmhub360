@@ -30,6 +30,14 @@ def mode_of(slug: str, role: str) -> str:
     return sv.get(ROLES[role][2]) or ("own" if role == "main" else "off")
 
 
+def clean_secret(v: str, what: str) -> str:
+    """Quita espacios (incluidos los «duros» e invisibles que trae copiar una contraseña de aplicación de Google) y avisa si queda un carácter no ASCII, que el SMTP/IMAP no admite."""
+    out = re.sub(r"[\s\u200b-\u200f\u2060\ufeff\xa0]", "", str(v or ""))
+    if out and not out.isascii():
+        raise ValueError(f"{what} tiene caracteres no válidos (tildes, símbolos raros o espacios invisibles). Escríbela a mano, sin copiar y pegar.")
+    return out
+
+
 def check_public_host(host: str) -> None:
     """La empresa escribe el servidor: no puede apuntar a direcciones internas del servidor (SMTP/IMAP hacia dentro)."""
     host = (host or "").strip().lower()
@@ -79,11 +87,14 @@ def save(tenant: dict, role: str, body: dict) -> dict:
     if not host or not ADDR.match(frm):
         raise ValueError("Escribe el servidor SMTP y un correo remitente válido.")
     check_public_host(host)
+    for v, w in ((sm.get("user"), "El usuario de salida"), (im.get("user"), "El usuario del buzón"), (frm, "El correo remitente")):
+        if v and not str(v).strip().isascii():
+            raise ValueError(f"{w} tiene caracteres no válidos (tildes o símbolos). Escríbelo a mano.")
     try:
         port = int(sm.get("port") or 587)
     except Exception:
         raise ValueError("El puerto SMTP no es válido.")
-    password = str(sm.get("password") or "").strip() or (old.get("password") if old.get("host") == host and old.get("user") == str(sm.get("user") or "").strip() else "")
+    password = clean_secret(sm.get("password"), "La contraseña del correo de salida") or (old.get("password") if old.get("host") == host and old.get("user") == str(sm.get("user") or "").strip() else "")
     if sm.get("user") and not password:
         raise ValueError("Falta la contraseña del correo de salida.")
     sec = sm.get("security") if sm.get("security") in ("TLS", "SSL", "") else "TLS"
@@ -92,7 +103,7 @@ def save(tenant: dict, role: str, body: dict) -> dict:
     ihost, iuser = str(im.get("host") or "").strip().lower(), str(im.get("user") or "").strip()
     if ihost and iuser:
         check_public_host(ihost)
-        ipass = str(im.get("password") or "").strip() or (oldbox.get("password") if oldbox.get("host") == ihost and oldbox.get("user") == iuser else "")
+        ipass = clean_secret(im.get("password"), "La contraseña del buzón de entrada") or (oldbox.get("password") if oldbox.get("host") == ihost and oldbox.get("user") == iuser else "")
         if not ipass:
             raise ValueError("Falta la contraseña del buzón de entrada.")
         same = oldbox.get("user") == iuser and oldbox.get("host") == ihost
