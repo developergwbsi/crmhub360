@@ -202,25 +202,97 @@ def _svg_chain() -> str:
     return o + "</svg>"
 
 
+
+def _svg_docs() -> str:
+    o = '<svg viewBox="0 0 800 250" role="img" aria-label="Lectura de documentos con IA"><rect width="800" height="250" rx="14" fill="#f8fafc"/>'
+    o += '<rect x="40" y="30" width="150" height="190" rx="10" fill="#fff" stroke="#cbd5e1"/><rect x="58" y="52" width="80" height="10" rx="5" fill="#94a3b8"/>'
+    for i in range(7):
+        o += f'<rect x="58" y="{78 + i * 18}" width="{114 - (i % 3) * 22}" height="7" rx="3" fill="#e2e8f0"/>'
+    o += '<text x="115" y="238" text-anchor="middle" font-size="12" fill="#475569" font-family="sans-serif">PDF: buró, cédula, soportes…</text>'
+    o += '<path d="M210 125 h70" stroke="#6366f1" stroke-width="3" marker-end="url(#ar2)"/><circle cx="300" cy="125" r="30" fill="#6366f1"/><text x="300" y="131" text-anchor="middle" fill="#fff" font-size="16" font-weight="800" font-family="sans-serif">IA</text>'
+    o += '<path d="M340 125 h60" stroke="#6366f1" stroke-width="3" marker-end="url(#ar2)"/>'
+    o += '<rect x="420" y="30" width="340" height="190" rx="12" fill="#fff" stroke="#c7d2fe"/><text x="440" y="56" font-size="13" font-weight="700" fill="#3730a3" font-family="sans-serif">Datos encontrados · tú los revisas</text>'
+    for i, (k, w) in enumerate([("Nombre", 150), ("Documento", 120), ("Ingresos", 100), ("Fecha", 90), ("Resumen", 200)]):
+        y = 78 + i * 28
+        o += f'<text x="440" y="{y + 12}" font-size="12" fill="#64748b" font-family="sans-serif">{k}</text><rect x="540" y="{y}" width="{w}" height="16" rx="5" fill="#eef2ff"/><circle cx="740" cy="{y + 8}" r="7" fill="#22c55e"/>'
+    return o + '<defs><marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#6366f1"/></marker></defs></svg>'
+
+
+def _svg_agents() -> str:
+    ag = [("Buscador", "Halla empresas en internet", "#6366f1"), ("Calificador", "Decide a quién vale la pena", "#0891b2"), ("Comercial virtual", "Escribe, responde y agenda", "#16a34a"), ("Asistente", "Resume y redacta en la ficha", "#f59e0b")]
+    o = '<svg viewBox="0 0 800 220" role="img" aria-label="Equipo de agentes de IA"><rect width="800" height="220" rx="14" fill="#f8fafc"/>'
+    for i, (n, d, col) in enumerate(ag):
+        x = 18 + i * 196
+        o += f'<rect x="{x}" y="28" width="172" height="164" rx="16" fill="#fff" stroke="{col}" stroke-width="2"/><circle cx="{x + 86}" cy="66" r="24" fill="{col}"/><circle cx="{x + 77}" cy="62" r="3.5" fill="#fff"/><circle cx="{x + 95}" cy="62" r="3.5" fill="#fff"/><path d="M{x + 76} 72 q10 8 20 0" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
+        o += f'<text x="{x + 86}" y="118" text-anchor="middle" font-size="14" font-weight="700" fill="#0f172a" font-family="sans-serif">{n}</text><text x="{x + 86}" y="140" text-anchor="middle" font-size="11.5" fill="#475569" font-family="sans-serif">{d}</text>'
+        o += f'<rect x="{x + 36}" y="158" width="100" height="18" rx="9" fill="{col}" opacity=".14"/><text x="{x + 86}" y="171" text-anchor="middle" font-size="10.5" font-weight="700" fill="{col}" font-family="sans-serif">trabaja contigo</text>'
+    return o + "</svg>"
+
+
+def _svg_channels() -> str:
+    ch = [("WhatsApp", "#16a34a"), ("Correo", "#4f46e5"), ("SMS", "#0891b2"), ("Telegram", "#0284c7"), ("Llamadas", "#f59e0b"), ("Videollamada", "#db2777")]
+    o = '<svg viewBox="0 0 800 260" role="img" aria-label="Todos los canales en una sola ficha"><rect width="800" height="260" rx="14" fill="#f8fafc"/>'
+    for i, (n, col) in enumerate(ch):
+        y = 22 + i * 36
+        o += f'<rect x="30" y="{y}" width="190" height="28" rx="14" fill="#fff" stroke="{col}" stroke-width="2"/><circle cx="48" cy="{y + 14}" r="6" fill="{col}"/><text x="66" y="{y + 19}" font-size="13" font-weight="600" fill="#0f172a" font-family="sans-serif">{n}</text><path d="M222 {y + 14} C 300 {y + 14}, 330 130, 400 130" stroke="{col}" stroke-width="2" fill="none" opacity=".6"/>'
+    o += '<rect x="400" y="52" width="370" height="156" rx="16" fill="#fff" stroke="#c7d2fe" stroke-width="2"/><circle cx="436" cy="86" r="16" fill="#6366f1"/><text x="462" y="82" font-size="14" font-weight="700" fill="#0f172a" font-family="sans-serif">Ficha del cliente</text><text x="462" y="100" font-size="11.5" fill="#64748b" font-family="sans-serif">Historial completo en un solo lugar</text>'
+    for i in range(4):
+        o += f'<rect x="420" y="{120 + i * 20}" width="{300 - i * 40}" height="10" rx="5" fill="#e2e8f0"/>'
+    return o + "</svg>"
+
+
 def _cards(items: list[tuple[str, str, str]]) -> str:
     return '<div class="grid">' + "".join(f'<div class="card"><div class="ic">{_h.escape(i)}</div><h3>{_h.escape(t)}</h3><p>{_h.escape(d)}</p></div>' for i, t, d in items) + "</div>"
 
 
 def default_pages(company: str, wa: str) -> list[dict]:
     """Presentaciones estándar de los productos de DigitalAlliance Hub (sin precios ni promesas de resultado)."""
-    crm = (f'<h2>Todo tu proceso de ventas, en un solo lugar</h2><p class="lead">Crm Hub 360 es el CRM en español con inteligencia artificial del portafolio de {_h.escape(company)}: junta a tus clientes, sus conversaciones y tu equipo, y deja que un comercial virtual trabaje por ti las 24 horas.</p>'
+    crm = (f'<h2>Todo lo que necesita tu equipo comercial, en un solo lugar</h2><p class="lead">Crm Hub 360 es el CRM en español con inteligencia artificial del portafolio de {_h.escape(company)}: ordena a tus clientes, atiende por todos los canales, busca clientes nuevos y deja que un equipo de agentes de IA trabaje contigo las 24 horas.</p>'
            f'<div class="fig">{_svg_pipeline()}<div class="cap">Cada oportunidad avanza por tu embudo, a la vista de todo el equipo.</div></div>'
-           + _cards([("1", "WhatsApp, correo, SMS y Telegram", "Las conversaciones con cada cliente quedan en su ficha, con historial, plantillas y respuestas rápidas."),
-                     ("2", "Comercial virtual con IA", "Contacta, responde y da seguimiento fuera de horario, y pasa el caso a una persona cuando hace falta."),
-                     ("3", "Videollamadas dentro del CRM", "Salas propias con subtítulos y grabación, agendadas desde la misma ficha."),
-                     ("4", "Formularios, reportes y tableros", "Capta clientes desde tu web y arma los tableros que cada usuario necesita."),
-                     ("5", "Agenda y tareas", "Cada seguimiento tiene fecha y responsable; nada se pierde entre chats."),
-                     ("6", "Roles y permisos", "Cada persona ve solo lo que su rol permite. Funciona en el navegador y como app instalable.")])
-           + '<h2>El motor que busca clientes por ti</h2><p class="lead">Lo más potente de Crm Hub 360: automatiza el control de tus ventas <b>y la búsqueda de nuevos clientes</b>. Tu equipo entra cuando ya hay una demo agendada.</p>'
+           '<h2>Un equipo de agentes de IA que trabaja contigo</h2><p class="lead">No es un solo asistente: son varios agentes, cada uno con su entrenamiento, que se pasan el trabajo hasta que tu equipo entra a cerrar.</p>'
+           f'<div class="fig">{_svg_agents()}<div class="cap">Agentes con funciones distintas que se complementan.</div></div>'
+           + _cards([("B", "Agente buscador", "Investiga en internet empresas que podrían necesitar lo que vendes y guarda solo las que tienen una página pública y un contacto de negocio publicado, con su fuente."),
+                     ("Q", "Agente calificador", "Con buenas prácticas de calificación decide a quién vale la pena, qué producto ofrecerle y con qué ángulo. Solo pasa lo bueno al comercial virtual."),
+                     ("V", "Comercial virtual", "Contacta, responde, hace seguimientos, maneja objeciones, comparte material y propone horarios para una demo. Pasa el caso a una persona cuando hace falta. Puedes tener varios, cada uno con su entrenamiento."),
+                     ("A", "Asistente en la ficha", "Resume la conversación, redacta una respuesta y analiza el sentimiento y el interés de compra con un clic.")])
+           + '<h2>Un motor que busca clientes por ti</h2><p class="lead">Lo más potente de Crm Hub 360: automatiza el control de tus ventas <b>y la búsqueda de nuevos clientes</b>. Tu equipo entra cuando ya hay una demo agendada.</p>'
            f'<div class="fig">{_svg_motor()}<div class="cap">De la búsqueda a la demo agendada, sin trabajo manual en el camino.</div></div>'
            f'<div class="fig">{_svg_chat()}<div class="cap">El comercial virtual conversa y coordina la agenda con la persona.</div></div>'
-           '<p><span class="pill">Respeta horarios legales</span><span class="pill">Baja de un clic</span><span class="pill">Lista de no contactar</span><span class="pill">Topes diarios y frenos automáticos</span></p>'
-           '<h2 id="como">Cómo funciona</h2><div class="steps"><div><b>Lo conectas.</b> Tus canales (WhatsApp, correo) y tu equipo entran al CRM.</div><div><b>Lo entrenas.</b> Le cuentas qué vendes y a quién; el comercial virtual aprende tu forma de hablar.</div>'
+           + _cards([("C", "Cumplimiento integrado", "Respeta horarios legales por país, la lista de no contactar y la baja de un clic en cada correo."),
+                     ("T", "Topes y frenos automáticos", "Límites diarios por remitente y frenos automáticos si suben los rebotes o las bajas, más un interruptor de emergencia."),
+                     ("M", "Mejora cada día", "Prueba variantes de mensaje, aprende cuál responde mejor y pausa los nichos que no funcionan."),
+                     ("P", "Propuestas y brochures", "El material de presentación se envía solo según el interés de cada prospecto, y ves cuántas veces se abrió.")])
+           + '<h2>Lee y entiende documentos</h2><p class="lead">Sube un PDF a la ficha del cliente —un reporte de buró, una cédula, soportes de ingresos— y Crm Hub 360 lo lee por ti: detecta el tipo de documento, extrae los datos que le pides y tú los revisas antes de guardarlos.</p>'
+           f'<div class="fig">{_svg_docs()}<div class="cap">Del PDF a los datos del cliente, con tu revisión antes de guardar.</div></div>'
+           + _cards([("L", "Lector rápido y con IA", "Primero lo lee un lector interno, rápido y sin IA; si quieres más precisión, lo mejoras con IA."),
+                     ("D", "Perfiles a tu medida", "Defines qué datos buscar según el documento: crédito, identidad, ingresos, resumen u otros."),
+                     ("F", "De documento a formulario", "Los datos pueden llenar tus formularios internos y generar PDF, tareas, cambios de estado y mensajes.")])
+           + '<h2>Todos los canales en una sola ficha</h2><p class="lead">Cada conversación, llamada y reunión con un cliente queda en su historial, sin importar por dónde llegó.</p>'
+           f'<div class="fig">{_svg_channels()}<div class="cap">Todo el historial del cliente en un solo lugar.</div></div>'
+           + _cards([("W", "WhatsApp con varios proveedores", "Conecta el que ya tienes: línea propia, API oficial de Meta, Gupshup o Twilio. Varias líneas y un principal."),
+                     ("E", "Correo, SMS y Telegram", "Envía y recibe desde el CRM, con plantillas y firma propia por usuario."),
+                     ("N", "Mensajes masivos y campañas", "Envíos a grupos de clientes con ritmo controlado, y campañas para medir qué convierte mejor."),
+                     ("Z", "Llamadas", "Llama desde el CRM con tu central o proveedor de voz y deja el registro en la ficha.")])
+           + '<h2>Videollamadas propias, con resumen automático</h2><p class="lead">Salas de videollamada dentro de Crm Hub 360, sin depender de otra herramienta.</p>'
+           + _cards([("1", "Agenda y invitación", "Programa la reunión desde la ficha; el cliente recibe el enlace por correo y entra sin instalar nada."),
+                     ("2", "Subtítulos en vivo", "Subtítulos en español e inglés durante la llamada."),
+                     ("3", "Grabación", "Graba videollamadas y pantalla, y las guarda ligadas al cliente."),
+                     ("4", "Resumen con acuerdos", "Al terminar, un resumen con puntos clave, acuerdos y pendientes queda como nota en la ficha.")])
+           + '<h2>Automatiza tu operación comercial</h2>'
+           + _cards([("R", "Procesos de leads", "Cuando entra un lead, consulta una API o un webhook (buró, validación de identidad, web scraping) y guarda la respuesta en la ficha."),
+                     ("W", "Consultas web", "Trae información de páginas —incluso con inicio de sesión— para decidir sobre un cliente, con análisis de IA opcional."),
+                     ("H", "Formularios de captación", "Crea formularios para tu web que alimentan el CRM, con acciones automáticas al recibirlos."),
+                     ("I", "Formularios internos", "Diseña los formularios de gestión de tu empresa, con generación de PDF, tareas y envío de mensajes.")])
+           + '<h2>Reportes, aprendizaje y control</h2>'
+           + _cards([("G", "Reportes y tableros", "Cada usuario arma sus gráficas (barras, líneas, circulares, indicadores) y tableros, y los comparte con su equipo."),
+                     ("K", "Banco de conocimiento", "Aprende de tu historial real: qué fuentes, campañas y asesores convierten mejor, y cuándo llegan los mejores clientes."),
+                     ("S", "Simulador", "Recorre con un lead de prueba todo lo que configuraste y te dice qué falta."),
+                     ("O", "Equipos y reparto", "Roles, equipos, organigrama y reparto de leads entre personas y comerciales virtuales."),
+                     ("Y", "Tareas, calendario y escritorio", "Agenda, tareas y un escritorio con los widgets que cada usuario elige."),
+                     ("U", "Siempre actualizado", "Cambios en tiempo real, avisos en el celular y en el navegador, y se instala como aplicación.")])
+           + '<h2>Trae lo tuyo: tú decides con qué trabajas</h2><p class="lead">Cada empresa puede usar sus propios proveedores o los que le ofrecemos: su correo y su buzón, su WhatsApp, su SMS y su telefonía, su motor de IA (Claude, OpenAI o local) y su buscador web. Los datos de cada empresa están separados de los de las demás, y cada usuario ve solo lo que su rol permite.</p>'
+           '<p><span class="pill">Respeta horarios legales</span><span class="pill">Baja de un clic</span><span class="pill">Lista de no contactar</span><span class="pill">Topes diarios y frenos automáticos</span><span class="pill">Datos separados por empresa</span><span class="pill">Copias de seguridad de tus leads</span></p>'
+           '<h2 id="como">Cómo funciona</h2><div class="steps"><div><b>Lo conectas.</b> Tus canales (WhatsApp, correo, llamadas) y tu equipo entran al CRM; cada empresa trae sus propios proveedores si lo prefiere.</div><div><b>Lo entrenas.</b> Le cuentas qué vendes y a quién; los agentes aprenden tu forma de hablar y tus reglas de calificación.</div>'
            '<div><b>Te entrega demos agendadas.</b> El motor busca, califica y conversa; tu equipo se dedica a cerrar.</div></div>')
     gestor = (f'<h2>Tu negocio de servicios, ordenado de punta a punta</h2><p class="lead">Gestor360 reúne agenda, servicios, nómina, inventario y clientes en una sola plataforma, para negocios con una o varias sedes.</p>'
               f'<div class="fig">{_svg_calendar()}<div class="cap">Agenda de citas por sede y por profesional.</div></div>'

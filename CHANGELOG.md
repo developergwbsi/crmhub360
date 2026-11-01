@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Cambiado
+- **Presentación de Crm Hub 360 ampliada** con todo lo que hace el producto: equipo de agentes de IA (buscador, calificador, comercial virtual, asistente), motor de prospección y su cumplimiento, lectura y comprensión de documentos (PDF), todos los canales, videollamadas con subtítulos, grabación y resumen, procesos y formularios, reportes, banco de conocimiento y «trae lo tuyo». Seis ilustraciones; sin precios ni promesas.
+
 ## [1.16.0] - 2026-11-01
 
 ### Añadido
