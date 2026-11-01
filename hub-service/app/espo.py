@@ -42,6 +42,12 @@ class Espo:
                                            "file": f"data:{mime};base64,{base64.b64encode(data).decode()}"})
         return r["id"]
 
+    async def upload_email(self, name: str, mime: str, data: bytes) -> str:
+        """Sube un archivo como adjunto de un correo y devuelve el id del adjunto (para el campo attachmentsIds del Email)."""
+        r = await self.post("Attachment", {"name": name, "type": mime, "role": "Attachment", "parentType": "Email", "field": "attachments", "relatedType": "Email",
+                                           "file": f"data:{mime};base64,{base64.b64encode(data).decode()}"})
+        return r["id"]
+
     async def note(self, lead_id: str, text: str, attachments: list[str] | None = None) -> None:
         """Agrega una nota tipo Post al flujo del lead (opcionalmente con archivos adjuntos ya subidos)."""
         body = {"type": "Post", "parentType": "Lead", "parentId": lead_id, "post": text}

@@ -7,7 +7,7 @@ import logging
 import re
 from datetime import datetime, timezone
 
-from . import compliance, db, ingest, llm
+from . import compliance, db, emailcheck, ingest, llm
 from .espo import Espo
 
 log = logging.getLogger("hub.prospects")
@@ -118,6 +118,10 @@ async def import_rows(tenant: dict, rows: list[dict], batch: str = "", default_c
         ok_e, why_e = compliance.email_ok(email) if email else (False, "")
         if email and not ok_e:
             reason, email = why_e, ""
+        elif email and len(rows) <= 100:   # lotes pequeños (buscador, listas cortas): se comprueba que el buzón exista; los grandes se comprueban al pasar al CRM
+            vs, vw = await emailcheck.verify(email)
+            if emailcheck.blocks(vs):
+                reason, email = vw, ""
         phone, why_p = compliance.phone_e164(phone_raw, country or default_country) if phone_raw else ("", "")
         if phone_raw and not phone and not email and not reason:
             reason = why_p
@@ -234,6 +238,10 @@ async def promote(tenant: dict, ids: list[int] | None = None, limit: int | None 
         try:
             if compliance.is_dnc(slug, email=r["email"] or None, phones=[r["phone"]] if r["phone"] else []):
                 _mark(r["id"], "rejected", "Está en la lista de no contactar"); out["skipped"] += 1; continue
+            if r["email"]:   # el correo debe existir: un rebote daña la reputación del remitente
+                vs, vw = await emailcheck.verify(r["email"])
+                if emailcheck.blocks(vs):
+                    _mark(r["id"], "rejected", vw); out["skipped"] += 1; continue
             en = r["enrichment"] or {}
             desc = "\n".join(x for x in [f"Empresa: {r['company']}" if r["company"] else "", f"Cargo: {r['title']}" if r["title"] else "", f"Sector: {r['industry']}" if r["industry"] else "",
                                           f"Dolor probable: {en['pain']}" if en.get("pain") else "", f"Puntaje de ajuste: {r['score']}/100" if r["score"] is not None else "", f"Lote: {r['batch']}",
@@ -288,6 +296,21 @@ def _allocate(rows: list[dict], n: int, tenant: dict) -> list[dict]:
         k = max((k for k in by if by[k]), key=lambda k: weight[k] / (taken[k] + 1))
         out.append(by[k].pop(0))
         taken[k] += 1
+    return out
+
+
+async def verify_pending(tenant: dict, limit: int = 200) -> dict:
+    """Comprueba que existan los correos de los prospectos «ready»; los inexistentes pasan a «rechazado» con el motivo."""
+    slug, out = tenant["slug"], {"checked": 0, "invalid": 0, "valid": 0, "unknown": 0}
+    with db.pool.connection() as c:
+        rows = [dict(r) for r in c.execute("SELECT id, email FROM prospects WHERE tenant=%s AND status='ready' AND email <> '' ORDER BY id LIMIT %s", (slug, limit)).fetchall()]
+    for r in rows:
+        st, why = await emailcheck.verify(r["email"])
+        out["checked"] += 1
+        if emailcheck.blocks(st):
+            _mark(r["id"], "rejected", why); out["invalid"] += 1
+        else:
+            out["valid" if st == "valid" else "unknown"] += 1
     return out
 
 

@@ -6,7 +6,7 @@ from psycopg.types.json import Jsonb
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from . import compliance, db, llm, mailout, proposals, prospects, push, routing, sms, whatsapp
+from . import compliance, db, emailcheck, llm, mailout, proposals, prospects, push, routing, sms, whatsapp
 from .espo import Espo
 
 log = logging.getLogger("hub.agent")
@@ -903,7 +903,9 @@ def _ensure_disclosure(message: str, cfg: dict, company: str, channel: str) -> s
 def _email_html(text: str, persona: str, role: str, company: str) -> str:
     """Convierte el texto en el HTML del correo del agente, con la firma de persona, cargo y empresa."""
     e = _html.escape
-    paras = "".join(f"<p style='margin:0 0 12px'>{e(p).replace(chr(10), '<br>')}</p>" for p in re.split(r"\n{2,}", text.strip()))
+    def link(t: str) -> str:   # enlaces pulsables (sin el punto o la coma final)
+        return re.sub(r"(https?://[^\s<]+?)([.,;:!?)]*)(?=\s|<|$)", lambda m: f"<a href='{m.group(1)}' style='color:#4f46e5'>{m.group(1)}</a>{m.group(2)}", t)
+    paras = "".join(f"<p style='margin:0 0 12px'>{link(e(p)).replace(chr(10), '<br>')}</p>" for p in re.split(r"\n{2,}", text.strip()))
     return (f"<div style='font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#161b2e;max-width:560px'>{paras}"
             f"<div style='margin-top:16px;padding-top:10px;border-top:2px solid #4f63e8;font-size:13px'><b>{e(persona)}</b><br><span style='color:#5d6678;white-space:nowrap'>{e(role)} · {e(company).replace(' ', chr(160))}</span></div></div>")
 
@@ -979,8 +981,25 @@ async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: s
             html_body = html_body[:-6] + compliance.unsub_footer(tenant.get("name") or "", url) + "</div>" if html_body.endswith("</div>") else html_body + compliance.unsub_footer(tenant.get("name") or "", url)
             headers = {"List-Unsubscribe": f"<{url}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"}
         await mailout.send(tenant, {"userId": uid, "userName": persona, "to": [lead["emailAddress"]], "subject": subject[:200], "html": html_body, "parentType": "Lead", "parentId": lead_id, "agent": True,
-                                    "authorLabel": f"{persona} (comercial virtual)", "headers": headers, "attachments": atts})
+                                    "authorLabel": f"{persona} Virtual", "headers": headers, "attachments": atts})
     _last_send[tenant["slug"]] = time.time()
+
+
+async def stop_bounced(tenant: dict, address: str) -> None:
+    """Un correo rebotó (la dirección no existe): el comercial virtual deja de escribirle a ese lead, queda anotado en el CRM y el prospecto se marca como rechazado."""
+    from . import ingest
+    slug = tenant["slug"]
+    lead_id = await ingest.find_lead(tenant, "emailAddress", address)
+    with db.pool.connection() as c:
+        c.execute("UPDATE prospects SET status='rejected', reason=%s, updated_at=now() WHERE tenant=%s AND lower(email)=%s AND status<>'rejected'", ("El correo rebotó: la dirección no existe", slug, address.lower()))
+    if not lead_id:
+        return
+    _set(slug, lead_id, state="stopped", reason="El correo rebotó: la dirección no existe", next_at=None)
+    log_event(slug, lead_id, "stop", channel="email", title="Detenido: el correo rebotó (la dirección no existe)", detail=address)
+    try:
+        await Espo(tenant).note(lead_id, f"[Comercial virtual] El correo a {address} rebotó: la dirección no existe. Se detuvieron los seguimientos; revisa la dirección o contacta a la empresa por otro medio.")
+    except Exception:
+        pass
 
 
 _brake_notified: dict = {}
@@ -1076,6 +1095,18 @@ async def step(tenant: dict, row: dict) -> None:
     channel = pick_channel(available_channels(tenant, cfg, lead), lead, row["attempts"], inbound)
     if not channel:
         await _escalate(tenant, cfg, lead, "El lead no tiene un canal de contacto disponible (teléfono con WhatsApp/SMS o correo).", dry=dry); return
+    if channel == "email" and proactive and lead.get("emailAddress"):   # antes de gastar IA y de escribir: ¿el buzón existe?
+        vs, vw = await emailcheck.verify(lead["emailAddress"])
+        if emailcheck.blocks(vs):
+            compliance.add_dnc(slug, email=lead["emailAddress"], reason=f"Correo inexistente (verificado): {vw}"[:190], source="verificacion")
+            _set(slug, lead_id, state="stopped", reason=f"El correo no existe: {vw}"[:300], next_at=None)
+            log_event(slug, lead_id, "stop", lead_name=lname, channel="email", title="Detenido: el correo no existe (verificado antes de enviar)", detail=vw, dry=dry)
+            if not dry:
+                try:
+                    await espo.note(lead_id, f"[Comercial virtual] No se envió: {vw}. Revisa la dirección o contacta a la empresa por otro medio.")
+                except Exception:
+                    pass
+            return
     step_idx = row["attempts"] if kind == "followup" else 0
     variant = pick_variant(slug, cfg, step_idx) if (proactive and ob) else None
     try:
@@ -1271,6 +1302,10 @@ async def approve(tenant: dict, lead_id: str, event_id: int, message: str | None
     try:
         menu = find_menu(cfg, channel, data.get("menu") or "", text)
         proactive = data.get("kind") in ("first", "followup")
+        if channel == "email" and proactive and lead.get("emailAddress"):   # la persona que aprueba también queda protegida: no se envía a un buzón que no existe
+            vs, vw = await emailcheck.verify(lead["emailAddress"])
+            if emailcheck.blocks(vs):
+                raise ValueError(f"No se envió: {vw}. Revisa la dirección del lead.")
         if channel == "email" and proactive and outbound_on(cfg) and not _quota_ok(tenant, cfg):
             raise ValueError("Se llegó al tope diario de correos en frío de este remitente; inténtalo mañana.")
         await _deliver(tenant, cfg, lead, channel, text, data.get("subject") or "", lead.get("assignedUserId"), menu, proactive=proactive)

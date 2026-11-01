@@ -8,3 +8,4 @@ pywebpush==2.0.*
 reportlab==4.*
 beautifulsoup4==4.*
 weasyprint==70.*
+dnspython==2.*

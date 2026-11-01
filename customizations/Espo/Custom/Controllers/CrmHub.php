@@ -2421,6 +2421,13 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/prospects/delete', ['ids' => array_map('intval', (array) ($d->ids ?? []))], 20);
     }
 
+    /** POST /CrmHub/prospectsVerify. Comprueba (en segundo plano) que existan los correos de los prospectos listos. Hub: POST /v1/prospects/verify. */
+    public function postActionProspectsVerify(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        return (object) $this->hubCall('POST', '/v1/prospects/verify', [], 20);
+    }
+
     /** POST /CrmHub/prospectsIcp. Perfil de cliente ideal. Hub: PUT /v1/prospects/icp. */
     public function postActionProspectsIcp(Request $request): \stdClass
     {

@@ -159,6 +159,11 @@ async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str, im
         from . import compliance
         for a in bad:
             compliance.add_dnc(tenant["slug"], email=a, reason="rebote: el correo no se pudo entregar", source="auto")
+            try:
+                from . import agent
+                await agent.stop_bounced(tenant, a)
+            except Exception as ex:
+                log.warning("detener tras el rebote de %s: %s", a, str(ex)[:100])
         return False
     owner, ptype, pid = await _route(tenant, espo, m, own_address)
     if not owner:

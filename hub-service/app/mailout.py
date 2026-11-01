@@ -98,6 +98,15 @@ async def send(tenant: dict, req: dict) -> dict:
             "isHtml": True, "status": "Sent", "dateSent": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"), "messageId": mid, "assignedUserId": uid, "usersIds": [uid]}
     if req.get("parentType") and req.get("parentId"):
         data.update({"parentType": req["parentType"], "parentId": req["parentId"]})
+    if req.get("attachments") and req.get("record") is not False:   # el correo guardado en el CRM muestra también los archivos que se enviaron
+        ids = []
+        for f in req["attachments"]:
+            try:
+                ids.append(await Espo(tenant).upload_email(f["name"], "application/pdf", f["bytes"]))
+            except Exception:
+                pass
+        if ids:
+            data["attachmentsIds"] = ids
     if req.get("record") is False:   # el CRM lo guarda con el usuario como autor (así queda en «Enviados» y no en la bandeja de entrada)
         if req.get("parentType") == "Lead" and req.get("parentId") and not req.get("agent"):
             from . import agent

@@ -233,7 +233,7 @@ def cold_unhealthy(tenant: str) -> str:
         with db.pool.connection() as c:
             sends = c.execute("SELECT count(*) n FROM agent_events WHERE tenant=%s AND kind='send' AND channel='email' AND NOT dry AND at > now() - interval '14 days'", (tenant,)).fetchone()["n"]
             bounces = c.execute("SELECT count(*) n FROM dnc WHERE tenant=%s AND reason ILIKE 'rebote%%' AND at > now() - interval '14 days'", (tenant,)).fetchone()["n"]
-            optouts = c.execute("SELECT count(*) n FROM dnc WHERE tenant=%s AND kind='email' AND reason NOT ILIKE 'rebote%%' AND source NOT IN ('csv','import','manual') AND at > now() - interval '14 days'", (tenant,)).fetchone()["n"]
+            optouts = c.execute("SELECT count(*) n FROM dnc WHERE tenant=%s AND kind='email' AND reason NOT ILIKE 'rebote%%' AND source NOT IN ('csv','import','manual','auto','verificacion') AND at > now() - interval '14 days'", (tenant,)).fetchone()["n"]
     except Exception:
         return ""
     if bounces >= 3 and sends and bounces / sends >= 0.15:

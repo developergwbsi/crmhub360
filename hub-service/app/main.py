@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, brand, compliance, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, brand, compliance, emailcheck, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -47,6 +47,7 @@ async def lifespan(_: FastAPI):
     compliance.ensure_schema()
     prospects.ensure_schema()
     proposals.ensure_schema()
+    emailcheck.ensure_schema()
     growth.ensure_schema()
     agent.ensure_schema()
     monitor.ensure_schema()
@@ -2615,6 +2616,15 @@ async def finder_run(body: dict = Body(default={}), tenant: dict = Depends(tenan
         raise HTTPException(403, str(e))
     except Exception as e:
         raise HTTPException(502, f"No se pudo completar la búsqueda: {str(e)[:200]}")
+
+
+@app.post("/v1/prospects/verify")
+async def prospects_verify(tasks: BackgroundTasks, tenant: dict = Depends(tenant_auth)):
+    """Comprueba (en segundo plano) que existan los correos de los prospectos listos; los inexistentes pasan a rechazados."""
+    with db.pool.connection() as c:
+        n = c.execute("SELECT count(*) n FROM prospects WHERE tenant=%s AND status='ready' AND email <> ''", (tenant["slug"],)).fetchone()["n"]
+    tasks.add_task(prospects.verify_pending, tenant)
+    return {"queued": n}
 
 
 @app.put("/v1/prospects/icp")
