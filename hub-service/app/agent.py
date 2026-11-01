@@ -589,6 +589,27 @@ def form_problems(channel: str, message: str, subject: str) -> list[str]:
     return out
 
 
+def _cut_email(message: str, limit: int = 88) -> str:
+    """Recorta un correo largo SIN romper los enlaces ni dejar frases a medias: protege las direcciones web, corta en un fin de frase y, si el recorte se llevó un enlace
+    (el del material o el de WhatsApp), lo vuelve a poner con una frase corta; así el enlace siempre llega completo y el PDF se adjunta."""
+    urls = list(dict.fromkeys(re.findall(r"https?://[^\s<>\"']+", message)))
+    urls = [u.rstrip(".,;:!?)") for u in urls]
+    work = message
+    for i, u in enumerate(urls):
+        work = work.replace(u, f"URL{i}ZZ")
+    cut = " ".join(work.split(" ")[:limit])
+    ends = list(re.finditer(r"[.?!](?=\s|$)", cut))
+    if ends and ends[-1].end() > 60:
+        cut = cut[:ends[-1].end()]
+    cut = cut.strip()
+    for i, u in enumerate(urls):
+        cut = cut.replace(f"URL{i}ZZ", u)
+    for u in urls:
+        if u not in cut:
+            cut += ("\n\nSi prefieres escribirnos por WhatsApp: " if "wa.me/" in u else "\n\nAquí puedes ver cómo funciona: ") + u
+    return cut
+
+
 def hard_fix(channel: str, message: str, subject: str) -> tuple[str, str]:
     """Último recurso si el modelo insiste en pasarse de los límites: se recorta (asunto a 4 palabras, correo a ~110 palabras en una frase completa, WhatsApp a 3 párrafos)."""
     if channel == "email":
@@ -599,8 +620,7 @@ def hard_fix(channel: str, message: str, subject: str) -> tuple[str, str]:
         for w in SPAM_WORDS:   # el asunto nunca sale con palabras típicas de spam
             subject = re.sub(re.escape(w), "", subject, flags=re.I).replace("!", "").strip() or "Una idea rápida"
         if _words(message) >= 120:
-            cut = " ".join(message.split(" ")[:110])
-            message = (cut[:cut.rfind(".") + 1] if "." in cut[60:] else cut).strip()
+            message = _cut_email(message)
     elif channel == "whatsapp":
         paras = [p.strip() for p in re.split(r"\n+", message) if p.strip()]
         if len(paras) > 3:

@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Corregido
+- **Un correo largo ya no sale con el enlace cortado.** Cuando el modelo se pasaba de las 120 palabras, el recorte de último recurso cortaba en el último punto, que a veces era el de la dirección web; el enlace llegaba roto, se perdía el cierre y no se adjuntaba el PDF. Ahora el recorte protege las direcciones, corta en un fin de frase y, si se llevó un enlace, lo vuelve a poner completo.
+
 ## [1.18.1] - 2026-11-01
 
 ### Corregido
