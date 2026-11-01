@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.19.0] - 2026-11-01
+
 ### Añadido
 - **¿Quién responde cuando un cliente escribe por WhatsApp?** Al agregar o editar un WhatsApp (*Integraciones → Canales*) se elige: mis asesores, **mensajes predefinidos**, comercial virtual con IA o **chatbot de Gestor360** (servicio adicional con cobro; sin el servicio aparece el botón «Solicitar el chatbot»).
 - **Mensajes predefinidos de WhatsApp**: saludo, fuera de horario, menú de opciones, palabras clave, con topes para no insistir y sin interferir con el comercial virtual.
