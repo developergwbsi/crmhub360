@@ -905,7 +905,7 @@ def _email_html(text: str, persona: str, role: str, company: str) -> str:
     e = _html.escape
     paras = "".join(f"<p style='margin:0 0 12px'>{e(p).replace(chr(10), '<br>')}</p>" for p in re.split(r"\n{2,}", text.strip()))
     return (f"<div style='font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#161b2e;max-width:560px'>{paras}"
-            f"<div style='margin-top:16px;padding-top:10px;border-top:2px solid #4f63e8;font-size:13px'><b>{e(persona)}</b><br><span style='color:#5d6678'>{e(role)} · {e(company)}</span></div></div>")
+            f"<div style='margin-top:16px;padding-top:10px;border-top:2px solid #4f63e8;font-size:13px'><b>{e(persona)}</b><br><span style='color:#5d6678;white-space:nowrap'>{e(role)} · {e(company)}</span></div></div>")
 
 
 def _inbound_recent(slug: str, lead_id: str, hours: int) -> bool:
@@ -924,6 +924,7 @@ def _quota_ok(tenant: dict, cfg: dict) -> bool:
 async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: str, subject: str, owner: str | None, menu: dict | None = None, proactive: bool = False) -> None:
     """Envía el mensaje por el canal elegido (WhatsApp con o sin menú, SMS o correo) respetando una pausa de 12 s entre envíos del mismo tenant."""
     persona, lead_id = cfg["persona"]["name"], lead["id"]
+    cname = tenant.get("name") or ""
     cold = proactive and prospects.is_cold(tenant["slug"], lead_id)
     if cold and channel != "email":
         raise ValueError("Contacto hallado por el buscador: por WhatsApp o SMS solo se escribe a quien dio permiso. Usa el correo con remitente propio para frío.")
@@ -939,6 +940,7 @@ async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: s
         route = routing.route_of(tenant["slug"], lead_id) or {}
         if cfg.get("bold", True):   # el nombre de la empresa y del comercial van en negrilla
             message = whatsapp.bold_names(message, [tenant.get("name") or "", persona])
+        message = proposals.nb(message, cname)
         if menu:   # lista o botones; queda pendiente la elección del cliente para entender su respuesta («2», «Deudas en mora»…)
             await whatsapp.send_menu(tenant, lead_id, menu, message, f"{persona} (comercial virtual)", None, route.get("last_in_phone"), bool(cfg.get("menus_native_evolution")))
             _set(tenant["slug"], lead_id, pending=Jsonb({"menu": menu["id"], "name": menu["name"], "options": [{"id": o["id"], "title": o["title"], "status": o.get("status") or ""} for o in menu["options"]],
@@ -955,6 +957,7 @@ async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: s
                 message = wt.get("preview") or message
             await whatsapp.send(tenant, lead_id, message, f"{persona} (comercial virtual)", None, route.get("last_in_phone"), template=tpl)
     elif channel == "sms":
+        message = proposals.nb(message, cname)
         await sms.send(tenant, lead_id, message, f"{persona} (comercial virtual)", None, None)
     else:
         espo = Espo(tenant)
@@ -963,13 +966,20 @@ async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: s
             from . import mailbox
             uid = await mailbox._admin_id(espo) or ""
         subject = subject.strip() or f"{tenant.get('name') or 'Seguimiento'}: tu solicitud"
+        message = proposals.nb(message, cname)
         html_body, headers = _email_html(message, persona, cfg["persona"]["role"], tenant.get("name") or ""), {}
+        atts = []
+        if ((tenant.get("settings") or {}).get("proposals_attach", True)):   # el correo lleva el enlace de la presentación y también su PDF adjunto
+            try:
+                atts = proposals.attachments_for(tenant["slug"], message.replace(proposals.NBSP, " "))
+            except Exception as e:
+                log.warning("adjuntos del correo: %s", str(e)[:100])
         if proactive and outbound_on(cfg):   # correo en frío: quién escribe y baja de un clic (también en la cabecera List-Unsubscribe)
             url = compliance.unsub_url(tenant["slug"], lead_id)
             html_body = html_body[:-6] + compliance.unsub_footer(tenant.get("name") or "", url) + "</div>" if html_body.endswith("</div>") else html_body + compliance.unsub_footer(tenant.get("name") or "", url)
             headers = {"List-Unsubscribe": f"<{url}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"}
         await mailout.send(tenant, {"userId": uid, "userName": persona, "to": [lead["emailAddress"]], "subject": subject[:200], "html": html_body, "parentType": "Lead", "parentId": lead_id, "agent": True,
-                                    "authorLabel": f"{persona} (comercial virtual)", "headers": headers})
+                                    "authorLabel": f"{persona} (comercial virtual)", "headers": headers, "attachments": atts})
     _last_send[tenant["slug"]] = time.time()
 
 

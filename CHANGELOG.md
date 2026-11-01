@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **Brochures en PDF adjuntos a los correos.** Cada presentación estándar tiene un brochure de 2 páginas; cuando el comercial virtual envía el enlace, el correo lleva también el PDF adjunto (hasta 2 y 4 MB). El PDF se descarga además de la biblioteca (botón «PDF»).
+- **El nombre de la empresa siempre en una sola línea** en correos, WhatsApp, SMS, presentaciones, PDF y pantallas.
+
 ### Cambiado
 - **Presentaciones con capturas reales**: Crm Hub 360 (panel gerencial, agentes de prospección y biblioteca de propuestas, tomadas del propio CRM) y Gestor360 (su interfaz). Gestor360 reescrito con sus cinco líneas de negocio (vehículos, salud y belleza, panaderías, ferreterías y otras), todos sus módulos y la conexión por API. El comercial virtual y el calificador conocen las nuevas líneas.
 

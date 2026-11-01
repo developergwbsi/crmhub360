@@ -2556,6 +2556,17 @@ def proposals_active(slug: str, body: dict = Body(...), tenant: dict = Depends(t
     return {"ok": True}
 
 
+@app.get("/v1/public/meet/p/{tenant}/{slug}.pdf")
+def proposal_pdf(tenant: str, slug: str):
+    """PDF del brochure de una presentación (el mismo que se adjunta a los correos)."""
+    if not re.fullmatch(r"[a-z0-9-]{1,40}", tenant) or not re.fullmatch(r"[a-z0-9-]{1,60}", slug):
+        raise HTTPException(404, "No existe")
+    b = proposals.get_pdf(tenant, slug)
+    if not b:
+        raise HTTPException(404, "No existe")
+    return Response(b, 200, {**_MEET_HEADERS, "Content-Type": "application/pdf", "Content-Disposition": f'inline; filename="{slug}.pdf"', "Cache-Control": "public, max-age=300"})
+
+
 @app.get("/v1/public/meet/p/{tenant}/{slug}", response_class=HTMLResponse)
 def proposal_page(tenant: str, slug: str):
     """Página pública de una presentación (https://meet.<dominio>/p/<empresa>/<producto>): HTML autocontenido, sin scripts."""

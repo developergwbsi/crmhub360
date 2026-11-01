@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS proposals (
     tenant TEXT NOT NULL, slug TEXT NOT NULL, title TEXT NOT NULL, product TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL DEFAULT 'brochure', summary TEXT NOT NULL DEFAULT '',
     html TEXT NOT NULL DEFAULT '', active BOOLEAN NOT NULL DEFAULT true, views INT NOT NULL DEFAULT 0, updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant, slug));
 ALTER TABLE proposals ADD COLUMN IF NOT EXISTS ext_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE proposals ADD COLUMN IF NOT EXISTS pdf BYTEA;
 """
 
 
@@ -33,8 +34,9 @@ def catalog(tenant: str) -> list[dict]:
 
 def listing(tenant: str) -> list[dict]:
     with db.pool.connection() as c:
-        rows = c.execute("SELECT slug, title, product, kind, summary, active, views, ext_url, updated_at FROM proposals WHERE tenant=%s ORDER BY (product='crm_hub_360') DESC, slug", (tenant,)).fetchall()
-    return [{**dict(r), "updated_at": r["updated_at"].isoformat(), "own": bool(r["ext_url"]), "url": r["ext_url"] or url(tenant, r["slug"])} for r in rows]
+        rows = c.execute("SELECT slug, title, product, kind, summary, active, views, ext_url, updated_at, (pdf IS NOT NULL) AS has_pdf FROM proposals WHERE tenant=%s ORDER BY (product='crm_hub_360') DESC, slug", (tenant,)).fetchall()
+    return [{**dict(r), "updated_at": r["updated_at"].isoformat(), "own": bool(r["ext_url"]), "url": r["ext_url"] or url(tenant, r["slug"]),
+             "pdf_url": (url(tenant, r["slug"]) + ".pdf") if r["has_pdf"] else ""} for r in rows]
 
 
 def _slugify(t: str) -> str:
@@ -93,6 +95,46 @@ def catalog_text(tenant: str) -> str:
             "Si pide información, una propuesta o una demo, envía el enlace correspondiente y propón dos horarios para una videollamada de 15 minutos. Nunca des precios ni prometas resultados.")
 
 
+NBSP = "\u00a0"
+
+
+def nb(text: str, name: str) -> str:
+    """El nombre de la empresa nunca se parte en dos líneas: sus espacios pasan a espacios duros (no se separan al ajustar el texto)."""
+    return text.replace(name, name.replace(" ", NBSP)) if name and " " in name else text
+
+
+def make_pdf(html: str) -> bytes | None:
+    """HTML → PDF con WeasyPrint (None si la librería no está disponible)."""
+    try:
+        import weasyprint
+        return weasyprint.HTML(string=html).write_pdf()
+    except Exception:
+        import logging
+        logging.getLogger("hub.proposals").exception("no se pudo generar el PDF")
+        return None
+
+
+def get_pdf(tenant: str, slug: str) -> bytes | None:
+    with db.pool.connection() as c:
+        r = c.execute("SELECT pdf FROM proposals WHERE tenant=%s AND slug=%s AND active AND pdf IS NOT NULL", (tenant, slug)).fetchone()
+    return bytes(r["pdf"]) if r and r["pdf"] else None
+
+
+MAX_ATTACH = 2          # PDF por correo
+MAX_ATTACH_BYTES = 4_000_000
+
+
+def attachments_for(tenant: str, text: str) -> list[dict]:
+    """PDF de los materiales cuyo enlace va en el mensaje (el correo lleva el enlace y también el PDF adjunto)."""
+    out, total = [], 0
+    with db.pool.connection() as c:
+        rows = c.execute("SELECT slug, title, pdf FROM proposals WHERE tenant=%s AND active AND pdf IS NOT NULL AND ext_url='' ORDER BY (product='crm_hub_360') DESC, slug", (tenant,)).fetchall()
+    for r in rows:
+        if url(tenant, r["slug"]) in (text or "") and len(out) < MAX_ATTACH and total + len(r["pdf"]) <= MAX_ATTACH_BYTES:
+            out.append({"name": _slugify(r["title"].split(":")[0]) + ".pdf", "bytes": bytes(r["pdf"])}); total += len(r["pdf"])
+    return out
+
+
 def get_page(tenant: str, slug: str) -> str | None:
     with db.pool.connection() as c:
         r = c.execute("SELECT html FROM proposals WHERE tenant=%s AND slug=%s AND active AND ext_url=''", (tenant, slug)).fetchone()
@@ -101,11 +143,11 @@ def get_page(tenant: str, slug: str) -> str | None:
     return r["html"] if r else None
 
 
-def upsert(tenant: str, slug: str, title: str, product: str, kind: str, summary: str, html: str, active: bool = True) -> None:
+def upsert(tenant: str, slug: str, title: str, product: str, kind: str, summary: str, html: str, active: bool = True, pdf: bytes | None = None) -> None:
     with db.pool.connection() as c:
-        c.execute("INSERT INTO proposals (tenant, slug, title, product, kind, summary, html, active) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) "
-                  "ON CONFLICT (tenant, slug) DO UPDATE SET title=EXCLUDED.title, product=EXCLUDED.product, kind=EXCLUDED.kind, summary=EXCLUDED.summary, html=EXCLUDED.html, updated_at=now()",
-                  (tenant, slug, title, product, kind, summary, html, active))
+        c.execute("INSERT INTO proposals (tenant, slug, title, product, kind, summary, html, active, pdf) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                  "ON CONFLICT (tenant, slug) DO UPDATE SET title=EXCLUDED.title, product=EXCLUDED.product, kind=EXCLUDED.kind, summary=EXCLUDED.summary, html=EXCLUDED.html, pdf=EXCLUDED.pdf, updated_at=now()",
+                  (tenant, slug, title, product, kind, summary, html, active, pdf))
 
 
 # ---------------------------------------------------------------- páginas
@@ -352,8 +394,78 @@ def default_pages(company: str, wa: str) -> list[dict]:
     ]
 
 
+# ---------------------------------------------------------------- brochures en PDF (2 páginas A4, para adjuntar a los correos)
+BRO_CSS = """
+@page { size: A4; margin: 0 }
+* { box-sizing: border-box } body { margin: 0; font-family: 'Liberation Sans', Arial, sans-serif; color: #0f172a; font-size: 10.5pt; line-height: 1.45 }
+.pg { width: 210mm; height: 297mm; overflow: hidden; page-break-after: always; background: #fff; position: relative }
+.pg:last-child { page-break-after: auto }
+.hero { background: linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #0891b2 100%); color: #fff; padding: 11mm 16mm 9mm }
+.brand { font-weight: bold; font-size: 12pt; margin-bottom: 6mm } .tag { display: inline-block; border: 1px solid rgba(255,255,255,.55); border-radius: 12px; padding: 1.2mm 4mm; font-size: 8.5pt; margin-bottom: 4mm }
+h1 { font-size: 23pt; line-height: 1.12; margin: 0 0 3mm } .sub { font-size: 12pt; margin: 0; opacity: .95 }
+.body { padding: 8mm 16mm 0 } h2 { font-size: 14pt; margin: 0 0 2mm; color: #1e1b4b } .lead { color: #475569; margin: 0 0 4mm }
+.cards { display: flex; flex-wrap: wrap; margin: 0 -2mm } .card { width: 50%; padding: 0 2mm 4mm } .card div { border: 1px solid #e2e8f0; border-radius: 3mm; padding: 3mm 4mm; background: #f8fafc; height: 100% }
+.card b { display: block; color: #3730a3; font-size: 10.5pt; margin-bottom: 1mm } .card span { color: #475569; font-size: 9.5pt }
+.fig { border: 1px solid #e2e8f0; border-radius: 3mm; padding: 3mm; margin: 2mm 0 4mm; text-align: center } .fig { page-break-inside: avoid } .fig svg { width: 100%; height: auto; max-height: 62mm } .fig img { width: 100%; height: auto; max-width: 94mm } .cap { color: #64748b; font-size: 8.5pt; margin-top: 1.5mm }
+.steps { margin: 0 0 4mm; padding: 0; list-style: none } .steps li { border-left: 3px solid #4f46e5; background: #f8fafc; padding: 2.5mm 4mm; margin-bottom: 2mm }
+.cta { background: #0f172a; color: #fff; border-radius: 4mm; padding: 6mm 8mm; margin: 4mm 0 0; text-align: center } .cta h2 { color: #fff; font-size: 15pt } .cta p { margin: 1mm 0; font-size: 11pt } .cta b { color: #4ade80 }
+.foot { position: absolute; left: 16mm; right: 16mm; bottom: 8mm; font-size: 8pt; color: #64748b; text-align: center }
+.pill { display: inline-block; background: #eef2ff; color: #3730a3; border-radius: 10px; padding: .8mm 3mm; font-size: 8.5pt; margin: 0 1.5mm 1.5mm 0 }
+"""
+
+
+def _bro_cards(items: list[tuple[str, str]]) -> str:
+    return '<div class="cards">' + "".join(f'<div class="card"><div><b>{_h.escape(t)}</b><span>{_h.escape(d)}</span></div></div>' for t, d in items) + "</div>"
+
+
+def _bro(company: str, wa: str, tag: str, h1: str, sub: str, p1: str, p2: str, cta_t: str) -> str:
+    c = _h.escape(company)
+    wl = f"<p>Escríbenos por WhatsApp: <b>wa.me/{wa}</b></p>" if wa else ""
+    cta = f'<div class="cta"><h2>{cta_t}</h2><p>Agenda una demostración de 15 minutos por videollamada, sin compromiso.</p><p>Responde al correo que te envió Valeria, nuestra asistente virtual.</p>{wl}</div>'
+    foot = f'<div class="foot">{c} · Presentación informativa, sin precios ni compromiso.</div>'
+    return (f'<!doctype html><html lang="es"><head><meta charset="utf-8"><style>{BRO_CSS}</style></head><body>'
+            f'<div class="pg"><div class="hero"><div class="brand">{c}.</div><span class="tag">{_h.escape(tag)}</span><h1>{h1}</h1><p class="sub">{sub}</p></div><div class="body">{p1}</div>{foot}</div>'
+            f'<div class="pg"><div class="body" style="padding-top:12mm">{p2}{cta}</div>{foot}</div></body></html>')
+
+
+def brochures(company: str, wa: str) -> dict:
+    """Brochure PDF (2 páginas) de cada producto: se adjunta a los correos junto con el enlace. Sin precios ni promesas de resultado."""
+    crm = _bro(company, wa, "El motor más inteligente del portafolio", "Tu CRM con IA que busca, atiende y agenda clientes",
+               "Automatiza el control de tus ventas y la búsqueda de nuevos clientes. Tu equipo entra cuando ya hay una demo agendada.",
+               '<h2>Todo lo que necesita tu equipo comercial</h2><p class="lead">Crm Hub 360 es el CRM en español con inteligencia artificial: ordena a tus clientes, atiende por todos los canales y busca clientes nuevos.</p>'
+               + _bro_cards([("Equipo de agentes de IA", "Buscador, calificador, comercial virtual y asistente, cada uno con su entrenamiento."), ("Motor que busca clientes", "Halla empresas, decide a quién vale la pena y les escribe, cumpliendo horarios y bajas."),
+                             ("Lee y entiende documentos", "Sube un PDF a la ficha, extrae los datos que necesitas y tú los revisas."), ("Todos los canales", "WhatsApp, correo, SMS, Telegram y llamadas, con el historial en una sola ficha."),
+                             ("Videollamadas propias", "Subtítulos en vivo, grabación y resumen con acuerdos y pendientes."), ("Reportes y control", "Tableros por usuario, banco de conocimiento, equipos y reparto de leads.")])
+               + f'<div class="fig">{_img("crm_panel.jpg", "Panel gerencial de Crm Hub 360")}<div class="cap">Panel gerencial de Crm Hub 360 (datos de prueba).</div></div>',
+               '<h2>De la búsqueda a la demo agendada</h2><p class="lead">El motor trabaja por ti las 24 horas: tu equipo se dedica a cerrar.</p>'
+               f'<div class="fig">{_svg_motor()}</div><div class="fig">{_svg_chat()}</div>'
+               '<h2>Cómo funciona</h2><ul class="steps"><li><b>Lo conectas.</b> Tus canales y tu equipo entran al CRM; cada empresa puede traer sus propios proveedores.</li><li><b>Lo entrenas.</b> Le cuentas qué vendes y a quién; los agentes aprenden tu forma de hablar.</li><li><b>Te entrega demos agendadas.</b> El motor busca, califica y conversa.</li></ul>'
+               '<p><span class="pill">Respeta horarios legales</span><span class="pill">Baja de un clic</span><span class="pill">Lista de no contactar</span><span class="pill">Datos separados por empresa</span></p>', "Mira cómo se vería en tu negocio")
+    gestor = _bro(company, wa, "Para negocios de servicios y ventas", "Tu negocio, bajo control en una sola plataforma",
+                  "Agenda, servicios, productos, nómina, inventario y clientes, con una app hecha a la medida de tu línea de negocio.",
+                  '<h2>Una app a la medida de tu línea de negocio</h2><p class="lead">Gestor360 cuenta hoy con cinco líneas de negocio y sigue sumando más.</p>'
+                  + _bro_cards([("Vehículos", "Mantenimiento, lavado y servicios: visitas y trazabilidad con fotos."), ("Salud y belleza", "Agenda por profesional, comisiones y fidelización."), ("Panaderías", "Ventas, productos e inventario con alertas de stock."),
+                                ("Ferreterías", "Inventario, cotizaciones y facturación."), ("Otras líneas", "Se configura a tu medida; seguimos sumando líneas.")])
+                  + f'<div class="fig">{_img("gestor360_dashboard.jpg", "Interfaz de Gestor360")}<div class="cap">La interfaz de Gestor360 (datos de ejemplo).</div></div>',
+                  '<h2>Todo lo que gestiona</h2><p class="lead">Activa solo los módulos que necesitas.</p>'
+                  + _bro_cards([("Agenda y turnos", "Reservas en línea, estados y evidencia con fotos."), ("Servicios y productos", "Catálogo, duración, precios y ventas."), ("Inventario", "Stock, alertas de reabastecimiento y costos por servicio."), ("Nómina", "Pre-nómina por comisión."),
+                                ("Cotizaciones", "Se convierten en orden de servicio."), ("Facturación electrónica", "Ante la DIAN, por sede o para toda la empresa."), ("Clientes y CRM", "Historial, fidelización y seguimiento."), ("Reportes", "Ventas, ocupación y rentabilidad."),
+                                ("Mensajería y campañas", "WhatsApp, correo y SMS, con IA opcional."), ("App para tus clientes", "Reservan y siguen su cita (Listo360)."), ("Varias sedes", "Branding propio y vista consolidada."), ("QR y check-in", "Registro de llegada digital.")])
+                  + '<h2>Se conecta con tus otras plataformas</h2><p class="lead">Integración con otras plataformas a través de APIs, WhatsApp Business, pagos en línea y notificaciones; se sincroniza con Core360. Con Crm Hub 360, además de ordenar tu operación, consigues clientes nuevos.</p>', "Conoce Gestor360")
+    core = _bro(company, wa, "ERP para manufactura y distribución", "Toda tu cadena de abastecimiento, bajo control",
+                "Compras, inventarios, producción, ventas y facturación electrónica en un solo sistema.",
+                f'<h2>El ERP para fabricar y distribuir</h2><p class="lead">Core360 es la plataforma de gestión empresarial de {_h.escape(company)}.</p><div class="fig">{_svg_chain()}<div class="cap">De la compra a la factura, con una única fuente de verdad.</div></div>'
+                + _bro_cards([("Compras", "Requisiciones, órdenes con aprobación y recepción contra la orden."), ("Inventarios y almacenes", "Por almacén, ubicación y lote; FIFO o costo promedio."), ("Producción", "Listas de materiales, órdenes y planeación (MRP)."),
+                              ("Ventas y distribución", "Cotizaciones, pedidos con reserva de stock y envíos."), ("Finanzas y facturación", "Cuentas por cobrar y pagar, libro mayor y DIAN."), ("Conexión con otras plataformas", "API con llaves y webhooks firmados.")]),
+                '<h2>Se contrata por módulos</h2><p class="lead">Empiezas con la base y sumas lo que necesitas: calidad, mantenimiento o proyectos son módulos opcionales.</p>'
+                + _bro_cards([("Calidad", "Planes de inspección, no conformidades y calificación de proveedores."), ("Mantenimiento", "Equipos, órdenes y planes preventivos."), ("Proyectos", "Gantt, horas, presupuesto y facturación por hitos."), ("Costos", "Centros de costos y rentabilidad.")])
+                + '<p class="lead">Y con <b>Crm Hub 360</b> conectas tu operación con la búsqueda y atención de clientes.</p>', "Conoce Core360")
+    return {"crm-hub-360": crm, "gestor360": gestor, "core360": core}
+
+
 def seed_defaults(tenant: str, company: str, wa: str) -> int:
-    n = 0
+    n, bro = 0, brochures(company, wa)
     for p in default_pages(company, wa):
-        upsert(tenant, p["slug"], p["title"], p["product"], p["kind"], p["summary"], p["html"]); n += 1
+        pdf = make_pdf(nb(bro[p["slug"]], company)) if p["slug"] in bro else None
+        upsert(tenant, p["slug"], p["title"], p["product"], p["kind"], p["summary"], nb(p["html"], company), pdf=pdf); n += 1
     return n

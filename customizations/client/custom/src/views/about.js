@@ -1,5 +1,5 @@
 /**
- * Acerca de Crm Hub 360: qué es la plataforma, quién la hace (DigitalAlliance Hub, digitalalliancehub.site), la versión instalada y el aviso legal del software libre en que se basa
+ * Acerca de Crm Hub 360: qué es la plataforma, quién la hace (DigitalAlliance Hub, digitalalliancehub.site), la versión instalada y el aviso legal del software libre en que se basa
  * (EspoCRM, licencia GNU AGPL v3), que se conserva por exigirlo esa licencia.
  */
 define('custom:views/about', ['view', 'custom:ui'], function (Dep, ChUi) {
@@ -27,8 +27,8 @@ define('custom:views/about', ['view', 'custom:ui'], function (Dep, ChUi) {
                     </div>
                 </div>
                 <div class="ch-ab-card ch-ab-col">
-                    <h4>Desarrollada por DigitalAlliance Hub</h4>
-                    <p>Crm Hub 360 es un producto de <b>DigitalAlliance Hub</b>. Si necesitas soporte, una capacitación o quieres conocer otras soluciones, visítanos.</p>
+                    <h4>Desarrollada por DigitalAlliance Hub</h4>
+                    <p>Crm Hub 360 es un producto de <b>DigitalAlliance Hub</b>. Si necesitas soporte, una capacitación o quieres conocer otras soluciones, visítanos.</p>
                     <p><a class="btn btn-primary" href="https://digitalalliancehub.site" target="_blank" rel="noopener"><span class="fas fa-up-right-from-square"></span> digitalalliancehub.site</a></p>
                 </div>
                 <div class="ch-ab-card ch-ab-col ch-ab-legal">

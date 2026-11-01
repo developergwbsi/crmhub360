@@ -214,7 +214,7 @@ def unsub_url(tenant: str, lead_id: str) -> str:
 def unsub_footer(company: str, url: str) -> str:
     """Pie de los correos proactivos: quién escribe y cómo darse de baja (un clic)."""
     import html
-    return (f"<div style='margin-top:18px;padding-top:10px;border-top:1px solid #e3e7f0;font-size:11.5px;color:#7b8499'>Te escribe {html.escape(company)}. "
+    return (f"<div style='margin-top:18px;padding-top:10px;border-top:1px solid #e3e7f0;font-size:11.5px;color:#7b8499'>Te escribe <span style='white-space:nowrap'>{html.escape(company)}</span>. "
             f"Si no quieres recibir más mensajes nuestros, <a href='{html.escape(url)}' style='color:#7b8499'>date de baja aquí</a> y no volveremos a escribirte.</div>")
 
 
