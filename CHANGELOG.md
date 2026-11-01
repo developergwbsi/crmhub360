@@ -5,6 +5,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Añadido
+- **Buscadores web por empresa.** El buscador de prospectos puede usar la búsqueda web de Claude (por defecto) o **Serper, Brave o Google Programmable Search** con clave. Cada empresa trae el suyo en *Integraciones → Buscadores* (con prueba de conexión y guía para sacar la clave) o usa uno prestado por el Centro de control, que tiene un nuevo tipo de proveedor «Buscador web» y la opción de servicio «Buscador web» por empresa.
+
+### Añadido
 - **Cada empresa configura su propio correo.** Nueva pestaña *Integraciones → Correo* con dos funciones: **correo principal** y **correo en frío** (remitente aparte en otro dominio), cada una con su SMTP de salida y su buzón IMAP de entrada, con presets de Zoho, Google y Microsoft 365 y botón «Probar conexión». En el Centro de control cada función puede quedar «Propia» (la empresa la configura) o «Prestada» por el sistema; nueva opción de servicio **Correo en frío**. Las respuestas al correo en frío entran por su propio buzón. Los servidores que escribe la empresa no pueden apuntar a direcciones internas del servidor.
 
 ## [1.13.1] - 2026-11-01

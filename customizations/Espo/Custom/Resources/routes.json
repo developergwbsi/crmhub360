@@ -1300,5 +1300,29 @@
             "controller": "CrmHub",
             "action": "mailConfigTest"
         }
+    },
+    {
+        "route": "/CrmHub/searchConfig",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "searchConfig"
+        }
+    },
+    {
+        "route": "/CrmHub/searchConfigSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "searchConfigSave"
+        }
+    },
+    {
+        "route": "/CrmHub/searchConfigTest",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "searchConfigTest"
+        }
     }
 ]

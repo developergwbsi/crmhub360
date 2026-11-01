@@ -9,6 +9,9 @@
 <div class="ch-pane" data-pane="correo" style="display:none">
   <div data-role="mail"></div>
 </div>
+<div class="ch-pane" data-pane="buscadores" style="display:none">
+  <div data-role="search"></div>
+</div>
 <div class="ch-pane" data-pane="canales">
 <div class="ch-grid">
   <div class="ch-span-2" data-role="lines"></div>

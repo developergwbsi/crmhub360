@@ -4,7 +4,7 @@ Agente del Hub que **investiga en internet** empresas que podrían necesitar lo 
 
 ## Cómo funciona
 1. `finder.run` arma un encargo con el *Cliente ideal* (Prospección), lo que ofrece la empresa (entrenamiento del comercial: `company.about/services`) y un *enfoque* opcional.
-2. Investiga con la **búsqueda web de Claude** (`llm.web_search`, herramienta `web_search` de Anthropic; costo = tokens + cargo por búsqueda). Un segundo motor (Google/Serper/Brave con clave propia) queda previsto como proveedor aparte.
+2. Investiga con el **buscador web de la empresa** (`searchengines.py`): por defecto la búsqueda web de Claude (`llm.web_search`; costo = tokens + cargo por búsqueda), o **Serper, Brave o Google Programmable Search** con clave. Cada empresa lo decide (ver «Buscadores» abajo). Con un motor de clave, el Hub genera consultas con la IA, busca, lee las páginas públicas de contacto y arma el informe con sus fuentes.
 3. Un segundo paso estructura el informe a JSON. Solo se guarda lo que tiene **dirección de fuente pública** y un correo o teléfono **de negocio** publicado. Se descartan: correos personales (gmail, hotmail…), contactos sin fuente, y cualquier correo «deducido».
 4. Se importan como prospectos con `origin='finder'` (lote `buscador-AAAAMMDD-HHMM`), pasan por las mismas validaciones (no contactar, duplicados, puntaje, enriquecimiento) y guardan la fuente en `raw.fuente_url`.
 
@@ -17,3 +17,7 @@ Agente del Hub que **investiga en internet** empresas que podrían necesitar lo 
 ## Operación
 - `GET/PUT /v1/finder` (estado, activar, tope diario `daily_limit`, `focus`); `POST /v1/finder/run {limit}` hace una pasada. Tope diario por defecto 20 (máx. 100).
 - Licencia: `settings.limits.finder = true` (Centro de control).
+
+## Buscadores (cada empresa trae el suyo)
+`settings.search.mode`: `global` (búsqueda web de Claude, por defecto) · `provider:<id>` (buscador prestado: proveedor de tipo «Buscador web» del Centro de control) · `own` (la empresa pone su clave en *Integraciones → Buscadores*; `settings.search.own = {engine, api_key, cx}`). El modo lo fija el Centro de control (*Empresas → Servicios → Buscador web*); la empresa solo edita el suyo en modo «Propio». La clave nunca vuelve al navegador. Endpoints del Hub: `GET/PUT /v1/search-config`, `POST /v1/search-config/test`.
+Cómo conseguir la clave: Serper (serper.dev → API Key), Brave (brave.com/search/api → API Keys), Google (programmablesearchengine.google.com para el `cx` + Custom Search API en Google Cloud para la clave). Los cupos y precios cambian: verificar en cada proveedor.

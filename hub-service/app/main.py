@@ -24,7 +24,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, compliance, finder, growth, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, compliance, finder, growth, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -2412,6 +2412,46 @@ async def mail_config_test(role: str, tenant: dict = Depends(tenant_auth)):
         return await mailcfg.test(tenant, role)
     except ValueError as e:
         raise HTTPException(422, str(e))
+
+
+@app.get("/v1/search-config")
+def search_config_get(tenant: dict = Depends(tenant_auth)):
+    """Buscador web de la empresa: cómo está (del sistema, prestado o propio) y los datos no secretos de su buscador propio."""
+    st, mode = searchengines.settings_of(tenant), searchengines.mode_of(tenant)
+    own = st.get("own") or {}
+    res = searchengines.resolve(tenant)
+    return {"mode": "own" if mode == "own" else ("loaned" if mode.startswith("provider:") else "global"), "editable": mode == "own", "active": {"engine": res["engine"], "source": res["source"]},
+            "own": {"engine": own.get("engine") or "", "cx": own.get("cx") or "", "hasKey": bool(own.get("api_key"))}, "engines": searchengines.ENGINES, "recommended": searchengines.RECOMMENDED}
+
+
+@app.put("/v1/search-config")
+async def search_config_save(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    """Guarda el buscador propio de la empresa (motor, clave, cx). Solo si el Centro de control dejó el buscador en «Propio»."""
+    if searchengines.mode_of(tenant) != "own":
+        raise HTTPException(403, "El buscador lo provee el sistema. Pide al administrador del servicio que lo deje como «Propio» para configurar el tuyo.")
+    eng = str(body.get("engine") or "")
+    if eng not in searchengines.ENGINES:
+        raise HTTPException(422, "Elige un motor de búsqueda de la lista.")
+    old = searchengines.settings_of(tenant).get("own") or {}
+    key = str(body.get("api_key") or "").strip() or (old.get("api_key") if old.get("engine") == eng else "")
+    if eng != "claude" and not key:
+        raise HTTPException(422, "Falta la clave (API key) del buscador.")
+    cx = str(body.get("cx") or "").strip()[:120]
+    if eng == "google" and not cx:
+        raise HTTPException(422, "Google Programmable Search necesita el identificador del buscador (cx).")
+    own = {"engine": eng, "api_key": key if eng != "claude" else "", "cx": cx if eng == "google" else ""}
+    with db.pool.connection() as c:
+        c.execute("UPDATE tenants SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), '{search,own}', %s::jsonb, true) WHERE slug=%s", (json.dumps(own), tenant["slug"]))
+    return search_config_get(db.get_tenant(tenant["slug"]))
+
+
+@app.post("/v1/search-config/test")
+async def search_config_test(tenant: dict = Depends(tenant_auth)):
+    """Prueba el buscador que usa la empresa con una búsqueda real (consume una consulta)."""
+    try:
+        return await searchengines.test(searchengines.resolve(tenant))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo usar el buscador: {str(e)[:200]}")
 
 
 @app.get("/v1/finder")

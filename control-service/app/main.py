@@ -976,6 +976,7 @@ KINDS = {
     "generic_voice": {"label": "Central / proveedor de llamadas (API HTTP)", "channels": ["voice"], "secrets": ["auth_secret"]},
     "email": {"label": "Proveedor de correo (SMTP: Gmail, Outlook, SendGrid, Resend…)", "channels": ["email"], "secrets": ["password", "reply_password", "inbound_secret"]},
     "ai": {"label": "Motor de IA (Anthropic, OpenAI y compatibles, Ollama)", "channels": ["ai"], "secrets": ["api_key"]},
+    "search": {"label": "Buscador web (Serper, Brave, Google) para el buscador de prospectos", "channels": ["search"], "secrets": ["api_key"]},
 }
 
 
@@ -1044,6 +1045,14 @@ def _clean_fields(kind: str, fields: dict, old: dict) -> dict:
         out["model"] = str(out.get("model") or "").strip()
         out["base_url"] = str(out.get("base_url") or "").strip()
         out["workspace_id"] = re.sub(r"[^\w\-]", "", str(out.get("workspace_id") or ""))[:80]
+    if kind == "search":
+        if out.get("engine") not in ("serper", "brave", "google"):
+            raise HTTPException(400, "Elige el buscador: Serper, Brave o Google")
+        if not out.get("api_key"):
+            raise HTTPException(400, "Falta la clave (API key) del buscador")
+        out["cx"] = str(out.get("cx") or "").strip()[:120]
+        if out["engine"] == "google" and not out["cx"]:
+            raise HTTPException(400, "Google Programmable Search necesita el identificador del buscador (cx)")
     if kind == "email":
         if not out.get("host") or not re.match(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$", str(out.get("from_address") or out.get("user") or "")):
             raise HTTPException(400, "Escribe el servidor SMTP y un correo remitente válido")
@@ -1265,6 +1274,7 @@ class ServicesReq(BaseModel):
     lookups: Optional[list] = None        # servicios de consulta del sistema habilitados para la empresa
     wa_bulk: Optional[dict] = None        # envío masivo por WhatsApp no oficial (Evolution): {max: destinatarios por campaña, every_s: segundos entre mensajes}
     templates: Optional[int] = None       # plantillas personales por usuario y canal (10 incluidas; más es un servicio adicional)
+    search: Optional[str] = None          # buscador web del buscador de prospectos: 'global' (Claude) | 'own' (la empresa pone su clave) | 'provider:<id>' (buscador prestado)
     mail_cold: Optional[str] = None       # correo en frío (remitente aparte, otro dominio): 'off' | 'own' (la empresa lo configura) | 'p<id>' (proveedor de correo prestado)
     finder: Optional[bool] = None         # buscador de prospectos en internet (servicio adicional; consume tokens del motor de IA de la empresa)
     meet: Optional[str] = None            # videollamadas propias (servicio adicional): 'off' | 'video' | 'video_subs' (con subtítulos en vivo)
@@ -1419,7 +1429,7 @@ async def get_services(slug: str, actor: str = Depends(me)):
         au = []
     return {"slug": slug, "ai": ((t["settings"] or {}).get("ai") or {}).get("mode") or "global", "aiProviders": [{"id": p["id"], "name": p["name"], "engine": p["fields"].get("engine"), "model": p["fields"].get("model")} for p in providers_list() if p["kind"] == "ai"],
             "aiDefault": get_setting("ai_default"), "aiUsage": au,
-            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "meet": ((t["settings"] or {}).get("limits") or {}).get("meet") or "off", "finder": bool(((t["settings"] or {}).get("limits") or {}).get("finder")), "mailCold": sv.get("mail_cold") or "off", "agents": int(((t["settings"] or {}).get("limits") or {}).get("agents") or 1), "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
+            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "meet": ((t["settings"] or {}).get("limits") or {}).get("meet") or "off", "finder": bool(((t["settings"] or {}).get("limits") or {}).get("finder")), "mailCold": sv.get("mail_cold") or "off", "search": ((t["settings"] or {}).get("search") or {}).get("mode") or "global", "searchProviders": [{"id": p["id"], "name": p["name"], "engine": p["fields"].get("engine")} for p in providers_list() if p["kind"] == "search"], "agents": int(((t["settings"] or {}).get("limits") or {}).get("agents") or 1), "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
             "lookups": list(((t["settings"] or {}).get("lookups")) or []), "lookupCatalog": [{"id": l["id"], "name": l["name"], "category": l.get("category", "otro")} for l in lookups_list()], "cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10),
             "waBulk": {"max": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("max") or 100), "every_s": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("every_s") or 120)}, "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
             "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
@@ -1493,6 +1503,12 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
             raise HTTPException(502, "No se pudo cambiar el servicio de videollamadas en la empresa")
         with db() as c6:
             c6.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps({"meet": req.meet}), slug))
+    if req.search is not None:
+        ok = req.search in ("global", "own") or (req.search.startswith("provider:") and any(p["id"] == req.search[9:] and p["kind"] == "search" for p in providers_list()))
+        if not ok:
+            raise HTTPException(400, "Buscador no válido")
+        with db() as c11:
+            c11.execute("UPDATE tenants SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), '{search}', COALESCE(settings->'search', '{}'::jsonb) || jsonb_build_object('mode', %s::text), true) WHERE slug=%s", (req.search, slug))
     if req.mail_cold is not None:
         if not (req.mail_cold in ("off", "own") or req.mail_cold.startswith("p")):
             raise HTTPException(400, "Correo en frío no válido")

@@ -2461,6 +2461,27 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/mail-config/' . (($d->role ?? '') === 'cold' ? 'cold' : 'main') . '/test', [], 60);
     }
 
+    /** GET /CrmHub/searchConfig. Admin. Buscador web de la empresa. Hub: GET /v1/search-config. */
+    public function getActionSearchConfig(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/search-config', null, 20);
+    }
+
+    /** POST /CrmHub/searchConfigSave. Admin. {engine, api_key, cx}. Hub: PUT /v1/search-config. */
+    public function postActionSearchConfigSave(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('PUT', '/v1/search-config', json_decode(json_encode($request->getParsedBody()), true) ?: [], 20);
+    }
+
+    /** POST /CrmHub/searchConfigTest. Admin. Prueba el buscador con una consulta real. Hub: POST /v1/search-config/test. */
+    public function postActionSearchConfigTest(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('POST', '/v1/search-config/test', [], 90);
+    }
+
     /** GET /CrmHub/finder. Estado del buscador de prospectos (licencia, configuración, última pasada). Hub: GET /v1/finder. */
     public function getActionFinder(Request $request): \stdClass
     {

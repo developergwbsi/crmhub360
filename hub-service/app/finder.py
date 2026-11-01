@@ -9,7 +9,7 @@ import logging
 import re
 from datetime import datetime, timezone
 
-from . import compliance, db, llm, prospects
+from . import compliance, db, llm, prospects, searchengines
 
 log = logging.getLogger("hub.finder")
 FREE_MAIL = {"gmail.com", "googlemail.com", "hotmail.com", "outlook.com", "live.com", "yahoo.com", "yahoo.es", "icloud.com", "msn.com", "proton.me", "protonmail.com"}
@@ -77,12 +77,17 @@ async def run(tenant: dict, limit: int | None = None) -> dict:
     if room == 0:
         return {"found": 0, "ready": 0, "rejected": 0, "reason": "Se alcanzó el tope diario del buscador."}
     n = min(n, room)
-    report = await llm.web_search(tenant, "Eres un investigador comercial riguroso. Solo reportas lo que verificaste en una página pública y siempre citas su dirección. Respondes en español.",
-                                  _brief(tenant, cfg, n, known), max_uses=min(10, 2 + n // 2))
+    brief = _brief(tenant, cfg, n, known)
+    eng = searchengines.resolve(tenant)
+    if eng["engine"] == "claude":
+        report = await llm.web_search(tenant, "Eres un investigador comercial riguroso. Solo reportas lo que verificaste en una página pública y siempre citas su dirección. Respondes en español.",
+                                      brief, max_uses=min(10, 2 + n // 2))
+    else:   # buscador con clave (propia o prestada): consultas → resultados → lectura de páginas
+        report = await searchengines.report(tenant, brief, n, eng)
     d = {}
     for _ in range(2):   # a veces la primera estructuración sale vacía aunque el informe traiga empresas: se reintenta una vez
         d = await llm.chat_json(tenant, "Extraes datos de un informe de investigación a JSON. Copia solo lo que el informe afirma, con su dirección de fuente; no inventes ni completes datos.",
-                                f"INFORME:\n{report[:12000]}", SCHEMA, 3000)
+                                f"INFORME:\n{report[:20000]}", SCHEMA, 3000)
         if d.get("candidates"):
             break
     rows, dropped = [], 0
