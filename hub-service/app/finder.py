@@ -79,8 +79,12 @@ async def run(tenant: dict, limit: int | None = None) -> dict:
     n = min(n, room)
     report = await llm.web_search(tenant, "Eres un investigador comercial riguroso. Solo reportas lo que verificaste en una página pública y siempre citas su dirección. Respondes en español.",
                                   _brief(tenant, cfg, n, known), max_uses=min(10, 2 + n // 2))
-    d = await llm.chat_json(tenant, "Extraes datos de un informe de investigación a JSON. Copia solo lo que el informe afirma, con su dirección de fuente; no inventes ni completes datos.",
-                            f"INFORME:\n{report[:12000]}", SCHEMA, 3000)
+    d = {}
+    for _ in range(2):   # a veces la primera estructuración sale vacía aunque el informe traiga empresas: se reintenta una vez
+        d = await llm.chat_json(tenant, "Extraes datos de un informe de investigación a JSON. Copia solo lo que el informe afirma, con su dirección de fuente; no inventes ni completes datos.",
+                                f"INFORME:\n{report[:12000]}", SCHEMA, 3000)
+        if d.get("candidates"):
+            break
     rows, dropped = [], 0
     for c in (d.get("candidates") or [])[:n]:
         src, email, phone = str(c.get("source_url") or "").strip(), str(c.get("email") or "").strip().lower(), str(c.get("phone") or "").strip()
