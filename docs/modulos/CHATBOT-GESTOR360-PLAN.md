@@ -29,6 +29,12 @@ Hub envía la respuesta por la MISMA línea de WhatsApp de la empresa (su númer
 - **Traspaso a humano**: cuando el bot escala, el Hub crea o actualiza el lead, avisa al asesor y deja la conversación en manos de la persona; el asesor puede devolverla al bot.
 - **Interfaz del CRM** (*Integraciones → WhatsApp*): al agregar la línea, un paso «¿Quién responde?» con tarjetas; si elige el chatbot: tarjetas con los **flujos base** (nombre y para qué sirve), un formulario simple con los datos del negocio que esos flujos necesitan (nombre, horario, dirección, servicios o productos, preguntas frecuentes, a quién escalar), un **probador** y el botón Activar.
 
+## Hallazgo que condiciona la integración (2026-11-01)
+La entrada para plataformas externas de Gestor360 recibe el mensaje del cliente, pero **las respuestas del bot salen por la línea de WhatsApp de la sede** que tenga configurada Gestor360; solo las respuestas de una **persona** quedan en el buzón que la plataforma externa recoge. Es decir: con lo que existe hoy, Crm Hub 360 no recibiría la respuesta del bot para enviarla por el WhatsApp de la empresa. Caminos:
+- **A. «Entrega externa» en Gestor360 (recomendado)**: un cambio pequeño en Gestor360 para que, en las sesiones que llegan por esa entrada, las respuestas del bot (texto, botones y listas) se devuelvan a la plataforma en vez de enviarse por su línea. El CRM sigue siendo el buzón único de conversaciones y envía por la línea de la empresa.
+- **B. La línea pasa a Gestor360 mientras haya chatbot**: la empresa conecta su WhatsApp en la sede de Gestor360 y el bot responde desde allí; las conversaciones con personas se atienden en Gestor360, no en el CRM. Sin cambios en Gestor360, pero se pierde el buzón único.
+- **C. Motor de flujos propio en Crm Hub 360**: ejecutar en el Hub los flujos de Gestor360 (se pueden exportar e importar) sin depender de su ejecución. Se pierde el catálogo vivo y la cuenta única en Gestor360.
+
 ## Puntos de atención
 - **La agenda**: el flujo «Agendar una cita» deja la cita en la agenda de **Gestor360**, no en el calendario de Crm Hub 360. Para empresas que solo usan el CRM, los flujos útiles sin Gestor360 son preguntas frecuentes, pedido, cotización, reclamo y encuesta, con los datos llegando al CRM como leads. Agendar exigiría que la empresa use Gestor360.
 - **Aprovisionamiento**: hay que confirmar si Gestor360 tiene (o hay que crear) una API de servicio para crear la sede y activar o editar flujos; hoy esas acciones se hacen con usuarios del panel.
