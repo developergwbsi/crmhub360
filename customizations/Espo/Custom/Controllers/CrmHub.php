@@ -2370,4 +2370,91 @@ class CrmHub
         $this->simGuard();
         return (object) $this->hubCall('GET', '/v1/rec/' . rawurlencode((string) $request->getQueryParam('id')) . '/play?userId=' . urlencode($this->user->getId()) . '&manager=' . ($this->recManager() ? 'true' : 'false'), null, 15);
     }
+    // ---------- Prospección saliente (Hub: /v1/prospects*, /v1/compliance/dnc, /v1/agent/outbound/stats; la manejan gerentes, directores y supervisores)
+    private function prospectGuard(): void
+    {
+        $this->simGuard();
+        if (!$this->canManageForms()) {
+            throw new Forbidden();
+        }
+    }
+
+    /** GET /CrmHub/prospects?status=&batch=&q=. Prospectos con su puntaje, conteos por estado, lotes y el perfil de cliente ideal. Hub: GET /v1/prospects. */
+    public function getActionProspects(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        $q = http_build_query(['status' => (string) $request->getQueryParam('status'), 'batch' => (string) $request->getQueryParam('batch'), 'q' => (string) $request->getQueryParam('q')]);
+        $r = $this->hubCall('GET', '/v1/prospects?' . $q, null, 20);
+        $r['isAdmin'] = $this->user->isAdmin();
+        return (object) $r;
+    }
+
+    /** POST /CrmHub/prospectsImport. {rows, batch?, defaultCountry?, campaign?, enrich?}. Valida y guarda prospectos. Hub: POST /v1/prospects/import. */
+    public function postActionProspectsImport(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/prospects/import', ['rows' => json_decode(json_encode($d->rows ?? []), true), 'batch' => (string) ($d->batch ?? ''), 'defaultCountry' => (string) ($d->defaultCountry ?? 'CO'),
+            'campaign' => (string) ($d->campaign ?? ''), 'enrich' => ($d->enrich ?? true) !== false], 120);
+    }
+
+    /** POST /CrmHub/prospectsEnrich. Enriquece con IA los prospectos pendientes (en segundo plano). Hub: POST /v1/prospects/enrich. */
+    public function postActionProspectsEnrich(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        return (object) $this->hubCall('POST', '/v1/prospects/enrich', null, 20);
+    }
+
+    /** POST /CrmHub/prospectsPromote. {ids?, limit?, agentId?}. Pasa prospectos listos al CRM como leads. Hub: POST /v1/prospects/promote. */
+    public function postActionProspectsPromote(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/prospects/promote', ['ids' => array_map('intval', (array) ($d->ids ?? [])), 'limit' => isset($d->limit) ? (int) $d->limit : null, 'agentId' => !empty($d->agentId) ? (string) $d->agentId : null], 300);
+    }
+
+    /** POST /CrmHub/prospectsDelete. {ids}. Borra prospectos que aún no pasaron al CRM. Hub: POST /v1/prospects/delete. */
+    public function postActionProspectsDelete(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/prospects/delete', ['ids' => array_map('intval', (array) ($d->ids ?? []))], 20);
+    }
+
+    /** POST /CrmHub/prospectsIcp. Perfil de cliente ideal. Hub: PUT /v1/prospects/icp. */
+    public function postActionProspectsIcp(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        return (object) $this->hubCall('PUT', '/v1/prospects/icp', json_decode(json_encode($request->getParsedBody()), true) ?: [], 20);
+    }
+
+    /** GET /CrmHub/outboundStats?days=. Envíos y respuestas por variante de la secuencia saliente. Hub: GET /v1/agent/outbound/stats. */
+    public function getActionOutboundStats(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        return (object) $this->hubCall('GET', '/v1/agent/outbound/stats?days=' . (int) ($request->getQueryParam('days') ?: 30), null, 20);
+    }
+
+    /** GET /CrmHub/dnc. Lista de no contactar. Hub: GET /v1/compliance/dnc. */
+    public function getActionDnc(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        return (object) $this->hubCall('GET', '/v1/compliance/dnc', null, 15);
+    }
+
+    /** POST /CrmHub/dncAdd. {email?, phone?, reason?}. Hub: POST /v1/compliance/dnc. */
+    public function postActionDncAdd(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/compliance/dnc', ['email' => (string) ($d->email ?? ''), 'phone' => (string) ($d->phone ?? ''), 'reason' => (string) ($d->reason ?? '')], 15);
+    }
+
+    /** POST /CrmHub/dncRemove. {kind, value}. Solo administradores: volver a permitir contactar es una decisión delicada. Hub: DELETE /v1/compliance/dnc. */
+    public function postActionDncRemove(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('DELETE', '/v1/compliance/dnc?kind=' . urlencode((string) ($d->kind ?? '')) . '&value=' . urlencode((string) ($d->value ?? '')), null, 15);
+    }
 }

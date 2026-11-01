@@ -24,7 +24,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, compliance, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +43,8 @@ async def lifespan(_: FastAPI):
     iforms.ensure_schema()
     bi.ensure_schema()
     recordings.ensure_schema()
+    compliance.ensure_schema()
+    prospects.ensure_schema()
     agent.ensure_schema()
     monitor.ensure_schema()
     usage.ensure_schema()
@@ -2263,6 +2265,133 @@ def rec_share_page(token: str):
 @app.get("/v1/public/meet/r/{token}/video")
 def rec_share_video(token: str, dl: int = 0):
     return _rec_file("", "", token, bool(dl))
+
+
+# ---------------- cumplimiento: lista de no contactar y baja de los correos
+class DncReq(BaseModel):
+    """Agrega a la lista de no contactar (correo y/o teléfono)."""
+    email: str = ""
+    phone: str = ""
+    reason: str = ""
+
+
+@app.get("/v1/compliance/dnc")
+def dnc_list(tenant: dict = Depends(tenant_auth)):
+    return {"items": compliance.list_dnc(tenant["slug"])}
+
+
+@app.post("/v1/compliance/dnc")
+def dnc_add(req: DncReq, tenant: dict = Depends(tenant_auth)):
+    if not req.email.strip() and not req.phone.strip():
+        raise HTTPException(422, "Escribe un correo o un teléfono.")
+    phones = [compliance.phone_e164(req.phone)[0] or req.phone] if req.phone.strip() else []
+    compliance.add_dnc(tenant["slug"], email=req.email or None, phones=phones, reason=req.reason or "Agregado a mano", source="manual")
+    return {"ok": True}
+
+
+@app.delete("/v1/compliance/dnc")
+def dnc_remove(kind: str, value: str, tenant: dict = Depends(tenant_auth)):
+    return {"ok": compliance.remove_dnc(tenant["slug"], kind, value)}
+
+
+_UNSUB_CSS = "body{font-family:system-ui,sans-serif;background:#f4f6fb;color:#1b2030;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}main{background:#fff;border-radius:14px;padding:28px 32px;max-width:420px;box-shadow:0 8px 30px #0001;text-align:center}button{background:#4f63e8;color:#fff;border:0;border-radius:9px;padding:11px 20px;font-size:15px;font-weight:600;cursor:pointer}p{color:#5d6678}"
+
+
+async def _do_unsub(token: str) -> bool:
+    p = compliance.unsub_parse(token)
+    if not p:
+        return False
+    t = db.get_tenant(p[0])
+    if not t:
+        return False
+    from . import ingest
+    await ingest.apply_optout(t, p[1], "Correo")
+    return True
+
+
+@app.get("/v1/public/meet/u/{token}", response_class=HTMLResponse)
+def unsub_page(token: str):
+    """Página de baja de un correo (https://meet.<dominio>/u/<enlace>): pide confirmar con un botón (los antivirus abren los enlaces sin querer)."""
+    if not compliance.unsub_parse(token):
+        return HTMLResponse("<!doctype html><meta charset=utf-8><body style='font-family:sans-serif;padding:40px'><h3>Este enlace no es válido.</h3>", 404, _MEET_HEADERS)
+    return HTMLResponse(f"<!doctype html><html lang=es><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=robots content=noindex><title>Darse de baja</title><style>{_UNSUB_CSS}</style>"
+                        "<main><h2>¿Quieres dejar de recibir mensajes?</h2><p>Confirma y no volveremos a escribirte por ningún canal.</p>"
+                        "<form method=post><button>Sí, darme de baja</button></form></main>", 200, {**_MEET_HEADERS, "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'"})
+
+
+@app.post("/v1/public/meet/u/{token}", response_class=HTMLResponse)
+async def unsub_do(token: str):
+    """Baja confirmada (botón de la página o «un clic» del cliente de correo, RFC 8058)."""
+    ok = await _do_unsub(token)
+    return HTMLResponse(f"<!doctype html><html lang=es><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Baja</title><style>{_UNSUB_CSS}</style>"
+                        f"<main><h2>{'Listo' if ok else 'Enlace no válido'}</h2><p>{'No volveremos a escribirte. Lamentamos las molestias.' if ok else 'No pudimos procesar la baja con este enlace.'}</p></main>", 200 if ok else 404, _MEET_HEADERS)
+
+
+# ---------------- prospección saliente: prospectos, perfil de cliente ideal y métricas de variantes
+class ProspectImportReq(BaseModel):
+    """Filas para importar (de un CSV o de otro sistema)."""
+    rows: list[dict]
+    batch: str = ""
+    defaultCountry: str = "CO"
+    campaign: str = ""
+    enrich: bool = True
+
+
+class ProspectPromoteReq(BaseModel):
+    """Pasa prospectos listos al CRM como leads."""
+    ids: list[int] = []
+    limit: int | None = None
+    agentId: str | None = None
+
+
+class ProspectIdsReq(BaseModel):
+    ids: list[int]
+
+
+@app.get("/v1/prospects")
+def prospects_list(status: str = "", batch: str = "", q: str = "", tenant: dict = Depends(tenant_auth)):
+    return {**prospects.listing(tenant["slug"], status, batch, q), "icp": prospects.icp(tenant)}
+
+
+@app.put("/v1/prospects/icp")
+def prospects_icp_save(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    try:
+        return prospects.save_icp(tenant["slug"], body)
+    except (ValueError, TypeError) as e:
+        raise HTTPException(422, "Revisa los valores del perfil de cliente ideal.")
+
+
+@app.post("/v1/prospects/import")
+async def prospects_import(req: ProspectImportReq, tasks: BackgroundTasks, tenant: dict = Depends(tenant_auth)):
+    if not req.rows:
+        raise HTTPException(422, "No hay filas para importar.")
+    r = await prospects.import_rows(tenant, req.rows, req.batch, req.defaultCountry, req.campaign)
+    if req.enrich and r["ready"]:
+        tasks.add_task(prospects.enrich_pending, tenant)
+    return r
+
+
+@app.post("/v1/prospects/enrich")
+async def prospects_enrich(tasks: BackgroundTasks, tenant: dict = Depends(tenant_auth)):
+    tasks.add_task(prospects.enrich_pending, tenant)
+    return {"ok": True}
+
+
+@app.post("/v1/prospects/promote")
+async def prospects_promote(req: ProspectPromoteReq, tenant: dict = Depends(tenant_auth)):
+    return await prospects.promote(tenant, req.ids or None, req.limit, req.agentId)
+
+
+@app.post("/v1/prospects/delete")
+def prospects_delete(req: ProspectIdsReq, tenant: dict = Depends(tenant_auth)):
+    return {"deleted": prospects.remove(tenant["slug"], req.ids)}
+
+
+@app.get("/v1/agent/outbound/stats")
+def outbound_stats(days: int = 30, tenant: dict = Depends(tenant_auth)):
+    """Envíos y respuestas por variante de cada paso de la secuencia saliente."""
+    st = agent.variant_stats(tenant["slug"], max(1, min(days, 365)), include_dry=True)
+    return {"items": [{"step": k[0], "variant": k[1], **v, "rate": round(v["replies"] * 100 / v["sends"], 1) if v["sends"] else 0} for k, v in sorted(st.items())]}
 
 
 @app.get("/v1/public/meet/_/assets/{name:path}")

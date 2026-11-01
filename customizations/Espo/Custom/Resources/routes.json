@@ -1116,5 +1116,85 @@
             "controller": "CrmHub",
             "action": "homeTabs"
         }
+    },
+    {
+        "route": "/CrmHub/prospects",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "prospects"
+        }
+    },
+    {
+        "route": "/CrmHub/prospectsImport",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "prospectsImport"
+        }
+    },
+    {
+        "route": "/CrmHub/prospectsEnrich",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "prospectsEnrich"
+        }
+    },
+    {
+        "route": "/CrmHub/prospectsPromote",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "prospectsPromote"
+        }
+    },
+    {
+        "route": "/CrmHub/prospectsDelete",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "prospectsDelete"
+        }
+    },
+    {
+        "route": "/CrmHub/prospectsIcp",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "prospectsIcp"
+        }
+    },
+    {
+        "route": "/CrmHub/outboundStats",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "outboundStats"
+        }
+    },
+    {
+        "route": "/CrmHub/dnc",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "dnc"
+        }
+    },
+    {
+        "route": "/CrmHub/dncAdd",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "dncAdd"
+        }
+    },
+    {
+        "route": "/CrmHub/dncRemove",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "dncRemove"
+        }
     }
 ]

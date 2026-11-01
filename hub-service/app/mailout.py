@@ -81,6 +81,8 @@ async def send(tenant: dict, req: dict) -> dict:
         msg["In-Reply-To"] = req["inReplyTo"]
         msg["References"] = " ".join([*(req.get("references") or []), req["inReplyTo"]][-10:])
     msg["X-Crm-User"] = uid
+    for k, v in (req.get("headers") or {}).items():   # p. ej. List-Unsubscribe de los correos en frío
+        msg[k] = v
     html = req.get("html") or ""
     msg.set_content(plain_of(html))
     msg.add_alternative(html, subtype="html")

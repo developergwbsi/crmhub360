@@ -269,6 +269,21 @@ async def send_menu(tenant: dict, lead_id: str, menu: dict, intro: str, agent: s
     return {"ok": True, "phone": number, **res}
 
 
+async def send_template(tenant: dict, phone: str, name: str, lang: str, params: list[str], *, kind: str = "template") -> None:
+    """Inicia (o reabre) una conversación con una plantilla aprobada por Meta (WhatsApp Cloud API oficial). ValueError si el proveedor no es Meta o la rechaza."""
+    tenant = lines.effective(tenant, "whatsapp")
+    if provider(tenant) != "meta":
+        raise ValueError("Iniciar conversaciones con plantilla solo se puede con la API oficial de WhatsApp (Meta).")
+    pid, tok = _need(tenant, "meta_phone_number_id", "meta_access_token")
+    comps = [{"type": "body", "parameters": [{"type": "text", "text": str(x)[:1000]} for x in params]}] if params else []
+    async with httpx.AsyncClient(timeout=25) as c:
+        r = await c.post(f"{config.META_GRAPH_BASE}/{pid}/messages", headers={"Authorization": f"Bearer {tok}"},
+                         json={"messaging_product": "whatsapp", "to": wa_number(phone), "type": "template", "template": {"name": name, "language": {"code": lang or "es"}, **({"components": comps} if comps else {})}})
+    if r.status_code >= 400:
+        raise ValueError(f"Meta rechazó la plantilla ({r.status_code}): {_err(r)}")
+    usage.record(tenant, "whatsapp", "meta", kind=kind, ext_id=_jget(r, "messages", 0, "id"))
+
+
 def lead_numbers(lead: dict) -> list[str]:
     """Todos los números del lead (principal primero), normalizados."""
     out = []
@@ -295,7 +310,7 @@ def pick_number(lead: dict, wanted: str | None) -> str:
     return nums[0]
 
 
-async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str | None = None, phone: str | None = None, line_id: str | None = None) -> dict:
+async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str | None = None, phone: str | None = None, line_id: str | None = None, template: dict | None = None) -> dict:
     """Envía un WhatsApp a un lead (por la línea por la que escribió, si sigue encendida), deja nota, registra la ruta para que la respuesta llegue a quien escribió y pausa al comercial virtual si lo manda una persona."""
     if not line_id:   # sin elección explícita se responde por la línea por la que el cliente escribió (si sigue encendida)
         last = (routing.route_of(tenant["slug"], lead_id) or {}).get("last_line")
@@ -305,7 +320,10 @@ async def send(tenant: dict, lead_id: str, text: str, agent: str, user_id: str |
     espo = Espo(tenant)
     lead = await espo.get(f"Lead/{lead_id}")
     number = pick_number(lead, phone)
-    await send_text(tenant, number, text)
+    if template:   # primer contacto con plantilla aprobada (fuera de la ventana de 24 h): «text» es la vista previa que queda en el historial
+        await send_template(tenant, number, template["name"], template.get("lang") or "es", template.get("params") or [])
+    else:
+        await send_text(tenant, number, text)
     _sent[(lead_id, text)] = time.time()
     await espo.note(lead_id, f"[WhatsApp] → {agent}: {text}")
     routing.note_out(tenant["slug"], lead_id, user_id, number, (tenant.get("_line") or {}).get("id"))   # la respuesta del cliente le llega a quien le escribió

@@ -163,6 +163,11 @@ async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None,
         routing.lid_set(tenant["slug"], lid, lead_id)
     if phone and not from_me:
         routing.note_in(tenant["slug"], lead_id, normalize_phone(phone))
+        try:   # quien nos escribe por WhatsApp nos da permiso para contestarle por ahí
+            from . import compliance
+            compliance.add_consent(tenant["slug"], phone=normalize_phone(phone), channel="whatsapp", source="escribió")
+        except Exception:
+            pass
     if from_me and whatsapp.recently_sent(lead_id, text):
         return lead_id  # eco del mensaje enviado desde el CRM; ya tiene su nota
     if not from_me:   # respuesta a un menú del comercial virtual («2» o el título): se registra la opción elegida
@@ -301,21 +306,29 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
     return res
 
 
-OPTOUT = {"baja", "stop", "alto", "cancelar", "no mas", "no mas mensajes", "no quiero mas mensajes", "unsubscribe", "salir"}
-
-
 def is_optout(text: str) -> bool:
-    """True si el texto es una palabra de baja (BAJA, STOP, etc.), sin tildes ni mayúsculas."""
-    import unicodedata
-    t = "".join(c for c in unicodedata.normalize("NFD", (text or "").lower().strip().strip(".!¡")) if unicodedata.category(c) != "Mn")
-    return t in OPTOUT
+    """True si el texto es una baja: palabra clave (BAJA, STOP…) o una frase clara («no me escriban más», «dame de baja», «remove me»)."""
+    from . import compliance
+    return compliance.is_optout_text(text)
 
 
 async def apply_optout(tenant: dict, lead_id: str, channel: str) -> None:
-    """El cliente pidió no recibir más mensajes: se marca el lead y las campañas masivas lo excluyen."""
+    """El cliente pidió no recibir más mensajes: se marca el lead, entra a la lista de «no contactar» (correo y teléfonos), se detiene al comercial virtual y las campañas lo excluyen."""
+    from . import agent, compliance
     espo = Espo(tenant)
+    try:
+        lead = await espo.get(f"Lead/{lead_id}", select="emailAddress,phoneNumber,phoneNumberData")
+        from . import whatsapp
+        compliance.add_dnc(tenant["slug"], email=lead.get("emailAddress"), phones=whatsapp.lead_numbers(lead), reason=f"Pidió la baja por {channel}", source=channel)
+    except Exception as e:
+        logging.getLogger("crmhub").warning("lista de no contactar: %s", str(e)[:100])
     await espo.put(f"Lead/{lead_id}", {"doNotContact": True})
-    await espo.note(lead_id, f"[{channel}] El cliente pidió no recibir más mensajes (BAJA). Se excluyó de las campañas masivas.")
+    await espo.note(lead_id, f"[{channel}] El cliente pidió no recibir más mensajes (BAJA). Se excluyó de las campañas y de los comerciales virtuales.")
+    try:
+        agent._set(tenant["slug"], lead_id, state="stopped", reason="El cliente pidió no recibir más mensajes", next_at=None)
+        agent.log_event(tenant["slug"], lead_id, "stop", title="Detenido: el cliente pidió la baja", channel=channel.lower())
+    except Exception:
+        pass
 
 
 def _media_label(kind: str) -> str:

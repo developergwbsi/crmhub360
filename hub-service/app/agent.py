@@ -6,7 +6,7 @@ from psycopg.types.json import Jsonb
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from . import db, llm, mailout, push, routing, sms, whatsapp
+from . import compliance, db, llm, mailout, push, routing, sms, whatsapp
 from .espo import Espo
 
 log = logging.getLogger("hub.agent")
@@ -38,6 +38,10 @@ DEFAULTS = {
     "menus": [], "menus_native_evolution": False,
     "quick": {"enabled": True, "buttons": ["Sí, me interesa", "Más información", "Ahora no"]},   # botones de respuesta rápida en los mensajes proactivos de WhatsApp
     "bold": True,                                                                           # negrilla automática del nombre de la empresa y del comercial
+    # prospección saliente (en frío): respeta horarios legales por país, lista de no contactar, cuota de correos por día y variantes A/B por paso
+    "outbound": {"enabled": False, "country": "CO", "max_email_per_day": 40, "require_consent_whatsapp": True,
+                 "wa_template": {"name": "", "lang": "es", "preview": "", "params": ["first_name"]},
+                 "steps": [{"variants": []}, {"variants": []}, {"variants": []}]},
 }
 _last_send: dict[str, float] = {}
 _task: asyncio.Task | None = None
@@ -189,7 +193,30 @@ def clean_config(new: dict) -> dict:
     titles = [t(x, 20) for x in (q.get("buttons") or []) if t(x, 20)][:3]
     out["quick"] = {"enabled": bool(q.get("enabled", True)) and len(titles) >= 2, "buttons": titles or DEFAULTS["quick"]["buttons"]}
     out["bold"] = c.get("bold") is not False
+    out["outbound"] = clean_outbound(c.get("outbound"))
     return out
+
+
+def clean_outbound(raw) -> dict:
+    """Valida la configuración de la prospección saliente: país, cuotas, plantilla de WhatsApp y variantes por paso (id, gancho y si está activa)."""
+    o, d = raw if isinstance(raw, dict) else {}, DEFAULTS["outbound"]
+    t = lambda v, n: str(v or "").strip()[:n]
+    wt = o.get("wa_template") if isinstance(o.get("wa_template"), dict) else {}
+    steps = []
+    for st in (o.get("steps") if isinstance(o.get("steps"), list) else d["steps"])[:5]:
+        vs = []
+        for v in ((st or {}).get("variants") or [])[:6]:
+            vid, ang = re.sub(r"[^a-z0-9_-]", "", t(v.get("id"), 20).lower()), t(v.get("angle"), 400)
+            if ang:
+                vs.append({"id": vid or "v" + str(len(vs) + 1), "angle": ang, "active": v.get("active") is not False})
+        steps.append({"variants": vs})
+    while len(steps) < 3:
+        steps.append({"variants": []})
+    return {"enabled": bool(o.get("enabled")), "country": (t(o.get("country"), 2) or "CO").upper(), "max_email_per_day": max(1, min(200, int(o.get("max_email_per_day") or 40))),
+            "require_consent_whatsapp": o.get("require_consent_whatsapp") is not False,
+            "wa_template": {"name": re.sub(r"[^a-z0-9_]", "", t(wt.get("name"), 80).lower()), "lang": t(wt.get("lang"), 10) or "es", "preview": t(wt.get("preview"), 1000),
+                            "params": [x for x in (wt.get("params") or ["first_name"]) if x in ("first_name", "name", "company", "lead_company")][:5] or ["first_name"]},
+            "steps": steps}
 
 
 def clean_menus(raw) -> list[dict]:
@@ -362,6 +389,10 @@ async def on_inbound(tenant: dict, lead_id: str, channel: str, text: str) -> Non
     """El cliente escribió: se espera unos segundos por si manda varios mensajes seguidos y se responde."""
     row = _row(tenant["slug"], lead_id)
     tenant = for_agent(tenant, (row or {}).get("agent_id"))
+    if compliance.is_optout_text(text):   # la baja se respeta siempre (en WhatsApp y SMS ya la procesó el webhook; aquí cubre el correo y las frases largas)
+        from . import ingest
+        await ingest.apply_optout(tenant, lead_id, {"whatsapp": "WhatsApp", "sms": "SMS", "email": "Correo"}.get(channel, channel))
+        return
     # solo atiende a leads que ya están a su cargo (llegaron con el agente activo o se le pasaron); no adopta chats que una persona ya llevaba
     if not row or effective_mode(tenant, row) != "auto" or row["state"] in ("escalated", "stopped"):
         return
@@ -412,11 +443,20 @@ async def history(tenant: dict, lead_id: str, n: int = 14) -> list[dict]:
     return items[-n:]
 
 
+CONSENT_SOURCES = ("Formulario Web", "WhatsApp", "Facebook Ads", "Instagram Ads", "SMS", "Telegram", "Referido")   # origen en el que la persona nos buscó o aceptó que le escribamos
+
+
 def available_channels(tenant: dict, cfg: dict, lead: dict) -> list[str]:
     """Canales por los que se puede escribir a este lead: habilitados en el entrenamiento y con proveedor, teléfono o correo disponible."""
     st, out = tenant.get("settings") or {}, []
-    phones = bool(whatsapp.lead_numbers(lead))
-    if cfg["channels"]["whatsapp"] and phones and whatsapp.provider(tenant):
+    nums = whatsapp.lead_numbers(lead)
+    phones = bool(nums)
+    wa_ok = True
+    ob = cfg.get("outbound") or {}
+    if ob.get("enabled") and ob.get("require_consent_whatsapp", True):   # en frío no se escribe por WhatsApp a quien no ha dado permiso ni ha escrito antes
+        wa_ok = (lead.get("source") in CONSENT_SOURCES or bool(lead.get("originForm")) or compliance.has_consent(tenant["slug"], phones=nums, channel="whatsapp")
+                 or bool((routing.route_of(tenant["slug"], lead["id"]) or {}).get("last_in_phone")))
+    if cfg["channels"]["whatsapp"] and phones and whatsapp.provider(tenant) and wa_ok:
         out.append("whatsapp")
     if cfg["channels"]["email"] and lead.get("emailAddress") and (st.get("mailout") or {}).get("host"):
         out.append("email")
@@ -435,6 +475,103 @@ def pick_channel(avail: list[str], lead: dict, attempts: int, inbound: str | Non
     if "whatsapp" in avail and "email" in avail and attempts >= 2 and attempts % 2 == 0:
         return "email"
     return pref if pref in avail else avail[0]
+
+
+# ---------------- prospección saliente: variantes A/B, reglas de forma y métricas
+def outbound_on(cfg: dict) -> bool:
+    return bool((cfg.get("outbound") or {}).get("enabled"))
+
+
+def lead_country(cfg: dict, lead: dict) -> str:
+    """País del lead (por su teléfono) o el país por defecto de la prospección."""
+    for n in whatsapp.lead_numbers(lead):
+        c = compliance.country_of_phone(n)
+        if c:
+            return c
+    return (cfg.get("outbound") or {}).get("country") or "CO"
+
+
+def variant_stats(slug: str, days: int = 60, include_dry: bool = False) -> dict:
+    """{(paso, variante): {sends, replies}}: respuestas atribuidas a la última variante enviada antes de cada mensaje del cliente."""
+    out: dict = {}
+    with db.pool.connection() as c:
+        sends = c.execute("SELECT lead_id, at, data FROM agent_events WHERE tenant=%s AND kind='send' AND data ? 'variant' AND at > now() - make_interval(days => %s) " + ("" if include_dry else "AND dry = false AND sent = true ") + "ORDER BY at", (slug, days)).fetchall()
+        ids = sorted({r["lead_id"] for r in sends})
+        inb = c.execute("SELECT lead_id, at FROM agent_events WHERE tenant=%s AND kind='inbound' AND lead_id = ANY(%s) AND at > now() - make_interval(days => %s) ORDER BY at", (slug, ids, days)).fetchall() if ids else []
+    by_lead: dict = {}
+    for r in sends:
+        d = r["data"] or {}
+        key = (int(d.get("step") or 0), str(d["variant"]))
+        out.setdefault(key, {"sends": 0, "replies": 0})["sends"] += 1
+        by_lead.setdefault(r["lead_id"], []).append((r["at"], key))
+    replied: set = set()
+    for r in inb:
+        prev = [k for (a, k) in by_lead.get(r["lead_id"], []) if a <= r["at"]]
+        if prev and (r["lead_id"], prev[-1]) not in replied:
+            replied.add((r["lead_id"], prev[-1]))
+            out[prev[-1]]["replies"] += 1
+    return out
+
+
+def pick_variant(slug: str, cfg: dict, step_idx: int) -> dict | None:
+    """Variante del paso: primero se prueba cada una (≥ 20 envíos); luego el 80 % va a la de mejor tasa de respuesta y el 20 % explora."""
+    import random
+    steps = (cfg.get("outbound") or {}).get("steps") or []
+    vs = [v for v in (steps[min(step_idx, len(steps) - 1)]["variants"] if steps else []) if v.get("active", True)]
+    if not vs:
+        return None
+    st = variant_stats(slug, include_dry=cfg.get("dry_run", False))
+    n = lambda v: st.get((step_idx, v["id"]), {"sends": 0, "replies": 0})
+    young = [v for v in vs if n(v)["sends"] < 20]
+    if young:
+        return min(young, key=lambda v: n(v)["sends"])
+    if random.random() < 0.2:
+        return random.choice(vs)
+    return max(vs, key=lambda v: n(v)["replies"] / max(1, n(v)["sends"]))
+
+
+def _words(t: str) -> int:
+    return len(re.findall(r"\S+", t or ""))
+
+
+def form_problems(channel: str, message: str, subject: str) -> list[str]:
+    """Reglas de forma de los mensajes en frío: WhatsApp ≤ 3 párrafos cortos y termina en pregunta; correo con asunto de 2 a 4 palabras, < 120 palabras y un solo llamado."""
+    out = []
+    if channel == "email":
+        if not 2 <= _words(subject) <= 4:
+            out.append("el asunto debe tener de 2 a 4 palabras, como un mensaje interno")
+        if _words(message) >= 120:
+            out.append("el cuerpo debe tener menos de 120 palabras")
+        if len(re.findall(r"https?://", message)) > 1:
+            out.append("solo un llamado a la acción (un enlace)")
+    elif channel == "whatsapp":
+        if len([p for p in re.split(r"\n+", message) if p.strip()]) > 3:
+            out.append("máximo 3 párrafos cortos")
+        if not message.rstrip().rstrip("*_ ").endswith("?"):
+            out.append("termina con una pregunta de baja fricción")
+    return out
+
+
+def hard_fix(channel: str, message: str, subject: str) -> tuple[str, str]:
+    """Último recurso si el modelo insiste en pasarse de los límites: se recorta (asunto a 4 palabras, correo a ~110 palabras en una frase completa, WhatsApp a 3 párrafos)."""
+    if channel == "email":
+        words = subject.split()[:4]
+        while len(words) > 2 and words[-1].lower().strip(".,:;") in ("de", "en", "un", "una", "el", "la", "los", "las", "y", "o", "para", "con", "a", "del", "al", "por", "que", "su", "sus"):
+            words.pop()   # sin terminar en una palabra suelta («Ordenar consultas en un»)
+        subject = " ".join(words) or "Una idea rápida"
+        if _words(message) >= 120:
+            cut = " ".join(message.split(" ")[:110])
+            message = (cut[:cut.rfind(".") + 1] if "." in cut[60:] else cut).strip()
+    elif channel == "whatsapp":
+        paras = [p.strip() for p in re.split(r"\n+", message) if p.strip()]
+        if len(paras) > 3:
+            paras = paras[:2] + [" ".join(paras[2:])]
+        message = "\n\n".join(paras)
+    return message, subject
+
+
+OUTBOUND_RULES = {"whatsapp": "WhatsApp: como máximo 3 párrafos CORTOS, conversacional, profesional pero humano, y termina con UNA pregunta fácil de contestar (de baja fricción).",
+                  "email": "Correo: ASUNTO de 2 a 4 palabras (como si fuera una comunicación interna, sin signos de exclamación ni palabras de spam), cuerpo de MENOS de 120 palabras y UN solo llamado a la acción."}
 
 
 def system_prompt(cfg: dict, tenant: dict, channel: str) -> str:
@@ -500,12 +637,21 @@ def lead_brief(lead: dict) -> str:
     return "\n".join(f"{k}: {v}" for k, v in keys if v)
 
 
-async def decide(tenant: dict, cfg: dict, lead: dict, hist: list[dict], kind: str, attempts: int, channel: str) -> dict:
+async def decide(tenant: dict, cfg: dict, lead: dict, hist: list[dict], kind: str, attempts: int, channel: str, variant: dict | None = None, fix: str = "") -> dict:
     """Pide al modelo la decisión (enviar, esperar, escalar o cerrar) para este turno y cuenta la llamada en el consumo."""
     persona, company = cfg["persona"]["name"], tenant.get("name") or "la empresa"
     conv = "\n".join(f"[{h['channel']}] {h['who']}: {_clip(h['text'], 400)}" for h in hist) or "(todavía no hay mensajes)"
-    user = (f"DATOS DEL LEAD:\n{lead_brief(lead)}\n\nCONVERSACIÓN HASTA AHORA (cronológica):\n{conv}\n\nSITUACIÓN: {situation_text(kind, attempts, len(cfg['cadence']['follow_ups']), channel, cfg['disclose'], persona, company)}\n"
+    sit = situation_text(kind, attempts, len(cfg['cadence']['follow_ups']), channel, cfg['disclose'], persona, company)
+    if variant and kind == "first":   # en frío la persona no se registró ni pidió nada: no se le puede decir lo contrario
+        sit = (f"Es el PRIMER contacto EN FRÍO: la persona NO se ha registrado ni nos ha escrito; la encontramos como posible cliente. NO digas que se registró ni que pidió información. Salúdala por su nombre, "
+               f"preséntate como {persona}{', asistente virtual' if cfg['disclose'] else ''} de {company}, explica en una frase por qué le escribes (según su sector o cargo, sin inventar datos) y haz UNA pregunta fácil de contestar.")
+    user = (f"DATOS DEL LEAD:\n{lead_brief(lead)}\n\nCONVERSACIÓN HASTA AHORA (cronológica):\n{conv}\n\nSITUACIÓN: {sit}\n"
             f"Canal por el que vas a escribir: {channel}.")
+    if variant and kind in ("first", "followup"):
+        user += (f"\n\nPROSPECCIÓN EN FRÍO (la persona NO nos ha escrito antes): {OUTBOUND_RULES.get(channel, '')}\nGANCHO DE ESTE MENSAJE (úsalo como enfoque, con tus palabras, sin copiarlo): {variant['angle']}\n"
+                 "Sé específico con su sector o situación si lo conoces, no inventes datos, no prometas resultados y no presiones.")
+    if fix:
+        user += f"\n\nCORRIGE tu respuesta anterior: {fix}."
     d = await llm.chat_json(tenant, system_prompt(cfg, tenant, channel), user, AGENT_SCHEMA, 600)
     _usage(tenant["slug"], llm=1)
     return d
@@ -559,8 +705,20 @@ def _email_html(text: str, persona: str, role: str, company: str) -> str:
             f"<div style='margin-top:16px;padding-top:10px;border-top:2px solid #4f63e8;font-size:13px'><b>{e(persona)}</b><br><span style='color:#5d6678'>{e(role)} · {e(company)}</span></div></div>")
 
 
+def _inbound_recent(slug: str, lead_id: str, hours: int) -> bool:
+    """¿El cliente escribió en las últimas `hours` horas? (WhatsApp Meta: dentro de la ventana de 24 h se puede contestar con texto libre)."""
+    with db.pool.connection() as c:
+        return bool(c.execute("SELECT 1 FROM agent_events WHERE tenant=%s AND lead_id=%s AND kind='inbound' AND at > now() - make_interval(hours => %s) LIMIT 1", (slug, lead_id, hours)).fetchone())
+
+
+def _quota_ok(tenant: dict, cfg: dict) -> bool:
+    """Cuenta un correo en frío de hoy para el remitente de la empresa; False si ya llegó al tope diario (protege la reputación del dominio)."""
+    sender = ((tenant.get("settings") or {}).get("mailout") or {}).get("from_address") or "-"
+    return compliance.mail_quota_take(tenant["slug"], sender, (cfg.get("outbound") or {}).get("max_email_per_day") or 40)
+
+
 # ---------------- envío
-async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: str, subject: str, owner: str | None, menu: dict | None = None) -> None:
+async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: str, subject: str, owner: str | None, menu: dict | None = None, proactive: bool = False) -> None:
     """Envía el mensaje por el canal elegido (WhatsApp con o sin menú, SMS o correo) respetando una pausa de 12 s entre envíos del mismo tenant."""
     persona, lead_id = cfg["persona"]["name"], lead["id"]
     gap = 12 - (time.time() - _last_send.get(tenant["slug"], 0))
@@ -575,7 +733,16 @@ async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: s
             _set(tenant["slug"], lead_id, pending=Jsonb({"menu": menu["id"], "name": menu["name"], "options": [{"id": o["id"], "title": o["title"], "status": o.get("status") or ""} for o in menu["options"]],
                                                          "at": datetime.now(timezone.utc).isoformat()}))
         else:
-            await whatsapp.send(tenant, lead_id, message, f"{persona} (comercial virtual)", None, route.get("last_in_phone"))
+            tpl = None
+            if proactive and outbound_on(cfg) and whatsapp.provider(tenant) == "meta" and not _inbound_recent(tenant["slug"], lead_id, 24):
+                wt = cfg["outbound"]["wa_template"]   # fuera de la ventana de 24 h solo se puede escribir con una plantilla aprobada por Meta
+                if not wt.get("name"):
+                    raise ValueError("Falta la plantilla aprobada de WhatsApp para iniciar conversaciones (Comercial virtual → Prospección).")
+                first = ((lead.get("firstName") or lead.get("name") or "").split(" ")[0]) or "hola"
+                vals = {"first_name": first, "name": lead.get("name") or first, "company": tenant.get("name") or "", "lead_company": lead.get("accountName") or ""}
+                tpl = {"name": wt["name"], "lang": wt.get("lang") or "es", "params": [vals.get(k, "") or "-" for k in wt.get("params") or []]}
+                message = wt.get("preview") or message
+            await whatsapp.send(tenant, lead_id, message, f"{persona} (comercial virtual)", None, route.get("last_in_phone"), template=tpl)
     elif channel == "sms":
         await sms.send(tenant, lead_id, message, f"{persona} (comercial virtual)", None, None)
     else:
@@ -585,9 +752,13 @@ async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: s
             from . import mailbox
             uid = await mailbox._admin_id(espo) or ""
         subject = subject.strip() or f"{tenant.get('name') or 'Seguimiento'}: tu solicitud"
-        await mailout.send(tenant, {"userId": uid, "userName": persona, "to": [lead["emailAddress"]], "subject": subject[:200],
-                                    "html": _email_html(message, persona, cfg["persona"]["role"], tenant.get("name") or ""), "parentType": "Lead", "parentId": lead_id, "agent": True,
-                                    "authorLabel": f"{persona} (comercial virtual)"})
+        html_body, headers = _email_html(message, persona, cfg["persona"]["role"], tenant.get("name") or ""), {}
+        if proactive and outbound_on(cfg):   # correo en frío: quién escribe y baja de un clic (también en la cabecera List-Unsubscribe)
+            url = compliance.unsub_url(tenant["slug"], lead_id)
+            html_body = html_body[:-6] + compliance.unsub_footer(tenant.get("name") or "", url) + "</div>" if html_body.endswith("</div>") else html_body + compliance.unsub_footer(tenant.get("name") or "", url)
+            headers = {"List-Unsubscribe": f"<{url}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"}
+        await mailout.send(tenant, {"userId": uid, "userName": persona, "to": [lead["emailAddress"]], "subject": subject[:200], "html": html_body, "parentType": "Lead", "parentId": lead_id, "agent": True,
+                                    "authorLabel": f"{persona} (comercial virtual)", "headers": headers})
     _last_send[tenant["slug"]] = time.time()
 
 
@@ -630,6 +801,9 @@ async def step(tenant: dict, row: dict) -> None:
     if lead.get("doNotContact"):
         _set(slug, lead_id, state="stopped", reason="El cliente pidió no recibir mensajes", next_at=None)
         log_event(slug, lead_id, "stop", lead_name=lname, title="Detenido: el cliente pidió no recibir mensajes"); return
+    if compliance.is_dnc(slug, email=lead.get("emailAddress"), phones=whatsapp.lead_numbers(lead)):
+        _set(slug, lead_id, state="stopped", reason="Está en la lista de no contactar", next_at=None)
+        log_event(slug, lead_id, "stop", lead_name=lname, title="Detenido: está en la lista de no contactar"); return
     if lead.get("status") in CLOSED:
         _set(slug, lead_id, state="stopped", reason=f"El lead está en «{lead.get('status')}»", next_at=None)
         log_event(slug, lead_id, "stop", lead_name=lname, title=f"Detenido: el lead está en «{lead.get('status')}»"); return
@@ -643,6 +817,13 @@ async def step(tenant: dict, row: dict) -> None:
         _set(slug, lead_id, next_at=nw)
         log_event(slug, lead_id, "wait", lead_name=lname, title="Fuera de horario: lo retomo cuando abra la ventana de atención", detail=nw.astimezone(_tz(cfg)).strftime("%d/%m %H:%M"), dry=dry)
         return
+    ob = outbound_on(cfg)
+    if proactive and ob:   # prospección en frío: además del horario del comercial, el horario legal del país de la persona
+        ok, legal_next = compliance.legal_ok(lead_country(cfg, lead), now, cfg["schedule"]["tz"])
+        if not ok:
+            _set(slug, lead_id, next_at=legal_next)
+            log_event(slug, lead_id, "wait", lead_name=lname, title="Fuera del horario legal de contacto de su país: lo retomo cuando se pueda", detail=legal_next.astimezone(_tz(cfg)).strftime("%d/%m %H:%M"), dry=dry)
+            return
     with db.pool.connection() as c:
         today = c.execute("SELECT count(*) n FROM agent_events WHERE tenant=%s AND lead_id=%s AND kind='send' AND at > now() - interval '24 hours'", (slug, lead_id)).fetchone()["n"]
     if proactive and today >= cfg["cadence"]["max_per_day"]:
@@ -655,8 +836,16 @@ async def step(tenant: dict, row: dict) -> None:
     channel = pick_channel(available_channels(tenant, cfg, lead), lead, row["attempts"], inbound)
     if not channel:
         await _escalate(tenant, cfg, lead, "El lead no tiene un canal de contacto disponible (teléfono con WhatsApp/SMS o correo).", dry=dry); return
+    step_idx = row["attempts"] if kind == "followup" else 0
+    variant = pick_variant(slug, cfg, step_idx) if (proactive and ob) else None
     try:
-        d = await decide(tenant, cfg, lead, hist, kind, row["attempts"], channel)
+        d = await decide(tenant, cfg, lead, hist, kind, row["attempts"], channel, variant)
+        if variant and d.get("action") == "send":   # reglas de forma de los mensajes en frío: una corrección con el modelo y, si insiste, se recorta
+            probs = form_problems(channel, _clean_message(d.get("message"), channel), str(d.get("subject") or ""))
+            if probs:
+                d = await decide(tenant, cfg, lead, hist, kind, row["attempts"], channel, variant, "; ".join(probs))
+            m2, s2 = hard_fix(channel, _clean_message(d.get("message"), channel), str(d.get("subject") or ""))
+            d["message"], d["subject"] = m2, s2
     except Exception as e:
         errs = row["errors"] + 1
         log.warning("decisión del agente (%s): %s", lead_id, str(e)[:160])
@@ -724,7 +913,8 @@ async def step(tenant: dict, row: dict) -> None:
             pass
     if cfg["approval"] and not dry:   # una persona aprueba cada mensaje antes de que salga
         ev = log_event(slug, lead_id, "proposal", lead_name=lname, channel=channel, title={"first": "Primer contacto propuesto", "followup": "Seguimiento propuesto", "reply": "Respuesta propuesta"}[kind] + (f" (con opciones: {menu['name']})" if menu else "") + " · pendiente de aprobación", detail=message, reason=reason,
-                       data={"kind": kind, "menu": menu["id"] if menu else "", "subject": d.get("subject") or "", "new_status": ns, "summary": summary, "attempts": row["attempts"], "first_response": first_response})
+                       data={"kind": kind, "menu": menu["id"] if menu else "", "subject": d.get("subject") or "", "new_status": ns, "summary": summary, "attempts": row["attempts"], "first_response": first_response,
+                             **({"variant": variant["id"], "step": step_idx} if variant else {})})
         _set(slug, lead_id, state="awaiting_approval", next_at=None, errors=0)
         to = lead.get("assignedUserId") or cfg.get("handoff_user_id")
         if to:
@@ -734,9 +924,12 @@ async def step(tenant: dict, row: dict) -> None:
                 pass
         return
     sent = False
+    if not dry and channel == "email" and proactive and ob and not _quota_ok(tenant, cfg):
+        _set(slug, lead_id, next_at=now + timedelta(hours=6))
+        log_event(slug, lead_id, "wait", lead_name=lname, title="Llegué al tope diario de correos en frío de este remitente: sigo mañana", dry=dry); return
     if not dry:
         try:
-            await _deliver(tenant, cfg, lead, channel, message, d.get("subject") or "", lead.get("assignedUserId"), menu)
+            await _deliver(tenant, cfg, lead, channel, message, d.get("subject") or "", lead.get("assignedUserId"), menu, proactive=proactive)
             sent = True
             _usage(slug, msgs=1)
         except Exception as e:
@@ -747,19 +940,21 @@ async def step(tenant: dict, row: dict) -> None:
             else:
                 _set(slug, lead_id, errors=errs, next_at=now + timedelta(minutes=15))
             return
-    await _after_send(tenant, cfg, lead, row, kind, channel, shown, d.get("subject") or "", reason, summary, sent=sent, dry=dry, first_response=first_response, menu=menu["id"] if menu else "")
+    await _after_send(tenant, cfg, lead, row, kind, channel, shown, d.get("subject") or "", reason, summary, sent=sent, dry=dry, first_response=first_response, menu=menu["id"] if menu else "",
+                      variant=variant["id"] if variant else "", step=step_idx)
 
 
 async def _after_send(tenant: dict, cfg: dict, lead: dict, row: dict, kind: str, channel: str, message: str, subject: str, reason: str, summary: str, *, sent: bool, dry: bool,
-                      first_response: int | None, by: str = "", menu: str = "") -> None:
+                      first_response: int | None, by: str = "", menu: str = "", variant: str = "", step: int = 0) -> None:
     """Después de un envío (o de su simulación): programa el siguiente seguimiento y deja la huella en la bitácora."""
     slug, lead_id, espo, now = tenant["slug"], lead["id"], Espo(tenant), datetime.now(timezone.utc)
     fu = cfg["cadence"]["follow_ups"]
     attempts = 1 if kind == "reply" else row["attempts"] + 1
     delay = fu[attempts - 1] if attempts - 1 < len(fu) else None
     if delay is None:
-        _set(slug, lead_id, state="waiting_reply", attempts=attempts, last_out_at=now, next_at=now + timedelta(days=3650), next_kind="followup", errors=0)
-        nxt = "Sin más seguimientos programados"
+        cold = outbound_on(cfg) and kind == "followup"
+        _set(slug, lead_id, state="waiting_reply", attempts=attempts, last_out_at=now, next_at=now + timedelta(days=3650), next_kind="followup", errors=0, **({"reason": "Pausado (frío): sin respuesta tras toda la secuencia"} if cold else {}))
+        nxt = "Pausado (frío): sin más seguimientos; si responde, se retoma" if cold else "Sin más seguimientos programados"
         if cfg["allow_status_changes"] and lead.get("status") in ("Nuevo Lead", "En Calificación") and not dry and kind == "followup":
             try:
                 await espo.put(f"Lead/{lead_id}", {"status": "En Enfriamiento/Contactado", "statusComment": "[Comercial virtual] Sin respuesta tras todos los seguimientos"})
@@ -769,7 +964,7 @@ async def _after_send(tenant: dict, cfg: dict, lead: dict, row: dict, kind: str,
         _set(slug, lead_id, state="waiting_reply", attempts=attempts, last_out_at=now, next_at=now + timedelta(minutes=delay), next_kind="followup", errors=0)
         nxt = f"Próximo seguimiento en {delay // 60} h" if delay >= 60 else f"Próximo seguimiento en {delay} min"
     log_event(slug, lead_id, "send", lead_name=lead.get("name") or "", channel=channel, title={"first": "Primer contacto", "followup": f"Seguimiento {attempts}", "reply": "Respuesta al cliente"}[kind] + (f" · aprobado por {by}" if by else ""),
-              detail=message, reason=reason, sent=sent, dry=dry, data={"summary": summary, "next": nxt, "subject": subject, **({"menu": menu} if menu else {}), **({"response_seconds": first_response} if first_response is not None else {})})
+              detail=message, reason=reason, sent=sent, dry=dry, data={"summary": summary, "next": nxt, "subject": subject, **({"menu": menu} if menu else {}), **({"variant": variant, "step": step} if variant else {}), **({"response_seconds": first_response} if first_response is not None else {})})
 
 
 # ---------------- aprobación previa
@@ -803,7 +998,10 @@ async def approve(tenant: dict, lead_id: str, event_id: int, message: str | None
         raise ValueError("El mensaje está vacío.")
     try:
         menu = find_menu(cfg, channel, data.get("menu") or "", text)
-        await _deliver(tenant, cfg, lead, channel, text, data.get("subject") or "", lead.get("assignedUserId"), menu)
+        proactive = data.get("kind") in ("first", "followup")
+        if channel == "email" and proactive and outbound_on(cfg) and not _quota_ok(tenant, cfg):
+            raise ValueError("Se llegó al tope diario de correos en frío de este remitente; inténtalo mañana.")
+        await _deliver(tenant, cfg, lead, channel, text, data.get("subject") or "", lead.get("assignedUserId"), menu, proactive=proactive)
     except Exception as e:
         raise RuntimeError(f"No se pudo enviar: {str(e)[:160]}")
     _usage(slug, msgs=1)
@@ -817,7 +1015,7 @@ async def approve(tenant: dict, lead_id: str, event_id: int, message: str | None
             log.warning("cambio de estado: %s", str(e)[:100])
     row = _row(slug, lead_id) or {"attempts": data.get("attempts", 0)}
     row = {**row, "attempts": data.get("attempts", row.get("attempts", 0))}
-    await _after_send(tenant, cfg, lead, row, data.get("kind", "followup"), channel, text, data.get("subject") or "", prop["reason"], data.get("summary") or "", sent=True, dry=False, first_response=data.get("first_response"), by=by)
+    await _after_send(tenant, cfg, lead, row, data.get("kind", "followup"), channel, text, data.get("subject") or "", prop["reason"], data.get("summary") or "", sent=True, dry=False, first_response=data.get("first_response"), variant=data.get("variant") or "", step=int(data.get("step") or 0), by=by)
 
 
 async def reject(tenant: dict, lead_id: str, event_id: int, by: str) -> None:

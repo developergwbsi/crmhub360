@@ -31,7 +31,8 @@
                 "SMS",
                 "Telegram",
                 "Manual",
-                "Referido"
+                "Referido",
+                "Prospección IA"
             ]
         },
         "creditPdf": {
