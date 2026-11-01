@@ -10,7 +10,7 @@ import time
 from collections import defaultdict, deque
 from urllib.parse import urlparse
 
-from . import ingest, qualify, telegram
+from . import brand, ingest, qualify, telegram
 from .espo import Espo
 
 FIELD_TYPES = ["text", "email", "tel", "textarea", "select", "number", "checkbox", "channel"]
@@ -232,7 +232,7 @@ def page(form: dict, *, error: str | None = None, values: dict | None = None, do
         bg += f'body{{background-image:url("{form["bg_image"]}");background-size:cover;background-position:center;background-attachment:fixed}}'
     css = CSS % {"color": form["color"], "button": form.get("button_color") or form["color"], "btext": form.get("button_text_color") or "#fff", "header": form.get("header_color") or form["color"]}
     top = f'<img class="banner" src="{E(form["header_image"])}" alt="">' if form.get("header_image") else '<div class="band"></div>'
-    head = f'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>{E(form["title"] or form["name"])}</title><style>{css}{bg}</style></head><body><main class="card">{top}<div class="body">'
+    head = f'<!doctype html><html lang="es"><head><meta charset="utf-8">{brand.link_tags()}<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>{E(form["title"] or form["name"])}</title><style>{css}{bg}</style></head><body><main class="card">{top}<div class="body">'
     if done is not None and done.get("notice"):
         return head + f'<div class="ok"><div class="tick">i</div><h1>{E(form["title"] or "Ya estás registrado")}</h1><p>{E(done["notice"])}</p></div></div></main></body></html>'
     if done is not None:

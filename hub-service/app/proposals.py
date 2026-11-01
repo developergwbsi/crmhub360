@@ -6,7 +6,7 @@ import base64
 import html as _h
 import os
 
-from . import db
+from . import brand, db
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS proposals (
@@ -179,7 +179,7 @@ footer{color:var(--mut);font-size:13px;text-align:center;padding:20px 0 40px}
 def _shell(company: str, title: str, tag: str, h1: str, sub: str, body: str, wa: str, cta_title: str, cta_text: str) -> str:
     c, wl = _h.escape(company), (f"https://wa.me/{wa}" if wa else "")
     wbtn = f'<a class="btn" href="{wl}">Escríbenos por WhatsApp</a>' if wl else ""
-    return (f'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">'
+    return (f'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">{brand.link_tags()}'
             f'<title>{_h.escape(title)} · {c}</title><style>{CSS}</style></head><body><div class="wrap">'
             f'<header class="top"><div class="brand">{c}<span>.</span></div></header>'
             f'<section class="hero"><span class="tag">{_h.escape(tag)}</span><h1>{h1}</h1><p>{sub}</p>{wbtn}<a class="btn alt" href="#como">Cómo funciona</a></section>'
@@ -293,6 +293,22 @@ def _img(name: str, alt: str, wide: bool = False) -> str:
         return ""
 
 
+def _svg_flow() -> str:
+    def box(x, y, w, t, col, fill="#fff", tc="#0f172a"):
+        return f'<rect x="{x}" y="{y}" width="{w}" height="40" rx="10" fill="{fill}" stroke="{col}" stroke-width="2"/><text x="{x + w / 2}" y="{y + 25}" text-anchor="middle" font-size="12" font-weight="600" fill="{tc}" font-family="sans-serif">{t}</text>'
+    o = '<svg viewBox="0 0 800 270" role="img" aria-label="Flujograma de un chatbot de agenda"><rect width="800" height="270" rx="14" fill="#f8fafc"/>'
+    o += box(10, 115, 168, "¿En qué te ayudo?", "#6366f1", "#6366f1", "#fff")
+    rows = [("Agendar una cita", 30, "#0891b2"), ("Ver servicios y horarios", 115, "#16a34a"), ("Hablar con una persona", 200, "#f59e0b")]
+    for t, y, col in rows:
+        o += f'<path d="M180 135 C 208 135, 198 {y + 20}, 228 {y + 20}" stroke="{col}" stroke-width="2" fill="none"/>' + box(230, y, 170, t, col)
+    o += box(430, 30, 150, "Elige el servicio", "#0891b2") + '<path d="M402 50 h26" stroke="#0891b2" stroke-width="2"/>'
+    o += box(610, 30, 170, "Elige día y hora libres", "#0891b2") + '<path d="M582 50 h26" stroke="#0891b2" stroke-width="2"/>'
+    o += '<path d="M695 72 v34" stroke="#0891b2" stroke-width="2"/>' + box(610, 108, 170, "Cita confirmada y aviso", "#16a34a", "#dcfce7", "#14532d")
+    o += box(430, 115, 176, "Responde con tu catálogo", "#16a34a") + '<path d="M402 135 h26" stroke="#16a34a" stroke-width="2"/>'
+    o += box(430, 200, 176, "Pasa el chat a tu equipo", "#f59e0b") + '<path d="M402 220 h26" stroke="#f59e0b" stroke-width="2"/>'
+    return o + "</svg>"
+
+
 def _cards(items: list[tuple[str, str, str]]) -> str:
     return '<div class="grid">' + "".join(f'<div class="card"><div class="ic">{_h.escape(i)}</div><h3>{_h.escape(t)}</h3><p>{_h.escape(d)}</p></div>' for i, t, d in items) + "</div>"
 
@@ -328,16 +344,16 @@ def default_pages(company: str, wa: str) -> list[dict]:
                      ("E", "Correo, SMS y Telegram", "Envía y recibe desde el CRM, con plantillas y firma propia por usuario."),
                      ("N", "Mensajes masivos y campañas", "Envíos a grupos de clientes con ritmo controlado, y campañas para medir qué convierte mejor."),
                      ("Z", "Llamadas", "Llama desde el CRM con tu central o proveedor de voz y deja el registro en la ficha.")])
-           + '<h2>Videollamadas propias, con resumen automático</h2><p class="lead">Salas de videollamada dentro de Crm Hub 360, sin depender de otra herramienta.</p>'
-           + _cards([("1", "Agenda y invitación", "Programa la reunión desde la ficha; el cliente recibe el enlace por correo y entra sin instalar nada."),
+           + '<h2>Reuniones y videollamadas propias, sin otro proveedor</h2><p class="lead">Crm Hub 360 trae su <b>propio módulo de reuniones</b>: no necesitas contratar otra herramienta de videollamadas (como Meet o Zoom), porque la reunión se programa, se hace y se registra dentro del CRM.</p>'
+           + _cards([("1", "Módulo de reuniones propio", "Programa la reunión desde la ficha o el calendario; el cliente recibe el enlace por correo y entra desde el navegador, sin instalar nada y sin otra plataforma."),
                      ("2", "Subtítulos en vivo", "Subtítulos en español e inglés durante la llamada."),
                      ("3", "Grabación", "Graba videollamadas y pantalla, y las guarda ligadas al cliente."),
                      ("4", "Resumen con acuerdos", "Al terminar, un resumen con puntos clave, acuerdos y pendientes queda como nota en la ficha.")])
            + '<h2>Automatiza tu operación comercial</h2>'
            + _cards([("R", "Procesos de leads", "Cuando entra un lead, consulta una API o un webhook (buró, validación de identidad, web scraping) y guarda la respuesta en la ficha."),
                      ("W", "Consultas web", "Trae información de páginas —incluso con inicio de sesión— para decidir sobre un cliente, con análisis de IA opcional."),
-                     ("H", "Formularios de captación", "Crea formularios para tu web que alimentan el CRM, con acciones automáticas al recibirlos."),
-                     ("I", "Formularios internos", "Diseña los formularios de gestión de tu empresa, con generación de PDF, tareas y envío de mensajes.")])
+                     ("H", "Tus propios formularios para captar leads", "Diseña tus formularios (con plantillas) y compártelos como enlace, QR o incrustados en tu web, en tus redes sociales o donde quieras: cada respuesta entra al CRM como lead, con correo y WhatsApp de bienvenida automáticos."),
+                     ("I", "Formularios internos configurables", "Diseña los formularios de gestión de tu empresa: campos, etapas donde se ven y acciones al guardar, como generar un PDF, crear una tarea, cambiar el estado o enviar un mensaje.")])
            + '<h2>Reportes, aprendizaje y control</h2>'
            + _cards([("G", "Reportes y tableros", "Cada usuario arma sus gráficas (barras, líneas, circulares, indicadores) y tableros, y los comparte con su equipo."),
                      ("K", "Banco de conocimiento", "Aprende de tu historial real: qué fuentes, campañas y asesores convierten mejor, y cuándo llegan los mejores clientes."),
@@ -367,9 +383,22 @@ def default_pages(company: str, wa: str) -> list[dict]:
                         ("C", "Clientes y CRM", "Historial, fidelización, comunicaciones y seguimiento de cada cliente, con base única para todas tus sedes."),
                         ("R", "Reportes", "Tableros de ventas, ocupación, rentabilidad y métricas clave, por sede o acumulados."),
                         ("Q", "QR y check-in", "Registro de llegada con QR y control de acceso digital."),
-                        ("M", "Mensajería y campañas", "Chat con tus clientes (con respuesta automática opcional con IA) y campañas por WhatsApp, correo y SMS."),
-                        ("L", "App para tus clientes", "Tus clientes encuentran tu sede, reservan, siguen el estado de su cita y reciben avisos en el celular."),
-                        ("E", "Varias sedes", "Branding propio por sede, equipos y comisiones, con vista consolidada de toda la empresa.")])
+                        ("M", "Mensajería y campañas", "Chat con tus clientes y campañas por WhatsApp, correo y SMS."),
+                        ("E", "Varias sedes", "Branding propio por sede, equipos y comisiones, con vista consolidada de toda la empresa."),
+                        ("T", "Seguimiento en campo", "Visitas a domicilio y ubicación de tus profesionales, para la línea de vehículos.")])
+              + '<h2>Chatbots configurables que atienden por ti</h2><p class="lead">Gestor360 incluye un módulo de <b>chatbots configurables</b>: los armas como agentes conversacionales o con <b>flujogramas</b> (flujos de decisión) y atienden a tus clientes mientras tu equipo trabaja.</p>'
+              f'<div class="fig">{_svg_flow()}<div class="cap">Ejemplo: flujograma de un chatbot de agenda.</div></div><p class="lead"><b>Ejemplos de lo que puedes configurar:</b></p>'
+              + _cards([("1", "Chatbot de agenda", "Existe una versión de agenda: el cliente escribe «quiero una cita», elige el servicio, el profesional y un horario libre, y la cita queda confirmada con su aviso."),
+                        ("2", "Chatbot de preguntas frecuentes", "Responde horarios, ubicación, servicios y productos con tus propias respuestas."),
+                        ("3", "Chatbot de seguimiento", "Informa el estado de la cita o del pedido y recuerda la próxima visita."),
+                        ("4", "Traspaso a una persona", "Cuando el cliente lo pide o el bot no sabe, pasa la conversación a tu equipo con todo el contexto.")])
+              + '<h2>Listo360: la app de tus clientes</h2><p class="lead">Listo360 es la app que <b>tu cliente final</b> usa para relacionarse con tu negocio. Es <b>personalizable para cada cliente de Gestor360</b>: con su marca, sus colores y sus sedes.</p>'
+              + _cards([("L", "Con su propio chat", "Tus clientes conversan con tu sede desde la app, con el chatbot o con tu equipo."),
+                        ("I", "Toda su información en un solo lugar", "Citas, compras, facturas y el historial de su gestión con cada sede."),
+                        ("A", "Agenda desde la app", "Reservan, reprograman y siguen el estado de su cita en tiempo real, con avisos en el celular."),
+                        ("P", "Pedidos desde la app", "Hacen sus pedidos desde la app, sin tener que llamar ni escribir."),
+                        ("D", "Se instala en cualquier dispositivo", "Es una app instalable en el celular, la tableta o el computador, si el cliente lo desea."),
+                        ("M", "Hecha a tu medida", "Cada negocio la personaliza con su propia identidad: marca, colores y frase.")])
               + '<h2>Se conecta con tus otras plataformas</h2><p class="lead">Gestor360 se integra con otras plataformas a través de <b>APIs</b>, además de WhatsApp Business, pagos en línea y notificaciones automáticas, y se sincroniza con <b>Core360</b>.</p>'
               '<p class="lead">Y junto con <b>Crm Hub 360</b>, además de ordenar tu operación, consigues clientes nuevos y los atiendes automáticamente: el CRM busca, califica y conversa por ti, y Gestor360 organiza el servicio.</p>')
     core = (f'<h2>El ERP para fabricar y distribuir</h2><p class="lead">Core360 es la plataforma de gestión empresarial de {_h.escape(company)} para manufactura y distribución: toda la cadena de abastecimiento en un solo sistema.</p>'
@@ -435,10 +464,11 @@ def brochures(company: str, wa: str) -> dict:
                '<h2>Todo lo que necesita tu equipo comercial</h2><p class="lead">Crm Hub 360 es el CRM en español con inteligencia artificial: ordena a tus clientes, atiende por todos los canales y busca clientes nuevos.</p>'
                + _bro_cards([("Equipo de agentes de IA", "Buscador, calificador, comercial virtual y asistente, cada uno con su entrenamiento."), ("Motor que busca clientes", "Halla empresas, decide a quién vale la pena y les escribe, cumpliendo horarios y bajas."),
                              ("Lee y entiende documentos", "Sube un PDF a la ficha, extrae los datos que necesitas y tú los revisas."), ("Todos los canales", "WhatsApp, correo, SMS, Telegram y llamadas, con el historial en una sola ficha."),
-                             ("Videollamadas propias", "Subtítulos en vivo, grabación y resumen con acuerdos y pendientes."), ("Reportes y control", "Tableros por usuario, banco de conocimiento, equipos y reparto de leads.")])
+                             ("Reuniones propias, sin otro proveedor", "Módulo de reuniones y videollamadas dentro del CRM, con subtítulos, grabación y resumen."), ("Reportes y control", "Tableros por usuario, banco de conocimiento, equipos y reparto de leads.")])
                + f'<div class="fig">{_img("crm_panel.jpg", "Panel gerencial de Crm Hub 360")}<div class="cap">Panel gerencial de Crm Hub 360 (datos de prueba).</div></div>',
                '<h2>De la búsqueda a la demo agendada</h2><p class="lead">El motor trabaja por ti las 24 horas: tu equipo se dedica a cerrar.</p>'
-               f'<div class="fig">{_svg_motor()}</div><div class="fig">{_svg_chat()}</div>'
+               f'<div class="fig">{_svg_motor()}</div>'
+               + _bro_cards([("Tus propios formularios", "Capta leads en tus redes, tu web o donde quieras, con enlace, QR o incrustados; cada respuesta entra al CRM."), ("Formularios internos configurables", "Campos, etapas y acciones al guardar: PDF, tareas, estados y mensajes.")]) +
                '<h2>Cómo funciona</h2><ul class="steps"><li><b>Lo conectas.</b> Tus canales y tu equipo entran al CRM; cada empresa puede traer sus propios proveedores.</li><li><b>Lo entrenas.</b> Le cuentas qué vendes y a quién; los agentes aprenden tu forma de hablar.</li><li><b>Te entrega demos agendadas.</b> El motor busca, califica y conversa.</li></ul>'
                '<p><span class="pill">Respeta horarios legales</span><span class="pill">Baja de un clic</span><span class="pill">Lista de no contactar</span><span class="pill">Datos separados por empresa</span></p>', "Mira cómo se vería en tu negocio")
     gestor = _bro(company, wa, "Para negocios de servicios y ventas", "Tu negocio, bajo control en una sola plataforma",
@@ -450,7 +480,9 @@ def brochures(company: str, wa: str) -> dict:
                   '<h2>Todo lo que gestiona</h2><p class="lead">Activa solo los módulos que necesitas.</p>'
                   + _bro_cards([("Agenda y turnos", "Reservas en línea, estados y evidencia con fotos."), ("Servicios y productos", "Catálogo, duración, precios y ventas."), ("Inventario", "Stock, alertas de reabastecimiento y costos por servicio."), ("Nómina", "Pre-nómina por comisión."),
                                 ("Cotizaciones", "Se convierten en orden de servicio."), ("Facturación electrónica", "Ante la DIAN, por sede o para toda la empresa."), ("Clientes y CRM", "Historial, fidelización y seguimiento."), ("Reportes", "Ventas, ocupación y rentabilidad."),
-                                ("Mensajería y campañas", "WhatsApp, correo y SMS, con IA opcional."), ("App para tus clientes", "Reservan y siguen su cita (Listo360)."), ("Varias sedes", "Branding propio y vista consolidada."), ("QR y check-in", "Registro de llegada digital.")])
+                                ("Chatbots configurables", "Agentes conversacionales o con flujogramas. Hay una versión de agenda: el cliente elige servicio y horario y la cita queda confirmada."),
+                                ("Listo360: la app de tus clientes", "Personalizable para cada cliente, con su propio chat; agenda, pedidos y su información con cada sede. Instalable en cualquier dispositivo."),
+                                ("Mensajería y campañas", "WhatsApp, correo y SMS."), ("Varias sedes", "Branding propio y vista consolidada.")])
                   + '<h2>Se conecta con tus otras plataformas</h2><p class="lead">Integración con otras plataformas a través de APIs, WhatsApp Business, pagos en línea y notificaciones; se sincroniza con Core360. Con Crm Hub 360, además de ordenar tu operación, consigues clientes nuevos.</p>', "Conoce Gestor360")
     core = _bro(company, wa, "ERP para manufactura y distribución", "Toda tu cadena de abastecimiento, bajo control",
                 "Compras, inventarios, producción, ventas y facturación electrónica en un solo sistema.",

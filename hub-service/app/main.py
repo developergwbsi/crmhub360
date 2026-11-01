@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, compliance, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, brand, compliance, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -2277,7 +2277,7 @@ def rec_share_page(token: str):
         return HTMLResponse("<!doctype html><meta charset=utf-8><title>Grabación</title><body style='font-family:sans-serif;padding:40px'><h2>Esta grabación ya no está compartida.</h2>", 404, _MEET_HEADERS)
     import html as _h
     t = _h.escape(r["title"])
-    page = ("<!doctype html><html lang=es><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=robots content=noindex><title>" + t + "</title>"
+    page = ("<!doctype html><html lang=es><head><meta charset=utf-8><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=icon type=image/png sizes=64x64 href=/favicon.ico><meta name=viewport content='width=device-width,initial-scale=1'><meta name=robots content=noindex><title>" + t + "</title>"
             "<style>body{margin:0;background:#0f1420;color:#e8ecf5;font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh}"
             "main{width:min(1100px,94vw);padding:24px 0}h1{font-size:20px;margin:0 0 4px}p{color:#8a93a8;margin:0 0 14px;font-size:14px}video{width:100%;max-height:78vh;background:#000;border-radius:10px}"
             "a.b{display:inline-block;margin-top:14px;background:#3b6df0;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600}</style></head><body><main>"
@@ -2338,7 +2338,7 @@ def unsub_page(token: str):
     """Página de baja de un correo (https://meet.<dominio>/u/<enlace>): pide confirmar con un botón (los antivirus abren los enlaces sin querer)."""
     if not compliance.unsub_parse(token):
         return HTMLResponse("<!doctype html><meta charset=utf-8><body style='font-family:sans-serif;padding:40px'><h3>Este enlace no es válido.</h3>", 404, _MEET_HEADERS)
-    return HTMLResponse(f"<!doctype html><html lang=es><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=robots content=noindex><title>Darse de baja</title><style>{_UNSUB_CSS}</style>"
+    return HTMLResponse(f"<!doctype html><html lang=es><meta charset=utf-8><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=icon type=image/png sizes=64x64 href=/favicon.ico><meta name=viewport content='width=device-width,initial-scale=1'><meta name=robots content=noindex><title>Darse de baja</title><style>{_UNSUB_CSS}</style>"
                         "<main><h2>¿Quieres dejar de recibir mensajes?</h2><p>Confirma y no volveremos a escribirte por ningún canal.</p>"
                         "<form method=post><button>Sí, darme de baja</button></form></main>", 200, {**_MEET_HEADERS, "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'"})
 
@@ -2347,7 +2347,7 @@ def unsub_page(token: str):
 async def unsub_do(token: str):
     """Baja confirmada (botón de la página o «un clic» del cliente de correo, RFC 8058)."""
     ok = await _do_unsub(token)
-    return HTMLResponse(f"<!doctype html><html lang=es><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Baja</title><style>{_UNSUB_CSS}</style>"
+    return HTMLResponse(f"<!doctype html><html lang=es><meta charset=utf-8><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=icon type=image/png sizes=64x64 href=/favicon.ico><meta name=viewport content='width=device-width,initial-scale=1'><title>Baja</title><style>{_UNSUB_CSS}</style>"
                         f"<main><h2>{'Listo' if ok else 'Enlace no válido'}</h2><p>{'No volveremos a escribirte. Lamentamos las molestias.' if ok else 'No pudimos procesar la baja con este enlace.'}</p></main>", 200 if ok else 404, _MEET_HEADERS)
 
 
@@ -2554,6 +2554,17 @@ def proposals_active(slug: str, body: dict = Body(...), tenant: dict = Depends(t
     if not n:
         raise HTTPException(404, "No existe")
     return {"ok": True}
+
+
+@app.get("/v1/public/meet/favicon.svg")
+def favicon_svg():
+    """Favicon genérico de DigitalAlliance Hub para las páginas públicas del dominio de las salas."""
+    return Response(brand.SVG, 200, {"Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/v1/public/meet/favicon.ico")
+def favicon_ico():
+    return Response(brand.png(), 200, {"Content-Type": "image/png", "Cache-Control": "public, max-age=86400"})
 
 
 @app.get("/v1/public/meet/p/{tenant}/{slug}.pdf")

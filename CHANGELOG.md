@@ -5,6 +5,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Añadido
+- **Favicon genérico de DigitalAlliance Hub** en todos los enlaces públicos que enviamos (presentaciones, salas de videollamada, grabaciones, bajas y formularios), con rutas `/favicon.svg` y `/favicon.ico` en el dominio de las salas.
+
+### Cambiado
+- **Gestor360**: nueva sección de **chatbots configurables** (agentes conversacionales o flujogramas, con una versión de agenda y un flujograma de ejemplo) y de **Listo360** (app personalizable de los clientes, con su propio chat, agenda, pedidos e información por sede, instalable en cualquier dispositivo). Su brochure en PDF los incluye.
+- **Crm Hub 360**: ahora destaca sus **formularios propios** para captar leads (enlace, QR o incrustados; redes o donde se quiera), los **formularios internos configurables** y su **módulo de reuniones propio**, sin necesidad de otro proveedor de videollamadas.
+
+### Añadido
 - **Brochures en PDF adjuntos a los correos.** Cada presentación estándar tiene un brochure de 2 páginas; cuando el comercial virtual envía el enlace, el correo lleva también el PDF adjunto (hasta 2 y 4 MB). El PDF se descarga además de la biblioteca (botón «PDF»).
 - **El nombre de la empresa siempre en una sola línea** en correos, WhatsApp, SMS, presentaciones, PDF y pantallas.
 

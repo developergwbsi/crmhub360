@@ -766,6 +766,6 @@ def page(code: str) -> str:
             .replace("__GUEST__", json.dumps(r.get("guest_name") or "").replace("<", "\\u003c")).replace("__V__", str(int(ASSETS.joinpath("room.js").stat().st_mtime)) if ASSETS.joinpath("room.js").exists() else "0"))
 
 
-_PAGE_END = """<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Videollamada</title>
+_PAGE_END = """<!doctype html><html lang="es"><head><meta charset="utf-8"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/png" sizes="64x64" href="/favicon.ico"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Videollamada</title>
 <style>body{font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f1424;color:#e9ecf8}.c{text-align:center;padding:24px;max-width:380px}h1{font-size:20px}p{color:#aab1cc}</style></head>
 <body><div class="c"><h1>Esta videollamada ya terminó</h1><p>El enlace venció o la sala se cerró. Pide a tu asesor un enlace nuevo.</p></div></body></html>"""
