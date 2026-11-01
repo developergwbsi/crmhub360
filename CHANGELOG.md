@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.11.2] - 2026-11-01
+
 ### Añadido
 - **Optimización diaria del motor comercial (F4).** Una tarea diaria (a la hora que elijas) lee los resultados por canal, por variante de cada paso y por nicho, y mejora la prospección sola: **reescribe con IA la variante que responde mucho peor que la ganadora** (la anterior queda pausada), **ajusta la guía de estilo** de WhatsApp (< 12 % de respuesta) o del correo (< 3 %), y **pausa los nichos** sin respuesta tras 300 intentos, repartiendo el cupo diario de prospectos hacia los nichos que mejor responden. Los asuntos de los correos en frío nunca llevan palabras de spam. Modo «aplica sola» o «solo propone»; **historial de ajustes con botón de revertir** (lo revertido no se vuelve a proponer por 14 días) y tablas de resultados por canal (con tasa de entrega) y por nicho en «Secuencia y resultados». Lo hace con muestras mínimas y no actúa con el comercial en modo prueba.
 
