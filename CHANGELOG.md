@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.11.1] - 2026-11-01
+
 ### Añadido
 - **Cierre del motor comercial (F3).** El comercial virtual ahora **clasifica la intención** de cada respuesta (interesado, pide demo, precio, competencia, tiempo, información, no le interesa) con un puntaje de 0 a 100 visible en la ficha del lead, responde las objeciones con un **guion enfocado en retorno de inversión, facilidad y centralización** (editable) y puede usar un **enlace de prueba**. Cuando el cliente muestra interés, **propone horarios libres** de la agenda de quien da la demo; al elegir uno **crea sola la reunión con videollamada**, se la confirma por el mismo canal, pasa el lead a «Calificado» y avisa al anfitrión. Si el horario ya no está libre ofrece otros; si hay negociación, pasa a una persona.
 - **Embudo de la prospección** en la pestaña Prospectos: contactados, respondieron, demos agendadas, pasados a una persona y la intención de los leads. Configuración del cierre en «Secuencia y resultados».
