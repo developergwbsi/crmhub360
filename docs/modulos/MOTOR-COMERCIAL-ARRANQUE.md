@@ -47,6 +47,8 @@ Mientras tanto, conversa con correos reales (equipo, amigos) desde ese buzón pa
 
 *CRM de producción → Comercial virtual*: lee y ajusta *Empresa*, *Servicios*, *Preguntas frecuentes* y *Objetivo*. Agrega las demás aplicaciones del catálogo (qué hace cada una y para quién). Usa **Probar** para simular respuestas de un cliente (precio, «ya tengo CRM», «no me interesa») y corrige lo que no te guste. **Criterio:** que respondas «eso lo diría yo» en 5 de 5 pruebas.
 
+**Catálogo del ecosistema en el entrenamiento (hecho el 2026-11-01).** El comercial virtual de producción conoce Crm Hub 360 (centro de la conversación) y las demás aplicaciones de web.digitalalliancehub.site según su estado real: **Gestor360** (disponible: agenda, nómina, inventario, facturación electrónica DIAN, app de cliente Listo360), **MultiXpress** y **MentisPro** (beta) y **Core360** y **TalentiaFlows** (próximamente, solo se mencionan como «en camino»). Regla: se habla primero de Crm Hub 360 y se ofrece otra aplicación solo cuando el negocio del prospecto encaja; sin precios ni promesas. Ojo: el entrenamiento real de cada comercial está en `settings.agents[i].config` (no en `settings.agent`). Si cambia el catálogo, actualizar `company.services`, `company.policies` y las preguntas frecuentes de ese comercial.
+
 ## Paso 4 — Primer lote de prospectos
 
 1. Reúne **20 a 30** prospectos B2B de Colombia de fuentes legítimas: tu propia base de contactos, referidos, personas con las que ya hubo contacto, directorios públicos y listas que tengas derecho a usar. Usa la plantilla [plantilla-prospectos.csv](plantilla-prospectos.csv) (nombre, empresa, cargo, correo, teléfono, país, sector).
