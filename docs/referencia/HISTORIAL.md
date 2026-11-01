@@ -2,8 +2,15 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.17.0)
+## Sin publicar (después de v1.17.1)
 
+- `ed34535` 2026-11-01 — Versión 1.18.0
+- `7b47aa1` 2026-11-01 — Validación de correos (buzón existente) antes de escribir, rebotes que detienen al comercial virtual, y correo guardado en el CRM con adjuntos y enlaces pulsables
+- `e996014` 2026-11-01 — Prospectos: el lead toma el nombre de la empresa cuando el contacto es un buzón genérico
+
+## v1.17.1
+
+- `f71726e` 2026-11-01 — Versión 1.17.1
 - `69d128a` 2026-11-01 — Versión 1.17.1
 - `4b46d88` 2026-11-01 — Correos: nombre de la empresa con espacio duro también en la firma y el pie de baja
 - `ac31798` 2026-11-01 — Prospección: título, pestañas, tarjetas, botones, buscador y filtros fijos; la lista se desplaza con sus encabezados fijos

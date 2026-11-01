@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **174** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **175** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -134,6 +134,7 @@ Total: **174** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/prospectsImport` | CrmHub.prospectsImport | POST /CrmHub/prospectsImport. {rows, batch?, defaultCountry?, campaign?, enrich?}. Valida y guarda prospectos. Hub: POST /v1/prospects/import. */ |
 | POST | `/CrmHub/prospectsNiche` | CrmHub.prospectsNiche | POST /CrmHub/prospectsNiche. {niche, paused}. Pausa o reanuda un nicho. Hub: POST /v1/prospects/niche. */ |
 | POST | `/CrmHub/prospectsPromote` | CrmHub.prospectsPromote | POST /CrmHub/prospectsPromote. {ids?, limit?, agentId?}. Pasa prospectos listos al CRM como leads. Hub: POST /v1/prospects/promote. */ |
+| POST | `/CrmHub/prospectsVerify` | CrmHub.prospectsVerify | POST /CrmHub/prospectsVerify. Comprueba (en segundo plano) que existan los correos de los prospectos listos. Hub: POST /v1/prospects/verify. */ |
 | GET | `/CrmHub/push/key` | CrmHub.pushKey | GET /CrmHub/push/key. Usuario. Hub: GET /v1/push/key. */ |
 | POST | `/CrmHub/push/subscribe` | CrmHub.pushSubscribe | POST /CrmHub/push/subscribe. Usuario. Hub: POST /v1/push/subscribe. */ |
 | POST | `/CrmHub/push/test` | CrmHub.pushTest | Envía una notificación de prueba a los dispositivos del propio usuario. */ |
