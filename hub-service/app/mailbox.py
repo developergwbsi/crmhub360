@@ -173,9 +173,9 @@ async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str, im
     return True
 
 
-async def poll(tenant: dict) -> int:
-    """Revisa el buzón IMAP de un tenant, importa los correos nuevos (uno que falle no frena a los demás) y guarda el último UID en settings.mailbox.last_uid. Devuelve cuántos importó."""
-    cfg = (tenant.get("settings") or {}).get("mailbox") or {}
+async def poll(tenant: dict, key: str = "mailbox") -> int:
+    """Revisa el buzón IMAP de un tenant (`mailbox`, o `mailbox_cold` el del correo en frío), importa los correos nuevos (uno que falle no frena a los demás) y guarda el último UID en settings.<key>.last_uid. Devuelve cuántos importó."""
+    cfg = (tenant.get("settings") or {}).get(key) or {}
     if not cfg.get("enabled") or not cfg.get("host") or not cfg.get("user"):
         return 0
     msgs, top = await asyncio.to_thread(fetch_new, cfg)
@@ -188,7 +188,7 @@ async def poll(tenant: dict) -> int:
             log.warning("no se pudo importar el correo %s de %s: %s", m["uid"], tenant["slug"], str(e)[:160])
     if top != int(cfg.get("last_uid") or 0):
         with db.pool.connection() as c:
-            c.execute("UPDATE tenants SET settings = jsonb_set(settings, '{mailbox,last_uid}', to_jsonb(%s::bigint)) WHERE slug = %s", (top, tenant["slug"]))
+            c.execute("UPDATE tenants SET settings = jsonb_set(settings, %s, to_jsonb(%s::bigint)) WHERE slug = %s", ("{" + key + ",last_uid}", top, tenant["slug"]))
     return n
 
 
@@ -198,14 +198,17 @@ async def worker():
     while True:
         try:
             with db.pool.connection() as c:
-                rows = c.execute("SELECT * FROM tenants WHERE status = 'active' AND settings ? 'mailbox'").fetchall()
+                rows = c.execute("SELECT * FROM tenants WHERE status = 'active' AND (settings ? 'mailbox' OR settings ? 'mailbox_cold')").fetchall()
             for t in rows:
-                try:
-                    n = await poll(t)
-                    if n:
-                        log.info("%s: %s correos nuevos", t["slug"], n)
-                except Exception as e:
-                    log.warning("buzón %s: %s", t["slug"], str(e)[:160])
+                for key in ("mailbox", "mailbox_cold"):
+                    if key not in (t.get("settings") or {}):
+                        continue
+                    try:
+                        n = await poll(t, key)
+                        if n:
+                            log.info("%s (%s): %s correos nuevos", t["slug"], key, n)
+                    except Exception as e:
+                        log.warning("buzón %s (%s): %s", t["slug"], key, str(e)[:160])
         except Exception:
             log.exception("ciclo del buzón")
         await asyncio.sleep(INTERVAL)

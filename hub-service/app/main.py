@@ -24,7 +24,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, compliance, finder, growth, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, compliance, finder, growth, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -2371,6 +2371,47 @@ class ProspectIdsReq(BaseModel):
 @app.get("/v1/prospects")
 def prospects_list(status: str = "", batch: str = "", q: str = "", tenant: dict = Depends(tenant_auth)):
     return {**prospects.listing(tenant["slug"], status, batch, q), "icp": prospects.icp(tenant)}
+
+
+@app.get("/v1/mail-config")
+def mail_config_get(tenant: dict = Depends(tenant_auth)):
+    """Correo de la empresa (principal y en frío): si lo provee el sistema o es propio, y los datos no secretos de cada uno."""
+    return mailcfg.get(tenant)
+
+
+@app.put("/v1/mail-config/{role}")
+def mail_config_save(role: str, body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    """Guarda el correo propio de la empresa (SMTP de salida y buzón IMAP). Solo si el Centro de control dejó esa función como «Propio»."""
+    if role not in mailcfg.ROLES:
+        raise HTTPException(404, "Función de correo desconocida")
+    try:
+        return mailcfg.save(tenant, role, body)
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.delete("/v1/mail-config/{role}")
+def mail_config_clear(role: str, tenant: dict = Depends(tenant_auth)):
+    if role not in mailcfg.ROLES:
+        raise HTTPException(404, "Función de correo desconocida")
+    try:
+        mailcfg.clear(tenant, role)
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    return {"ok": True}
+
+
+@app.post("/v1/mail-config/{role}/test")
+async def mail_config_test(role: str, tenant: dict = Depends(tenant_auth)):
+    """Prueba de conexión SMTP e IMAP con los datos guardados (no envía ni lee correos)."""
+    if role not in mailcfg.ROLES:
+        raise HTTPException(404, "Función de correo desconocida")
+    try:
+        return await mailcfg.test(tenant, role)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
 
 
 @app.get("/v1/finder")

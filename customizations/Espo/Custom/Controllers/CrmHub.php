@@ -2428,6 +2428,39 @@ class CrmHub
         return (object) $this->hubCall('PUT', '/v1/prospects/icp', json_decode(json_encode($request->getParsedBody()), true) ?: [], 20);
     }
 
+    /** GET /CrmHub/mailConfig. Admin. Correo de la empresa (principal y en frío). Hub: GET /v1/mail-config. */
+    public function getActionMailConfig(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/mail-config', null, 20);
+    }
+
+    /** POST /CrmHub/mailConfigSave. Admin. {role: main|cold, smtp:{…}, imap:{…}}. Hub: PUT /v1/mail-config/{role}. */
+    public function postActionMailConfigSave(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = json_decode(json_encode($request->getParsedBody()), true) ?: [];
+        $role = ($d['role'] ?? '') === 'cold' ? 'cold' : 'main';
+        unset($d['role']);
+        return (object) $this->hubCall('PUT', '/v1/mail-config/' . $role, $d, 20);
+    }
+
+    /** POST /CrmHub/mailConfigClear. Admin. {role}. Quita el correo propio. Hub: DELETE /v1/mail-config/{role}. */
+    public function postActionMailConfigClear(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('DELETE', '/v1/mail-config/' . (($d->role ?? '') === 'cold' ? 'cold' : 'main'), null, 20);
+    }
+
+    /** POST /CrmHub/mailConfigTest. Admin. {role}. Prueba SMTP/IMAP sin enviar ni leer correos. Hub: POST /v1/mail-config/{role}/test. */
+    public function postActionMailConfigTest(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/mail-config/' . (($d->role ?? '') === 'cold' ? 'cold' : 'main') . '/test', [], 60);
+    }
+
     /** GET /CrmHub/finder. Estado del buscador de prospectos (licencia, configuración, última pasada). Hub: GET /v1/finder. */
     public function getActionFinder(Request $request): \stdClass
     {

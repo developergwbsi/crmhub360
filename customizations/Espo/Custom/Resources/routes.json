@@ -1268,5 +1268,37 @@
             "controller": "CrmHub",
             "action": "finderRun"
         }
+    },
+    {
+        "route": "/CrmHub/mailConfig",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "mailConfig"
+        }
+    },
+    {
+        "route": "/CrmHub/mailConfigSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "mailConfigSave"
+        }
+    },
+    {
+        "route": "/CrmHub/mailConfigClear",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "mailConfigClear"
+        }
+    },
+    {
+        "route": "/CrmHub/mailConfigTest",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "mailConfigTest"
+        }
     }
 ]

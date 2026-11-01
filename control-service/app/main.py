@@ -1265,6 +1265,7 @@ class ServicesReq(BaseModel):
     lookups: Optional[list] = None        # servicios de consulta del sistema habilitados para la empresa
     wa_bulk: Optional[dict] = None        # envío masivo por WhatsApp no oficial (Evolution): {max: destinatarios por campaña, every_s: segundos entre mensajes}
     templates: Optional[int] = None       # plantillas personales por usuario y canal (10 incluidas; más es un servicio adicional)
+    mail_cold: Optional[str] = None       # correo en frío (remitente aparte, otro dominio): 'off' | 'own' (la empresa lo configura) | 'p<id>' (proveedor de correo prestado)
     finder: Optional[bool] = None         # buscador de prospectos en internet (servicio adicional; consume tokens del motor de IA de la empresa)
     meet: Optional[str] = None            # videollamadas propias (servicio adicional): 'off' | 'video' | 'video_subs' (con subtítulos en vivo)
 
@@ -1283,6 +1284,40 @@ async def tenant_mail_state(t: dict) -> dict:
 IMAP_HOSTS = {"smtp.gmail.com": "imap.gmail.com", "smtp.office365.com": "outlook.office365.com", "smtp.mail.yahoo.com": "imap.mail.yahoo.com", "smtp.zoho.com": "imap.zoho.com"}
 
 
+def set_company_cold_mail(slug: str, mode: str) -> None:
+    """Correo en frío de la empresa: 'off' lo quita, 'own' deja lo que la empresa configuró en el CRM, 'p<id>' presta un proveedor de correo del sistema (remitente aparte).
+    El correo en frío nunca usa el proveedor transaccional (Resend…): si el proveedor prestado es Resend se rechaza."""
+    with db() as c:
+        row = c.execute("SELECT settings FROM tenants WHERE slug=%s", (slug,)).fetchone()
+        settings = dict(row["settings"] or {})
+        if mode == "own":
+            return
+        if mode == "off":
+            for k in ("mailout_cold", "mailbox_cold"):
+                settings.pop(k, None)
+        else:
+            p = next((x for x in providers_list() if x["id"] == mode and x["kind"] == "email"), None)
+            if not p:
+                raise HTTPException(400, "Proveedor de correo inexistente")
+            f = p["fields"]
+            if "resend" in (f.get("host") or "").lower():
+                raise HTTPException(400, "Resend no admite correo en frío: usa un buzón real en un dominio aparte (Zoho, Google Workspace…).")
+            box_user = f.get("reply_user") or f.get("user") or ""
+            box_host = f.get("reply_host") or IMAP_HOSTS.get(f.get("host", ""), "")
+            box_pass = f.get("reply_password") or f.get("password") or ""
+            plus = any(k in (box_host + box_user + (f.get("host") or "")) for k in ("gmail", "google", "zoho"))
+            settings["mailout_cold"] = {"host": f["host"], "port": int(f.get("port") or 587), "security": f.get("security", "TLS"), "user": f.get("user", ""), "password": f.get("password", ""),
+                                        "from_address": f["from_address"], "plus": plus, "source": "loaned", **({"reply_address": box_user} if f.get("reply_user") else {})}
+            if box_host and box_user and box_pass:
+                old = settings.get("mailbox_cold") or {}
+                same = old.get("user") == box_user and old.get("host") == box_host
+                settings["mailbox_cold"] = {"enabled": True, "host": box_host, "port": 993, "user": box_user, "password": box_pass, "folder": "INBOX", "source": "loaned",
+                                            "since": old.get("since") if same else time.strftime("%Y-%m-%d", time.gmtime()), "last_uid": old.get("last_uid", 0) if same else 0}
+            else:
+                settings.pop("mailbox_cold", None)
+        c.execute("UPDATE tenants SET settings=%s WHERE slug=%s", (json.dumps(settings), slug))
+
+
 def set_company_mailbox(slug: str, mail: Optional[dict]) -> bool:
     """Activa (o retira) la lectura del buzón de entrada de la empresa: el Hub trae por IMAP los correos que llegan a esa cuenta.
     No se hace desde EspoCRM porque el cortafuegos del servidor redirige IMAP (143/993) del tráfico de los contenedores."""
@@ -1295,9 +1330,11 @@ def set_company_mailbox(slug: str, mail: Optional[dict]) -> bool:
         old = settings.get("mailbox") or {}
         if mail and host and box_user and box_pass:
             same = old.get("user") == box_user and old.get("host") == host
-            settings["mailbox"] = {"enabled": True, "host": host, "port": 993, "user": box_user, "password": box_pass, "folder": "INBOX",
+            settings["mailbox"] = {"enabled": True, "host": host, "port": 993, "user": box_user, "password": box_pass, "folder": "INBOX", "source": "loaned",
                                    "since": old.get("since") if same else time.strftime("%Y-%m-%d", time.gmtime()), "last_uid": old.get("last_uid", 0) if same else 0}
             ok = True
+        elif (settings.get("mailbox") or {}).get("source") == "own" and not mail:
+            ok = True   # correo propio que la empresa configuró en el CRM: no se borra al dejar el modo en «Propio»
         else:
             settings.pop("mailbox", None)
             ok = False
@@ -1307,8 +1344,10 @@ def set_company_mailbox(slug: str, mail: Optional[dict]) -> bool:
             inbound = bool(mail.get("inbound_secret") and not reply)   # Resend recibe las respuestas en el dominio y avisa por webhook: cualquier «ventas+id@» llega
             plus = plus or inbound
             settings["mailout"] = {"host": mail["host"], "port": int(mail.get("port") or 587), "security": mail.get("security") or "", "user": mail.get("user") or "",
-                                   "password": mail.get("password") or "", "from_address": mail["from_address"], "plus": plus, **({"reply_address": mail["reply_user"]} if reply else {}),
+                                   "password": mail.get("password") or "", "from_address": mail["from_address"], "plus": plus, "source": "loaned", **({"reply_address": mail["reply_user"]} if reply else {}),
                                    **({"inbound_secret": mail["inbound_secret"]} if inbound else {})}
+        elif (settings.get("mailout") or {}).get("source") == "own" and not mail:
+            pass
         else:
             settings.pop("mailout", None)
         c.execute("UPDATE tenants SET settings=%s WHERE slug=%s", (json.dumps(settings), slug))
@@ -1380,7 +1419,7 @@ async def get_services(slug: str, actor: str = Depends(me)):
         au = []
     return {"slug": slug, "ai": ((t["settings"] or {}).get("ai") or {}).get("mode") or "global", "aiProviders": [{"id": p["id"], "name": p["name"], "engine": p["fields"].get("engine"), "model": p["fields"].get("model")} for p in providers_list() if p["kind"] == "ai"],
             "aiDefault": get_setting("ai_default"), "aiUsage": au,
-            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "meet": ((t["settings"] or {}).get("limits") or {}).get("meet") or "off", "finder": bool(((t["settings"] or {}).get("limits") or {}).get("finder")), "agents": int(((t["settings"] or {}).get("limits") or {}).get("agents") or 1), "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
+            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "meet": ((t["settings"] or {}).get("limits") or {}).get("meet") or "off", "finder": bool(((t["settings"] or {}).get("limits") or {}).get("finder")), "mailCold": sv.get("mail_cold") or "off", "agents": int(((t["settings"] or {}).get("limits") or {}).get("agents") or 1), "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
             "lookups": list(((t["settings"] or {}).get("lookups")) or []), "lookupCatalog": [{"id": l["id"], "name": l["name"], "category": l.get("category", "otro")} for l in lookups_list()], "cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10),
             "waBulk": {"max": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("max") or 100), "every_s": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("every_s") or 120)}, "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
             "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
@@ -1454,6 +1493,11 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
             raise HTTPException(502, "No se pudo cambiar el servicio de videollamadas en la empresa")
         with db() as c6:
             c6.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps({"meet": req.meet}), slug))
+    if req.mail_cold is not None:
+        if not (req.mail_cold in ("off", "own") or req.mail_cold.startswith("p")):
+            raise HTTPException(400, "Correo en frío no válido")
+        set_company_cold_mail(slug, req.mail_cold)
+        sv["mail_cold"] = req.mail_cold
     if req.finder is not None:
         with db() as c10:
             c10.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps({"finder": bool(req.finder)}), slug))

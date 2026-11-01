@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **Cada empresa configura su propio correo.** Nueva pestaña *Integraciones → Correo* con dos funciones: **correo principal** y **correo en frío** (remitente aparte en otro dominio), cada una con su SMTP de salida y su buzón IMAP de entrada, con presets de Zoho, Google y Microsoft 365 y botón «Probar conexión». En el Centro de control cada función puede quedar «Propia» (la empresa la configura) o «Prestada» por el sistema; nueva opción de servicio **Correo en frío**. Las respuestas al correo en frío entran por su propio buzón. Los servidores que escribe la empresa no pueden apuntar a direcciones internas del servidor.
+
 ## [1.13.1] - 2026-11-01
 
 ### Añadido

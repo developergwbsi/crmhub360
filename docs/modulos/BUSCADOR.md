@@ -10,7 +10,7 @@ Agente del Hub que **investiga en internet** empresas que podrían necesitar lo 
 
 ## Reglas de cumplimiento (no se pueden saltar)
 - Los contactos hallados son **fríos**: `prospects.is_cold` lo detecta y `agent._deliver` **nunca** los envía por WhatsApp ni SMS, ni por el proveedor de correo transaccional (Resend).
-- El correo en frío solo sale por un **remitente aparte** (`settings.mailout_cold`: buzón real en un dominio aparte; fase F6). Sin él, la propuesta queda sin enviar.
+- El correo en frío solo sale por un **remitente aparte** (`settings.mailout_cold` + buzón `settings.mailbox_cold`: buzón real en un dominio aparte). Cada empresa lo configura **ella misma** (*Integraciones → Correo → Correo en frío*) o se le **presta** uno desde el Centro de control. Sin él, la propuesta queda sin enviar. Las respuestas a esos correos entran por el buzón en frío (`mailbox.poll(..., 'mailbox_cold')`).
 - Cada mensaje en frío exige **aprobación de una persona**, aunque el comercial esté en automático. Lleva baja de un clic y cabecera `List-Unsubscribe`.
 - Datos personales (Ley 1581 de 2012, Colombia): solo datos de contacto de negocio de fuentes públicas, con la fuente guardada para responder a cualquier solicitud del titular; la baja se respeta siempre (`dnc`).
 

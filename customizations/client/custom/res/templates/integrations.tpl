@@ -6,6 +6,9 @@
   {{#each tabs}}<button type="button" role="tab" class="ch-tabbtn {{#if active}}active{{/if}}" data-action="tab" data-tab="{{key}}"><span class="{{icon}}"></span> {{label}}</button>{{/each}}
 </div>
 
+<div class="ch-pane" data-pane="correo" style="display:none">
+  <div data-role="mail"></div>
+</div>
 <div class="ch-pane" data-pane="canales">
 <div class="ch-grid">
   <div class="ch-span-2" data-role="lines"></div>
