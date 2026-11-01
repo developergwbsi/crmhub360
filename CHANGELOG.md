@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.13.0] - 2026-11-01
+
 ### Añadido
 - **Buscador de prospectos (`buscador_<empresa>`).** Un agente investiga en internet (búsqueda web de Claude) empresas que podrían necesitar lo que se vende y las deja como prospectos con su fuente pública. Los contactos hallados se tratan como **fríos**: nunca salen por WhatsApp/SMS ni por Resend, solo por un remitente de correo aparte y con aprobación de una persona. Se activa por empresa desde la licencia. Ver `docs/modulos/BUSCADOR.md`.
 
