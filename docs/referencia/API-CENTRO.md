@@ -2,7 +2,7 @@
 
 FastAPI detrás de Apache en `control.<dominio>`. Todo requiere sesión firmada del Centro y cabecera anti-CSRF, salvo el login y `/monitor/evolution` (webhook de la línea de pruebas, autenticado con su propio secreto). Las operaciones peligrosas se encolan (`control_jobs`) y las ejecuta `bin/control-worker`.
 
-Total: **59** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `control-service/app/main.py`.*
+Total: **60** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `control-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -51,6 +51,7 @@ Total: **59** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings
 | PUT | `/api/providers/{pid}` | `save_provider` | Crea (pid «new») o edita un proveedor; valida los campos según su tipo y conserva los secretos vacíos. Lo llama la interfaz web del Centro. |
 | POST | `/api/providers/{pid}/test` | `test_provider_mail` | Envía un correo de prueba por un proveedor de correo. Lo llama la interfaz web del Centro. |
 | POST | `/api/providers/{pid}/test-ai` | `test_provider_ai` | Prueba un motor de IA (Anthropic, OpenAI o Ollama) con una llamada mínima y devuelve los segundos que tardó. Lo llama la interfaz web del Centro. |
+| POST | `/api/providers/{pid}/test-gestor360` | `test_provider_gestor360` | Prueba la cuenta de DigitalAlliance Hub en Gestor360 iniciando sesión (no se muestra ni se guarda el token). Lo llama la interfaz web del Centro. |
 | GET | `/api/releases` | `releases` | Últimas 30 versiones base con cuántas empresas cliente usan cada una. Lo llama la interfaz web del Centro. |
 | POST | `/api/releases` | `publish_release` | Encola el trabajo «release» que publica la versión base actual. Lo llama la interfaz web del Centro. |
 | POST | `/api/reset` | `reset_password_with_token` | Consume el token de recuperación (un solo uso) y fija la nueva contraseña. Lo llama la pantalla de ingreso. |

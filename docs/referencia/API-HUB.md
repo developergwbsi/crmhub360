@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **203** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **208** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -43,6 +43,8 @@ Total: **203** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/broadcasts` | `bc_create` | Crea una campaña masiva (con inicio programado de hasta 14 días); la procesa el worker de broadcast. |
 | GET | `/v1/broadcasts/{bid}` | `bc_detail` | Detalle de una campaña, con sus fechas como texto; 404 si no existe. |
 | POST | `/v1/broadcasts/{bid}/{action}` | `bc_action` | Pausa, reanuda o cancela una campaña; 409 si su estado no lo permite. |
+| GET | `/v1/chatbot` | `chatbot_state` | Estado del servicio de chatbot (Gestor360): contratado, solicitado, motor listo y configurado. |
+| POST | `/v1/chatbot/request` | `chatbot_request` | La empresa solicita el servicio de chatbot (adicional, con cobro). |
 | DELETE | `/v1/compliance/dnc` | `dnc_remove` | — |
 | GET | `/v1/compliance/dnc` | `dnc_list` | — |
 | POST | `/v1/compliance/dnc` | `dnc_add` | — |
@@ -95,6 +97,7 @@ Total: **203** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/lines/default` | `lines_default` | Marca una línea como predeterminada de su canal. |
 | POST | `/v1/lines/delete` | `lines_delete` | Elimina una línea. |
 | POST | `/v1/lines/enabled` | `lines_enabled` | Enciende o apaga una línea. |
+| POST | `/v1/lines/responder` | `lines_responder` | Cambia quién responde cuando un cliente escribe por esa línea: human / preset / virtual / chatbot (este último, solo con el servicio contratado). |
 | POST | `/v1/lines/send-test` | `lines_send_test` | Envía un mensaje de prueba por una línea. |
 | POST | `/v1/lines/test` | `lines_test` | Prueba la conexión de una línea. |
 | GET | `/v1/mail-config` | `mail_config_get` | Correo de la empresa (principal y en frío): si lo provee el sistema o es propio, y los datos no secretos de cada uno. |
@@ -112,6 +115,8 @@ Total: **203** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/meet/status` | `meet_status` | Servicio de videollamadas habilitado a la empresa: off / video / video_subs. |
 | GET | `/v1/meet/waiting` | `meet_waiting` | Salas con clientes esperando (de toda la empresa); el CRM filtra las del usuario. |
 | POST | `/v1/pipeline/run` | `pipeline_run` | Una pasada completa ahora mismo: busca, califica y pasa los mejores al comercial virtual. |
+| GET | `/v1/presets` | `presets_get` | Mensajes predefinidos de WhatsApp (saludo, fuera de horario, menú y palabras clave). |
+| PUT | `/v1/presets` | `presets_save` | — |
 | GET | `/v1/process/runs` | `proc_runs` | Historial de ejecuciones de procesos (de un lead o del tenant). |
 | POST | `/v1/process/trigger` | `proc_trigger` | Lo llama el CRM al guardar un lead: ejecuta los procesos (manual en el acto; si no, tras 1,5 s en segundo plano) y, si el lead es nuevo, da de alta al comercial virtual. |
 | GET | `/v1/processes` | `proc_list` | Procesos configurados, campos disponibles, máximo y catálogo. |

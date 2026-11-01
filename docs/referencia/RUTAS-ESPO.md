@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **176** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **181** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -41,6 +41,8 @@ Total: **176** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/broadcasts/:id/:act` | CrmHub.broadcastAction | POST /CrmHub/broadcasts/:id/:act. Usuario con permiso de masivos. Hub: POST /v1/broadcasts/{id}/{act}. */ |
 | POST | `/CrmHub/call` | CrmHub.logCall | Registra una llamada saliente hecha desde el lead (queda en Llamadas y en el historial). */ |
 | GET | `/CrmHub/channels` | CrmHub.channels | Qué canales están listos (el botón de llamar decide entre click-to-call y el marcador del equipo). */ |
+| GET | `/CrmHub/chatbot` | CrmHub.chatbot | GET /CrmHub/chatbot. Admin. Estado del servicio de chatbot (Gestor360): contratado, solicitado, motor listo. Hub: GET /v1/chatbot. */ |
+| POST | `/CrmHub/chatbotRequest` | CrmHub.chatbotRequest | POST /CrmHub/chatbotRequest. Admin. {note}. La empresa solicita el chatbot (servicio adicional con cobro). Hub: POST /v1/chatbot/request. */ |
 | GET | `/CrmHub/conversations` | CrmHub.conversations | GET /CrmHub/conversations?scope=mine/all&channel=whatsapp/sms/telegram. Cualquier usuario: la bandeja de Mensajes. Conversaciones (por lead) de WhatsApp, SMS y Telegram de los leads que el usuario puede ver (control de acceso de Espo): con «mine» solo las de sus leads o en las que escribió él; con «all» todas las visibles. Cada una trae el último mensaje y lo último de cada canal. |
 | GET | `/CrmHub/dnc` | CrmHub.dnc | GET /CrmHub/dnc. Lista de no contactar. Hub: GET /v1/compliance/dnc. */ |
 | POST | `/CrmHub/dncAdd` | CrmHub.dncAdd | POST /CrmHub/dncAdd. {email?, phone?, reason?}. Hub: POST /v1/compliance/dnc. */ |
@@ -89,6 +91,7 @@ Total: **176** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/lineDefault` | CrmHub.lineDefault | POST /CrmHub/lineDefault. Admin. Hub: POST /v1/lines/default. */ |
 | POST | `/CrmHub/lineDelete` | CrmHub.lineDelete | POST /CrmHub/lineDelete. Admin. Hub: POST /v1/lines/delete. */ |
 | POST | `/CrmHub/lineEnable` | CrmHub.lineEnable | POST /CrmHub/lineEnable. Admin. Hub: POST /v1/lines/enabled. */ |
+| POST | `/CrmHub/lineResponder` | CrmHub.lineResponder | POST /CrmHub/lineResponder. Admin. {id, responder}. Quién responde en esa línea. Hub: POST /v1/lines/responder. */ |
 | POST | `/CrmHub/lineSave` | CrmHub.lineSave | POST /CrmHub/lineSave. Admin. Hub: POST /v1/lines. */ |
 | POST | `/CrmHub/lineSendTest` | CrmHub.lineSendTest | POST /CrmHub/lineSendTest. Admin. Hub: POST /v1/lines/send-test. */ |
 | POST | `/CrmHub/lineTest` | CrmHub.lineTest | POST /CrmHub/lineTest. Admin. Hub: POST /v1/lines/test. */ |
@@ -117,6 +120,8 @@ Total: **176** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/pipeline` | CrmHub.pipeline | Lo lee cualquier usuario autenticado (incluido el usuario API del Hub). */ |
 | PUT | `/CrmHub/pipeline` | CrmHub.pipeline | PUT /CrmHub/pipeline. Admin. Guarda los estados del pipeline. */ |
 | POST | `/CrmHub/pipelineRun` | CrmHub.pipelineRun | POST /CrmHub/pipelineRun. Admin. Ciclo completo: buscador → calificador → comercial virtual. Hub: POST /v1/pipeline/run. */ |
+| GET | `/CrmHub/presets` | CrmHub.presets | GET /CrmHub/presets. Admin. Mensajes predefinidos de WhatsApp. Hub: GET /v1/presets. */ |
+| POST | `/CrmHub/presetsSave` | CrmHub.presetsSave | POST /CrmHub/presetsSave. Admin. Guarda los mensajes predefinidos. Hub: PUT /v1/presets. */ |
 | POST | `/CrmHub/processRun` | CrmHub.processRun | Ejecuta de nuevo los procesos de un lead (quien puede editar el lead). */ |
 | GET | `/CrmHub/processRuns` | CrmHub.processRuns | GET /CrmHub/processRuns. Lectura del lead (o admin sin lead). Hub: GET /v1/process/runs. */ |
 | POST | `/CrmHub/processTest` | CrmHub.processTest | POST /CrmHub/processTest. Admin. Hub: POST /v1/processes/test. */ |

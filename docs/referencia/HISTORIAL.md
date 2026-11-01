@@ -2,8 +2,18 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.18.0)
+## Sin publicar (después de v1.18.1)
 
+- `5ff3c61` 2026-11-01 — Versión 1.19.0
+- `0b5ff72` 2026-11-01 — Base del chatbot de Gestor360: quién responde por línea, mensajes predefinidos, proveedor y servicio en el Centro de control, y solicitud del chatbot
+- `842c1d9` 2026-11-01 — Chatbot Gestor360: hallazgo sobre cómo salen las respuestas del bot y caminos de integración
+- `481cb5e` 2026-11-01 — Documento de diseño: chatbots de WhatsApp con Gestor360
+- `0ee44d8` 2026-11-01 — El tope diario de correos en frío cuenta por el remitente del correo en frío
+- `2bb1c58` 2026-11-01 — Correo en frío: el recorte de último recurso ya no corta las direcciones web
+
+## v1.18.1
+
+- `a7c1096` 2026-11-01 — Versión 1.18.1
 - `a38f832` 2026-11-01 — Versión 1.18.1
 - `8dc2139` 2026-11-01 — Los correos del comercial virtual salen en «Enviados» del CRM: el remitente se registra como dirección del usuario
 
