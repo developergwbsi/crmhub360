@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Publica una versión: encabezado en el CHANGELOG, commit, etiqueta, push y reconstrucción de los contenedores del Hub y del Centro de control.
+# Uso: bin/desplegar-version X.Y.Z   (haz antes el respaldo con bin/backup)
+set -euo pipefail
+V="${1:?Uso: bin/desplegar-version X.Y.Z}"
+cd "$(dirname "$0")/.."
+grep -q "^## \[$V\]" CHANGELOG.md || python3 - "$V" <<'PY'
+import sys, datetime
+v = sys.argv[1]
+s = open("CHANGELOG.md", encoding="utf-8").read()
+m = "## [Sin publicar]"
+assert m in s, "no se encontró la sección «Sin publicar»"
+open("CHANGELOG.md", "w", encoding="utf-8").write(s.replace(m, f"{m}\n\n## [{v}] - {datetime.date.today().isoformat()}", 1))
+PY
+git add -A
+git commit -qm "Versión $V" || true
+./bin/tag-release "$V"
+git push -q
+git push -q --tags
+docker compose up -d --build hub-service control
+echo "✓ Versión $V desplegada en los contenedores. Avísale a Claude para publicar el release y actualizar las empresas."
