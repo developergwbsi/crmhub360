@@ -1616,3 +1616,20 @@ body:has(.list-kanban) #content, body:has(.ch-studio) #content { padding-bottom:
 .ch-pa-flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 0 0 14px; } .ch-pa-flow span { flex: 1 1 160px; background: var(--ch-surface); border: 1px solid var(--ch-line); border-radius: 12px; padding: 10px 14px; font-size: 12.5px; color: var(--ch-muted); } .ch-pa-flow span b { display: block; color: inherit; font-size: 14px; } .ch-pa-flow i { align-self: center; color: var(--ch-muted); }
 .ch-pa-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } @media (max-width: 1100px) { .ch-pa-grid { grid-template-columns: 1fr; } }
 .ch-pa .ch-pr-card h5, .ch-pl .ch-pr-card h5 { margin-top: 0; font-size: 16px; }
+
+/* Prospección: lo de arriba (título, pestañas, tarjetas, botones, buscador y filtros) queda fijo; solo se desplaza la lista, con los encabezados de columna fijos */
+.ch-pr { display: flex; flex-direction: column; height: calc(100vh - 76px); min-height: 440px; padding-bottom: 0; }
+.ch-pr > .ch-rc-top, .ch-pr > .ch-pr-tabs { flex: none; }
+.ch-pr-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 20px; }
+.ch-pr-body.is-list { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr); column-gap: 12px; overflow: hidden; padding-bottom: 0; align-items: start; }
+.ch-pr-body.is-list > .ch-pr-bar, .ch-pr-body.is-list > .ch-pr-filters, .ch-pr-body.is-list > .ch-pr-tbl, .ch-pr-body.is-list > .ch-empty { grid-column: 1 / -1; }
+.ch-pr-body.is-list > .ch-pr-fun { grid-column: 1; margin-bottom: 8px; } .ch-pr-body.is-list > .ch-pr-stats { grid-column: 2; margin-bottom: 8px; align-self: end; }
+.ch-pr-body.is-list .ch-pr-fun h5 { margin: 0 0 4px; font-size: 12.5px; color: var(--ch-muted); }
+.ch-pr-body.is-list .ch-pr-stats { gap: 8px; margin-bottom: 8px; } .ch-pr-body.is-list .ch-pr-fun .ch-pr-stats { margin-bottom: 0; }
+.ch-pr-body.is-list .ch-pr-stats > div { padding: 6px 12px; border-radius: 10px; } .ch-pr-body.is-list .ch-pr-stats b { font-size: 18px; line-height: 1.15; } .ch-pr-body.is-list .ch-pr-stats span { font-size: 11px; line-height: 1.2; }
+.ch-pr-body.is-list > .ch-pr-bar { margin-bottom: 8px; } .ch-pr-body.is-list > .ch-pr-filters { margin-bottom: 8px; }
+.ch-pr-body.is-list > .ch-pr-tbl { align-self: stretch; min-height: 0; overflow: auto; }
+.ch-pr-body.is-list > .ch-pr-tbl thead th { position: sticky; top: 0; z-index: 3; background: var(--ch-surface); box-shadow: 0 1px 0 var(--ch-line); }
+@media (max-width: 1100px) { .ch-pr-body.is-list { grid-template-columns: minmax(0, 1fr); } .ch-pr-body.is-list > .ch-pr-fun, .ch-pr-body.is-list > .ch-pr-stats { grid-column: 1; } }
+@media (max-width: 800px) { .ch-pr { height: auto; } .ch-pr-body, .ch-pr-body.is-list { overflow: visible; display: block; } .ch-pr-body.is-list > .ch-pr-tbl { overflow: auto; max-height: 70vh; } }
+@media (max-height: 800px) { .ch-pr > .ch-rc-top p { display: none; } .ch-pr { height: calc(100vh - 64px); } }

@@ -69,6 +69,7 @@ define('custom:views/prospects', ['view', 'custom:ui'], function (Dep, ChUi) {
         // ---------- prospectos
         drawList(body) {
             const d = this.d, c = d.counts || {}, icp = d.icp || {};
+            body.classList.add('is-list');   // título, pestañas, tarjetas, botones y filtros quedan fijos; solo la lista se desplaza (con sus encabezados fijos)
             const rows = (d.items || []).map(i => { const [l, k] = ST[i.status] || [i.status, '']; const en = i.enrichment || {};
                 return `<tr><td><input type="checkbox" data-sel="${i.id}" ${this.sel.has(i.id) ? 'checked' : ''} ${i.status === 'imported' ? 'disabled' : ''}></td><td><b>${esc(i.name)}</b>${i.origin === 'finder' ? ' <span class="ch-pr-tag" title="Hallado por el buscador en internet: contacto frío">Buscador</span>' : ''}<small>${esc([i.title, i.company].filter(Boolean).join(' · '))}</small>${i.origin === 'finder' && (i.raw || {}).fuente_url ? `<small>Fuente: <a href="${esc(String((i.raw || {}).fuente_url).split(' ')[0])}" target="_blank" rel="noopener noreferrer">ver página</a></small>` : ''}</td>` +
                     `<td>${esc(i.email)}<small>${esc(i.phone)}</small></td><td>${esc(i.industry || '—')}<small>${esc(i.country)} · ${esc((i.segment || '').toUpperCase())}</small></td><td>${i.score == null ? '—' : `<span class="ch-pr-sc" title="${esc(en.reason || '')}">${i.score}</span>`}${en.pain ? `<small>${esc(en.pain)}</small>` : ''}</td>` +
