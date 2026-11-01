@@ -2482,6 +2482,13 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/search-config/test', [], 90);
     }
 
+    /** POST /CrmHub/pipelineRun. Admin. Ciclo completo: buscador → calificador → comercial virtual. Hub: POST /v1/pipeline/run. */
+    public function postActionPipelineRun(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('POST', '/v1/pipeline/run', [], 600);
+    }
+
     /** GET /CrmHub/finder. Estado del buscador de prospectos (licencia, configuración, última pasada). Hub: GET /v1/finder. */
     public function getActionFinder(Request $request): \stdClass
     {

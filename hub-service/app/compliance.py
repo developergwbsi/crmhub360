@@ -225,3 +225,21 @@ def mail_quota_take(tenant: str, sender: str, limit: int) -> bool:
         row = c.execute("INSERT INTO mail_quota (tenant, day, sender, n) VALUES (%s, current_date, %s, 1) ON CONFLICT (tenant, day, sender) DO UPDATE SET n = mail_quota.n + 1 "
                         "WHERE mail_quota.n < %s RETURNING n", (tenant, sender.lower(), limit)).fetchone()
     return bool(row)
+
+
+def cold_unhealthy(tenant: str) -> str:
+    """Frenos del correo en frío: devuelve el motivo si hay que parar (rebotes o bajas altos en los últimos 14 días), o '' si todo va bien."""
+    try:
+        with db.pool.connection() as c:
+            sends = c.execute("SELECT count(*) n FROM agent_events WHERE tenant=%s AND kind='send' AND channel='email' AND NOT dry AND at > now() - interval '14 days'", (tenant,)).fetchone()["n"]
+            bounces = c.execute("SELECT count(*) n FROM dnc WHERE tenant=%s AND reason ILIKE 'rebote%%' AND at > now() - interval '14 days'", (tenant,)).fetchone()["n"]
+            optouts = c.execute("SELECT count(*) n FROM dnc WHERE tenant=%s AND kind='email' AND reason NOT ILIKE 'rebote%%' AND source NOT IN ('csv','import','manual') AND at > now() - interval '14 days'", (tenant,)).fetchone()["n"]
+    except Exception:
+        return ""
+    if bounces >= 3 and sends and bounces / sends >= 0.15:
+        return f"{bounces} rebotes en {sends} envíos (más del 15 %)"
+    if sends >= 10 and bounces / sends >= 0.08:
+        return f"{bounces} rebotes en {sends} envíos (más del 8 %)"
+    if sends >= 10 and optouts / sends >= 0.05:
+        return f"{optouts} bajas en {sends} envíos (más del 5 %)"
+    return ""

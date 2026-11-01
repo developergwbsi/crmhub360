@@ -132,6 +132,19 @@ async def _route(tenant: dict, espo: Espo, m: dict, account: str) -> tuple[str |
     return None, ptype, pid
 
 
+BOUNCE_FROM = re.compile(r"(mailer-daemon|postmaster|mail delivery subsystem)", re.I)
+BOUNCE_SUBJ = re.compile(r"(delivery status notification|undeliver|no se pudo entregar|devuelto|returned mail|failure notice|delivery failure|mail delivery failed)", re.I)
+
+
+def bounced_addresses(m: dict, own: str) -> list[str]:
+    """Si el mensaje es un rebote (el correo no llegó), devuelve las direcciones que fallaron; si no lo es, []."""
+    if not (BOUNCE_FROM.search(m.get("from") or "") or BOUNCE_FROM.search(m.get("fromName") or "")) or not BOUNCE_SUBJ.search(m.get("subject") or ""):
+        return []
+    text = (m.get("text") or "") + " " + re.sub(r"<[^>]+>", " ", m.get("html") or "")
+    skip = {own.lower(), (m.get("from") or "").lower()}
+    return list(dict.fromkeys(a.lower() for a in re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", text) if a.lower() not in skip and not BOUNCE_FROM.search(a)))[:3]
+
+
 async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str, import_all: bool = False) -> bool:
     """Guarda un correo entrante en EspoCRM (Email archivado) asignado a su dueño y ligado al lead o contacto si se reconoce; avisa por push y al comercial virtual. False si ya estaba importado o no es de nadie (salvo import_all)."""
     if m["messageId"]:   # no repetir un correo ya importado (p. ej. si se reinicia el avance del buzón)
@@ -141,6 +154,12 @@ async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str, im
                 return False
         except Exception:
             pass
+    bad = bounced_addresses(m, own_address)
+    if bad:   # rebote: la dirección no existe o rechazó el correo; no se vuelve a escribir y cuenta para el freno automático
+        from . import compliance
+        for a in bad:
+            compliance.add_dnc(tenant["slug"], email=a, reason="rebote: el correo no se pudo entregar", source="auto")
+        return False
     owner, ptype, pid = await _route(tenant, espo, m, own_address)
     if not owner:
         if not import_all:

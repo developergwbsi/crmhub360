@@ -14,6 +14,7 @@ import json
 import logging
 from datetime import datetime
 import os
+import re
 import secrets
 from contextlib import asynccontextmanager
 
@@ -24,7 +25,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, compliance, finder, growth, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, compliance, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -45,6 +46,7 @@ async def lifespan(_: FastAPI):
     recordings.ensure_schema()
     compliance.ensure_schema()
     prospects.ensure_schema()
+    proposals.ensure_schema()
     growth.ensure_schema()
     agent.ensure_schema()
     monitor.ensure_schema()
@@ -57,7 +59,9 @@ async def lifespan(_: FastAPI):
     ag = asyncio.create_task(agent.worker())
     ms = asyncio.create_task(meet_summary.loop())
     gr = asyncio.create_task(growth.loop())
+    pl = asyncio.create_task(pipeline.worker())
     yield
+    pl.cancel()
     ms.cancel()
     gr.cancel()
     bg.cancel()
@@ -2454,6 +2458,54 @@ async def search_config_test(tenant: dict = Depends(tenant_auth)):
         raise HTTPException(502, f"No se pudo usar el buscador: {str(e)[:200]}")
 
 
+@app.post("/v1/pipeline/run")
+async def pipeline_run(tenant: dict = Depends(tenant_auth)):
+    """Una pasada completa ahora mismo: busca, califica y pasa los mejores al comercial virtual."""
+    if agent.engine_paused(tenant):
+        raise HTTPException(409, "El motor comercial está pausado por el interruptor de emergencia.")
+    try:
+        return await pipeline.run_once(tenant)
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo completar: {str(e)[:200]}")
+
+
+@app.get("/v1/proposals")
+def proposals_list(tenant: dict = Depends(tenant_auth)):
+    """Material (presentaciones, propuestas) que los agentes pueden enviar."""
+    with db.pool.connection() as c:
+        rows = c.execute("SELECT slug, title, product, kind, summary, active, views, updated_at FROM proposals WHERE tenant=%s ORDER BY slug", (tenant["slug"],)).fetchall()
+    return {"items": [{**dict(r), "updated_at": r["updated_at"].isoformat(), "url": proposals.url(tenant["slug"], r["slug"])} for r in rows]}
+
+
+@app.post("/v1/proposals/seed")
+def proposals_seed(tenant: dict = Depends(tenant_auth)):
+    """Crea (o actualiza) las presentaciones estándar de los productos de la empresa."""
+    wa = re.sub(r"\D", "", str((tenant.get("settings") or {}).get("gupshup_source") or ""))
+    return {"created": proposals.seed_defaults(tenant["slug"], tenant.get("name") or "", wa)}
+
+
+@app.put("/v1/proposals/{slug}/active")
+def proposals_active(slug: str, body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    with db.pool.connection() as c:
+        n = c.execute("UPDATE proposals SET active=%s WHERE tenant=%s AND slug=%s", (bool(body.get("active")), tenant["slug"], slug)).rowcount
+    if not n:
+        raise HTTPException(404, "No existe")
+    return {"ok": True}
+
+
+@app.get("/v1/public/meet/p/{tenant}/{slug}", response_class=HTMLResponse)
+def proposal_page(tenant: str, slug: str):
+    """Página pública de una presentación (https://meet.<dominio>/p/<empresa>/<producto>): HTML autocontenido, sin scripts."""
+    if not re.fullmatch(r"[a-z0-9-]{1,40}", tenant) or not re.fullmatch(r"[a-z0-9-]{1,60}", slug):
+        raise HTTPException(404, "No existe")
+    h = proposals.get_page(tenant, slug)
+    if not h:
+        raise HTTPException(404, "No existe")
+    return HTMLResponse(h, 200, {**_MEET_HEADERS, "Cache-Control": "public, max-age=300", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"})
+
+
 @app.get("/v1/finder")
 def finder_get(tenant: dict = Depends(tenant_auth)):
     """Estado del buscador de prospectos: licencia, configuración y última pasada."""
@@ -2465,7 +2517,9 @@ def finder_save(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
     """Activa o ajusta el buscador (tope diario y enfoque). Requiere que la licencia lo incluya."""
     if not finder.licensed(tenant):
         raise HTTPException(403, "El buscador no está incluido en la licencia de esta empresa.")
-    finder._save(tenant["slug"], {"enabled": bool(body.get("enabled")), "daily_limit": max(1, min(100, int(body.get("daily_limit") or 20))), "focus": str(body.get("focus") or "")[:600]})
+    finder._save(tenant["slug"], {"enabled": bool(body.get("enabled")), "daily_limit": max(1, min(100, int(body.get("daily_limit") or 20))), "focus": str(body.get("focus") or "")[:600],
+                                  "auto": bool(body.get("auto")), "hour": max(0, min(23, int(body.get("hour") if body.get("hour") is not None else 9))),
+                                  "autonomy": "auto" if body.get("autonomy") == "auto" else "approval"})
     return finder.config(db.get_tenant(tenant["slug"]))
 
 

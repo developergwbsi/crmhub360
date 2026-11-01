@@ -39,7 +39,8 @@ def typo_suspect(email: str, website: str, source: str) -> bool:
 
 def config(tenant: dict) -> dict:
     f = ((tenant.get("settings") or {}).get("finder") or {})
-    return {"enabled": bool(f.get("enabled")), "daily_limit": max(1, min(100, int(f.get("daily_limit") or 20))), "focus": str(f.get("focus") or "")[:600], "last_run": f.get("last_run")}
+    return {"enabled": bool(f.get("enabled")), "daily_limit": max(1, min(100, int(f.get("daily_limit") or 20))), "focus": str(f.get("focus") or "")[:600], "last_run": f.get("last_run"),
+            "auto": bool(f.get("auto")), "hour": int(f.get("hour") if f.get("hour") is not None else 9), "autonomy": "auto" if f.get("autonomy") == "auto" else "approval", "pipeline_last": f.get("pipeline_last")}
 
 
 def licensed(tenant: dict) -> bool:

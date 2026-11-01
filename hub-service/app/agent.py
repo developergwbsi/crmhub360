@@ -6,7 +6,7 @@ from psycopg.types.json import Jsonb
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from . import compliance, db, llm, mailout, prospects, push, routing, sms, whatsapp
+from . import compliance, db, llm, mailout, proposals, prospects, push, routing, sms, whatsapp
 from .espo import Espo
 
 log = logging.getLogger("hub.agent")
@@ -34,7 +34,7 @@ DEFAULTS = {
     "company": {"about": "", "services": "", "policies": "", "tone": "Cercano, claro y respetuoso. Trátalo de tú.", "language": "español", "forbidden": "",
                 "escalate_when": "El cliente pide hablar con una persona, quiere negociar precio o condiciones, se queja o está molesto, o la consulta es legal o sensible."},
     "goals": "Conseguir que el cliente cuente su situación, confirmar su interés y agendar una llamada con un asesor.",
-    "schedule": {"tz": "America/Bogota", "days": [1, 2, 3, 4, 5, 6], "start": "08:00", "end": "19:00", "reply_outside_hours": True},
+    "schedule": {"tz": "America/Bogota", "days": [1, 2, 3, 4, 5, 6], "start": "08:00", "end": "19:00", "reply_outside_hours": True, "email_any_time": False},
     "cadence": {"first_contact_minutes": 2, "follow_ups": [240, 1440, 4320, 10080], "max_per_day": 3, "human_hold_minutes": 120},
     "channels": {"whatsapp": True, "email": True, "sms": False}, "handoff_user_id": "", "faq": [],
     "menus": [], "menus_native_evolution": False,
@@ -183,7 +183,7 @@ def clean_config(new: dict) -> dict:
         ZoneInfo(str(s.get("tz")))
     except Exception:
         raise ValueError("Zona horaria no válida.")
-    out["schedule"] = {"tz": str(s["tz"]), "days": sorted({int(d) for d in s.get("days", []) if 1 <= int(d) <= 7}) or [1, 2, 3, 4, 5], "start": s["start"], "end": s["end"], "reply_outside_hours": bool(s.get("reply_outside_hours"))}
+    out["schedule"] = {"tz": str(s["tz"]), "days": sorted({int(d) for d in s.get("days", []) if 1 <= int(d) <= 7}) or [1, 2, 3, 4, 5], "start": s["start"], "end": s["end"], "reply_outside_hours": bool(s.get("reply_outside_hours")), "email_any_time": bool(s.get("email_any_time"))}
     if out["schedule"]["start"] >= out["schedule"]["end"]:
         raise ValueError("La hora de inicio debe ser anterior a la de fin.")
     cd = c["cadence"]
@@ -846,6 +846,11 @@ async def decide(tenant: dict, cfg: dict, lead: dict, hist: list[dict], kind: st
     if variant and kind in ("first", "followup"):
         user += (f"\n\nPROSPECCIÓN EN FRÍO (la persona NO nos ha escrito antes): {OUTBOUND_RULES.get(channel, '')}\nGANCHO DE ESTE MENSAJE (úsalo como enfoque, con tus palabras, sin copiarlo): {variant['angle']}\n"
                  "Sé específico con su sector o situación si lo conoces, no inventes datos, no prometas resultados y no presiones.")
+    if kind in ("first", "followup", "reply") and channel == "email":
+        try:
+            user += proposals.catalog_text(tenant["slug"])
+        except Exception:
+            pass
     if (cfg.get("closer") or {}).get("enabled") and kind in ("reply", "followup"):
         user += await demo_prompt(tenant, cfg, lead)
     if fix:
@@ -968,6 +973,23 @@ async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: s
     _last_send[tenant["slug"]] = time.time()
 
 
+_brake_notified: dict = {}
+
+
+async def _notify_brake(tenant: dict, cfg: dict, why: str) -> None:
+    """Avisa (una vez al día) a la persona de traspaso de que el correo en frío se frenó solo."""
+    slug, day = tenant["slug"], datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if _brake_notified.get(slug) == day:
+        return
+    _brake_notified[slug] = day
+    to = cfg.get("handoff_user_id") or ((cfg.get("closer") or {}).get("host_user_id"))
+    if to:
+        try:
+            await push.send(slug, title="Correo en frío frenado automáticamente", body=why[:140], url="/#CrmHub/prospeccion", tag=f"crmhub-brake-{slug}", kind="agent", user_id=to)
+        except Exception:
+            pass
+
+
 async def _escalate(tenant: dict, cfg: dict, lead: dict, reason: str, *, dry: bool, quote: str = "") -> None:
     """Pasa el lead a una persona: detiene al agente, asigna y deja nota en Espo, avisa por push y registra el evento (en prueba solo registra)."""
     slug, lead_id = tenant["slug"], lead["id"]
@@ -1018,13 +1040,15 @@ async def step(tenant: dict, row: dict) -> None:
         return
     kind = row["next_kind"]
     proactive = kind in ("first", "followup")
-    if (proactive or not cfg["schedule"]["reply_outside_hours"]) and not in_window(cfg, now):
+    # decisión de la empresa: los correos (no WhatsApp ni SMS) se pueden enviar a cualquier hora; solo aplica si el único canal del lead es el correo
+    email_any = bool(cfg["schedule"].get("email_any_time")) and proactive and available_channels(tenant, cfg, lead) == ["email"]
+    if (proactive or not cfg["schedule"]["reply_outside_hours"]) and not in_window(cfg, now) and not email_any:
         nw = next_window(cfg, now)
         _set(slug, lead_id, next_at=nw)
         log_event(slug, lead_id, "wait", lead_name=lname, title="Fuera de horario: lo retomo cuando abra la ventana de atención", detail=nw.astimezone(_tz(cfg)).strftime("%d/%m %H:%M"), dry=dry)
         return
     ob = outbound_on(cfg)
-    if proactive and ob:   # prospección en frío: además del horario del comercial, el horario legal del país de la persona
+    if proactive and ob and not email_any:   # prospección en frío: además del horario del comercial, el horario legal del país de la persona
         ok, legal_next = compliance.legal_ok(lead_country(cfg, lead), now, cfg["schedule"]["tz"])
         if not ok:
             _set(slug, lead_id, next_at=legal_next)
@@ -1141,7 +1165,8 @@ async def step(tenant: dict, row: dict) -> None:
             first_response = int((now - datetime.strptime(lead["createdAt"][:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)).total_seconds())
         except Exception:
             pass
-    if (cfg["approval"] or (kind in ("first", "followup") and prospects.is_cold(slug, lead_id))) and not dry:   # una persona aprueba cada mensaje antes de que salga (siempre, si el contacto lo halló el buscador)
+    cold_auto = ((tenant.get("settings") or {}).get("finder") or {}).get("autonomy") == "auto"   # decisión de la empresa: el correo en frío sale solo (con tope diario y frenos)
+    if (cfg["approval"] or (kind in ("first", "followup") and not cold_auto and prospects.is_cold(slug, lead_id))) and not dry:   # una persona aprueba cada mensaje antes de que salga (siempre, si el contacto lo halló el buscador)
         ev = log_event(slug, lead_id, "proposal", lead_name=lname, channel=channel, title={"first": "Primer contacto propuesto", "followup": "Seguimiento propuesto", "reply": "Respuesta propuesta"}[kind] + (f" (con opciones: {menu['name']})" if menu else "") + " · pendiente de aprobación", detail=message, reason=reason,
                        data={"kind": kind, "menu": menu["id"] if menu else "", "subject": d.get("subject") or "", "new_status": ns, "summary": summary, "attempts": row["attempts"], "first_response": first_response,
                              **({"variant": variant["id"], "step": step_idx} if variant else {})})
@@ -1154,6 +1179,13 @@ async def step(tenant: dict, row: dict) -> None:
                 pass
         return
     sent = False
+    if not dry and channel == "email" and proactive and ob:
+        bad = compliance.cold_unhealthy(slug)
+        if bad:
+            _set(slug, lead_id, next_at=now + timedelta(hours=6))
+            log_event(slug, lead_id, "wait", lead_name=lname, title=f"Frenado automáticamente: {bad}. Reviso en 6 horas.", dry=dry)
+            await _notify_brake(tenant, cfg, bad)
+            return
     if not dry and channel == "email" and proactive and ob and not _quota_ok(tenant, cfg):
         _set(slug, lead_id, next_at=now + timedelta(hours=6))
         log_event(slug, lead_id, "wait", lead_name=lname, title="Llegué al tope diario de correos en frío de este remitente: sigo mañana", dry=dry); return

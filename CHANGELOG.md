@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **Cadena comercial autónoma.** Nuevo agente **Calificador** (califica A/B/C/D con buenas prácticas, elige producto y ángulo, y pasa a Valeria solo lo bueno), **ciclo diario automático** (buscador → calificador → Valeria) con hora configurable, y **autonomía del correo en frío** (sale solo, con tope diario y **frenos automáticos por rebotes y bajas**; los rebotes se detectan en el buzón y pasan a «No contactar»). Opción «Enviar correos a cualquier hora».
+- **Propuestas y presentaciones** públicas con ilustraciones para Crm Hub 360, Gestor360 y Core360 (sin precios ni promesas); el comercial virtual las envía solo, siempre con Crm Hub 360 en el primer correo.
+- Pestaña *Prospección → Buscador*: ciclo diario, hora, autonomía del frío y «Ciclo completo ahora».
+
 ## [1.14.0] - 2026-11-01
 
 ### Añadido

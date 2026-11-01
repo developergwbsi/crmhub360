@@ -1324,5 +1324,13 @@
             "controller": "CrmHub",
             "action": "searchConfigTest"
         }
+    },
+    {
+        "route": "/CrmHub/pipelineRun",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "pipelineRun"
+        }
     }
 ]
