@@ -974,7 +974,7 @@ KINDS = {
     "generic_whatsapp": {"label": "Otro proveedor de WhatsApp (API HTTP)", "channels": ["whatsapp"], "secrets": ["auth_secret"]},
     "generic_sms": {"label": "Proveedor de SMS (API HTTP)", "channels": ["sms"], "secrets": ["auth_secret"]},
     "generic_voice": {"label": "Central / proveedor de llamadas (API HTTP)", "channels": ["voice"], "secrets": ["auth_secret"]},
-    "email": {"label": "Proveedor de correo (SMTP: Gmail, Outlook, SendGrid, Resend…)", "channels": ["email"], "secrets": ["password", "reply_password"]},
+    "email": {"label": "Proveedor de correo (SMTP: Gmail, Outlook, SendGrid, Resend…)", "channels": ["email"], "secrets": ["password", "reply_password", "inbound_secret"]},
     "ai": {"label": "Motor de IA (Anthropic, OpenAI y compatibles, Ollama)", "channels": ["ai"], "secrets": ["api_key"]},
 }
 
@@ -1065,6 +1065,10 @@ def _clean_fields(kind: str, fields: dict, old: dict) -> dict:
         else:
             out["reply_user"] = out["reply_host"] = ""
             out["reply_password"] = ""
+        if out.get("inbound_secret") and not ru:   # respuestas por correo entrante de Resend: el secreto del webhook va aparte y no hay buzón IMAP
+            out["inbound_secret"] = str(out["inbound_secret"]).strip()
+        elif ru:
+            out["inbound_secret"] = ""
         if "gmail" in out["host"] or "google" in out["host"]:
             out["password"] = str(out.get("password", "")).replace(" ", "")
     return out
@@ -1299,8 +1303,11 @@ def set_company_mailbox(slug: str, mail: Optional[dict]) -> bool:
         # envío «como el usuario»: el Hub manda con SMTP propio (nombre, firma y Reply-To del usuario) y las respuestas vuelven por un alias personal
         if mail and mail.get("host") and mail.get("from_address"):
             plus = any(k in (mail["reply_host"] if reply else mail["host"]) + (mail["reply_user"] if reply else "") for k in ("gmail", "google", "zoho"))
+            inbound = bool(mail.get("inbound_secret") and not reply)   # Resend recibe las respuestas en el dominio y avisa por webhook: cualquier «ventas+id@» llega
+            plus = plus or inbound
             settings["mailout"] = {"host": mail["host"], "port": int(mail.get("port") or 587), "security": mail.get("security") or "", "user": mail.get("user") or "",
-                                   "password": mail.get("password") or "", "from_address": mail["from_address"], "plus": plus, **({"reply_address": mail["reply_user"]} if reply else {})}
+                                   "password": mail.get("password") or "", "from_address": mail["from_address"], "plus": plus, **({"reply_address": mail["reply_user"]} if reply else {}),
+                                   **({"inbound_secret": mail["inbound_secret"]} if inbound else {})}
         else:
             settings.pop("mailout", None)
         c.execute("UPDATE tenants SET settings=%s WHERE slug=%s", (json.dumps(settings), slug))
@@ -1321,7 +1328,7 @@ async def set_company_mail(t: dict, mode: str) -> None:
             raise HTTPException(400, "Proveedor de correo inexistente")
         f = p["fields"]
         mail = {"host": f["host"], "port": f.get("port") or 587, "security": f.get("security", "TLS"), "user": f.get("user", ""), "password": f.get("password", ""),
-                "from_address": f["from_address"], "enabled": True,
+                "from_address": f["from_address"], "enabled": True, "inbound_secret": f.get("inbound_secret", ""),
                 **({"reply_user": f["reply_user"], "reply_password": f.get("reply_password", ""), "reply_host": f.get("reply_host", "")} if f.get("reply_user") else {})}
         mode = "shared"
     async with espo(t) as c:

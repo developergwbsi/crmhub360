@@ -24,7 +24,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, compliance, growth, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, compliance, growth, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -195,6 +195,23 @@ async def gupshup_ingest(slug: str, request: Request):
     """Webhook de Gupshup: registra el mensaje entrante de WhatsApp."""
     tenant = _ingest_tenant(slug, request)
     return {"lead": await ingest.from_gupshup(tenant, await request.json())}
+
+
+@app.post("/v1/ingest/{slug}/resend-mail")
+async def resend_mail_ingest(slug: str, request: Request):
+    """Webhook de correo entrante de Resend (email.received), autenticado con la firma Svix y el secreto de la empresa; responde 200 salvo firma inválida."""
+    tenant = db.get_tenant(slug)
+    secret = (((tenant or {}).get("settings") or {}).get("mailout") or {}).get("inbound_secret") or ""
+    body = await request.body()
+    if not tenant or not resend_inbound.verify(secret, body, request.headers):
+        raise HTTPException(401, "No autorizado")
+    if tenant["status"] != "active":
+        raise HTTPException(403, "Licencia suspendida o vencida")
+    try:
+        return {"imported": await resend_inbound.handle(tenant, json.loads(body))}
+    except Exception:
+        log.exception("fallo al procesar un correo entrante de Resend")
+        return {"imported": False}
 
 
 @app.post("/v1/ingest/{slug}/telegram")
