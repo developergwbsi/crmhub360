@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **177** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **178** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -74,6 +74,7 @@ Total: **177** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/ingest/{slug}/facebook` | `fb_ingest` | Webhook de Facebook Lead Ads: valida la firma de Meta y crea o actualiza los leads. |
 | POST | `/v1/ingest/{slug}/generic` | `generic_ingest` | Webhook genérico para proveedores HTTP de SMS o WhatsApp (?channel=sms/whatsapp). |
 | POST | `/v1/ingest/{slug}/gupshup` | `gupshup_ingest` | Webhook de Gupshup: registra el mensaje entrante de WhatsApp. |
+| POST | `/v1/ingest/{slug}/resend-mail` | `resend_mail_ingest` | Webhook de correo entrante de Resend (email.received), autenticado con la firma Svix y el secreto de la empresa; responde 200 salvo firma inválida. |
 | POST | `/v1/ingest/{slug}/telegram` | `telegram_ingest` | Webhook de Telegram autenticado con el secreto del bot; siempre responde 200 para que Telegram no reintente. |
 | POST | `/v1/ingest/{slug}/twilio` | `twilio_ingest` | Webhook de Twilio (SMS/WhatsApp, formulario urlencoded); responde TwiML vacío. |
 | POST | `/v1/ingest/{slug}/voice-status` | `voice_status` | Callback de estado de llamada de Twilio: actualiza la llamada en Espo (Held o Not Held, fin) y deja una nota en el lead. |

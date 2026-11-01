@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.12.0)
+## Sin publicar (después de v1.12.1)
 
+- `26ca51a` 2026-11-01 — Versión 1.12.2
+- `ea72559` 2026-11-01 — Correo: respuestas de clientes por el correo entrante de Resend (webhook firmado), sin buzón IMAP
+
+## v1.12.1
+
+- `49ea2e4` 2026-11-01 — Versión 1.12.1
 - `4aff229` 2026-11-01 — Versión 1.12.1
 - `a4dfbe7` 2026-11-01 — Correo: proveedor con buzón de respuestas aparte (Resend y similares) para no perder las respuestas de los clientes
 - `28895c3` 2026-11-01 — Guía de arranque: política de proveedores de correo (Resend no admite correo en frío)
