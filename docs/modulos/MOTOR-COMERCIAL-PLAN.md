@@ -67,7 +67,7 @@ El paso de la cadencia y la variante usada se guardan en `agent_leads` / `agent_
 | F2 Salida y variantes | Hecha | `agent.py` (`outbound`, `pick_variant`, `form_problems`), plantilla Meta en `whatsapp.send_template` |
 | F3 Cierre | Hecha | `agent.py` (`closer`, `free_slots`, `_book_demo`, `funnel`), pestaña «Secuencia y resultados» |
 | F4 Optimización diaria | Hecha | `growth.py` (atribución, reescritura de variantes, guía de estilo, pausa de nichos, historial y reversión) |
-| F5 Panel en el Centro de control | Pendiente | |
+| F5 Panel en el Centro de control | Hecha | `control-service/app/engine_cc.py`, pestaña «Motor comercial», `agent.engine_paused` |
 | F6 Entregabilidad (DNS, calentamiento) | Parcial: cuota diaria por remitente; falta SPF/DKIM/DMARC y calentamiento por tramos | |
 
 Ajuste frente al plan: **no se agregaron estados nuevos al CRM** («Pausado (frío)» y «Demo agendada»). El «pausado» se ve en la bitácora del comercial virtual y el lead queda en «En Enfriamiento/Contactado»; la demo agendada se verá como reunión con videollamada en la fase F3. Así no se toca el pipeline existente.

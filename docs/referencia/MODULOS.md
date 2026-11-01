@@ -56,6 +56,7 @@
 
 | Módulo | Qué hace |
 |---|---|
+| `engine_cc.py` | Motor comercial en el Centro de control: vista maestra de la prospección de IA de TODAS las empresas (la propia y las de los clientes). Lee las tablas del Hub (agent_events, agent_leads, prospects, dnc, growth_log) y muestra por empresa: comerciales virtuales, volumen, respuestas, demos, escalados, pendientes de aprobación y alertas; más las variantes ganadoras y los nichos de todo el sistema. Trae el interruptor de emergencia: pausa global o por empresa (el Hub deja de enviar de inmediato) y apagar un comercial. Se inicializa con init() desde main.py. |
 | `evomon.py` | Monitor de conexión de Evolution API (WhatsApp) del Centro de control. |
 | `main.py` | Crm Hub 360 - Centro de control: crear y vigilar empresas, restablecer claves y entrar en modo lectura. No ejecuta nada privilegiado: encola trabajos que realiza `bin/control-worker` en el servidor. |
 | `usage_cc.py` | Consumo y tarifas en el Centro de control: lee el libro de consumo del Hub (tabla usage_events) y lo resume por empresa, canal y proveedor. |

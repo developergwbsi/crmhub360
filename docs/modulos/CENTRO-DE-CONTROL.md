@@ -54,3 +54,10 @@ Clave con scrypt, sesión firmada (12 h, HttpOnly/Secure/SameSite=Strict), cabec
 ## Interfaz
 
 Tablas con búsqueda, paginación, encabezado fijo y desplazamiento interno (`table.js`); ilustraciones animadas cuando no hay datos (`empty.js`); aviso de nueva versión.
+
+
+## Motor comercial (vista maestra de la prospección de IA)
+
+Pestaña **Motor comercial** (`control-service/app/engine_cc.py`, `static/app.js → drawMotor`). Lee las tablas del Hub (`agent_events`, `agent_leads`, `prospects`, `dnc`, `growth_log`) y muestra, para todas las empresas: contactados, respondieron, tasa, demos agendadas, escalados, mensajes que esperan aprobación, errores y alertas (prospección activa en modo prueba, errores altos, muchos envíos sin respuesta, empresa pausada); además las variantes que mejor responden, los nichos y los ajustes recientes de la optimización diaria. Al abrir una empresa: sus comerciales virtuales (encender/apagar), estado de sus leads, aprobaciones pendientes con enlace al lead y actividad reciente.
+
+**Interruptor de emergencia:** *Pausa de emergencia* (global, `control_settings.engine_paused`) o *Pausar esta empresa* (`settings.engine_paused`). El Hub (`agent.engine_paused`) deja de ejecutar a los comerciales virtuales de inmediato (no se envían ni respuestas ni seguimientos y la optimización diaria tampoco corre); los mensajes pendientes se conservan y se retoman al reanudar. Todo queda en el historial de cambios del Centro. Endpoints: `GET /api/engine/overview`, `GET /api/engine/companies/{slug}`, `POST /api/engine/pause`, `POST /api/engine/companies/{slug}/pause`, `POST /api/engine/companies/{slug}/agents/{id}/enabled`.

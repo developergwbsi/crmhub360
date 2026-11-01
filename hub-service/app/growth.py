@@ -329,7 +329,7 @@ async def loop() -> None:
             with db.pool.connection() as c:
                 tenants = [dict(r) for r in c.execute("SELECT * FROM tenants WHERE status='active'").fetchall()]
             for t in tenants:
-                if not agent.licensed(t):
+                if not agent.licensed(t) or agent.engine_paused(t):
                     continue
                 for a in agent.agents(t):
                     cfg = a["config"]

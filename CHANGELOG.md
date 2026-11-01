@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **Panel maestro «Motor comercial» en el Centro de control (F5).** Una pestaña nueva reúne la prospección de IA de **todas las empresas**: contactados, respondieron y tasa, demos agendadas, pasados a una persona, mensajes que esperan aprobación y errores, con **alertas** (prospección activa en modo prueba, errores altos, muchos envíos sin respuesta). Debajo, las **variantes que mejor responden**, los **nichos** y los ajustes recientes de la optimización diaria. Al abrir una empresa se ven sus comerciales virtuales (se pueden **encender o apagar**), el estado de sus leads, las aprobaciones pendientes y la actividad reciente.
+- **Interruptor de emergencia:** *Pausa de emergencia* para todas las empresas o *Pausar esta empresa*. El comercial virtual deja de escribir de inmediato (ni respuestas ni seguimientos ni optimización) y retoma donde iba al reanudar. Queda en el historial del Centro.
+
 ## [1.11.2] - 2026-11-01
 
 ### Añadido

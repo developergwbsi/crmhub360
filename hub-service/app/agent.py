@@ -1251,6 +1251,21 @@ async def reject(tenant: dict, lead_id: str, event_id: int, by: str) -> None:
 
 
 # ---------------- ciclo de trabajo
+_pause_cache: dict = {"at": 0.0, "global": False}
+
+
+def engine_paused(tenant: dict) -> bool:
+    """Interruptor de emergencia del Centro de control: pausa global (control_settings «engine_paused») o de esta empresa (settings.engine_paused). Detiene TODO lo automático."""
+    if time.time() - _pause_cache["at"] > 10:
+        try:
+            with db.pool.connection() as c:
+                r = c.execute("SELECT value FROM control_settings WHERE key='engine_paused'").fetchone()
+            _pause_cache.update(at=time.time(), **{"global": bool(r and r["value"])})
+        except Exception:
+            _pause_cache["at"] = time.time()
+    return bool(_pause_cache["global"] or (tenant.get("settings") or {}).get("engine_paused"))
+
+
 async def worker() -> None:
     """Bucle en segundo plano (cada 15 s): toma hasta 10 leads vencidos de tenants activos en modo automático y ejecuta step() en cada uno."""
     await asyncio.sleep(10)
@@ -1262,6 +1277,8 @@ async def worker() -> None:
                 t = db.get_tenant(r["tenant"])
                 if not t or t["status"] != "active":
                     continue
+                if engine_paused(t):
+                    continue   # pausa de emergencia: nadie escribe hasta que el Centro de control la quite
                 t = for_agent(t, r["agent_id"])
                 if effective_mode(t, dict(r)) != "auto":
                     continue

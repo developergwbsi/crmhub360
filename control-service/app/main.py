@@ -1612,6 +1612,8 @@ from . import usage_cc  # noqa: E402  consumo y tarifas
 usage_cc.init(_deps)
 from . import walines  # noqa: E402  inventario de líneas de WhatsApp (Evolution)
 walines.init(_deps)
+from . import engine_cc  # noqa: E402  motor comercial (vista maestra de la prospección de IA)
+engine_cc.init(_deps)
 
 if __name__ == "__main__":
     uvicorn.run(app, host=BIND_HOST, port=PORT, log_level="info", proxy_headers=False)

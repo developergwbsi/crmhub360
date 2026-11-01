@@ -120,11 +120,64 @@
   function shell() {
     $app.innerHTML = `<div class="top"><div class="brand"><i>◆</i><span>Crm Hub 360 <small>· Centro de control</small></span></div><span class="grow"></span>
       <button class="btn sm" id="acc"><span id="who">Mi cuenta</span></button><button class="btn sm" id="out">Salir</button></div>
-      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="lineas">Líneas WhatsApp</button><button class="tab" data-t="consumo">Consumo</button><button class="tab" data-t="monitor">Monitor de canales<span class="tabdot" id="mon-badge" hidden></span></button><button class="tab" data-t="actividad">Actividad</button></div>
+      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="lineas">Líneas WhatsApp</button><button class="tab" data-t="consumo">Consumo</button><button class="tab" data-t="motor">Motor comercial</button><button class="tab" data-t="monitor">Monitor de canales<span class="tabdot" id="mon-badge" hidden></span></button><button class="tab" data-t="actividad">Actividad</button></div>
       <main id="main"></main>`;
     document.getElementById('acc').onclick = accountDialog;
     document.getElementById('out').onclick = async () => { try { await api('POST', '/logout'); } catch (e) { /* ya cerrada */ } renderLogin(); };
     document.querySelectorAll('.tab').forEach(b => b.onclick = () => { state.tab = b.dataset.t; draw(); });
+  }
+
+
+  // ---------- Motor comercial: vista maestra de la prospección de IA de todas las empresas
+  async function drawMotor() {
+    const main = document.getElementById('main');
+    const days = state.motorDays || (state.motorDays = 7);
+    if (!main.querySelector('[data-motor]')) { main.innerHTML = '<h2>Motor comercial</h2><p class="sub">Cargando…</p><div data-motor></div>'; }
+    let r; try { r = await api('GET', '/engine/overview?days=' + days); } catch (e) { main.innerHTML = `<h2>Motor comercial</h2><div class="err">${esc(e.message)}</div>`; return; }
+    if (state.tab !== 'motor') { return; }
+    const n = v => (v == null ? '—' : Number(v).toLocaleString('es-CO')), t = r.totals;
+    const rows = r.items.map(c => {
+      const m = c.m || {}, on = c.agents.filter(a => a.enabled).length;
+      const st = c.status !== 'active' ? '<span class="chip bad">Suspendida</span>' : c.paused ? '<span class="chip bad">Pausada</span>' : !c.licensed ? '<span class="chip">Sin licencia</span>' : c.activeOutbound ? `<span class="chip ok">${c.activeOutbound} saliente${c.activeOutbound > 1 ? 's' : ''} activo${c.activeOutbound > 1 ? 's' : ''}</span>` : '<span class="chip warn">Sin prospección</span>';
+      return `<tr data-c="${esc(c.slug)}"><td><div class="name">${esc(c.name)}</div><div class="mut">${esc(c.slug)} · ${on}/${c.agents.length} comerciales</div></td><td>${st}</td><td>${n(m.contacted || 0)}</td><td>${n(m.replied || 0)}</td>` +
+        `<td><b>${c.rate == null ? '—' : c.rate + '%'}</b></td><td>${n(m.demos || 0)}</td><td class="hide-m">${n(m.escalated || 0)}</td><td class="hide-m">${m.pending ? `<span class="chip warn">${m.pending}</span>` : '—'}</td><td class="hide-m">${m.errors ? `<span class="chip bad">${m.errors}</span>` : '—'}</td>` +
+        `<td>${c.alerts.length ? `<span title="${esc(c.alerts.join(' · '))}">⚠ ${c.alerts.length}</span>` : ''}</td></tr>`; }).join('');
+    const vr = r.variants.map(v => `<tr><td>${esc(v.tenant)}</td><td>Paso ${v.step + 1}</td><td><b>${esc(v.variant)}</b></td><td>${v.sends}</td><td>${v.replies}</td><td><b>${v.rate}%</b></td></tr>`).join('');
+    const nr = r.niches.map(x => `<tr><td>${esc(x.niche)}</td><td>${x.leads}</td><td>${x.replied}</td><td><b>${x.rate}%</b></td></tr>`).join('');
+    const gr = r.growth.map(x => `<tr><td>${esc(x.tenant)}</td><td>${esc(new Date(x.at).toLocaleString('es-CO'))}</td><td>${esc(x.title)}</td><td>${x.reverted ? 'Revertido' : x.applied ? 'Aplicado' : 'Propuesto'}</td></tr>`).join('');
+    main.innerHTML = `<h2>Motor comercial</h2><p class="sub">La fuerza de ventas de IA de todas las empresas en un solo lugar: cuánto contactan, cuánto responden, cuántas demos agendan y dónde hay que mirar. Cada empresa se configura en su propio CRM (menú Prospección); desde aquí se vigila y se puede <b>detener todo de inmediato</b>.</p>
+      ${r.paused ? '<div class="err" style="margin-bottom:12px"><b>Pausa de emergencia activa:</b> ningún comercial virtual de ninguna empresa está escribiendo.</div>' : ''}
+      <div class="bar"><select id="m-d"><option value="1">Últimas 24 horas</option><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option></select><span class="grow"></span>
+        <button class="btn sm ${r.paused ? 'primary' : 'danger'}" id="m-pause">${r.paused ? 'Reanudar todo' : 'Pausa de emergencia (todas las empresas)'}</button></div>
+      <div class="kpis"><div class="kpi"><span>Contactados</span><b>${n(t.contacted)}</b></div><div class="kpi"><span>Respondieron</span><b>${n(t.replied)}${t.rate != null ? ` <small>· ${t.rate}%</small>` : ''}</b></div><div class="kpi"><span>Demos agendadas</span><b>${n(t.demos)}</b></div>
+        <div class="kpi"><span>Pasaron a una persona</span><b>${n(t.escalated)}</b></div><div class="kpi"><span>Esperan aprobación</span><b>${n(t.pending)}</b></div><div class="kpi"><span>Errores</span><b>${n(t.errors)}</b></div></div>
+      <div class="card"><table><thead><tr><th>Empresa</th><th>Estado</th><th>Contactados</th><th>Respondieron</th><th>Tasa</th><th>Demos</th><th class="hide-m">Escalados</th><th class="hide-m">Aprobación</th><th class="hide-m">Errores</th><th>Alertas</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <h3 style="margin-top:22px">Variantes que mejor responden</h3><div class="card">${vr ? `<table><thead><tr><th>Empresa</th><th>Paso</th><th>Variante</th><th>Envíos</th><th>Respuestas</th><th>Tasa</th></tr></thead><tbody>${vr}</tbody></table>` : '<div style="padding:18px" class="mut">Aún no hay variantes con suficientes envíos (mínimo 10).</div>'}</div>
+      <h3 style="margin-top:22px">Nichos</h3><div class="card">${nr ? `<table><thead><tr><th>Nicho</th><th>Contactados</th><th>Respondieron</th><th>Tasa</th></tr></thead><tbody>${nr}</tbody></table>` : '<div style="padding:18px" class="mut">Aún no hay nichos con al menos 5 prospectos contactados.</div>'}</div>
+      <h3 style="margin-top:22px">Ajustes recientes de la optimización diaria</h3><div class="card">${gr ? `<table><thead><tr><th>Empresa</th><th>Cuándo</th><th>Ajuste</th><th>Estado</th></tr></thead><tbody>${gr}</tbody></table>` : '<div style="padding:18px" class="mut">Todavía no se han hecho ajustes.</div>'}</div>`;
+    const $ = id => document.getElementById(id);
+    $('m-d').value = String(days); $('m-d').onchange = e => { state.motorDays = +e.target.value; drawMotor(); };
+    $('m-pause').onclick = async () => {
+      const go = await confirmBox(r.paused ? 'Reanudar todo' : 'Pausa de emergencia', r.paused ? 'Los comerciales virtuales de todas las empresas vuelven a escribir.' : 'Ningún comercial virtual de ninguna empresa volverá a enviar mensajes (ni respuestas ni seguimientos) hasta que reanudes. Los mensajes pendientes se conservan.', r.paused ? 'Reanudar' : 'Pausar todo', !r.paused);
+      if (go) { try { await api('POST', '/engine/pause', {paused: !r.paused}); toast(r.paused ? 'Motor reanudado' : 'Motor en pausa'); drawMotor(); } catch (e) { toast(e.message); } }
+    };
+    main.querySelectorAll('[data-c]').forEach(tr => tr.onclick = () => motorDetail(tr.dataset.c));
+  }
+  async function motorDetail(slug) {
+    let d; try { d = await api('GET', '/engine/companies/' + slug); } catch (e) { toast(e.message); return; }
+    const ag = d.agents.map(a => `<tr><td><b>${esc(a.name)}</b><div class="mut">${esc(a.persona)}</div></td><td>${a.enabled ? '<span class="chip ok">Encendido</span>' : '<span class="chip">Apagado</span>'}</td><td>${a.mode === 'auto' ? 'Automático' : 'Manual'}${a.dry_run ? ' · <span class="chip warn">prueba</span>' : ''}${a.approval ? ' · con aprobación' : ''}</td>` +
+      `<td>${[a.outbound ? 'saliente' : '', a.closer ? 'cierre' : '', a.growth ? 'optimización (' + (a.growth_mode === 'propose' ? 'propone' : 'aplica') + ')' : ''].filter(Boolean).join(' · ') || '—'}</td><td><button class="btn sm ${a.enabled ? 'danger' : ''}" data-ag="${esc(a.id)}" data-on="${a.enabled ? 0 : 1}">${a.enabled ? 'Apagar' : 'Encender'}</button></td></tr>`).join('');
+    const pd = d.pending.map(x => `<tr><td>${esc(x.lead_name)}</td><td>${esc(x.title)}<div class="mut">${esc(x.detail)}</div></td><td><a class="btn sm" target="_blank" rel="noopener" href="https://${esc(d.host)}/#Lead/view/${esc(x.lead_id)}">Abrir lead</a></td></tr>`).join('');
+    const ev = d.events.map(x => `<tr><td class="mut">${esc(new Date(x.at).toLocaleString('es-CO'))}</td><td>${esc(x.lead_name || '')}</td><td>${esc(x.title)}${x.dry ? ' <span class="chip warn">prueba</span>' : ''}</td></tr>`).join('');
+    const stl = {active: 'Activos', waiting_reply: 'Esperando respuesta', escalated: 'En manos de una persona', stopped: 'Detenidos', awaiting_approval: 'Esperando aprobación', paused: 'En pausa'};
+    const m = modal(`<h3>${esc(d.name)} <span class="mut">· motor comercial</span></h3><div class="bar"><span class="mut">${Object.entries(d.states).map(([k, v]) => `${stl[k] || k}: <b>${v}</b>`).join(' · ') || 'Sin leads atendidos todavía'}</span><span class="grow"></span>` +
+      `<button class="btn sm ${d.paused ? 'primary' : 'danger'}" id="md-p">${d.paused ? 'Reanudar esta empresa' : 'Pausar esta empresa'}</button></div>` +
+      `<h4>Comerciales virtuales</h4><table><thead><tr><th>Comercial</th><th>Estado</th><th>Modo</th><th>Funciones</th><th></th></tr></thead><tbody>${ag}</tbody></table>` +
+      (pd ? `<h4>Esperan aprobación</h4><table><tbody>${pd}</tbody></table>` : '') + `<h4>Actividad reciente</h4>${ev ? `<table><tbody>${ev}</tbody></table>` : '<p class="mut">Sin actividad.</p>'}` +
+      `<div class="foot"><button class="btn" data-x="c">Cerrar</button></div>`, 'wide');
+    m.el.querySelector('[data-x=c]').onclick = m.close;
+    m.el.querySelector('#md-p').onclick = async () => { try { await api('POST', `/engine/companies/${slug}/pause`, {paused: !d.paused}); toast(d.paused ? 'Empresa reanudada' : 'Empresa en pausa'); m.close(); drawMotor(); } catch (e) { toast(e.message); } };
+    m.el.querySelectorAll('[data-ag]').forEach(b => b.onclick = async () => { try { await api('POST', `/engine/companies/${slug}/agents/${b.dataset.ag}/enabled`, {enabled: b.dataset.on === '1'}); toast(b.dataset.on === '1' ? 'Comercial encendido' : 'Comercial apagado'); m.close(); motorDetail(slug); } catch (e) { toast(e.message); } });
   }
 
   // ---------- Monitor de WhatsApp (Evolution): prueba de extremo a extremo, alertas y vinculación por QR
@@ -375,7 +428,7 @@
 
   function draw() {
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.t === state.tab));
-    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, servicios: drawLookups, correo: drawMail, bienvenida: drawTemplates, monitor: drawMonitor, consumo: drawUsage, lineas: drawLines, actividad: drawActivity}[state.tab])();
+    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, servicios: drawLookups, correo: drawMail, bienvenida: drawTemplates, monitor: drawMonitor, consumo: drawUsage, motor: drawMotor, lineas: drawLines, actividad: drawActivity}[state.tab])();
     if (state.tab !== 'monitor') { clearInterval(state.monTimer); }
   }
 
