@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Corregido
+- **Los correos que envía el comercial virtual salen en «Enviados»** del CRM (antes aparecían en la «Bandeja de entrada»). Al enviar, el Hub registra la dirección remitente como una de las direcciones del usuario (acción `CrmHub/senderAddress`, solo para el usuario de integración); EspoCRM clasifica así el correo como enviado por esa persona, también los ya enviados.
+
 ## [1.18.0] - 2026-11-01
 
 ### Añadido

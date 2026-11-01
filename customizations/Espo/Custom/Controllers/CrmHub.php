@@ -166,6 +166,33 @@ class CrmHub
         return (object) ['sent' => $n];
     }
 
+    /** Solo el usuario API del Hub. {userId, address}: registra la dirección remitente del comercial virtual como una de las direcciones de ese usuario, así los correos que envía el comercial virtual salen en «Enviados» (y no en la «Bandeja de entrada»). */
+    public function postActionSenderAddress(Request $request): \stdClass
+    {
+        if (!$this->user->isApi()) {
+            throw new Forbidden();
+        }
+        $d = $request->getParsedBody();
+        $address = strtolower(trim((string) ($d->address ?? '')));
+        if (!filter_var($address, FILTER_VALIDATE_EMAIL)) {
+            throw new BadRequest('Dirección no válida.');
+        }
+        $user = $this->em->getEntityById('User', (string) ($d->userId ?? ''));
+        if (!$user || !$user->get('isActive') || $user->isApi()) {
+            throw new BadRequest('Usuario no válido.');
+        }
+        $rows = $user->get('emailAddressData') ?? [];
+        foreach ($rows as $row) {
+            if (strtolower((string) ($row->emailAddress ?? '')) === $address) {
+                return (object) ['ok' => true, 'already' => true];
+            }
+        }
+        $rows[] = (object) ['emailAddress' => $address, 'primary' => count($rows) === 0, 'optOut' => false, 'invalid' => false];
+        $user->set('emailAddressData', $rows);
+        $this->em->saveEntity($user);
+        return (object) ['ok' => true];
+    }
+
     /** Lo lee cualquier usuario autenticado (incluido el usuario API del Hub). */
     public function getActionPipeline(Request $request): \stdClass
     {

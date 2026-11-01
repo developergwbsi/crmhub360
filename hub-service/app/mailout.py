@@ -57,6 +57,21 @@ def plain_of(html: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", _html.unescape(re.sub(r"<[^>]+>", "", t))).strip()
 
 
+_sender_ok: set = set()   # (empresa, usuario, dirección) ya registrados en el CRM
+
+
+async def _sender_in_sent(tenant: dict, uid: str, address: str) -> None:
+    """Registra la dirección remitente como una de las del usuario: así el correo que envía el comercial virtual sale en «Enviados» del CRM y no en la bandeja de entrada."""
+    key = (tenant["slug"], uid, address.lower())
+    if key in _sender_ok:
+        return
+    try:
+        await Espo(tenant).post("CrmHub/senderAddress", {"userId": uid, "address": address})
+        _sender_ok.add(key)
+    except Exception:
+        pass   # sin esto el correo se guarda igual, solo que aparece en la bandeja de entrada
+
+
 async def send(tenant: dict, req: dict) -> dict:
     """Envía un correo por SMTP en nombre del usuario (From con su nombre, Reply-To con alias propio) y lo registra en EspoCRM como «Sent», salvo que record sea False; si es un lead y no lo manda el agente, pausa al comercial virtual."""
     cfg = (tenant.get("settings") or {}).get("mailout") or {}
@@ -112,6 +127,8 @@ async def send(tenant: dict, req: dict) -> dict:
             from . import agent
             agent.note_human(tenant["slug"], req["parentId"], agent.hold_minutes(tenant, req["parentId"]))
         return {"id": None, "messageId": mid, "replyTo": reply_to, "email": data}
+    if req.get("agent"):
+        await _sender_in_sent(tenant, uid, cfg["from_address"])
     saved = await Espo(tenant).post("Email", data)
     if req.get("parentType") == "Lead" and req.get("parentId") and not req.get("agent"):
         from . import agent

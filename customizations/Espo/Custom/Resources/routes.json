@@ -1404,5 +1404,13 @@
             "controller": "CrmHub",
             "action": "prospectsVerify"
         }
+    },
+    {
+        "route": "/CrmHub/senderAddress",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "senderAddress"
+        }
     }
 ]
