@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **178** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **181** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -57,6 +57,9 @@ Total: **178** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/docs/remember` | `docs_remember` | Crea un perfil de lectura reutilizable a partir de los ítems indicados. |
 | GET | `/v1/docs/run` | `docs_run` | Estado y resultado de una lectura de documento; 404 si no existe. |
 | POST | `/v1/email/send` | `email_send` | Envía un correo como el usuario (nombre, firma y Reply-To personales). 409 si la empresa no tiene el correo del Centro. |
+| GET | `/v1/finder` | `finder_get` | Estado del buscador de prospectos: licencia, configuración y última pasada. |
+| PUT | `/v1/finder` | `finder_save` | Activa o ajusta el buscador (tope diario y enfoque). Requiere que la licencia lo incluya. |
+| POST | `/v1/finder/run` | `finder_run` | Una pasada de búsqueda en internet (solo guarda prospectos con fuente pública; no envía nada). |
 | GET | `/v1/forms/template/{key}` | `form_template` | Construye una plantilla de formulario de la galería; la usa el editor de formularios de Espo. |
 | POST | `/v1/growth/apply` | `growth_apply` | — |
 | GET | `/v1/growth/overview` | `growth_overview` | — |
