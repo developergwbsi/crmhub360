@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.17.1] - 2026-11-01
+
 ### Corregido
 - El nombre de la empresa también va con espacio duro en la firma y en el pie de baja de los correos.
 
