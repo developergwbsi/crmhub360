@@ -2,6 +2,7 @@
 Cada empresa tiene las suyas (tabla proposals) y puede activarlas o apagarlas; el comercial virtual recibe el catálogo en su prompt y envía el enlace que corresponde.
 Reglas de contenido: sin precios, sin promesas de resultados, sin testimonios ni cifras inventadas. Las páginas son HTML autocontenido con ilustraciones SVG (sin recursos externos).
 Se sirven en https://<MEET_HOST>/p/<empresa>/<slug> (ver main.py: /v1/public/meet/p/...)."""
+import base64
 import html as _h
 import os
 
@@ -124,7 +125,7 @@ h2{font-size:clamp(22px,3.4vw,30px);letter-spacing:-.02em;margin:46px 0 8px}.lea
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}.card h3{margin:10px 0 6px;font-size:17px}.card p{margin:0;color:var(--mut);font-size:15px}
 .ic{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--a),var(--b));color:#fff;display:grid;place-items:center;font-weight:800}
-.fig{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;margin:16px 0}.fig svg{width:100%;height:auto;display:block}.cap{font-size:13px;color:var(--mut);text-align:center;margin-top:6px}
+.fig{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;margin:16px 0}.fig svg{width:100%;height:auto;display:block}.fig img.wide{max-width:100%;border:1px solid var(--line)}.fig img{width:100%;max-width:620px;height:auto;display:block;margin:0 auto;border-radius:14px}.cap{font-size:13px;color:var(--mut);text-align:center;margin-top:6px}
 .steps{counter-reset:s;display:grid;gap:12px}.steps div{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px 16px 62px;position:relative}
 .steps div:before{counter-increment:s;content:counter(s);position:absolute;left:16px;top:14px;width:34px;height:34px;border-radius:50%;background:var(--a);color:#fff;display:grid;place-items:center;font-weight:800}
 .cta{background:linear-gradient(135deg,#0f172a,#312e81);color:#fff;border-radius:24px;padding:40px;margin:46px 0;text-align:center}.cta h2{margin-top:0}.cta .btn{background:#22c55e;color:#052e16}.cta .btn.alt{background:transparent;color:#fff}
@@ -241,6 +242,15 @@ def _svg_channels() -> str:
     return o + "</svg>"
 
 
+def _img(name: str, alt: str, wide: bool = False) -> str:
+    """Imagen de proposal_assets incrustada (data URI): las páginas son autocontenidas y no cargan recursos externos."""
+    try:
+        with open(os.path.join(os.path.dirname(__file__), "proposal_assets", name), "rb") as f:
+            return f'<img{" class=wide" if wide else ""} alt="{_h.escape(alt)}" src="data:image/jpeg;base64,{base64.b64encode(f.read()).decode()}">'
+    except OSError:
+        return ""
+
+
 def _cards(items: list[tuple[str, str, str]]) -> str:
     return '<div class="grid">' + "".join(f'<div class="card"><div class="ic">{_h.escape(i)}</div><h3>{_h.escape(t)}</h3><p>{_h.escape(d)}</p></div>' for i, t, d in items) + "</div>"
 
@@ -248,9 +258,11 @@ def _cards(items: list[tuple[str, str, str]]) -> str:
 def default_pages(company: str, wa: str) -> list[dict]:
     """Presentaciones estándar de los productos de DigitalAlliance Hub (sin precios ni promesas de resultado)."""
     crm = (f'<h2>Todo lo que necesita tu equipo comercial, en un solo lugar</h2><p class="lead">Crm Hub 360 es el CRM en español con inteligencia artificial del portafolio de {_h.escape(company)}: ordena a tus clientes, atiende por todos los canales, busca clientes nuevos y deja que un equipo de agentes de IA trabaje contigo las 24 horas.</p>'
+           f'<div class="fig">{_img("crm_panel.jpg", "Panel gerencial de Crm Hub 360", True)}<div class="cap">Tu panel gerencial en Crm Hub 360: embudo, leads por semana, origen y asesor (datos de prueba).</div></div>'
            f'<div class="fig">{_svg_pipeline()}<div class="cap">Cada oportunidad avanza por tu embudo, a la vista de todo el equipo.</div></div>'
            '<h2>Un equipo de agentes de IA que trabaja contigo</h2><p class="lead">No es un solo asistente: son varios agentes, cada uno con su entrenamiento, que se pasan el trabajo hasta que tu equipo entra a cerrar.</p>'
            f'<div class="fig">{_svg_agents()}<div class="cap">Agentes con funciones distintas que se complementan.</div></div>'
+           + f'<div class="fig">{_img("crm_agentes.jpg", "Agentes de prospección en Crm Hub 360", True)}<div class="cap">Los agentes de prospección, con su propia configuración, en la pantalla real de Crm Hub 360.</div></div>'
            + _cards([("B", "Agente buscador", "Investiga en internet empresas que podrían necesitar lo que vendes y guarda solo las que tienen una página pública y un contacto de negocio publicado, con su fuente."),
                      ("Q", "Agente calificador", "Con buenas prácticas de calificación decide a quién vale la pena, qué producto ofrecerle y con qué ángulo. Solo pasa lo bueno al comercial virtual."),
                      ("V", "Comercial virtual", "Contacta, responde, hace seguimientos, maneja objeciones, comparte material y propone horarios para una demo. Pasa el caso a una persona cuando hace falta. Puedes tener varios, cada uno con su entrenamiento."),
@@ -262,6 +274,7 @@ def default_pages(company: str, wa: str) -> list[dict]:
                      ("T", "Topes y frenos automáticos", "Límites diarios por remitente y frenos automáticos si suben los rebotes o las bajas, más un interruptor de emergencia."),
                      ("M", "Mejora cada día", "Prueba variantes de mensaje, aprende cuál responde mejor y pausa los nichos que no funcionan."),
                      ("P", "Propuestas y brochures", "El material de presentación se envía solo según el interés de cada prospecto, y ves cuántas veces se abrió.")])
+           + f'<div class="fig">{_img("crm_material.jpg", "Biblioteca de propuestas y brochures", True)}<div class="cap">La biblioteca de propuestas y brochures que usan tus agentes: puedes agregar el tuyo.</div></div>'
            + '<h2>Lee y entiende documentos</h2><p class="lead">Sube un PDF a la ficha del cliente —un reporte de buró, una cédula, soportes de ingresos— y Crm Hub 360 lo lee por ti: detecta el tipo de documento, extrae los datos que le pides y tú los revisas antes de guardarlos.</p>'
            f'<div class="fig">{_svg_docs()}<div class="cap">Del PDF a los datos del cliente, con tu revisión antes de guardar.</div></div>'
            + _cards([("L", "Lector rápido y con IA", "Primero lo lee un lector interno, rápido y sin IA; si quieres más precisión, lo mejoras con IA."),
@@ -294,16 +307,29 @@ def default_pages(company: str, wa: str) -> list[dict]:
            '<p><span class="pill">Respeta horarios legales</span><span class="pill">Baja de un clic</span><span class="pill">Lista de no contactar</span><span class="pill">Topes diarios y frenos automáticos</span><span class="pill">Datos separados por empresa</span><span class="pill">Copias de seguridad de tus leads</span></p>'
            '<h2 id="como">Cómo funciona</h2><div class="steps"><div><b>Lo conectas.</b> Tus canales (WhatsApp, correo, llamadas) y tu equipo entran al CRM; cada empresa trae sus propios proveedores si lo prefiere.</div><div><b>Lo entrenas.</b> Le cuentas qué vendes y a quién; los agentes aprenden tu forma de hablar y tus reglas de calificación.</div>'
            '<div><b>Te entrega demos agendadas.</b> El motor busca, califica y conversa; tu equipo se dedica a cerrar.</div></div>')
-    gestor = (f'<h2>Tu negocio de servicios, ordenado de punta a punta</h2><p class="lead">Gestor360 reúne agenda, servicios, nómina, inventario y clientes en una sola plataforma, para negocios con una o varias sedes.</p>'
-              f'<div class="fig">{_svg_calendar()}<div class="cap">Agenda de citas por sede y por profesional.</div></div>'
-              + _cards([("A", "Agenda y trazabilidad", "Citas con estados, lista de tareas y evidencia en fotos que el cliente también puede ver."),
-                        ("N", "Nómina e inventario", "Pre-nómina a partir de servicios y ventas, y control de productos con alertas de stock mínimo."),
-                        ("F", "Facturación electrónica", "Emisión ante la DIAN desde la factura del servicio, por sede o para toda la empresa."),
-                        ("L", "App para tus clientes", "Tus clientes reservan, siguen su cita y reciben avisos en el celular (Listo360)."),
-                        ("W", "Mensajería a clientes", "Chat y campañas por WhatsApp, correo y SMS desde la misma plataforma."),
-                        ("S", "Varias sedes", "Una base única de clientes y reportes por sede o acumulados.")])
-              + '<h2 id="como">Pensado para</h2><p><span class="pill">Salud y belleza</span><span class="pill">Automotriz</span><span class="pill">Pastelerías</span><span class="pill">Mecánica</span><span class="pill">Autolavados</span></p>'
-              '<p class="lead">Y junto con <b>Crm Hub 360</b>, además de ordenar tu operación, consigues clientes nuevos y los atiendes automáticamente.</p>')
+    gestor = (f'<h2>La plataforma de gestión para tu negocio de servicios y ventas</h2><p class="lead">Gestor360 reúne la agenda, los servicios, los productos, la nómina, el inventario y los clientes de tu negocio en una sola plataforma, con una app hecha a la medida de tu línea de negocio. Y sigue sumando líneas.</p>'
+              f'<div class="fig">{_img("gestor360_dashboard.jpg", "Interfaz de Gestor360: citas, ocupación e ingresos")}<div class="cap">La interfaz de Gestor360 (datos de ejemplo).</div></div>'
+              '<h2>Una app a la medida de tu línea de negocio</h2><p class="lead">Gestor360 se adapta a cómo trabaja cada negocio. Hoy cuenta con cinco líneas:</p>'
+              + _cards([("V", "Vehículos", "Mantenimiento, lavado y servicios para vehículos: visitas, trazabilidad con fotos y seguimiento del servicio."),
+                        ("B", "Salud y belleza", "Peluquerías, barberías, spa y estética: agenda por profesional, comisiones y fidelización."),
+                        ("P", "Panaderías", "Ventas, productos, inventario con alertas de stock mínimo y promociones."),
+                        ("H", "Ferreterías", "Venta y control de materiales: inventario, cotizaciones y facturación."),
+                        ("+", "Otras líneas", "¿Tu negocio es distinto? Se configura a tu medida, y seguimos sumando más líneas.")])
+              + '<h2 id="como">Todo lo que gestiona</h2><p class="lead">Servicios y productos, de la reserva a la factura, en una sola plataforma. Activa solo los módulos que necesitas.</p>'
+              + _cards([("A", "Agenda y turnos", "Reservas en línea, calendario y gestión de turnos en tiempo real, con estados, lista de tareas y fotos como evidencia."),
+                        ("S", "Servicios y productos", "Catálogo de servicios con duración y precios, y venta de productos sueltos o ligados a un servicio."),
+                        ("I", "Inventario", "Control de stock con movimientos, varios almacenes, alertas de reabastecimiento y costos por servicio."),
+                        ("N", "Nómina", "Liquidación de pre-nómina por comisión, a partir de los servicios y las ventas de cada colaborador."),
+                        ("Q", "Cotizaciones", "Tablero de cotizaciones que se convierten en orden de servicio con un clic."),
+                        ("F", "Facturación electrónica", "Factura electrónica ante la DIAN desde la factura del servicio, por sede o para toda la empresa."),
+                        ("C", "Clientes y CRM", "Historial, fidelización, comunicaciones y seguimiento de cada cliente, con base única para todas tus sedes."),
+                        ("R", "Reportes", "Tableros de ventas, ocupación, rentabilidad y métricas clave, por sede o acumulados."),
+                        ("Q", "QR y check-in", "Registro de llegada con QR y control de acceso digital."),
+                        ("M", "Mensajería y campañas", "Chat con tus clientes (con respuesta automática opcional con IA) y campañas por WhatsApp, correo y SMS."),
+                        ("L", "App para tus clientes", "Tus clientes encuentran tu sede, reservan, siguen el estado de su cita y reciben avisos en el celular."),
+                        ("E", "Varias sedes", "Branding propio por sede, equipos y comisiones, con vista consolidada de toda la empresa.")])
+              + '<h2>Se conecta con tus otras plataformas</h2><p class="lead">Gestor360 se integra con otras plataformas a través de <b>APIs</b>, además de WhatsApp Business, pagos en línea y notificaciones automáticas, y se sincroniza con <b>Core360</b>.</p>'
+              '<p class="lead">Y junto con <b>Crm Hub 360</b>, además de ordenar tu operación, consigues clientes nuevos y los atiendes automáticamente: el CRM busca, califica y conversa por ti, y Gestor360 organiza el servicio.</p>')
     core = (f'<h2>El ERP para fabricar y distribuir</h2><p class="lead">Core360 es la plataforma de gestión empresarial de {_h.escape(company)} para manufactura y distribución: toda la cadena de abastecimiento en un solo sistema.</p>'
             f'<div class="fig">{_svg_chain()}<div class="cap">De la compra a la factura, con una única fuente de verdad.</div></div>'
             + _cards([("C", "Compras", "Requisiciones, órdenes con aprobación, recepción contra la orden y alertas de reposición."),
@@ -318,8 +344,8 @@ def default_pages(company: str, wa: str) -> list[dict]:
          "summary": "Presentación del CRM con comercial virtual y motor que busca clientes (producto principal).",
          "html": _shell(company, "Crm Hub 360", "El motor más inteligente del portafolio", "Tu CRM con IA que <u>busca</u>, atiende y agenda clientes", "Automatiza el control de tus ventas y la búsqueda de nuevos clientes. Tu equipo entra cuando ya hay una demo agendada.", crm, wa, "Mira cómo se vería en tu negocio", "Agenda una demostración de 15 minutos por videollamada, sin compromiso.")},
         {"slug": "gestor360", "title": "Gestor360: agenda, nómina, inventario y facturación", "product": "gestor360", "kind": "presentación",
-         "summary": "Plataforma para negocios de servicios con sedes (salud y belleza, automotriz, autolavados…).",
-         "html": _shell(company, "Gestor360", "Para negocios de servicios", "Toda tu operación de servicios en <u>una sola plataforma</u>", "Agenda, servicios, nómina, inventario y clientes. Paga solo los módulos que necesitas.", gestor, wa, "Conoce Gestor360", "Agenda una demostración de 15 minutos por videollamada, sin compromiso.")},
+         "summary": "Plataforma de gestión para negocios de servicios y ventas con sedes: vehículos, salud y belleza, panaderías, ferreterías y otras líneas.",
+         "html": _shell(company, "Gestor360", "Para negocios de servicios", "Tu negocio, <u>bajo control</u> en una sola plataforma", "Agenda, servicios, productos, nómina, inventario y clientes, con una app hecha a la medida de tu línea de negocio.", gestor, wa, "Conoce Gestor360", "Agenda una demostración de 15 minutos por videollamada, sin compromiso.")},
         {"slug": "core360", "title": "Core360: ERP para manufactura y distribución", "product": "core360", "kind": "presentación",
          "summary": "ERP con compras, inventarios, producción, ventas, finanzas y facturación electrónica.",
          "html": _shell(company, "Core360", "ERP para manufactura y distribución", "Toda tu cadena de abastecimiento, <u>bajo control</u>", "Compras, inventarios, producción, ventas y facturación electrónica en un solo sistema.", core, wa, "Conoce Core360", "Agenda una demostración de 15 minutos por videollamada, sin compromiso.")},

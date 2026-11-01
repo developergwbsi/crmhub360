@@ -14,7 +14,7 @@ DEFAULT_RULES = (
     "- Encaje: ¿el negocio vende o atiende clientes y sufre el problema de seguimiento disperso (WhatsApp, correo, Excel)? Más sedes, asesores o volumen de consultas = más encaje.\n"
     "- Contactabilidad: correo de negocio en dominio propio (info@, ventas@, comercial@ o una persona) es un buen contacto; solo teléfono no se puede trabajar por correo.\n"
     "- Producto: Crm Hub 360 es el producto principal y el que más se impulsa: es el motor que ordena las ventas y busca clientes, y encaja con casi cualquier empresa que venda o atienda clientes. "
-    "Elígelo SIEMPRE por defecto. Cambia a Gestor360 solo si el negocio es claramente de servicios con agenda y sedes (belleza, automotriz, autolavado) Y el dolor es la operación de citas/nómina/inventario; "
+    "Elígelo SIEMPRE por defecto. Cambia a Gestor360 solo si el negocio es claramente de servicios o ventas con sedes (vehículos, salud y belleza, panaderías, ferreterías) Y el dolor es la operación de citas/nómina/inventario/productos; "
     "a Core360 solo si fabrica o distribuye y el dolor es inventarios, producción o compras. En el ángulo menciona primero Crm Hub 360 aunque el producto elegido sea otro.\n"
     "- Descarta (grado D): competidores directos (otros CRM), entidades públicas, personas naturales y contactos sin relación con ventas o atención.\n"
     "- Prefiere a quien decide (gerencia, dirección comercial, dueño). Si el contacto es solo atención al cliente, baja un grado.\n"

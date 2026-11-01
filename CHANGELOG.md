@@ -5,6 +5,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Cambiado
+- **Presentaciones con capturas reales**: Crm Hub 360 (panel gerencial, agentes de prospección y biblioteca de propuestas, tomadas del propio CRM) y Gestor360 (su interfaz). Gestor360 reescrito con sus cinco líneas de negocio (vehículos, salud y belleza, panaderías, ferreterías y otras), todos sus módulos y la conexión por API. El comercial virtual y el calificador conocen las nuevas líneas.
+
+### Cambiado
 - **Presentación de Crm Hub 360 ampliada** con todo lo que hace el producto: equipo de agentes de IA (buscador, calificador, comercial virtual, asistente), motor de prospección y su cumplimiento, lectura y comprensión de documentos (PDF), todos los canales, videollamadas con subtítulos, grabación y resumen, procesos y formularios, reportes, banco de conocimiento y «trae lo tuyo». Seis ilustraciones; sin precios ni promesas.
 
 ## [1.16.0] - 2026-11-01
