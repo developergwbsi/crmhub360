@@ -44,3 +44,6 @@ Cómo conseguir la clave: Serper (serper.dev → API Key), Brave (brave.com/sear
 ## Cómo se guarda el correo enviado en el CRM
 El correo que envía el comercial virtual queda en *Correos* con **los PDF adjuntos registrados** (`Espo.upload_email`), los **enlaces pulsables** y el remitente «Valeria Virtual».
 - **Carpeta «Enviados»**: EspoCRM trata un correo como enviado por un usuario si lo creó él o si la dirección remitente es una de las suyas. Los correos del comercial virtual los crea el usuario de integración, por eso `mailout._sender_in_sent` registra (una vez por usuario y dirección) el remitente en el perfil del usuario con `POST /CrmHub/senderAddress` (acción del CRM reservada al usuario API; el Hub no puede editar usuarios por la API normal). Es retroactivo: la carpeta se calcula al consultar.
+
+## Reporte gerencial por correo
+Tras el ciclo diario el Hub envía un correo (`report.py`) con las cifras del día, una lectura gerencial (IA, con texto de respaldo si falla) y los siguientes pasos. Configuración en `settings.finder.report` = `{enabled, hour, to[], last}` (hora local de la empresa, 11 por defecto), editable en la tarjeta del buscador. `POST /v1/report/send` lo envía de inmediato (acción `CrmHub/reportSend`). Sale por el correo principal de la empresa, no por el de frío.

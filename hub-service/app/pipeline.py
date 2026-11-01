@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from . import agent, db, finder, qualifier
+from . import agent, db, finder, qualifier, report
 
 log = logging.getLogger("hub.pipeline")
 
@@ -53,4 +53,17 @@ async def worker() -> None:
                     finder._save(t["slug"], {"pipeline_last": {"at": datetime.now(timezone.utc).isoformat(), "error": str(e)[:200]}})
         except Exception:
             log.exception("ciclo del pipeline")
+        try:   # reporte gerencial por correo: después del ciclo, a la hora que cada empresa eligió
+            with db.pool.connection() as c:
+                rows = c.execute("SELECT * FROM tenants WHERE status='active' AND settings->'finder'->'report'->>'enabled' = 'true'").fetchall()
+            for t in rows:
+                t = dict(t)
+                if report.due(t):
+                    try:
+                        r = await report.send(t)
+                        log.info("%s: reporte gerencial enviado a %s", t["slug"], ", ".join(r["to"]))
+                    except Exception as e:
+                        log.warning("reporte gerencial %s: %s", t["slug"], str(e)[:200])
+        except Exception:
+            log.exception("reporte gerencial")
         await asyncio.sleep(600)

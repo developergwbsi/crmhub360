@@ -1452,5 +1452,13 @@
             "controller": "CrmHub",
             "action": "presetsSave"
         }
+    },
+    {
+        "route": "/CrmHub/reportSend",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "reportSend"
+        }
     }
 ]

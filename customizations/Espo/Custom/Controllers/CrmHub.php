@@ -2621,6 +2621,14 @@ class CrmHub
         return (object) $this->hubCall('PUT', '/v1/presets', json_decode(json_encode($request->getParsedBody()), true) ?: [], 20);
     }
 
+    /** POST /CrmHub/reportSend. Admin. {to?}. Envía ahora el reporte gerencial del motor comercial (vista previa). Hub: POST /v1/report/send. */
+    public function postActionReportSend(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = json_decode(json_encode($request->getParsedBody()), true) ?: [];
+        return (object) $this->hubCall('POST', '/v1/report/send', ['to' => is_array($d['to'] ?? null) ? $d['to'] : [], 'preview' => true], 120);
+    }
+
     /** GET /CrmHub/finder. Estado del buscador de prospectos (licencia, configuración, última pasada). Hub: GET /v1/finder. */
     public function getActionFinder(Request $request): \stdClass
     {

@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, brand, chatbot, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, brand, chatbot, report, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -2650,7 +2650,25 @@ def finder_save(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
     finder._save(tenant["slug"], {"enabled": bool(body.get("enabled")), "daily_limit": max(1, min(100, int(body.get("daily_limit") or 20))), "focus": str(body.get("focus") or "")[:600],
                                   "auto": bool(body.get("auto")), "hour": max(0, min(23, int(body.get("hour") if body.get("hour") is not None else 9))),
                                   "autonomy": "auto" if body.get("autonomy") == "auto" else "approval"})
+    if isinstance(body.get("report"), dict):   # reporte gerencial por correo: activo, hora local y destinatarios
+        r = body["report"]
+        to = [a.strip().lower() for a in (r.get("to") if isinstance(r.get("to"), list) else str(r.get("to") or "").replace(";", ",").split(",")) if "@" in a and "." in a][:8]
+        with db.pool.connection() as c:
+            c.execute("UPDATE tenants SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), '{finder,report}', COALESCE(settings->'finder'->'report','{}'::jsonb) || %s::jsonb, true) WHERE slug=%s",
+                      (json.dumps({"enabled": bool(r.get("enabled")), "hour": max(0, min(23, int(r.get("hour") if r.get("hour") is not None else 11))), "to": to}), tenant["slug"]))
     return finder.config(db.get_tenant(tenant["slug"]))
+
+
+@app.post("/v1/report/send")
+async def report_send(body: dict = Body(default={}), tenant: dict = Depends(tenant_auth)):
+    """Envía ahora el reporte gerencial (como vista previa) a los destinatarios configurados o al indicado."""
+    to = [a.strip() for a in (body.get("to") or []) if isinstance(a, str) and "@" in a][:5] or None
+    try:
+        return await report.send(tenant, to, preview=bool(body.get("preview", True)))
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo enviar el reporte: {str(e)[:200]}")
 
 
 @app.post("/v1/finder/run")
