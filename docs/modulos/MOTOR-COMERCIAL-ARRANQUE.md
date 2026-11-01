@@ -33,6 +33,12 @@ No se escribe en frío desde el dominio principal ni desde el Gmail de la empres
 
 Mientras tanto, conversa con correos reales (equipo, amigos) desde ese buzón para que tenga historial.
 
+### Qué proveedor de correo usar (importante)
+
+- **Resend** (y servicios parecidos de envío por API: SendGrid, Mailgun, Postmark…) **prohíben el correo en frío**: su política de uso exige que cada destinatario haya dado permiso (opt-in), prohíbe listas compradas o extraídas y suspende cuentas con **quejas > 0,08 %** o **rebotes > 4 %**. Sirve muy bien para correo **con permiso**: confirmaciones de demo, invitaciones a videollamadas, respuestas a quien escribió, formularios web, correos del CRM. SMTP de Resend: `smtp.resend.com`, puerto 465 (SSL) o 587 (STARTTLS), usuario `resend`, contraseña = la API key.
+- Para **prospectar a personas que aún no te conocen** hace falta un **buzón real** (Google Workspace, Zoho…) en un dominio aparte, con envíos 1 a 1, bajos y con baja de un clic, y revisar con asesoría legal el marco de datos personales de cada país.
+- Mientras tanto, la prospección puede arrancar **solo con contactos con permiso o que ya conocen la empresa** (referidos, clientes, personas que pidieron información, quienes llenaron un formulario).
+
 ## Paso 3 — Revisar el entrenamiento
 
 *CRM de producción → Comercial virtual*: lee y ajusta *Empresa*, *Servicios*, *Preguntas frecuentes* y *Objetivo*. Agrega las demás aplicaciones del catálogo (qué hace cada una y para quién). Usa **Probar** para simular respuestas de un cliente (precio, «ya tengo CRM», «no me interesa») y corrige lo que no te guste. **Criterio:** que respondas «eso lo diría yo» en 5 de 5 pruebas.
