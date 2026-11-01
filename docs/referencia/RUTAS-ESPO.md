@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **155** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **158** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -56,6 +56,9 @@ Total: **155** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/docRun` | CrmHub.docRun | GET /CrmHub/docRun. Edición del lead. Hub: GET /v1/docs/run. */ |
 | POST | `/CrmHub/email/send` | CrmHub.emailSend | Envía desde el Hub con el nombre y la firma del usuario; si la empresa no tiene el correo del Centro responde fallback para usar el envío de Espo. */ |
 | GET | `/CrmHub/emailSignature` | CrmHub.emailSignature | GET /CrmHub/emailSignature. Usuario. Firma y nombre del usuario. */ |
+| GET | `/CrmHub/finder` | CrmHub.finder | GET /CrmHub/finder. Estado del buscador de prospectos (licencia, configuración, última pasada). Hub: GET /v1/finder. */ |
+| POST | `/CrmHub/finderRun` | CrmHub.finderRun | POST /CrmHub/finderRun. Admin. {limit}. Una pasada de búsqueda en internet. Hub: POST /v1/finder/run. */ |
+| POST | `/CrmHub/finderSave` | CrmHub.finderSave | POST /CrmHub/finderSave. Admin. {enabled, daily_limit, focus}. Hub: PUT /v1/finder. */ |
 | GET | `/CrmHub/formTemplate` | CrmHub.formTemplate | Un formulario web ya diseñado a partir de una plantilla (se guarda al pulsar «Guardar»). */ |
 | POST | `/CrmHub/growthApply` | CrmHub.growthApply | POST /CrmHub/growthApply. Admin. {id}. Aplica un ajuste propuesto. Hub: POST /v1/growth/apply. */ |
 | GET | `/CrmHub/growthOverview` | CrmHub.growthOverview | GET /CrmHub/growthOverview?agentId=. Resultados por canal y nicho e historial de ajustes de la optimización diaria. Hub: GET /v1/growth/overview. */ |

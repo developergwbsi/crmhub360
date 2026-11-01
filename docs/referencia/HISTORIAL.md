@@ -2,8 +2,15 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.12.2)
+## Sin publicar (después de v1.13.0)
 
+- `698ec0c` 2026-11-01 — Versión 1.13.1
+- `bb4a75a` 2026-11-01 — Buscador: reintento al estructurar el informe
+- `a913590` 2026-11-01 — Buscador: pestaña en Prospección, interruptor de licencia en el Centro de control y control de erratas en el dominio del correo
+
+## v1.13.0
+
+- `e3c13b4` 2026-11-01 — Versión 1.13.0
 - `c6d3f2f` 2026-11-01 — Versión 1.13.0
 - `a0af27e` 2026-11-01 — Buscador de prospectos: investigación web con fuentes públicas y protección de contactos fríos
 - `258108f` 2026-11-01 — Guía de arranque: Core360 ya está disponible en el entrenamiento
