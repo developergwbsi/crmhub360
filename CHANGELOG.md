@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.18.0] - 2026-11-01
+
 ### Añadido
 - **Validación de correos antes de escribir.** Se comprueba que el buzón exista sin enviarle nada (dominio con correo y respuesta del servidor del destinatario). Se aplica al importar prospectos, al pasarlos al CRM, antes de que el comercial virtual escriba y al aprobar un mensaje; nuevo botón **Validar correos** en Prospección. Los inexistentes quedan rechazados con el motivo y en *No contactar*.
 - **Un rebote detiene al comercial virtual** para ese lead (antes solo se agregaba a *No contactar*), se anota en la ficha y el prospecto queda rechazado.
