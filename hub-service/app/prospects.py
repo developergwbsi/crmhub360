@@ -241,7 +241,8 @@ async def promote(tenant: dict, ids: list[int] | None = None, limit: int | None 
                                           (f"Oferta indicada por el equipo: {(r['raw'] or {}).get('oferta')} como producto principal de este contacto." if (r.get("raw") or {}).get("oferta") else ""),
                                           (f"Producto recomendado por el calificador: {(en.get('qualifier') or {}).get('product', '')} (grado {(en.get('qualifier') or {}).get('grade', '')}). Ángulo: {(en.get('qualifier') or {}).get('angle', '')}" if en.get("qualifier") else "")] if x)
             extra = {"description": desc, "preferredChannel": "Correo" if r["email"] else "WhatsApp", **({"accountName": r["company"]} if r["company"] else {})}
-            lead_id = await ingest.upsert_lead(tenant, name=r["name"], phone=r["phone"] or None, email=r["email"] or None, source="Prospección IA", extra=extra, campaign=r["campaign"] or cfg["campaign"] or None)
+            lead_name = _lead_name(r)
+            lead_id = await ingest.upsert_lead(tenant, name=lead_name, phone=r["phone"] or None, email=r["email"] or None, source="Prospección IA", extra=extra, campaign=r["campaign"] or cfg["campaign"] or None)
             _mark(r["id"], "imported", "", lead_id)
             out["created"] += 1
             try:
@@ -252,6 +253,17 @@ async def promote(tenant: dict, ids: list[int] | None = None, limit: int | None 
             out["errors"] += 1
             log.warning("promover prospecto %s: %s", r["id"], str(e)[:120])
     return out
+
+
+GENERIC_CONTACTS = {"atencion al cliente", "servicio al cliente", "atencion", "contacto", "contactenos", "info", "informacion", "ventas", "comercial", "equipo", "administracion", "recepcion", "pqr", "clientes", "gerencia"}
+
+
+def _lead_name(r: dict) -> str:
+    """Nombre del lead: si el único contacto público es un buzón genérico («Atención al cliente», «Ventas»…), el lead se llama como la empresa."""
+    import unicodedata
+    nm = (r.get("name") or "").strip()
+    key = unicodedata.normalize("NFKD", nm).encode("ascii", "ignore").decode().lower().strip(" .:-")
+    return (r.get("company") or nm) if (not nm or key in GENERIC_CONTACTS) and r.get("company") else nm
 
 
 def _allocate(rows: list[dict], n: int, tenant: dict) -> list[dict]:

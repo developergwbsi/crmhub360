@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Corregido
+- Un prospecto cuyo único contacto público es un buzón genérico («Atención al cliente», «Ventas»…) ya no da nombre al lead: el lead se llama como la empresa.
+
 ## [1.17.1] - 2026-11-01
 
 ### Corregido
