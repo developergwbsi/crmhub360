@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **199** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **202** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -135,7 +135,10 @@ Total: **199** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/public/meet/_/rec/{rid}/chunk` | `rec_chunk` | — |
 | GET | `/v1/public/meet/_/rec/{rid}/file` | `rec_file` | Reproduce o descarga una grabación con una llave de corta vida (la entrega el CRM al usuario con acceso). |
 | POST | `/v1/public/meet/_/rec/{rid}/finish` | `rec_finish` | — |
+| GET | `/v1/public/meet/favicon.ico` | `favicon_ico` | — |
+| GET | `/v1/public/meet/favicon.svg` | `favicon_svg` | Favicon genérico de DigitalAlliance Hub para las páginas públicas del dominio de las salas. |
 | GET | `/v1/public/meet/p/{tenant}/{slug}` | `proposal_page` | Página pública de una presentación (https://meet.<dominio>/p/<empresa>/<producto>): HTML autocontenido, sin scripts. |
+| GET | `/v1/public/meet/p/{tenant}/{slug}.pdf` | `proposal_pdf` | PDF del brochure de una presentación (el mismo que se adjunta a los correos). |
 | GET | `/v1/public/meet/r/{token}` | `rec_share_page` | Página pública de una grabación compartida (https://meet.<dominio>/r/<enlace>). |
 | GET | `/v1/public/meet/r/{token}/video` | `rec_share_video` | — |
 | GET | `/v1/public/meet/u/{token}` | `unsub_page` | Página de baja de un correo (https://meet.<dominio>/u/<enlace>): pide confirmar con un botón (los antivirus abren los enlaces sin querer). |

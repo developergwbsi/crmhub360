@@ -2,8 +2,19 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.15.0)
+## Sin publicar (después de v1.16.0)
 
+- `6f3ab85` 2026-11-01 — Versión 1.17.0
+- `927a069` 2026-11-01 — bin/desplegar-version: publica una versión con un solo comando
+- `e83bfbd` 2026-11-01 — Core360 ampliado (planta conectada, turnos, contabilidad), oferta indicada por el equipo y un solo enlace de material en el correo en frío
+- `34f4e2c` 2026-11-01 — Presentaciones: chatbots y Listo360 en Gestor360; formularios propios y reuniones propias en Crm Hub 360; favicon genérico en los enlaces públicos
+- `edff6a4` 2026-11-01 — Brochures PDF adjuntos a los correos con el enlace, y nombre de la empresa siempre en una sola línea
+- `af894e8` 2026-11-01 — Presentaciones con capturas reales (Crm Hub 360 y Gestor360), Gestor360 con sus cinco líneas y conexión por API
+- `64b7b1d` 2026-11-01 — Presentación de Crm Hub 360 ampliada: agentes de IA, lectura de documentos, canales, videollamadas, reportes y más
+
+## v1.16.0
+
+- `6f0e1f9` 2026-11-01 — Versión 1.16.0
 - `f6e9817` 2026-11-01 — Versión 1.16.0
 - `3854b83` 2026-11-01 — Comercial virtual: pestañas Agentes de prospección (buscador y calificador) y Propuestas y brochures
 - `bf9eeb8` 2026-11-01 — Presentaciones: sin emoji en la ilustración del chat
