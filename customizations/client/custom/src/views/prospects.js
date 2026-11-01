@@ -58,19 +58,19 @@ define('custom:views/prospects', ['view', 'custom:ui'], function (Dep, ChUi) {
             const d = this.d;
             if (!d) { root.innerHTML = '<div class="ch-muted" style="padding:24px">Cargando…</div>'; return; }
             if (d.error) { root.innerHTML = '<div class="ch-chat-err">Solo gerentes, directores y supervisores pueden usar la prospección.</div>'; return; }
-            const tabs = [['list', 'Prospectos'], ['icp', 'Cliente ideal'], ...(d.isAdmin ? [['seq', 'Secuencia y resultados']] : []), ['dnc', 'No contactar']];
+            const tabs = [['list', 'Prospectos'], ['icp', 'Cliente ideal'], ['finder', 'Buscador'], ...(d.isAdmin ? [['seq', 'Secuencia y resultados']] : []), ['dnc', 'No contactar']];
             root.innerHTML = `<div class="ch-rc-top"><div><h3>Prospección</h3><p class="ch-muted">Carga prospectos, deja que la IA los valide y puntúe, y los comerciales virtuales los contactan respetando horarios legales, la lista de no contactar y los permisos de cada canal.</p></div></div>` +
                 `<div class="ch-pr-tabs">${tabs.map(([k, l]) => `<button type="button" data-tab="${k}" class="${this.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div><div class="ch-pr-body"></div>`;
             const body = root.querySelector('.ch-pr-body');
             root.querySelector('.ch-pr-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b) { this.tab = b.dataset.tab; this.draw(); } };
-            ({list: () => this.drawList(body), icp: () => this.drawIcp(body), seq: () => this.drawSeq(body), dnc: () => this.drawDnc(body)})[this.tab]();
+            ({list: () => this.drawList(body), icp: () => this.drawIcp(body), finder: () => this.drawFinder(body), seq: () => this.drawSeq(body), dnc: () => this.drawDnc(body)})[this.tab]();
         }
 
         // ---------- prospectos
         drawList(body) {
             const d = this.d, c = d.counts || {}, icp = d.icp || {};
             const rows = (d.items || []).map(i => { const [l, k] = ST[i.status] || [i.status, '']; const en = i.enrichment || {};
-                return `<tr><td><input type="checkbox" data-sel="${i.id}" ${this.sel.has(i.id) ? 'checked' : ''} ${i.status === 'imported' ? 'disabled' : ''}></td><td><b>${esc(i.name)}</b><small>${esc([i.title, i.company].filter(Boolean).join(' · '))}</small></td>` +
+                return `<tr><td><input type="checkbox" data-sel="${i.id}" ${this.sel.has(i.id) ? 'checked' : ''} ${i.status === 'imported' ? 'disabled' : ''}></td><td><b>${esc(i.name)}</b>${i.origin === 'finder' ? ' <span class="ch-pr-tag" title="Hallado por el buscador en internet: contacto frío">Buscador</span>' : ''}<small>${esc([i.title, i.company].filter(Boolean).join(' · '))}</small>${i.origin === 'finder' && (i.raw || {}).fuente_url ? `<small>Fuente: <a href="${esc(String((i.raw || {}).fuente_url).split(' ')[0])}" target="_blank" rel="noopener noreferrer">ver página</a></small>` : ''}</td>` +
                     `<td>${esc(i.email)}<small>${esc(i.phone)}</small></td><td>${esc(i.industry || '—')}<small>${esc(i.country)} · ${esc((i.segment || '').toUpperCase())}</small></td><td>${i.score == null ? '—' : `<span class="ch-pr-sc" title="${esc(en.reason || '')}">${i.score}</span>`}${en.pain ? `<small>${esc(en.pain)}</small>` : ''}</td>` +
                     `<td><span class="ch-pr-tag ${k}">${l}</span>${i.reason ? `<small>${esc(i.reason)}</small>` : ''}${i.lead_id ? `<small><a href="#Lead/view/${esc(i.lead_id)}">Ver lead</a></small>` : ''}</td></tr>`; }).join('');
             const fu = this.fun, pct = (a, b) => b ? Math.round(a * 100 / b) + '%' : '—';
@@ -124,6 +124,29 @@ define('custom:views/prospects', ['view', 'custom:ui'], function (Dep, ChUi) {
         }
 
         // ---------- cliente ideal
+        // ---------- buscador (agente que investiga en internet)
+        drawFinder(body) {
+            body.innerHTML = '<div class="ch-muted" style="padding:16px">Cargando…</div>';
+            Espo.Ajax.getRequest('CrmHub/finder').then(f => {
+                const lr = f.last_run;
+                body.innerHTML = `<div class="ch-pr-card"><h5><span class="fas fa-magnifying-glass"></span> ${esc(f.name)}</h5>` +
+                    `<p class="ch-muted">Un agente que investiga en internet empresas que podrían necesitar lo que ofreces y las deja en <b>Prospectos</b> con la página pública donde halló el contacto. Usa el motor de IA de tu empresa (consume tokens y el cargo por búsqueda web).</p>` +
+                    (f.licensed ? '' : '<div class="ch-chat-err">El buscador no está incluido en tu licencia. Pídelo al administrador del servicio.</div>') +
+                    `<div class="ch-pr-g2"><div><label class="ch-pr-chk"><input type="checkbox" data-f2="enabled" ${f.enabled ? 'checked' : ''} ${f.licensed ? '' : 'disabled'}> <b>Buscador activo</b></label></div>` +
+                    `<div><label>Tope de empresas por día</label><input class="form-control" type="number" min="1" max="100" data-f2="daily_limit" value="${f.daily_limit}" ${f.licensed ? '' : 'disabled'}></div></div>` +
+                    `<label>Enfoque de la búsqueda (opcional)</label><textarea class="form-control" rows="3" data-f2="focus" placeholder="Ej.: clínicas de estética con varias sedes en Cali y Bogotá; fábricas de muebles de más de 20 empleados" ${f.licensed ? '' : 'disabled'}>${esc(f.focus)}</textarea>` +
+                    `<div class="ch-pr-warn"><b>Reglas:</b> solo se guardan empresas con una página pública y un contacto de negocio publicado; nunca se adivinan correos. Los hallados son <b>contactos fríos</b>: no reciben WhatsApp ni SMS, el correo sale solo por un remitente aparte y <b>cada mensaje lo aprueba una persona</b>.</div>` +
+                    `<p><button class="btn btn-primary" data-a="fsave" ${f.licensed ? '' : 'disabled'}><span class="fas fa-floppy-disk"></span> Guardar</button> <button class="btn btn-default" data-a="frun" ${f.licensed && f.enabled ? '' : 'disabled'}><span class="fas fa-play"></span> Buscar ahora</button></p>` +
+                    (lr ? `<p class="ch-muted">Última búsqueda: ${esc(ChUi.fmt.dt(lr.at))} · ${lr.found} empresas halladas · ${lr.ready} listas · lote ${esc(lr.batch)}</p>` : '<p class="ch-muted">Aún no ha buscado.</p>') + '</div>';
+                const q = s => body.querySelector(s), fail = xhr => { Espo.Ui.notify(false); if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error((xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || 'No se pudo completar.'); };
+                const data = () => ({enabled: q('[data-f2=enabled]').checked, daily_limit: +q('[data-f2=daily_limit]').value || 20, focus: q('[data-f2=focus]').value});
+                q('[data-a=fsave]').onclick = () => Espo.Ajax.postRequest('CrmHub/finderSave', data()).then(() => { Espo.Ui.success('Guardado'); this.drawFinder(body); }).catch(fail);
+                q('[data-a=frun]').onclick = () => ChUi.confirm({title: 'Buscar ahora', ok: 'Buscar', text: 'El agente investigará en internet y guardará prospectos nuevos. Consume tokens y búsquedas del proveedor de IA. No envía nada.'}).then(y => {
+                    if (!y) { return; } Espo.Ui.notify('Buscando en internet… puede tardar un par de minutos');
+                    Espo.Ajax.postRequest('CrmHub/finderRun', {}).then(r => { Espo.Ui.notify(false); Espo.Ui.success(`${r.ready || 0} prospectos nuevos${r.reason ? ' · ' + r.reason : ''}`); this.tab = 'list'; this.load(); }).catch(fail); });
+            }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } body.innerHTML = '<div class="ch-chat-err">No se pudo cargar el buscador.</div>'; });
+        }
+
         drawIcp(body) {
             const i = this.d.icp || {}, ls = v => esc((v || []).join(', '));
             body.innerHTML = `<div class="ch-pr-card"><h4>¿A quién le vendemos?</h4><p class="ch-muted">Con esto la IA decide qué tan bien encaja cada prospecto (0 a 100) y solo pasan al CRM los que superan el puntaje mínimo.</p>` +

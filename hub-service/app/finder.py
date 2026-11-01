@@ -3,6 +3,7 @@ y deja en Prospectos (origen «finder») solo lo que tiene una fuente pública v
 por la propia empresa o un directorio; los correos personales (gmail, hotmail…) se descartan; cada prospecto guarda la dirección donde se halló.
 Los hallados NUNCA salen por WhatsApp/SMS ni por el proveedor de correo transaccional (Resend): solo por un remitente aparte y con aprobación de una persona (agent._deliver).
 Configuración: settings.finder = {enabled, daily_limit, focus, last_run}. Licencia: settings.limits.finder."""
+import difflib
 import json
 import logging
 import re
@@ -20,6 +21,20 @@ SCHEMA = {"type": "object", "properties": {"candidates": {"type": "array", "item
     "source_url": {"type": "string", "description": "dirección exacta donde aparece el dato de contacto"},
     "why": {"type": "string", "description": "una frase: por qué necesitaría lo que vendemos"}},
     "required": ["company", "source_url", "why"]}}}, "required": ["candidates"]}
+
+
+def _domain(u: str) -> str:
+    m = re.search(r"(?:https?://)?(?:www\.)?([a-z0-9.-]+\.[a-z]{2,})", (u or "").lower())
+    return m.group(1) if m else ""
+
+
+def typo_suspect(email: str, website: str, source: str) -> bool:
+    """¿El dominio del correo es casi igual (pero no igual) al del sitio? Suele ser una errata de la página o del modelo; un rebote daña la reputación del remitente."""
+    ed = email.partition("@")[2]
+    for site in (_domain(website), _domain(source)):
+        if site and ed != site and not ed.endswith("." + site) and not site.endswith("." + ed) and difflib.SequenceMatcher(None, ed, site).ratio() >= 0.85:
+            return True
+    return False
 
 
 def config(tenant: dict) -> dict:
@@ -73,6 +88,8 @@ async def run(tenant: dict, limit: int | None = None) -> dict:
             dropped += 1; continue
         if email and email.partition("@")[2] in FREE_MAIL:
             email = ""   # correo personal: no se usa en frío
+        if email and typo_suspect(email, str(c.get("website") or ""), src):
+            email = ""   # dominio casi igual al del sitio: posible errata, no se usa
         if not email and not phone:
             dropped += 1; continue
         rows.append({"nombre": str(c.get("contact_name") or "")[:120] or c.get("company"), "empresa": c.get("company"), "cargo": c.get("contact_title") or "", "correo": email, "telefono": phone, "pais": "",

@@ -2428,6 +2428,27 @@ class CrmHub
         return (object) $this->hubCall('PUT', '/v1/prospects/icp', json_decode(json_encode($request->getParsedBody()), true) ?: [], 20);
     }
 
+    /** GET /CrmHub/finder. Estado del buscador de prospectos (licencia, configuración, última pasada). Hub: GET /v1/finder. */
+    public function getActionFinder(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        return (object) $this->hubCall('GET', '/v1/finder', null, 20);
+    }
+
+    /** POST /CrmHub/finderSave. Admin. {enabled, daily_limit, focus}. Hub: PUT /v1/finder. */
+    public function postActionFinderSave(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('PUT', '/v1/finder', json_decode(json_encode($request->getParsedBody()), true) ?: [], 20);
+    }
+
+    /** POST /CrmHub/finderRun. Admin. {limit}. Una pasada de búsqueda en internet. Hub: POST /v1/finder/run. */
+    public function postActionFinderRun(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('POST', '/v1/finder/run', json_decode(json_encode($request->getParsedBody()), true) ?: [], 300);
+    }
+
     /** GET /CrmHub/outboundStats?days=. Envíos y respuestas por variante de la secuencia saliente. Hub: GET /v1/agent/outbound/stats. */
     public function getActionOutboundStats(Request $request): \stdClass
     {

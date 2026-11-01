@@ -1265,6 +1265,7 @@ class ServicesReq(BaseModel):
     lookups: Optional[list] = None        # servicios de consulta del sistema habilitados para la empresa
     wa_bulk: Optional[dict] = None        # envío masivo por WhatsApp no oficial (Evolution): {max: destinatarios por campaña, every_s: segundos entre mensajes}
     templates: Optional[int] = None       # plantillas personales por usuario y canal (10 incluidas; más es un servicio adicional)
+    finder: Optional[bool] = None         # buscador de prospectos en internet (servicio adicional; consume tokens del motor de IA de la empresa)
     meet: Optional[str] = None            # videollamadas propias (servicio adicional): 'off' | 'video' | 'video_subs' (con subtítulos en vivo)
 
 
@@ -1377,9 +1378,9 @@ async def get_services(slug: str, actor: str = Depends(me)):
             au = [dict(r) for r in c6.execute("SELECT engine, calls, tokens_in, tokens_out FROM ai_usage WHERE tenant=%s AND month=to_char(now() AT TIME ZONE 'UTC','YYYY-MM') ORDER BY calls DESC", (slug,)).fetchall()]
     except Exception:
         au = []
-    return {"ai": ((t["settings"] or {}).get("ai") or {}).get("mode") or "global", "aiProviders": [{"id": p["id"], "name": p["name"], "engine": p["fields"].get("engine"), "model": p["fields"].get("model")} for p in providers_list() if p["kind"] == "ai"],
+    return {"slug": slug, "ai": ((t["settings"] or {}).get("ai") or {}).get("mode") or "global", "aiProviders": [{"id": p["id"], "name": p["name"], "engine": p["fields"].get("engine"), "model": p["fields"].get("model")} for p in providers_list() if p["kind"] == "ai"],
             "aiDefault": get_setting("ai_default"), "aiUsage": au,
-            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "meet": ((t["settings"] or {}).get("limits") or {}).get("meet") or "off", "agents": int(((t["settings"] or {}).get("limits") or {}).get("agents") or 1), "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
+            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "meet": ((t["settings"] or {}).get("limits") or {}).get("meet") or "off", "finder": bool(((t["settings"] or {}).get("limits") or {}).get("finder")), "agents": int(((t["settings"] or {}).get("limits") or {}).get("agents") or 1), "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
             "lookups": list(((t["settings"] or {}).get("lookups")) or []), "lookupCatalog": [{"id": l["id"], "name": l["name"], "category": l.get("category", "otro")} for l in lookups_list()], "cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10),
             "waBulk": {"max": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("max") or 100), "every_s": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("every_s") or 120)}, "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
             "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
@@ -1453,6 +1454,9 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
             raise HTTPException(502, "No se pudo cambiar el servicio de videollamadas en la empresa")
         with db() as c6:
             c6.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps({"meet": req.meet}), slug))
+    if req.finder is not None:
+        with db() as c10:
+            c10.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps({"finder": bool(req.finder)}), slug))
     if req.lookups is not None:
         known = {l["id"] for l in lookups_list()}
         ids = [str(i) for i in req.lookups if str(i) in known]

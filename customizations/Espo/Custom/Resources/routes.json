@@ -1244,5 +1244,29 @@
             "controller": "CrmHub",
             "action": "prospectsNiche"
         }
+    },
+    {
+        "route": "/CrmHub/finder",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "finder"
+        }
+    },
+    {
+        "route": "/CrmHub/finderSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "finderSave"
+        }
+    },
+    {
+        "route": "/CrmHub/finderRun",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "finderRun"
+        }
     }
 ]
