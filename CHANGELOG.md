@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.20.0] - 2026-11-01
+
 ### Añadido
 - **Reporte gerencial por correo del motor comercial.** Después del ciclo diario (hora configurable, 11:00 por defecto) llega a los destinatarios elegidos un correo con las cifras del día (prospectos hallados, listos, descartados y por qué, correos enviados, rebotes, bajas, respuestas, demos), una lectura gerencial y los siguientes pasos. Se configura en *Comercial virtual → Agentes de prospección → Buscador* y se puede enviar al instante con «Enviar el reporte ahora».
 
