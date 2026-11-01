@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **181** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **182** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -153,6 +153,7 @@ Total: **181** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/recPlay` | CrmHub.recPlay | GET /CrmHub/recPlay?id=. Usuario dueño (o con alcance «todos»). Direcciones de reproducción y descarga (vencen en 4 horas). Hub: GET /v1/rec/{id}/play. */ |
 | POST | `/CrmHub/recStart` | CrmHub.recStart | POST /CrmHub/recStart. Usuario. {title?, audio?, mime?}. Crea la grabación y devuelve la dirección y llave para subir el video. Hub: POST /v1/rec/start. */ |
 | POST | `/CrmHub/recUpdate` | CrmHub.recUpdate | POST /CrmHub/recUpdate. Usuario dueño (o con alcance «todos»). {id, title?, share?}. Hub: POST /v1/rec/{id}/update. */ |
+| POST | `/CrmHub/reportSend` | CrmHub.reportSend | POST /CrmHub/reportSend. Admin. {to?}. Envía ahora el reporte gerencial del motor comercial (vista previa). Hub: POST /v1/report/send. */ |
 | GET | `/CrmHub/searchConfig` | CrmHub.searchConfig | GET /CrmHub/searchConfig. Admin. Buscador web de la empresa. Hub: GET /v1/search-config. */ |
 | POST | `/CrmHub/searchConfigSave` | CrmHub.searchConfigSave | POST /CrmHub/searchConfigSave. Admin. {engine, api_key, cx}. Hub: PUT /v1/search-config. */ |
 | POST | `/CrmHub/searchConfigTest` | CrmHub.searchConfigTest | POST /CrmHub/searchConfigTest. Admin. Prueba el buscador con una consulta real. Hub: POST /v1/search-config/test. */ |

@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **208** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **209** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -180,6 +180,7 @@ Total: **208** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | DELETE | `/v1/rec/{rid}` | `rec_delete` | — |
 | GET | `/v1/rec/{rid}/play` | `rec_play` | — |
 | POST | `/v1/rec/{rid}/update` | `rec_update` | — |
+| POST | `/v1/report/send` | `report_send` | Envía ahora el reporte gerencial (como vista previa) a los destinatarios configurados o al indicado. |
 | GET | `/v1/search-config` | `search_config_get` | Buscador web de la empresa: cómo está (del sistema, prestado o propio) y los datos no secretos de su buscador propio. |
 | PUT | `/v1/search-config` | `search_config_save` | Guarda el buscador propio de la empresa (motor, clave, cx). Solo si el Centro de control dejó el buscador en «Propio». |
 | POST | `/v1/search-config/test` | `search_config_test` | Prueba el buscador que usa la empresa con una búsqueda real (consume una consulta). |

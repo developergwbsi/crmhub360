@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.18.1)
+## Sin publicar (después de v1.19.0)
 
+- `072e3e3` 2026-11-01 — Versión 1.20.0
+- `0c5a334` 2026-11-01 — Reporte gerencial por correo del motor comercial (pendiente de versión)
+
+## v1.19.0
+
+- `04e4a54` 2026-11-01 — Versión 1.19.0
 - `5ff3c61` 2026-11-01 — Versión 1.19.0
 - `0b5ff72` 2026-11-01 — Base del chatbot de Gestor360: quién responde por línea, mensajes predefinidos, proveedor y servicio en el Centro de control, y solicitud del chatbot
 - `842c1d9` 2026-11-01 — Chatbot Gestor360: hallazgo sobre cómo salen las respuestas del bot y caminos de integración
