@@ -905,7 +905,7 @@ def _email_html(text: str, persona: str, role: str, company: str) -> str:
     e = _html.escape
     paras = "".join(f"<p style='margin:0 0 12px'>{e(p).replace(chr(10), '<br>')}</p>" for p in re.split(r"\n{2,}", text.strip()))
     return (f"<div style='font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#161b2e;max-width:560px'>{paras}"
-            f"<div style='margin-top:16px;padding-top:10px;border-top:2px solid #4f63e8;font-size:13px'><b>{e(persona)}</b><br><span style='color:#5d6678;white-space:nowrap'>{e(role)} · {e(company)}</span></div></div>")
+            f"<div style='margin-top:16px;padding-top:10px;border-top:2px solid #4f63e8;font-size:13px'><b>{e(persona)}</b><br><span style='color:#5d6678;white-space:nowrap'>{e(role)} · {e(company).replace(' ', chr(160))}</span></div></div>")
 
 
 def _inbound_recent(slug: str, lead_id: str, hours: int) -> bool:

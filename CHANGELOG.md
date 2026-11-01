@@ -5,6 +5,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Corregido
+- El nombre de la empresa también va con espacio duro en la firma y en el pie de baja de los correos.
+
+### Corregido
 - **Prospección con encabezado fijo**: el título, las pestañas, las tarjetas, los botones (importar, enriquecer…), el buscador y los filtros se quedan fijos; solo se desplaza la lista, con sus encabezados de columna también fijos.
 
 ## [1.17.0] - 2026-11-01
