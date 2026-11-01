@@ -938,7 +938,8 @@ def _inbound_recent(slug: str, lead_id: str, hours: int) -> bool:
 
 def _quota_ok(tenant: dict, cfg: dict) -> bool:
     """Cuenta un correo en frío de hoy para el remitente de la empresa; False si ya llegó al tope diario (protege la reputación del dominio)."""
-    sender = ((tenant.get("settings") or {}).get("mailout") or {}).get("from_address") or "-"
+    st = tenant.get("settings") or {}
+    sender = (st.get("mailout_cold") or st.get("mailout") or {}).get("from_address") or "-"   # el correo en frío sale por su propio remitente
     return compliance.mail_quota_take(tenant["slug"], sender, (cfg.get("outbound") or {}).get("max_email_per_day") or 40)
 
 
