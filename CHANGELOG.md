@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.11.0] - 2026-11-01
+
 ### Añadido
 - **Prospección saliente (motor comercial de IA).** Nuevo menú **Prospección**: se importan prospectos (CSV), se validan (correo, teléfono internacional, no contactar, duplicados contra el CRM), la IA los puntúa contra el **cliente ideal** y los enriquece (empresa o persona, sector, dolor probable); los mejores pasan al CRM como leads de «Prospección IA», hasta un **tope diario**. El comercial virtual los contacta con una **secuencia de 3 pasos** (primer contacto, 72 horas, 5 días) con **variantes A/B por paso** (se prueba cada una y luego se envía más la que mejor responde) y reglas de forma: WhatsApp de máximo 3 párrafos cortos con pregunta final; correo con asunto de 2 a 4 palabras, menos de 120 palabras y un solo llamado.
 - **Cumplimiento integrado:** lista de **no contactar** (se llena sola con BAJA, STOP, «no me escriban más» y el enlace de baja de los correos, que es de un clic), **horarios legales por país** (Colombia: Ley 2300), **WhatsApp solo a quien dio permiso o ya escribió**, plantillas oficiales de Meta para iniciar conversaciones y **tope diario de correos en frío por remitente**.
