@@ -1204,5 +1204,45 @@
             "controller": "CrmHub",
             "action": "outboundFunnel"
         }
+    },
+    {
+        "route": "/CrmHub/growthOverview",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "growthOverview"
+        }
+    },
+    {
+        "route": "/CrmHub/growthRun",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "growthRun"
+        }
+    },
+    {
+        "route": "/CrmHub/growthApply",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "growthApply"
+        }
+    },
+    {
+        "route": "/CrmHub/growthRevert",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "growthRevert"
+        }
+    },
+    {
+        "route": "/CrmHub/prospectsNiche",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "prospectsNiche"
+        }
     }
 ]

@@ -25,6 +25,18 @@ define('custom:views/prospects', ['view', 'custom:ui'], function (Dep, ChUi) {
         return rows.map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] || '').trim()])));
     }
 
+
+    const KIND = {variant: 'Variante', style: 'Estilo', niche_pause: 'Nicho'};
+    function growthHtml(g) {
+        const ch = g.channels.length ? `<table><thead><tr><th>Canal</th><th>Envíos</th><th>Respuestas</th><th>Tasa</th><th>Mínimo</th><th>Entrega</th></tr></thead><tbody>${g.channels.map(c => `<tr><td>${c.channel === 'whatsapp' ? 'WhatsApp' : c.channel === 'email' ? 'Correo' : esc(c.channel)}</td><td>${c.sends}</td><td>${c.replies}</td><td><b>${c.rate}%</b></td><td>${c.target != null ? c.target + '%' : '—'}</td><td>${c.delivery != null ? c.delivery + '%' : '—'}</td></tr>`).join('')}</tbody></table>` : '<p class="ch-muted">Aún no hay envíos en frío en los últimos 30 días.</p>';
+        const ni = g.niches.length ? `<table><thead><tr><th>Nicho</th><th>Contactados</th><th>Respondieron</th><th>Tasa</th><th></th></tr></thead><tbody>${g.niches.map(n => `<tr><td>${esc(n.niche)}${n.paused ? ' <span class="ch-pr-tag bad">En pausa</span>' : ''}</td><td>${n.leads}</td><td>${n.replied}</td><td>${n.rate}%</td><td><button class="btn btn-link btn-sm" data-gr="niche" data-n="${esc(n.niche)}" data-p="${n.paused ? 0 : 1}">${n.paused ? 'Reanudar' : 'Pausar'}</button></td></tr>`).join('')}</tbody></table>` : '';
+        const lg = g.log.length ? `<table><thead><tr><th>Cuándo</th><th>Ajuste</th><th></th></tr></thead><tbody>${g.log.map(x => `<tr><td>${esc(ChUi.fmt.dt(x.at))}</td><td><span class="ch-pr-tag">${KIND[x.kind] || x.kind}</span> ${esc(x.title)}<small>${esc(x.reason)}${x.kind === 'variant' ? ' · nuevo enfoque: ' + esc((x.payload.new || {}).angle || '') : x.kind === 'style' ? ' · ' + esc(x.payload.after || '') : ''}</small></td>` +
+            `<td>${x.reverted ? '<span class="ch-pr-tag">Revertido</span>' : x.applied ? `<button class="btn btn-link btn-sm" data-gr="revert" data-id="${x.id}">Revertir</button>` : `<button class="btn btn-primary btn-sm" data-gr="apply" data-id="${x.id}">Aplicar</button>`}</td></tr>`).join('')}</tbody></table>` : '<p class="ch-muted">Todavía no ha hecho ajustes.</p>';
+        return `<div class="ch-pr-gr"><div class="ch-pr-bar"><button type="button" class="btn btn-default btn-sm" data-gr="run">Analizar ahora (solo proponer)</button><button type="button" class="btn btn-default btn-sm" data-gr="runapply">Analizar y aplicar</button>` +
+            `<span class="ch-muted">${g.lastRun ? 'Última tarea diaria: ' + esc(g.lastRun) : 'Aún no se ha ejecutado la tarea diaria.'}${g.dry_run ? ' · El comercial está en modo prueba: no hay respuestas reales que analizar.' : ''}</span></div>` +
+            `<h6>Resultados por canal (30 días)</h6><div class="ch-pr-tbl">${ch}</div>${ni ? `<h6>Resultados por nicho</h6><div class="ch-pr-tbl">${ni}</div>` : ''}<h6>Historial de ajustes</h6><div class="ch-pr-tbl">${lg}</div></div>`;
+    }
+
     return class extends Dep {
         templateContent = '<div class="ch-pr"></div>'
         tab = 'list'
@@ -129,15 +141,22 @@ define('custom:views/prospects', ['view', 'custom:ui'], function (Dep, ChUi) {
         // ---------- secuencia (administradores)
         drawSeq(body) {
             body.innerHTML = '<div class="ch-muted" style="padding:16px">Cargando…</div>';
-            Promise.all([Espo.Ajax.getRequest('CrmHub/agentConfig', {}), Espo.Ajax.getRequest('CrmHub/outboundStats', {days: 60}), Espo.Ajax.getRequest('User', {maxSize: 200, select: 'name,isActive,type'}).catch(() => ({list: []}))]).then(([ac, st, us]) => {
+            Promise.all([Espo.Ajax.getRequest('CrmHub/agentConfig', {}), Espo.Ajax.getRequest('CrmHub/outboundStats', {days: 60}), Espo.Ajax.getRequest('User', {maxSize: 200, select: 'name,isActive,type'}).catch(() => ({list: []})), Espo.Ajax.getRequest('CrmHub/growthOverview', {agentId: ''}).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } return null; })]).then(([ac, st, us, gr]) => {
                 this.users = (us.list || []).filter(u => u.isActive && ['regular', 'admin'].includes(u.type));
-                const cfg = ac.config, ob = cfg.outbound, cl = cfg.closer || {enabled: false, auto_book: true, demo_minutes: 15, host_user_id: '', signup_url: '', playbook: ''}, stats = {}; (st.items || []).forEach(x => { stats[x.step + '|' + x.variant] = x; });
+                const cfg = ac.config, gc = cfg.growth || {enabled: false, mode: 'auto', min_sends: 30, wa_min_rate: 12, email_min_rate: 3, niche_pause_after: 300, hour: 3}, ob = cfg.outbound, cl = cfg.closer || {enabled: false, auto_book: true, demo_minutes: 15, host_user_id: '', signup_url: '', playbook: ''}, stats = {}; (st.items || []).forEach(x => { stats[x.step + '|' + x.variant] = x; });
                 const wt = ob.wa_template, steps = ob.steps.slice(0, 3);
                 body.innerHTML = `<div class="ch-pr-card"><h4>Comercial virtual saliente: ${esc((ac.name || cfg.persona.name))}</h4>` +
                     `<label class="ch-pr-chk"><input type="checkbox" data-o="enabled" ${ob.enabled ? 'checked' : ''}> <b>Prospección saliente activa</b> <small>— contacta a los leads de «Prospección IA» y aplica horarios legales, no contactar y cuota de correos.</small></label>` +
                     `<div class="ch-pr-warn">${cfg.dry_run ? '<b>Modo prueba:</b> el comercial virtual solo simula (no envía nada). ' : ''}${cfg.mode !== 'auto' ? '<b>Comercial en modo manual:</b> actívalo en «Comercial virtual» para que escriba. ' : ''}${cfg.approval ? 'Cada mensaje espera tu aprobación. ' : ''}Cambia estos ajustes en <a href="#CrmHub/agente">Comercial virtual</a>.</div>` +
                     `<div class="ch-pr-g2"><div><label>País por defecto</label><input class="form-control" data-o="country" maxlength="2" value="${esc(ob.country)}"></div><div><label>Tope de correos en frío por día (por remitente)</label><input class="form-control" type="number" min="1" max="200" data-o="max_email_per_day" value="${ob.max_email_per_day}"></div></div>` +
                     `<label class="ch-pr-chk"><input type="checkbox" data-o="require_consent_whatsapp" ${ob.require_consent_whatsapp ? 'checked' : ''}> WhatsApp solo a quien dio permiso o ya escribió <small>— a los demás se les escribe primero por correo.</small></label>` +
+                    `<h5>Optimización diaria</h5><p class="ch-muted">Cada día la IA lee los resultados y mejora sola: reescribe las variantes que peor responden, ajusta el estilo de WhatsApp y del correo si no llegan al mínimo, y pausa los nichos que no responden para mandar más volumen a los que sí. Todo queda en el historial y se puede revertir.</p>` +
+                    `<label class="ch-pr-chk"><input type="checkbox" data-g="enabled" ${gc.enabled ? 'checked' : ''}> <b>Optimización diaria activa</b></label>` +
+                    `<div class="ch-pr-g2"><div><label>Cómo aplica los cambios</label><select class="form-control" data-g="mode"><option value="auto" ${gc.mode !== 'propose' ? 'selected' : ''}>Los aplica sola (con historial para revertir)</option><option value="propose" ${gc.mode === 'propose' ? 'selected' : ''}>Solo propone y yo los aplico</option></select></div>` +
+                    `<div><label>Hora de la tarea diaria</label><input class="form-control" type="number" min="0" max="23" data-g="hour" value="${gc.hour}"></div>` +
+                    `<div><label>Mínimo de envíos para decidir una variante</label><input class="form-control" type="number" min="10" max="1000" data-g="min_sends" value="${gc.min_sends}"></div><div><label>Pausar un nicho tras estos intentos sin respuesta</label><input class="form-control" type="number" min="50" max="5000" data-g="niche_pause_after" value="${gc.niche_pause_after}"></div>` +
+                    `<div><label>Respuesta mínima de WhatsApp (%)</label><input class="form-control" type="number" min="1" max="80" data-g="wa_min_rate" value="${gc.wa_min_rate}"></div><div><label>Respuesta mínima de correo (%)</label><input class="form-control" type="number" min="1" max="80" data-g="email_min_rate" value="${gc.email_min_rate}"></div></div>` +
+                    (gr ? growthHtml(gr) : '') +
                     `<h5>Cierre: demo y objeciones</h5><label class="ch-pr-chk"><input type="checkbox" data-c="enabled" ${cl.enabled ? 'checked' : ''}> <b>El comercial virtual clasifica la intención y maneja objeciones</b> <small>— precio, competencia, tiempo, desconfianza.</small></label>` +
                     `<label class="ch-pr-chk"><input type="checkbox" data-c="auto_book" ${cl.auto_book ? 'checked' : ''}> Agendar la demo solo cuando el cliente elige un horario <small>— crea la reunión con videollamada y le confirma por el mismo canal.</small></label>` +
                     `<div class="ch-pr-g2"><div><label>Duración de la demo (minutos)</label><input class="form-control" type="number" min="10" max="90" data-c="demo_minutes" value="${cl.demo_minutes}"></div><div><label>Quién da la demo</label><select class="form-control" data-c="host_user_id"><option value="">El asesor del lead o a quien se pasan los casos</option>${(this.users || []).map(u => `<option value="${esc(u.id)}" ${u.id === cl.host_user_id ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select></div>` +
@@ -150,15 +169,27 @@ define('custom:views/prospects', ['view', 'custom:ui'], function (Dep, ChUi) {
                     steps.map((s, k) => `<div class="ch-pr-step"><b>${STEPS[k]}</b><textarea class="form-control" rows="3" data-v="${k}" placeholder="a1: Ahorro de tiempo con todo en un solo lugar&#10;a2: Pregunta sobre cómo hacen hoy el seguimiento">${esc(s.variants.map(v => `${v.id}${v.active === false ? ' (pausada)' : ''}: ${v.angle}`).join('\n'))}</textarea>` +
                         (s.variants.length ? `<div class="ch-pr-vs">${s.variants.map(v => { const x = stats[k + '|' + v.id]; return `<span class="ch-pr-v ${v.active === false ? 'off' : ''}"><b>${esc(v.id)}</b> ${x ? `${x.sends} env. · ${x.replies} resp. · ${x.rate}%` : 'sin envíos'}</span>`; }).join('')}</div>` : '') + '</div>').join('') +
                     `<p><button class="btn btn-primary" data-a="save"><span class="fas fa-floppy-disk"></span> Guardar secuencia</button></p></div>`;
+                body.addEventListener('click', e => this.growthClick(e, body));
                 body.querySelector('[data-a=save]').onclick = () => {
                     const q = s => body.querySelector(s), o = {enabled: q('[data-o=enabled]').checked, country: q('[data-o=country]').value, max_email_per_day: +q('[data-o=max_email_per_day]').value || 40, require_consent_whatsapp: q('[data-o=require_consent_whatsapp]').checked,
                         wa_template: {name: q('[data-w=name]').value, lang: q('[data-w=lang]').value, preview: q('[data-w=preview]').value, params: ['first_name']}, steps: [0, 1, 2].map(k => ({variants: q(`[data-v="${k}"]`).value.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
                             const m = /^([a-z0-9_-]{1,20})(\s*\(pausada\))?\s*:\s*(.+)$/i.exec(l); return m ? {id: m[1].toLowerCase(), angle: m[3], active: !m[2]} : {id: '', angle: l, active: true}; })}))};
                     const closer = {enabled: q('[data-c=enabled]').checked, auto_book: q('[data-c=auto_book]').checked, demo_minutes: +q('[data-c=demo_minutes]').value || 15, host_user_id: q('[data-c=host_user_id]').value, signup_url: q('[data-c=signup_url]').value.trim(), playbook: q('[data-c=playbook]').value};
-                    Espo.Ajax.postRequest('CrmHub/agentConfigSave', {config: Object.assign({}, cfg, {outbound: o, closer}), agentId: ac.selectedId}).then(() => { Espo.Ui.success('Secuencia guardada'); this.drawSeq(body); })
+                    const growth = {enabled: q('[data-g=enabled]').checked, mode: q('[data-g=mode]').value, hour: +q('[data-g=hour]').value, min_sends: +q('[data-g=min_sends]').value, niche_pause_after: +q('[data-g=niche_pause_after]').value, wa_min_rate: +q('[data-g=wa_min_rate]').value, email_min_rate: +q('[data-g=email_min_rate]').value};
+                    Espo.Ajax.postRequest('CrmHub/agentConfigSave', {config: Object.assign({}, cfg, {outbound: Object.assign({}, cfg.outbound, o), closer, growth}), agentId: ac.selectedId}).then(() => { Espo.Ui.success('Secuencia guardada'); this.drawSeq(body); })
                         .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo guardar.'); });
                 };
             }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } body.innerHTML = '<div class="ch-chat-err">No se pudo cargar la secuencia.</div>'; });
+        }
+
+
+        growthClick(e, body) {
+            const b = e.target.closest('[data-gr]'); if (!b) { return; } const k = b.dataset.gr, id = +b.dataset.id;
+            const done = () => this.drawSeq(body), fail = xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error((xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || 'No se pudo completar.'); };
+            if (k === 'apply') { Espo.Ajax.postRequest('CrmHub/growthApply', {id}).then(() => { Espo.Ui.success('Cambio aplicado'); done(); }).catch(fail); }
+            else if (k === 'revert') { ChUi.confirm({title: 'Revertir el cambio', ok: 'Revertir', text: 'Se vuelve a como estaba antes de este ajuste.'}).then(y => { if (y) { Espo.Ajax.postRequest('CrmHub/growthRevert', {id}).then(() => { Espo.Ui.success('Cambio revertido'); done(); }).catch(fail); } }); }
+            else if (k === 'run' || k === 'runapply') { Espo.Ui.notify('Analizando resultados…'); Espo.Ajax.postRequest('CrmHub/growthRun', {apply: k === 'runapply', force: false}).then(r => { Espo.Ui.notify(false); Espo.Ui.success(r.changes.length ? `${r.changes.length} ajustes ${r.changes.some(c => c.applied) ? 'aplicados' : 'propuestos'}` : (r.skipped[0] || 'Nada que ajustar por ahora: los resultados están dentro de lo esperado.')); done(); }).catch(x => { Espo.Ui.notify(false); fail(x); }); }
+            else if (k === 'niche') { Espo.Ajax.postRequest('CrmHub/prospectsNiche', {niche: b.dataset.n, paused: b.dataset.p === '1'}).then(done).catch(fail); }
         }
 
         // ---------- no contactar

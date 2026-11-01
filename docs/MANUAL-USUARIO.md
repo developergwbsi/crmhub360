@@ -777,6 +777,10 @@ Cierre: de la respuesta a la demo
 
 Cuando un prospecto responde, el comercial virtual **entiende qué quiere** (interesado, pide demo, duda de precio, compara con otro, tiene poco tiempo, pide información o no le interesa) y lo ve en la ficha del lead como **«Intención»** con un puntaje de 0 a 100. Responde con un guion de objeciones enfocado en **retorno de inversión, facilidad de uso y tener todo en un solo lugar** (puedes cambiar el guion en «Secuencia y resultados → Cierre»). Cuando el cliente muestra interés le propone 2 o 3 horarios libres de la agenda de quien da la demo; al elegir uno, **la reunión con videollamada se crea sola**, se la confirma por el mismo canal con el enlace, el lead pasa a «Calificado» y se avisa al anfitrión. Si hay descuentos, negociación o algo delicado, pasa a una persona. En la pestaña **Prospectos** ves el embudo: contactados, respondieron, demos agendadas y pasados a una persona.
 
+Optimización diaria
+
+En «Secuencia y resultados» puedes activar la **optimización diaria**. Cada día, a la hora que elijas, la IA lee los resultados de los últimos 30 días y mejora sola: **reescribe la variante** que responde mucho peor que la mejor (la anterior queda pausada), **ajusta el estilo** de WhatsApp o del correo cuando su tasa de respuesta no llega al mínimo (WhatsApp 12 %, correo 3 %, configurables) y **pausa los nichos** que no responden tras 300 intentos, repartiendo el cupo diario de prospectos hacia los nichos que mejor responden. Puedes elegir que **aplique sola** o que solo **proponga** para que tú la apliques con un clic. Todo queda en el **historial de ajustes** y se puede **revertir**; lo que reviertes no se vuelve a proponer por 14 días. No cambia nada hasta tener suficientes envíos para decidir.
+
 Reglas que se cumplen solas
 
 - **Horarios legales por país** (Colombia: lunes a viernes 7:00 a 19:00 y sábados 8:00 a 15:00; domingos no). Fuera de horario, el mensaje espera.

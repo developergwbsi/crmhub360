@@ -2,8 +2,9 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.11.0)
+## v1.11.1
 
+- `40425ef` 2026-11-01 — Versión 1.11.1
 - `d1f14d8` 2026-11-01 — Versión 1.11.1
 - `bc20778` 2026-11-01 — Motor comercial F3: intención, guion de objeciones, demo agendada sola y embudo
 

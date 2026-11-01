@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **150** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **155** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -57,6 +57,10 @@ Total: **150** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/email/send` | CrmHub.emailSend | Envía desde el Hub con el nombre y la firma del usuario; si la empresa no tiene el correo del Centro responde fallback para usar el envío de Espo. */ |
 | GET | `/CrmHub/emailSignature` | CrmHub.emailSignature | GET /CrmHub/emailSignature. Usuario. Firma y nombre del usuario. */ |
 | GET | `/CrmHub/formTemplate` | CrmHub.formTemplate | Un formulario web ya diseñado a partir de una plantilla (se guarda al pulsar «Guardar»). */ |
+| POST | `/CrmHub/growthApply` | CrmHub.growthApply | POST /CrmHub/growthApply. Admin. {id}. Aplica un ajuste propuesto. Hub: POST /v1/growth/apply. */ |
+| GET | `/CrmHub/growthOverview` | CrmHub.growthOverview | GET /CrmHub/growthOverview?agentId=. Resultados por canal y nicho e historial de ajustes de la optimización diaria. Hub: GET /v1/growth/overview. */ |
+| POST | `/CrmHub/growthRevert` | CrmHub.growthRevert | POST /CrmHub/growthRevert. Admin. {id}. Revierte un ajuste. Hub: POST /v1/growth/revert. */ |
+| POST | `/CrmHub/growthRun` | CrmHub.growthRun | POST /CrmHub/growthRun. Admin. {agentId?, apply?, force?}. Analiza ahora (y aplica si apply). Hub: POST /v1/growth/run. */ |
 | GET | `/CrmHub/homeTabs` | CrmHub.homeTabs | GET /CrmHub/homeTabs. Usuario. Nombres de las pestañas de su escritorio (Inicio), para elegir en cuál fijar un tablero. */ |
 | POST | `/CrmHub/iformAction` | CrmHub.iformAction | POST /CrmHub/iformAction. Usuario con edición del lead. {leadId, entryId, actionId}. Ejecuta una acción de botón del formulario. Hub: POST /v1/iforms/action. */ |
 | GET | `/CrmHub/iformEntries` | CrmHub.iformEntries | GET /CrmHub/iformEntries?leadId=. Usuario con lectura del lead. Respuestas de los formularios del lead. Hub: GET /v1/iforms/entries. */ |
@@ -115,6 +119,7 @@ Total: **150** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/prospectsEnrich` | CrmHub.prospectsEnrich | POST /CrmHub/prospectsEnrich. Enriquece con IA los prospectos pendientes (en segundo plano). Hub: POST /v1/prospects/enrich. */ |
 | POST | `/CrmHub/prospectsIcp` | CrmHub.prospectsIcp | POST /CrmHub/prospectsIcp. Perfil de cliente ideal. Hub: PUT /v1/prospects/icp. */ |
 | POST | `/CrmHub/prospectsImport` | CrmHub.prospectsImport | POST /CrmHub/prospectsImport. {rows, batch?, defaultCountry?, campaign?, enrich?}. Valida y guarda prospectos. Hub: POST /v1/prospects/import. */ |
+| POST | `/CrmHub/prospectsNiche` | CrmHub.prospectsNiche | POST /CrmHub/prospectsNiche. {niche, paused}. Pausa o reanuda un nicho. Hub: POST /v1/prospects/niche. */ |
 | POST | `/CrmHub/prospectsPromote` | CrmHub.prospectsPromote | POST /CrmHub/prospectsPromote. {ids?, limit?, agentId?}. Pasa prospectos listos al CRM como leads. Hub: POST /v1/prospects/promote. */ |
 | GET | `/CrmHub/push/key` | CrmHub.pushKey | GET /CrmHub/push/key. Usuario. Hub: GET /v1/push/key. */ |
 | POST | `/CrmHub/push/subscribe` | CrmHub.pushSubscribe | POST /CrmHub/push/subscribe. Usuario. Hub: POST /v1/push/subscribe. */ |

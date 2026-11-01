@@ -41,10 +41,11 @@ DEFAULTS = {
     "quick": {"enabled": True, "buttons": ["Sí, me interesa", "Más información", "Ahora no"]},   # botones de respuesta rápida en los mensajes proactivos de WhatsApp
     "bold": True,                                                                           # negrilla automática del nombre de la empresa y del comercial
     # prospección saliente (en frío): respeta horarios legales por país, lista de no contactar, cuota de correos por día y variantes A/B por paso
+    "growth": {"enabled": False, "mode": "auto", "min_sends": 30, "wa_min_rate": 12, "email_min_rate": 3, "niche_pause_after": 300, "hour": 3},
     "closer": {"enabled": False, "signup_url": "", "demo_minutes": 15, "auto_book": True, "host_user_id": "", "playbook": ""},
     "outbound": {"enabled": False, "country": "CO", "max_email_per_day": 40, "require_consent_whatsapp": True,
                  "wa_template": {"name": "", "lang": "es", "preview": "", "params": ["first_name"]},
-                 "steps": [{"variants": []}, {"variants": []}, {"variants": []}]},
+                 "steps": [{"variants": []}, {"variants": []}, {"variants": []}], "style": {"whatsapp": "", "email": ""}},
 }
 _last_send: dict[str, float] = {}
 _task: asyncio.Task | None = None
@@ -198,7 +199,16 @@ def clean_config(new: dict) -> dict:
     out["bold"] = c.get("bold") is not False
     out["outbound"] = clean_outbound(c.get("outbound"))
     out["closer"] = clean_closer(c.get("closer"))
+    out["growth"] = clean_growth(c.get("growth"))
     return out
+
+
+def clean_growth(raw) -> dict:
+    """Valida la optimización diaria: activa, modo (auto aplica; propose deja propuestas), muestras mínimas, umbrales de respuesta por canal y hora de la tarea."""
+    o, d = raw if isinstance(raw, dict) else {}, DEFAULTS["growth"]
+    n = lambda k, lo, hi: max(lo, min(hi, int(o.get(k) if o.get(k) not in (None, "") else d[k])))
+    return {"enabled": bool(o.get("enabled")), "mode": "propose" if o.get("mode") == "propose" else "auto", "min_sends": n("min_sends", 10, 1000), "wa_min_rate": n("wa_min_rate", 1, 80),
+            "email_min_rate": n("email_min_rate", 1, 80), "niche_pause_after": n("niche_pause_after", 50, 5000), "hour": n("hour", 0, 23)}
 
 
 DEFAULT_PLAYBOOK = """- PRECIO («¿cuánto cuesta?», «está caro»): no inventes cifras. Reencuadra en retorno de inversión: horas que el equipo pierde persiguiendo clientes por chats sueltos, ventas que se enfrían por falta de seguimiento y herramientas que se reemplazan por una sola. Ofrece la demo para ver el costo frente al beneficio con SUS números; si pide negociar o descuentos, escala a una persona.
@@ -237,7 +247,7 @@ def clean_outbound(raw) -> dict:
             "require_consent_whatsapp": o.get("require_consent_whatsapp") is not False,
             "wa_template": {"name": re.sub(r"[^a-z0-9_]", "", t(wt.get("name"), 80).lower()), "lang": t(wt.get("lang"), 10) or "es", "preview": t(wt.get("preview"), 1000),
                             "params": [x for x in (wt.get("params") or ["first_name"]) if x in ("first_name", "name", "company", "lead_company")][:5] or ["first_name"]},
-            "steps": steps}
+            "steps": steps, "style": {k: t((o.get("style") or {}).get(k) if isinstance(o.get("style"), dict) else "", 700) for k in ("whatsapp", "email")}}
 
 
 def clean_menus(raw) -> list[dict]:
@@ -555,12 +565,18 @@ def _words(t: str) -> int:
     return len(re.findall(r"\S+", t or ""))
 
 
+SPAM_WORDS = ("gratis", "oferta", "urgente", "descuento", "promoción", "promocion", "ganaste", "dinero fácil", "garantizado", "100%", "!!", "$$", "compra ya", "última oportunidad", "click aquí")
+
+
 def form_problems(channel: str, message: str, subject: str) -> list[str]:
     """Reglas de forma de los mensajes en frío: WhatsApp ≤ 3 párrafos cortos y termina en pregunta; correo con asunto de 2 a 4 palabras, < 120 palabras y un solo llamado."""
     out = []
     if channel == "email":
         if not 2 <= _words(subject) <= 4:
             out.append("el asunto debe tener de 2 a 4 palabras, como un mensaje interno")
+        bad = [w for w in SPAM_WORDS if w in subject.lower()]
+        if bad:
+            out.append("el asunto no debe llevar palabras típicas de spam (" + ", ".join(bad[:3]) + ")")
         if _words(message) >= 120:
             out.append("el cuerpo debe tener menos de 120 palabras")
         if len(re.findall(r"https?://", message)) > 1:
@@ -580,6 +596,8 @@ def hard_fix(channel: str, message: str, subject: str) -> tuple[str, str]:
         while len(words) > 2 and words[-1].lower().strip(".,:;") in ("de", "en", "un", "una", "el", "la", "los", "las", "y", "o", "para", "con", "a", "del", "al", "por", "que", "su", "sus"):
             words.pop()   # sin terminar en una palabra suelta («Ordenar consultas en un»)
         subject = " ".join(words) or "Una idea rápida"
+        for w in SPAM_WORDS:   # el asunto nunca sale con palabras típicas de spam
+            subject = re.sub(re.escape(w), "", subject, flags=re.I).replace("!", "").strip() or "Una idea rápida"
         if _words(message) >= 120:
             cut = " ".join(message.split(" ")[:110])
             message = (cut[:cut.rfind(".") + 1] if "." in cut[60:] else cut).strip()
@@ -821,6 +839,10 @@ async def decide(tenant: dict, cfg: dict, lead: dict, hist: list[dict], kind: st
                f"preséntate como {persona}{', asistente virtual' if cfg['disclose'] else ''} de {company}, explica en una frase por qué le escribes (según su sector o cargo, sin inventar datos) y haz UNA pregunta fácil de contestar.")
     user = (f"DATOS DEL LEAD:\n{lead_brief(lead)}\n\nCONVERSACIÓN HASTA AHORA (cronológica):\n{conv}\n\nSITUACIÓN: {sit}\n"
             f"Canal por el que vas a escribir: {channel}.")
+    if variant is not None or (outbound_on(cfg) and kind in ("first", "followup")):
+        sty = ((cfg.get("outbound") or {}).get("style") or {}).get(channel) or ""
+        if sty:
+            user += f"\n\nGUÍA DE ESTILO APRENDIDA (de lo que mejor ha funcionado): {sty}"
     if variant and kind in ("first", "followup"):
         user += (f"\n\nPROSPECCIÓN EN FRÍO (la persona NO nos ha escrito antes): {OUTBOUND_RULES.get(channel, '')}\nGANCHO DE ESTE MENSAJE (úsalo como enfoque, con tus palabras, sin copiarlo): {variant['angle']}\n"
                  "Sé específico con su sector o situación si lo conoces, no inventes datos, no prometas resultados y no presiones.")
@@ -1164,7 +1186,7 @@ async def _after_send(tenant: dict, cfg: dict, lead: dict, row: dict, kind: str,
         _set(slug, lead_id, state="waiting_reply", attempts=attempts, last_out_at=now, next_at=now + timedelta(minutes=delay), next_kind="followup", errors=0)
         nxt = f"Próximo seguimiento en {delay // 60} h" if delay >= 60 else f"Próximo seguimiento en {delay} min"
     log_event(slug, lead_id, "send", lead_name=lead.get("name") or "", channel=channel, title={"first": "Primer contacto", "followup": f"Seguimiento {attempts}", "reply": "Respuesta al cliente"}[kind] + (f" · aprobado por {by}" if by else ""),
-              detail=message, reason=reason, sent=sent, dry=dry, data={"summary": summary, "next": nxt, "subject": subject, **({"menu": menu} if menu else {}), **({"variant": variant, "step": step} if variant else {}), **({"response_seconds": first_response} if first_response is not None else {})})
+              detail=message, reason=reason, sent=sent, dry=dry, data={"summary": summary, "next": nxt, "subject": subject, "kind": kind, **({"menu": menu} if menu else {}), **({"variant": variant, "step": step} if variant else {}), **({"response_seconds": first_response} if first_response is not None else {})})
 
 
 # ---------------- aprobación previa

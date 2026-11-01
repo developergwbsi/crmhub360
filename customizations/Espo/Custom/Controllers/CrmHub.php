@@ -2442,6 +2442,45 @@ class CrmHub
         return (object) $this->hubCall('GET', '/v1/agent/funnel?days=' . (int) ($request->getQueryParam('days') ?: 30), null, 20);
     }
 
+    /** GET /CrmHub/growthOverview?agentId=. Resultados por canal y nicho e historial de ajustes de la optimización diaria. Hub: GET /v1/growth/overview. */
+    public function getActionGrowthOverview(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/growth/overview?agentId=' . rawurlencode((string) $request->getQueryParam('agentId')), null, 30);
+    }
+
+    /** POST /CrmHub/growthRun. Admin. {agentId?, apply?, force?}. Analiza ahora (y aplica si apply). Hub: POST /v1/growth/run. */
+    public function postActionGrowthRun(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/growth/run', ['agentId' => (string) ($d->agentId ?? ''), 'apply' => isset($d->apply) ? (bool) $d->apply : null, 'force' => !empty($d->force)], 180);
+    }
+
+    /** POST /CrmHub/growthApply. Admin. {id}. Aplica un ajuste propuesto. Hub: POST /v1/growth/apply. */
+    public function postActionGrowthApply(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/growth/apply', ['id' => (int) ($d->id ?? 0), 'by' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 30);
+    }
+
+    /** POST /CrmHub/growthRevert. Admin. {id}. Revierte un ajuste. Hub: POST /v1/growth/revert. */
+    public function postActionGrowthRevert(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/growth/revert', ['id' => (int) ($d->id ?? 0), 'by' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 30);
+    }
+
+    /** POST /CrmHub/prospectsNiche. {niche, paused}. Pausa o reanuda un nicho. Hub: POST /v1/prospects/niche. */
+    public function postActionProspectsNiche(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/prospects/niche', ['niche' => (string) ($d->niche ?? ''), 'paused' => !empty($d->paused)], 15);
+    }
+
     /** GET /CrmHub/dnc. Lista de no contactar. Hub: GET /v1/compliance/dnc. */
     public function getActionDnc(Request $request): \stdClass
     {

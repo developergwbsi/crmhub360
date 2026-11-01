@@ -24,7 +24,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, compliance, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, compliance, growth, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailout, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -45,6 +45,7 @@ async def lifespan(_: FastAPI):
     recordings.ensure_schema()
     compliance.ensure_schema()
     prospects.ensure_schema()
+    growth.ensure_schema()
     agent.ensure_schema()
     monitor.ensure_schema()
     usage.ensure_schema()
@@ -55,8 +56,10 @@ async def lifespan(_: FastAPI):
     mb = asyncio.create_task(mailbox.worker())
     ag = asyncio.create_task(agent.worker())
     ms = asyncio.create_task(meet_summary.loop())
+    gr = asyncio.create_task(growth.loop())
     yield
     ms.cancel()
+    gr.cancel()
     bg.cancel()
     mb.cancel()
     ag.cancel()
@@ -2385,6 +2388,57 @@ async def prospects_promote(req: ProspectPromoteReq, tenant: dict = Depends(tena
 @app.post("/v1/prospects/delete")
 def prospects_delete(req: ProspectIdsReq, tenant: dict = Depends(tenant_auth)):
     return {"deleted": prospects.remove(tenant["slug"], req.ids)}
+
+
+# ---------------- optimización diaria (growth loop)
+class GrowthRunReq(BaseModel):
+    """Ejecuta el análisis ahora. apply=True aplica los cambios; False solo propone. force analiza aunque el comercial esté en modo prueba."""
+    agentId: str = ""
+    apply: bool | None = None
+    force: bool = False
+
+
+class GrowthEntryReq(BaseModel):
+    id: int
+    by: str = ""
+
+
+@app.get("/v1/growth/overview")
+def growth_overview(agentId: str = "", tenant: dict = Depends(tenant_auth)):
+    a = agent.get_agent(tenant, agentId or None)
+    return growth.overview(tenant, a["id"] if a else "main")
+
+
+@app.post("/v1/growth/run")
+async def growth_run(req: GrowthRunReq, tenant: dict = Depends(tenant_auth)):
+    a = agent.get_agent(tenant, req.agentId or None)
+    return await growth.analyze(tenant, a["id"] if a else "main", req.apply, req.force)
+
+
+@app.post("/v1/growth/apply")
+def growth_apply(req: GrowthEntryReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return growth.apply_entry(tenant["slug"], req.id, req.by or "manual")
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/growth/revert")
+def growth_revert(req: GrowthEntryReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return growth.revert_entry(tenant["slug"], req.id, req.by or "manual")
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/prospects/niche")
+def prospects_niche(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    """Pausa o reanuda un nicho a mano."""
+    n = str(body.get("niche") or "").strip().lower()[:60]
+    if not n:
+        raise HTTPException(422, "Falta el nicho.")
+    growth._set_paused(tenant["slug"], n, bool(body.get("paused")))
+    return {"ok": True}
 
 
 @app.get("/v1/agent/funnel")

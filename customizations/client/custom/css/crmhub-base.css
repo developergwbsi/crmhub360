@@ -1611,3 +1611,5 @@ body:has(.list-kanban) #content, body:has(.ch-studio) #content { padding-bottom:
 .ch-pr-card label.ch-pr-chk { display: flex; align-items: baseline; gap: 8px; font-weight: 400; font-size: 14px; margin: 10px 0; cursor: pointer; } .ch-pr-chk input { margin: 0; flex: none; } .ch-pr-chk small { color: var(--ch-muted); }
 .ch-pr-fun { margin-bottom: 14px; } .ch-pr-fun h5 { margin: 0 0 8px; font-weight: 700; } .ch-pr-stats5 { grid-template-columns: repeat(4, 1fr); }
 .ch-agp-intent { margin: 6px 0; font-size: 13px; color: var(--ch-muted); } .ch-agp-intent b { color: var(--ch-ink); }
+.ch-pr-gr { margin: 12px 0; } .ch-pr-gr h6 { margin: 14px 0 6px; font-weight: 700; } .ch-pr-gr .ch-pr-tbl table { font-size: 13px; }
+.ch-pr-gr .ch-pr-tbl small { max-width: 620px; white-space: pre-line; }

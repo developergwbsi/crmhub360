@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **172** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **177** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -58,6 +58,10 @@ Total: **172** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/docs/run` | `docs_run` | Estado y resultado de una lectura de documento; 404 si no existe. |
 | POST | `/v1/email/send` | `email_send` | Envía un correo como el usuario (nombre, firma y Reply-To personales). 409 si la empresa no tiene el correo del Centro. |
 | GET | `/v1/forms/template/{key}` | `form_template` | Construye una plantilla de formulario de la galería; la usa el editor de formularios de Espo. |
+| POST | `/v1/growth/apply` | `growth_apply` | — |
+| GET | `/v1/growth/overview` | `growth_overview` | — |
+| POST | `/v1/growth/revert` | `growth_revert` | — |
+| POST | `/v1/growth/run` | `growth_run` | — |
 | GET | `/v1/iforms` | `iforms_list` | Formularios de la empresa (solo los activos, salvo all=true para quien los administra) y los catálogos para diseñarlos. |
 | PUT | `/v1/iforms` | `iforms_save` | — |
 | POST | `/v1/iforms/action` | `iforms_action` | — |
@@ -109,6 +113,7 @@ Total: **172** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/prospects/enrich` | `prospects_enrich` | — |
 | PUT | `/v1/prospects/icp` | `prospects_icp_save` | — |
 | POST | `/v1/prospects/import` | `prospects_import` | — |
+| POST | `/v1/prospects/niche` | `prospects_niche` | Pausa o reanuda un nicho a mano. |
 | POST | `/v1/prospects/promote` | `prospects_promote` | — |
 | GET | `/v1/public/meet/_/assets/{name:path}` | `meet_asset` | Archivos estáticos de la sala: página (js y css), fondos virtuales y segmentación de persona (alojados aquí, sin servicios de terceros). |
 | GET | `/v1/public/meet/_/lk.js` | `meet_js` | Cliente de LiveKit para la página de la videollamada. |

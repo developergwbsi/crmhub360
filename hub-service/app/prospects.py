@@ -225,7 +225,8 @@ async def promote(tenant: dict, ids: list[int] | None = None, limit: int | None 
         if ids:
             rows = c.execute("SELECT * FROM prospects WHERE tenant=%s AND status='ready' AND id = ANY(%s) ORDER BY score DESC NULLS LAST LIMIT %s", (slug, ids, room)).fetchall()
         else:
-            rows = c.execute("SELECT * FROM prospects WHERE tenant=%s AND status='ready' AND COALESCE(score,0) >= %s ORDER BY score DESC NULLS LAST, id LIMIT %s", (slug, cfg["min_score"], min(room, limit or room))).fetchall()
+            rows = c.execute("SELECT * FROM prospects WHERE tenant=%s AND status='ready' AND COALESCE(score,0) >= %s ORDER BY score DESC NULLS LAST, id LIMIT 2000", (slug, cfg["min_score"])).fetchall()
+            rows = _allocate([dict(r) for r in rows], min(room, limit or room), tenant)
     out = {"created": 0, "skipped": 0, "limit_reached": room == 0, "errors": 0}
     for r in rows:
         r = dict(r)
@@ -246,6 +247,31 @@ async def promote(tenant: dict, ids: list[int] | None = None, limit: int | None 
         except Exception as e:
             out["errors"] += 1
             log.warning("promover prospecto %s: %s", r["id"], str(e)[:120])
+    return out
+
+
+def _allocate(rows: list[dict], n: int, tenant: dict) -> list[dict]:
+    """Reparte el cupo del día entre los nichos según cuánto responden (los pausados no entran); dentro de cada nicho van primero los de mejor puntaje."""
+    from . import growth
+    paused = set(((tenant.get("settings") or {}).get("prospecting") or {}).get("paused_niches") or [])
+    by: dict = {}
+    for r in rows:
+        if r["niche"] not in paused:
+            by.setdefault(r["niche"], []).append(r)
+    if not by or n <= 0:
+        return []
+    try:
+        w = growth.niche_weights(tenant["slug"], tenant)
+    except Exception:
+        w = {}
+    avg = (sum(w.values()) / len(w)) if w else 0.3
+    weight = {k: w.get(k, avg) for k in by}   # un nicho sin historial parte del promedio (se explora)
+    taken = {k: 0 for k in by}
+    out: list[dict] = []
+    while len(out) < n and any(by.values()):
+        k = max((k for k in by if by[k]), key=lambda k: weight[k] / (taken[k] + 1))
+        out.append(by[k].pop(0))
+        taken[k] += 1
     return out
 
 
