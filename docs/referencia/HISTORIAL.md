@@ -2,8 +2,16 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.10.6)
+## Sin publicar (después de v1.10.7)
 
+- `8592b3c` 2026-11-01 — Versión 1.11.0
+- `f2c315a` 2026-11-01 — Plan del motor comercial: decisiones y estado
+- `3402737` 2026-11-01 — Motor comercial: prospección saliente (prospectos, ICP, secuencia con variantes A/B) y cumplimiento (no contactar, horarios legales, baja de un clic, cuotas)
+- `31a4464` 2026-11-01 — Plan del motor comercial autónomo de DigitalAlliance Hub
+
+## v1.10.7
+
+- `ce8a7ca` 2026-10-19 — Versión 1.10.7
 - `9b9fd18` 2026-10-19 — Versión 1.10.7
 - `ef4dd32` 2026-10-19 — El panel del manual se reubica en la sección de la página nueva al navegar
 - `0cfc3c8` 2026-10-19 — Ficha completa del participante en panel lateral desde la videollamada; campaña de los formularios de captación elegida de una lista

@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **159** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **171** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -18,6 +18,7 @@ Total: **159** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/agent/lead` | `agent_lead` | Estado del comercial virtual sobre un lead, para la ficha del CRM. |
 | POST | `/v1/agent/lead/action` | `agent_lead_action` | Intervención humana sobre un lead (pausar, tomar control, cambiar de comercial, reanudar); devuelve el estado nuevo. |
 | POST | `/v1/agent/menu-test` | `agent_menu_test` | Envía un menú del entrenamiento a un número de prueba para ver cómo lo recibe el cliente. |
+| GET | `/v1/agent/outbound/stats` | `outbound_stats` | Envíos y respuestas por variante de cada paso de la secuencia saliente. |
 | GET | `/v1/agent/pending` | `agent_pending` | Mensajes del comercial virtual pendientes de aprobación. |
 | GET | `/v1/agent/stats` | `agent_stats` | Estadísticas del comercial virtual del periodo (1 a 365 días) y sus últimos 40 eventos. |
 | POST | `/v1/agent/test` | `agent_test` | Genera la respuesta de prueba del comercial virtual para un cliente simulado, sin enviar nada. |
@@ -41,6 +42,9 @@ Total: **159** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/broadcasts` | `bc_create` | Crea una campaña masiva (con inicio programado de hasta 14 días); la procesa el worker de broadcast. |
 | GET | `/v1/broadcasts/{bid}` | `bc_detail` | Detalle de una campaña, con sus fechas como texto; 404 si no existe. |
 | POST | `/v1/broadcasts/{bid}/{action}` | `bc_action` | Pausa, reanuda o cancela una campaña; 409 si su estado no lo permite. |
+| DELETE | `/v1/compliance/dnc` | `dnc_remove` | — |
+| GET | `/v1/compliance/dnc` | `dnc_list` | — |
+| POST | `/v1/compliance/dnc` | `dnc_add` | — |
 | POST | `/v1/credit/parse` | `credit_parse` | Encola la lectura del informe de crédito de un adjunto del lead; lo llama la interfaz de Espo (responde 202). |
 | POST | `/v1/docs/apply` | `docs_apply` | Aplica al lead los valores o ítems leídos de un documento. |
 | POST | `/v1/docs/dismiss` | `docs_dismiss` | Descarta una lectura pendiente del usuario. |
@@ -99,6 +103,12 @@ Total: **159** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/processes` | `proc_list` | Procesos configurados, campos disponibles, máximo y catálogo. |
 | PUT | `/v1/processes` | `proc_save` | Valida y guarda los procesos del tenant (settings.processes). |
 | POST | `/v1/processes/test` | `proc_test` | Prueba una definición contra un lead real (o datos de ejemplo) sin guardar nada en el lead. |
+| GET | `/v1/prospects` | `prospects_list` | — |
+| POST | `/v1/prospects/delete` | `prospects_delete` | — |
+| POST | `/v1/prospects/enrich` | `prospects_enrich` | — |
+| PUT | `/v1/prospects/icp` | `prospects_icp_save` | — |
+| POST | `/v1/prospects/import` | `prospects_import` | — |
+| POST | `/v1/prospects/promote` | `prospects_promote` | — |
 | GET | `/v1/public/meet/_/assets/{name:path}` | `meet_asset` | Archivos estáticos de la sala: página (js y css), fondos virtuales y segmentación de persona (alojados aquí, sin servicios de terceros). |
 | GET | `/v1/public/meet/_/lk.js` | `meet_js` | Cliente de LiveKit para la página de la videollamada. |
 | POST | `/v1/public/meet/_/rec/{rid}/chunk` | `rec_chunk` | — |
@@ -106,6 +116,8 @@ Total: **159** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/public/meet/_/rec/{rid}/finish` | `rec_finish` | — |
 | GET | `/v1/public/meet/r/{token}` | `rec_share_page` | Página pública de una grabación compartida (https://meet.<dominio>/r/<enlace>). |
 | GET | `/v1/public/meet/r/{token}/video` | `rec_share_video` | — |
+| GET | `/v1/public/meet/u/{token}` | `unsub_page` | Página de baja de un correo (https://meet.<dominio>/u/<enlace>): pide confirmar con un botón (los antivirus abren los enlaces sin querer). |
+| POST | `/v1/public/meet/u/{token}` | `unsub_do` | Baja confirmada (botón de la página o «un clic» del cliente de correo, RFC 8058). |
 | GET | `/v1/public/meet/{code}` | `meet_page` | Página pública de la videollamada (se publica en https://meet.<dominio>/<código>). Puede incrustarse en el CRM de la empresa (el asesor la ve sin salir de la ficha). |
 | POST | `/v1/public/meet/{code}/admin` | `meet_admin` | Controles del anfitrión: silenciar, quitar, bloquear la sala o terminar la llamada. |
 | GET | `/v1/public/meet/{code}/chat` | `meet_chat_get` | Historial reciente del chat de la sala (para quien entra tarde). |

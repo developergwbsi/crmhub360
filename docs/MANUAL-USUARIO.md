@@ -35,6 +35,7 @@
 - [5i. Reportes y tableros](#5i-reportes-y-tableros)
 - [5j. Consultas web (con login y navegación)](#5j-consultas-web-con-login-y-navegación)
 - [5k. Grabaciones (pantalla y videollamadas)](#5k-grabaciones-pantalla-y-videollamadas)
+- [5l. Prospección (comerciales virtuales que salen a vender)](#5l-prospección-comerciales-virtuales-que-salen-a-vender)
 - [9e. Procesos de leads, copias de leads y lectura de documentos](#9e-procesos-de-leads-copias-de-leads-y-lectura-de-documentos)
 - [10. Preguntas frecuentes](#10-preguntas-frecuentes)
 
@@ -755,6 +756,38 @@ Ver, descargar y compartir
 **Ojo:**
 
 solo se graba lo que compartes. Avisa a las personas antes de grabarlas y no compartas el enlace con quien no deba verlo.
+
+
+## 5l. Prospección (comerciales virtuales que salen a vender)
+
+*Visible para: Director, Gerente*
+
+Qué es
+
+El menú **Prospección** convierte al comercial virtual en una fuerza de ventas que **sale a buscar clientes**: cargas una lista de prospectos, la IA los valida y puntúa según tu **cliente ideal**, y los mejores pasan al CRM como leads de **«Prospección IA»**, donde el comercial virtual los contacta con una secuencia de 3 pasos y variantes A/B.
+
+Paso a paso
+
+1. **Cliente ideal**: describe a quién le vendes (sectores, países, cargos), el puntaje mínimo para pasar al CRM y el tope de leads nuevos por día (para empezar poco a poco).
+2. **Prospectos → Importar CSV**: columnas como nombre, empresa, cargo, correo, teléfono, país y sector. Cada fila se valida (correo bien escrito, teléfono en formato internacional, no estar en la lista de no contactar ni repetido en el CRM). La IA analiza el sector, si es empresa o persona y su dolor probable, y calcula un puntaje de 0 a 100.
+3. **Pasar al CRM los mejores**: crea los leads (hasta el tope diario) y el comercial virtual saliente empieza a contactarlos.
+4. **Secuencia y resultados** (administradores): activa la prospección saliente, define las variantes de cada paso (primer contacto, seguimiento a las 72 horas y último intento a los 5 días) y mira cuál responde mejor. Las que mejor responden se envían más.
+
+Reglas que se cumplen solas
+
+- **Horarios legales por país** (Colombia: lunes a viernes 7:00 a 19:00 y sábados 8:00 a 15:00; domingos no). Fuera de horario, el mensaje espera.
+- **Lista de no contactar**: quien escribe BAJA, STOP, «no me escriban más» o usa el enlace de baja de los correos entra sola y nadie le vuelve a escribir.
+- **WhatsApp solo con permiso**: a quien no ha escrito antes ni dio su permiso se le escribe primero por correo. Con la API oficial de Meta, fuera de las 24 horas se usa una plantilla aprobada.
+- **Correos en frío**: asunto corto, menos de 120 palabras, un solo llamado, enlace de baja de un clic y un tope diario por remitente para cuidar la reputación del dominio.
+- El comercial virtual se presenta como asistente virtual y pasa a una persona cuando el cliente lo pide o quiere negociar.
+
+**Recomendación:**
+
+empieza con el comercial virtual en
+
+**modo prueba**
+
+y el tope diario bajo, revisa los mensajes en su bitácora y sube el volumen poco a poco.
 
 
 ## 9e. Procesos de leads, copias de leads y lectura de documentos

@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **139** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **149** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -42,6 +42,9 @@ Total: **139** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/call` | CrmHub.logCall | Registra una llamada saliente hecha desde el lead (queda en Llamadas y en el historial). */ |
 | GET | `/CrmHub/channels` | CrmHub.channels | Qué canales están listos (el botón de llamar decide entre click-to-call y el marcador del equipo). */ |
 | GET | `/CrmHub/conversations` | CrmHub.conversations | GET /CrmHub/conversations?scope=mine/all&channel=whatsapp/sms/telegram. Cualquier usuario: la bandeja de Mensajes. Conversaciones (por lead) de WhatsApp, SMS y Telegram de los leads que el usuario puede ver (control de acceso de Espo): con «mine» solo las de sus leads o en las que escribió él; con «all» todas las visibles. Cada una trae el último mensaje y lo último de cada canal. |
+| GET | `/CrmHub/dnc` | CrmHub.dnc | GET /CrmHub/dnc. Lista de no contactar. Hub: GET /v1/compliance/dnc. */ |
+| POST | `/CrmHub/dncAdd` | CrmHub.dncAdd | POST /CrmHub/dncAdd. {email?, phone?, reason?}. Hub: POST /v1/compliance/dnc. */ |
+| POST | `/CrmHub/dncRemove` | CrmHub.dncRemove | POST /CrmHub/dncRemove. {kind, value}. Solo administradores: volver a permitir contactar es una decisión delicada. Hub: DELETE /v1/compliance/dnc. */ |
 | POST | `/CrmHub/docApply` | CrmHub.docApply | POST /CrmHub/docApply. Edición del lead. Hub: POST /v1/docs/apply (guarda los datos elegidos). */ |
 | POST | `/CrmHub/docDismiss` | CrmHub.docDismiss | POST /CrmHub/docDismiss. Usuario (no API ni portal). Hub: POST /v1/docs/dismiss. */ |
 | POST | `/CrmHub/docExtract` | CrmHub.docExtract | Lee un PDF que el usuario acaba de subir y devuelve los datos extraídos para que los revise (todavía no se guarda nada en el lead). */ |
@@ -98,6 +101,7 @@ Total: **139** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/myroles` | CrmHub.myroles | Roles del usuario actual: el manual muestra solo lo que le corresponde. */ |
 | POST | `/CrmHub/notifyTeam` | CrmHub.notifyTeam | Solo el usuario API del Hub: avisa en la campana del CRM (p. ej. «Nuevo registro» de un formulario web). */ |
 | GET | `/CrmHub/orgchart` | CrmHub.orgchart | GET /CrmHub/orgchart. Usuarios con permiso de asignación. Organigrama por roles y equipos. */ |
+| GET | `/CrmHub/outboundStats` | CrmHub.outboundStats | GET /CrmHub/outboundStats?days=. Envíos y respuestas por variante de la secuencia saliente. Hub: GET /v1/agent/outbound/stats. */ |
 | GET | `/CrmHub/pipeline` | CrmHub.pipeline | Lo lee cualquier usuario autenticado (incluido el usuario API del Hub). */ |
 | PUT | `/CrmHub/pipeline` | CrmHub.pipeline | PUT /CrmHub/pipeline. Admin. Guarda los estados del pipeline. */ |
 | POST | `/CrmHub/processRun` | CrmHub.processRun | Ejecuta de nuevo los procesos de un lead (quien puede editar el lead). */ |
@@ -105,6 +109,12 @@ Total: **139** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/processTest` | CrmHub.processTest | POST /CrmHub/processTest. Admin. Hub: POST /v1/processes/test. */ |
 | GET | `/CrmHub/processes` | CrmHub.processes | GET /CrmHub/processes. Admin. Hub: GET /v1/processes. */ |
 | POST | `/CrmHub/processesSave` | CrmHub.processesSave | POST /CrmHub/processesSave. Admin. Hub: PUT /v1/processes. */ |
+| GET | `/CrmHub/prospects` | CrmHub.prospects | GET /CrmHub/prospects?status=&batch=&q=. Prospectos con su puntaje, conteos por estado, lotes y el perfil de cliente ideal. Hub: GET /v1/prospects. */ |
+| POST | `/CrmHub/prospectsDelete` | CrmHub.prospectsDelete | POST /CrmHub/prospectsDelete. {ids}. Borra prospectos que aún no pasaron al CRM. Hub: POST /v1/prospects/delete. */ |
+| POST | `/CrmHub/prospectsEnrich` | CrmHub.prospectsEnrich | POST /CrmHub/prospectsEnrich. Enriquece con IA los prospectos pendientes (en segundo plano). Hub: POST /v1/prospects/enrich. */ |
+| POST | `/CrmHub/prospectsIcp` | CrmHub.prospectsIcp | POST /CrmHub/prospectsIcp. Perfil de cliente ideal. Hub: PUT /v1/prospects/icp. */ |
+| POST | `/CrmHub/prospectsImport` | CrmHub.prospectsImport | POST /CrmHub/prospectsImport. {rows, batch?, defaultCountry?, campaign?, enrich?}. Valida y guarda prospectos. Hub: POST /v1/prospects/import. */ |
+| POST | `/CrmHub/prospectsPromote` | CrmHub.prospectsPromote | POST /CrmHub/prospectsPromote. {ids?, limit?, agentId?}. Pasa prospectos listos al CRM como leads. Hub: POST /v1/prospects/promote. */ |
 | GET | `/CrmHub/push/key` | CrmHub.pushKey | GET /CrmHub/push/key. Usuario. Hub: GET /v1/push/key. */ |
 | POST | `/CrmHub/push/subscribe` | CrmHub.pushSubscribe | POST /CrmHub/push/subscribe. Usuario. Hub: POST /v1/push/subscribe. */ |
 | POST | `/CrmHub/push/test` | CrmHub.pushTest | Envía una notificación de prueba a los dispositivos del propio usuario. */ |
