@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, brand, compliance, emailcheck, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, brand, chatbot, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -48,6 +48,8 @@ async def lifespan(_: FastAPI):
     prospects.ensure_schema()
     proposals.ensure_schema()
     emailcheck.ensure_schema()
+    presets.ensure_schema()
+    chatbot.ensure_schema()
     growth.ensure_schema()
     agent.ensure_schema()
     monitor.ensure_schema()
@@ -1767,6 +1769,7 @@ class LineSaveReq(BaseModel):
     fields: dict = {}
     http: dict | None = None
     voice_record: bool = False
+    responder: str | None = None   # quién responde: human | preset | virtual | chatbot
 
 
 class LineIdReq(BaseModel):
@@ -1807,6 +1810,49 @@ def lines_save(req: LineSaveReq, tenant: dict = Depends(tenant_auth)):
         return lines.save(tenant, req.model_dump())
     except ValueError as e:
         raise HTTPException(422, str(e))
+
+
+class LineResponderReq(BaseModel):
+    id: str
+    responder: str
+
+
+@app.post("/v1/lines/responder")
+def lines_responder(req: LineResponderReq, tenant: dict = Depends(tenant_auth)):
+    """Cambia quién responde cuando un cliente escribe por esa línea: human | preset | virtual | chatbot (este último, solo con el servicio contratado)."""
+    try:
+        lines.set_responder(tenant, req.id, req.responder)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
+
+
+@app.get("/v1/presets")
+def presets_get(tenant: dict = Depends(tenant_auth)):
+    """Mensajes predefinidos de WhatsApp (saludo, fuera de horario, menú y palabras clave)."""
+    return presets.config(tenant)
+
+
+@app.put("/v1/presets")
+def presets_save(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    return presets.save(tenant["slug"], body)
+
+
+@app.get("/v1/chatbot")
+def chatbot_state(tenant: dict = Depends(tenant_auth)):
+    """Estado del servicio de chatbot (Gestor360): contratado, solicitado, motor listo y configurado."""
+    return chatbot.state(tenant)
+
+
+class ChatbotRequestReq(BaseModel):
+    note: str = ""
+    by: str = ""
+
+
+@app.post("/v1/chatbot/request")
+def chatbot_request(req: ChatbotRequestReq, tenant: dict = Depends(tenant_auth)):
+    """La empresa solicita el servicio de chatbot (adicional, con cobro)."""
+    return chatbot.request(tenant, req.note, req.by)
 
 
 @app.post("/v1/lines/enabled")

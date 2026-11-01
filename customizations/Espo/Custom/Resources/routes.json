@@ -1412,5 +1412,45 @@
             "controller": "CrmHub",
             "action": "senderAddress"
         }
+    },
+    {
+        "route": "/CrmHub/chatbot",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "chatbot"
+        }
+    },
+    {
+        "route": "/CrmHub/chatbotRequest",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "chatbotRequest"
+        }
+    },
+    {
+        "route": "/CrmHub/lineResponder",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "lineResponder"
+        }
+    },
+    {
+        "route": "/CrmHub/presets",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "presets"
+        }
+    },
+    {
+        "route": "/CrmHub/presetsSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "presetsSave"
+        }
     }
 ]

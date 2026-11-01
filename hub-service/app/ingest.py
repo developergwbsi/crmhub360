@@ -146,7 +146,7 @@ async def notify_owner(tenant: dict, lead_id: str, name: str | None, text: str) 
 
 async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None, text: str, from_me: bool = False,
                            avatar_payload: dict | None = None, lead_id: str | None = None, lid: str | None = None,
-                           media: tuple[bytes, str, str] | None = None) -> str | None:
+                           media: tuple[bytes, str, str] | None = None, line: str | None = None) -> str | None:
     """Mensaje de WhatsApp (de cualquier proveedor): busca/crea el lead por teléfono (o por el LID ya conocido) y lo registra en su flujo."""
     from . import whatsapp, routing  # import tardío: whatsapp importa este módulo
     if not lead_id and phone:
@@ -189,6 +189,12 @@ async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None,
     if not from_me:
         await notify_owner(tenant, lead_id, name, text)
         if not is_optout(text):
+            try:   # quién responde en esa línea: mensajes predefinidos (el chatbot de Gestor360 se conecta en una fase posterior; mientras tanto lo atienden los asesores)
+                from . import lines, presets
+                if lines.responder_of(tenant, line) == "preset":
+                    await presets.handle(tenant, lead_id, phone, text)
+            except Exception as e:
+                logging.getLogger("crmhub").warning("mensajes predefinidos: %s", str(e)[:100])
             from . import agent
             try:
                 await agent.on_inbound(tenant, lead_id, "whatsapp", text)
@@ -295,7 +301,9 @@ async def from_evolution(tenant: dict, payload: dict) -> str | None:
     if media_kind:
         from . import media as media_mod
         media = await media_mod.from_evolution(tenant, payload.get("instance") or "", key, media_kind, media_meta)
-    res = await whatsapp_inbound(tenant, phone=phone, name=d.get("pushName"), text=text, from_me=from_me, avatar_payload=payload, lead_id=lead_id, lid=lid, media=media)
+    from . import lines as _lines
+    res = await whatsapp_inbound(tenant, phone=phone, name=d.get("pushName"), text=text, from_me=from_me, avatar_payload=payload, lead_id=lead_id, lid=lid, media=media,
+                                 line=_lines.line_for_instance(tenant, payload.get("instance")))
     try:   # varias líneas de Evolution: se recuerda por cuál escribió el cliente para responderle por la misma
         from . import lines
         ln = lines.line_for_instance(tenant, payload.get("instance"))

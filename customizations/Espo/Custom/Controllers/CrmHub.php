@@ -2584,6 +2584,43 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/qualifier/run', [], 300);
     }
 
+    /** GET /CrmHub/chatbot. Admin. Estado del servicio de chatbot (Gestor360): contratado, solicitado, motor listo. Hub: GET /v1/chatbot. */
+    public function getActionChatbot(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/chatbot', null, 20);
+    }
+
+    /** POST /CrmHub/chatbotRequest. Admin. {note}. La empresa solicita el chatbot (servicio adicional con cobro). Hub: POST /v1/chatbot/request. */
+    public function postActionChatbotRequest(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/chatbot/request', ['note' => mb_substr((string) ($d->note ?? ''), 0, 500), 'by' => (string) ($this->user->get('name') ?: $this->user->get('userName'))], 20);
+    }
+
+    /** POST /CrmHub/lineResponder. Admin. {id, responder}. Quién responde en esa línea. Hub: POST /v1/lines/responder. */
+    public function postActionLineResponder(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/lines/responder', ['id' => (string) ($d->id ?? ''), 'responder' => (string) ($d->responder ?? '')], 20);
+    }
+
+    /** GET /CrmHub/presets. Admin. Mensajes predefinidos de WhatsApp. Hub: GET /v1/presets. */
+    public function getActionPresets(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/presets', null, 20);
+    }
+
+    /** POST /CrmHub/presetsSave. Admin. Guarda los mensajes predefinidos. Hub: PUT /v1/presets. */
+    public function postActionPresetsSave(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('PUT', '/v1/presets', json_decode(json_encode($request->getParsedBody()), true) ?: [], 20);
+    }
+
     /** GET /CrmHub/finder. Estado del buscador de prospectos (licencia, configuración, última pasada). Hub: GET /v1/finder. */
     public function getActionFinder(Request $request): \stdClass
     {

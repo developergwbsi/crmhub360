@@ -26,6 +26,7 @@ SPEC = {
         "generic": ("Otra central / proveedor (API HTTP)", None)}},
 }
 MAX_LINES = 12
+RESPONDERS = ("human", "preset", "virtual", "chatbot")   # quién contesta cuando un cliente escribe: asesores, mensajes predefinidos, comercial virtual con IA o chatbot de Gestor360
 
 
 def _st(tenant: dict) -> dict:
@@ -57,7 +58,7 @@ def raw_cards(tenant: dict, ch: str) -> list[dict]:
         m = _meta(st, ch)
         out.append({"id": "main:" + ch, "channel": ch, "type": mt, "name": m.get("name") or "Principal", "enabled": m.get("enabled", True) is not False,
                     "fields": {k: st.get(k, "") for k, _, _ in (_spec_fields(ch, mt) or [])}, "http": st.get(HTTPKEY[ch]) if mt == "generic" else None,
-                    "main": True, "extra": {"voice_record": bool(st.get("voice_record"))} if ch == "voice" else {}})
+                    "main": True, "responder": m.get("responder"), "extra": {"voice_record": bool(st.get("voice_record"))} if ch == "voice" else {}})
     for ln in st.get("lines") or []:
         if ln.get("channel") == ch and ln.get("type") in SPEC[ch]["types"]:
             out.append({**ln, "main": False, "enabled": ln.get("enabled", True) is not False})
@@ -134,7 +135,47 @@ def _public(card: dict, ch: str) -> dict:
         sec = http.pop(httpgen.SECRET, "")
         http["secretSet"] = bool(sec); http["secretHint"] = ("…" + sec[-4:]) if sec and len(sec) > 6 else ""
     return {"id": card["id"], "channel": ch, "type": card["type"], "typeLabel": SPEC[ch]["types"][card["type"]][0], "name": card["name"], "enabled": card["enabled"],
-            "main": card["main"], "fields": fields, "http": http, "extra": card.get("extra") or {}}
+            "main": card["main"], "fields": fields, "http": http, "extra": card.get("extra") or {}, "responder": card.get("responder") if card.get("responder") in RESPONDERS else "human"}
+
+
+def chatbot_licensed(tenant: dict) -> bool:
+    return bool(((_st(tenant).get("limits") or {}).get("chatbot")))
+
+
+def _resp(tenant: dict, body: dict) -> str | None:
+    """Valida el «quién responde» recibido: el chatbot de Gestor360 es un servicio adicional y solo se elige si la empresa lo tiene contratado."""
+    r = body.get("responder")
+    if r is None:
+        return None
+    if r not in RESPONDERS:
+        raise ValueError("Elige quién responde: asesores, mensajes predefinidos, comercial virtual o chatbot.")
+    if r == "chatbot" and not chatbot_licensed(tenant):
+        raise ValueError("El chatbot de Gestor360 es un servicio adicional. Solicítalo para poder elegirlo.")
+    return r
+
+
+def responder_of(tenant: dict, line_id: str | None = None, ch: str = "whatsapp") -> str:
+    """Quién responde en esa línea (por defecto, la línea predeterminada del canal): human | preset | virtual | chatbot."""
+    st, cards = _st(tenant), raw_cards(tenant, ch)
+    lid = line_id or _default_id(st, ch, cards) or ("main:" + ch)
+    c = next((x for x in cards if x["id"] == lid), None)
+    r = (c or {}).get("responder")
+    return r if r in RESPONDERS else "human"
+
+
+def set_responder(tenant: dict, lid: str, responder: str) -> None:
+    """Cambia quién responde en una línea (la principal en line_meta; las demás en settings.lines)."""
+    r = _resp(tenant, {"responder": responder})
+    st = _st(tenant)
+    if lid.startswith("main:"):
+        meta = dict(st.get("line_meta") or {}); meta[lid] = {**(meta.get(lid) or {}), "responder": r}
+        _write(tenant["slug"], {"line_meta": meta}); return
+    lines = list(st.get("lines") or [])
+    cur = next((l for l in lines if l["id"] == lid), None)
+    if not cur:
+        raise ValueError("La línea no existe")
+    cur["responder"] = r
+    _write(tenant["slug"], {"lines": lines})
 
 
 def is_managed(tenant: dict, lid: str) -> bool:
@@ -204,6 +245,7 @@ def save(tenant: dict, body: dict) -> dict:
     slug, st = tenant["slug"], _st(tenant)
     name = (body.get("name") or "").strip()[:60]
     lid = body.get("id")
+    responder = _resp(tenant, body)
     http_in = body.get("http") if isinstance(body.get("http"), dict) else None
     extra = {"voice_record": bool(body.get("voice_record"))} if ch == "voice" else {}
     cards = raw_cards(tenant, ch)
@@ -215,7 +257,7 @@ def save(tenant: dict, body: dict) -> dict:
             patch[HTTPKEY[ch]] = httpgen.merge(st.get(HTTPKEY[ch]), http_in)
         if ch == "voice":
             patch["voice_record"] = extra["voice_record"]
-        meta = dict(st.get("line_meta") or {}); meta[lid] = {**(meta.get(lid) or {}), "name": name or "Principal"}
+        meta = dict(st.get("line_meta") or {}); meta[lid] = {**(meta.get(lid) or {}), "name": name or "Principal", **({"responder": responder} if responder else {})}
         patch["line_meta"] = meta
         _write(slug, patch)
         return {"id": lid}
@@ -224,7 +266,7 @@ def save(tenant: dict, body: dict) -> dict:
         cur = next((l for l in lines if l["id"] == lid), None)
         if not cur:
             raise ValueError("La línea no existe")
-        cur.update({"type": typ, "name": name or cur["name"], "fields": _clean_fields(ch, typ, body.get("fields") or {}, cur.get("fields") or {}), "extra": extra})
+        cur.update({"type": typ, "name": name or cur["name"], "fields": _clean_fields(ch, typ, body.get("fields") or {}, cur.get("fields") or {}), "extra": extra, **({"responder": responder} if responder else {})})
         if typ == "generic" and http_in is not None:
             cur["http"] = httpgen.merge(cur.get("http"), http_in)
     else:
@@ -234,7 +276,7 @@ def save(tenant: dict, body: dict) -> dict:
             name = "Principal"
         lid = "l_" + secrets.token_hex(4)
         new = {"id": lid, "channel": ch, "type": typ, "name": name or f"{SPEC[ch]['types'][typ][0]} {len(raw_cards(tenant, ch)) + 1}", "enabled": True,
-               "fields": _clean_fields(ch, typ, body.get("fields") or {}, {}), "extra": extra}
+               "fields": _clean_fields(ch, typ, body.get("fields") or {}, {}), "extra": extra, "responder": responder or "human"}
         if typ == "generic":
             new["http"] = httpgen.merge(None, http_in or {})
         lines.append(new)

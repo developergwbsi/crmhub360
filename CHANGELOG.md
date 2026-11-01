@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **¿Quién responde cuando un cliente escribe por WhatsApp?** Al agregar o editar un WhatsApp (*Integraciones → Canales*) se elige: mis asesores, **mensajes predefinidos**, comercial virtual con IA o **chatbot de Gestor360** (servicio adicional con cobro; sin el servicio aparece el botón «Solicitar el chatbot»).
+- **Mensajes predefinidos de WhatsApp**: saludo, fuera de horario, menú de opciones, palabras clave, con topes para no insistir y sin interferir con el comercial virtual.
+- **Centro de control**: proveedor «Gestor360» (la cuenta de DigitalAlliance Hub, con botón Probar) y servicio «Chatbot de WhatsApp (Gestor360)» por empresa, con aviso de las solicitudes. Todo chatbot es de Gestor360; no se permiten chatbots de terceros. La conexión de mensajes con Gestor360 viene en la siguiente fase.
+
 ### Corregido
 - El tope diario de correos en frío se cuenta por el remitente que realmente los envía (el del correo en frío), no por el del correo normal.
 

@@ -1633,3 +1633,9 @@ body:has(.list-kanban) #content, body:has(.ch-studio) #content { padding-bottom:
 @media (max-width: 1100px) { .ch-pr-body.is-list { grid-template-columns: minmax(0, 1fr); } .ch-pr-body.is-list > .ch-pr-fun, .ch-pr-body.is-list > .ch-pr-stats { grid-column: 1; } }
 @media (max-width: 800px) { .ch-pr { height: auto; } .ch-pr-body, .ch-pr-body.is-list { overflow: visible; display: block; } .ch-pr-body.is-list > .ch-pr-tbl { overflow: auto; max-height: 70vh; } }
 @media (max-height: 800px) { .ch-pr > .ch-rc-top p { display: none; } .ch-pr { height: calc(100vh - 64px); } }
+/* Quién responde cuando un cliente escribe por WhatsApp */
+.ch-resp { margin-top: 14px; } .ch-resp-opt { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--ch-line); border-radius: 12px; margin: 8px 0; cursor: pointer; font-weight: 400; background: var(--ch-surface); }
+.ch-resp-opt:has(input:checked) { border-color: var(--ch-primary); background: color-mix(in srgb, var(--ch-primary) 7%, var(--ch-surface)); } .ch-resp-opt.off { opacity: .8; cursor: default; }
+.ch-resp-opt input { margin-top: 4px; flex: none; } .ch-resp-opt > .fas { font-size: 18px; width: 22px; text-align: center; margin-top: 2px; color: var(--ch-primary); } .ch-resp-opt b { display: block; } .ch-resp-opt small { display: block; color: var(--ch-muted); font-size: 12.5px; margin: 2px 0 4px; }
+.ch-ln-resp { margin: 8px 0 2px; font-size: 12.5px; color: var(--ch-muted); } .ch-ln-resp .fas { margin-right: 4px; }
+.ch-pr-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 8px; align-items: start; margin: 6px 0; } @media (max-width: 800px) { .ch-pr-row { grid-template-columns: 1fr; } }

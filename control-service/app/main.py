@@ -977,6 +977,7 @@ KINDS = {
     "email": {"label": "Proveedor de correo (SMTP: Gmail, Outlook, SendGrid, Resend…)", "channels": ["email"], "secrets": ["password", "reply_password", "inbound_secret"]},
     "ai": {"label": "Motor de IA (Anthropic, OpenAI y compatibles, Ollama)", "channels": ["ai"], "secrets": ["api_key"]},
     "search": {"label": "Buscador web (Serper, Brave, Google) para el buscador de prospectos", "channels": ["search"], "secrets": ["api_key"]},
+    "gestor360": {"label": "Gestor360: cuenta de DigitalAlliance Hub para los chatbots de WhatsApp de las empresas", "channels": ["chatbot"], "secrets": ["password"]},
 }
 
 
@@ -1045,6 +1046,16 @@ def _clean_fields(kind: str, fields: dict, old: dict) -> dict:
         out["model"] = str(out.get("model") or "").strip()
         out["base_url"] = str(out.get("base_url") or "").strip()
         out["workspace_id"] = re.sub(r"[^\w\-]", "", str(out.get("workspace_id") or ""))[:80]
+    if kind == "gestor360":
+        if not re.match(r"^https://[^\s/]+(/[^\s]*)?$", str(out.get("base_url") or "").strip()):
+            raise HTTPException(400, "La dirección de Gestor360 debe empezar por https://")
+        out["base_url"] = str(out["base_url"]).strip().rstrip("/")
+        if not re.match(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$", str(out.get("email") or "").strip()):
+            raise HTTPException(400, "Escribe el correo del usuario de servicio de DigitalAlliance Hub en Gestor360")
+        out["email"] = str(out["email"]).strip()
+        if not out.get("password"):
+            raise HTTPException(400, "Falta la contraseña del usuario de servicio")
+        out["empresa"] = str(out.get("empresa") or "").strip()[:120]
     if kind == "search":
         if out.get("engine") not in ("serper", "brave", "google"):
             raise HTTPException(400, "Elige el buscador: Serper, Brave o Google")
@@ -1094,6 +1105,8 @@ def save_provider(pid: str, req: ProviderReq, actor: str = Depends(me)):
         raise HTTPException(404, "Proveedor no encontrado")
     if cur and cur["kind"] != req.kind:
         raise HTTPException(400, "No se puede cambiar el tipo de un proveedor existente")
+    if req.kind == "gestor360" and not cur and any(p["kind"] == "gestor360" for p in items):
+        raise HTTPException(400, "Ya hay una cuenta de Gestor360 (la de DigitalAlliance Hub): edítala en lugar de crear otra.")
     fields = _clean_fields(req.kind, req.fields, (cur or {}).get("fields", {}))
     if cur:
         cur.update({"name": req.name.strip(), "notes": req.notes.strip(), "fields": fields})
@@ -1136,6 +1149,26 @@ def set_ai_default(req: AiDefaultReq, actor: str = Depends(me)):
     put_setting("ai_default", req.id)
     audit(actor, "motor_ia_global", req.id or "local")
     return {"ok": True, "default": req.id}
+
+
+@app.post("/api/providers/{pid}/test-gestor360")
+async def test_provider_gestor360(pid: str, actor: str = Depends(me)):
+    """Prueba la cuenta de DigitalAlliance Hub en Gestor360 iniciando sesión (no se muestra ni se guarda el token). Lo llama la interfaz web del Centro."""
+    p = next((x for x in providers_list() if x["id"] == pid and x["kind"] == "gestor360"), None)
+    if not p:
+        raise HTTPException(404, "Cuenta de Gestor360 no encontrada")
+    f, t0 = p["fields"], time.time()
+    try:
+        async with httpx.AsyncClient(timeout=30) as c:
+            r = await c.post(f["base_url"].rstrip("/") + "/api/v1/auth/login", json={"email": f["email"], "password": f.get("password", "")})
+    except Exception as e:
+        raise HTTPException(502, "No se pudo conectar con Gestor360: " + str(e)[:160])
+    if r.status_code in (400, 401, 403):
+        raise HTTPException(502, "Gestor360 rechazó el usuario o la contraseña.")
+    if r.status_code >= 400:
+        raise HTTPException(502, f"Gestor360 respondió {r.status_code}.")
+    audit(actor, "probar_gestor360", pid)
+    return {"ok": True, "seconds": round(time.time() - t0, 1)}
 
 
 @app.post("/api/providers/{pid}/test-ai")
@@ -1274,6 +1307,7 @@ class ServicesReq(BaseModel):
     lookups: Optional[list] = None        # servicios de consulta del sistema habilitados para la empresa
     wa_bulk: Optional[dict] = None        # envío masivo por WhatsApp no oficial (Evolution): {max: destinatarios por campaña, every_s: segundos entre mensajes}
     templates: Optional[int] = None       # plantillas personales por usuario y canal (10 incluidas; más es un servicio adicional)
+    chatbot: Optional[bool] = None        # chatbot de WhatsApp de Gestor360 (servicio adicional con cobro)
     search: Optional[str] = None          # buscador web del buscador de prospectos: 'global' (Claude) | 'own' (la empresa pone su clave) | 'provider:<id>' (buscador prestado)
     mail_cold: Optional[str] = None       # correo en frío (remitente aparte, otro dominio): 'off' | 'own' (la empresa lo configura) | 'p<id>' (proveedor de correo prestado)
     finder: Optional[bool] = None         # buscador de prospectos en internet (servicio adicional; consume tokens del motor de IA de la empresa)
@@ -1292,6 +1326,16 @@ async def tenant_mail_state(t: dict) -> dict:
 
 
 IMAP_HOSTS = {"smtp.gmail.com": "imap.gmail.com", "smtp.office365.com": "outlook.office365.com", "smtp.mail.yahoo.com": "imap.mail.yahoo.com", "smtp.zoho.com": "imap.zoho.com"}
+
+
+def chatbot_request_of(slug: str) -> Optional[str]:
+    """Fecha de la solicitud pendiente de chatbot de esa empresa (la crea la empresa desde su CRM), o None."""
+    try:
+        with db() as c:
+            r = c.execute("SELECT created_at FROM service_requests WHERE tenant=%s AND service='chatbot' AND status='pending' ORDER BY created_at DESC LIMIT 1", (slug,)).fetchone()
+        return r["created_at"].isoformat() if r else None
+    except Exception:
+        return None
 
 
 def set_company_cold_mail(slug: str, mode: str) -> None:
@@ -1429,7 +1473,7 @@ async def get_services(slug: str, actor: str = Depends(me)):
         au = []
     return {"slug": slug, "ai": ((t["settings"] or {}).get("ai") or {}).get("mode") or "global", "aiProviders": [{"id": p["id"], "name": p["name"], "engine": p["fields"].get("engine"), "model": p["fields"].get("model")} for p in providers_list() if p["kind"] == "ai"],
             "aiDefault": get_setting("ai_default"), "aiUsage": au,
-            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "meet": ((t["settings"] or {}).get("limits") or {}).get("meet") or "off", "finder": bool(((t["settings"] or {}).get("limits") or {}).get("finder")), "mailCold": sv.get("mail_cold") or "off", "search": ((t["settings"] or {}).get("search") or {}).get("mode") or "global", "searchProviders": [{"id": p["id"], "name": p["name"], "engine": p["fields"].get("engine")} for p in providers_list() if p["kind"] == "search"], "agents": int(((t["settings"] or {}).get("limits") or {}).get("agents") or 1), "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
+            "agent": ((t["settings"] or {}).get("limits") or {}).get("agent") or "off", "meet": ((t["settings"] or {}).get("limits") or {}).get("meet") or "off", "finder": bool(((t["settings"] or {}).get("limits") or {}).get("finder")), "chatbot": bool(((t["settings"] or {}).get("limits") or {}).get("chatbot")), "chatbotRequest": chatbot_request_of(slug), "chatbotReady": any(p["kind"] == "gestor360" for p in providers_list()), "mailCold": sv.get("mail_cold") or "off", "search": ((t["settings"] or {}).get("search") or {}).get("mode") or "global", "searchProviders": [{"id": p["id"], "name": p["name"], "engine": p["fields"].get("engine")} for p in providers_list() if p["kind"] == "search"], "agents": int(((t["settings"] or {}).get("limits") or {}).get("agents") or 1), "agentUsage": dict(u) if u else {"messages": 0, "llm_calls": 0, "escalations": 0},
             "lookups": list(((t["settings"] or {}).get("lookups")) or []), "lookupCatalog": [{"id": l["id"], "name": l["name"], "category": l.get("category", "otro")} for l in lookups_list()], "cartera": cartera, "templates": int(((t["settings"] or {}).get("limits") or {}).get("templates") or 10),
             "waBulk": {"max": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("max") or 100), "every_s": int(((((t["settings"] or {}).get("limits") or {}).get("wa_bulk")) or {}).get("every_s") or 120)}, "whatsapp": sv.get("whatsapp") or {}, "sms": sv.get("sms") or {}, "voice": sv.get("voice") or {}, "mail": {"mode": sv.get("mail") or "own", "systemReady": bool((get_setting("mail") or {}).get("host")) and (get_setting("mail") or {}).get("enabled", True), **(await tenant_mail_state(t))},
             "providers": [mask_provider(p) for p in providers_list()], "kinds": {k: v["channels"] for k, v in KINDS.items()}}
@@ -1503,6 +1547,11 @@ async def put_services(slug: str, req: ServicesReq, actor: str = Depends(me)):
             raise HTTPException(502, "No se pudo cambiar el servicio de videollamadas en la empresa")
         with db() as c6:
             c6.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps({"meet": req.meet}), slug))
+    if req.chatbot is not None:
+        with db() as c12:
+            c12.execute("UPDATE tenants SET settings = jsonb_set(settings, '{limits}', COALESCE(settings->'limits', '{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps({"chatbot": bool(req.chatbot)}), slug))
+            if req.chatbot:   # la solicitud pendiente queda atendida
+                c12.execute("UPDATE service_requests SET status='done' WHERE tenant=%s AND service='chatbot' AND status='pending'", (slug,))
     if req.search is not None:
         ok = req.search in ("global", "own") or (req.search.startswith("provider:") and any(p["id"] == req.search[9:] and p["kind"] == "search" for p in providers_list()))
         if not ok:

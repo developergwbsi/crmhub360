@@ -1,6 +1,6 @@
 # Chatbots de WhatsApp con Gestor360 — análisis y plan
 
-Estado: **diseño (sin construir)**. Revisado el 2026-11-01 contra la documentación técnica de Gestor360.
+Estado: **fase 1 construida** (quién responde, mensajes predefinidos, servicio y proveedor «Gestor360» en el Centro de control, solicitud del chatbot); la conexión de mensajes con Gestor360 sigue en diseño. Revisado el 2026-11-01 contra la documentación técnica de Gestor360.
 
 ## Idea
 Cuando una empresa agrega un WhatsApp en Crm Hub 360 se le pregunta **quién responde cuando un cliente escribe**:
@@ -46,3 +46,13 @@ La entrada para plataformas externas de Gestor360 recibe el mensaje del cliente,
 2. **Cuenta y proveedor Gestor360** en el Centro de control + servicio «Chatbot» con tarifa.
 3. **Integración**: sede por empresa, entrega y recogida de mensajes, traspaso a humano, interfaz amigable de flujos base y probador.
 4. **Endurecimiento** y métricas del bot en el CRM.
+
+## Fase 1 construida (lo que ya existe)
+- **Quién responde por línea** (`lines.responder_of`, `settings.line_meta["main:whatsapp"].responder` o `responder` en cada línea adicional): `human` (por defecto), `preset`, `virtual` o `chatbot`. El chatbot solo se puede elegir si la empresa tiene el servicio (`settings.limits.chatbot`). En el CRM: *Integraciones → Canales de mensajería*, en el formulario de agregar o editar un WhatsApp y en «cambiar» de cada tarjeta (`POST /CrmHub/lineResponder` → Hub `POST /v1/lines/responder`).
+- **Mensajes predefinidos** (`presets.py`, `settings.presets`, editor en el mismo formulario): saludo (no se repite dentro de unas horas), fuera de horario, menú de opciones (respuesta por número o nombre), palabras clave y tope de 3 mensajes por hora por lead. No contesta si el lead lo atiende un comercial virtual ni a quien pidió la baja. Entra por `ingest.whatsapp_inbound` (parámetro `line` para identificar la línea de Evolution).
+- **Servicio y solicitud**: `chatbot.py` (`GET /v1/chatbot`, `POST /v1/chatbot/request`, tabla `service_requests`). Sin el servicio, la opción dice «Solicitar el chatbot» y la solicitud aparece en el Centro de control, en *Empresas → Servicios → Chatbot*, hasta que se activa.
+- **Centro de control**: tipo de proveedor **«Gestor360»** (una sola cuenta: URL, usuario de servicio y contraseña cifrada; botón *Probar* que inicia sesión en `/api/v1/auth/login` sin guardar el token) y el servicio **«Chatbot de WhatsApp (Gestor360)»** por empresa, con aviso de solicitud y de cuenta sin conectar. El cobro se define en *Consumo y tarifas*.
+- Regla: todo chatbot es de Gestor360; no se ofrece ningún chatbot de terceros.
+
+## Pendiente (fase 2 y 3)
+Cuenta de DigitalAlliance Hub en Gestor360 y un Gestor360 de pruebas; aprovisionamiento de la sede por empresa; registro de la línea de WhatsApp en la sede (el CRM le pasa a Gestor360 los datos de la línea para que la configure con sus claves); reenvío de los mensajes al bot, traspaso a humano y espejo de la conversación en el CRM; interfaz de flujos base y probador.
