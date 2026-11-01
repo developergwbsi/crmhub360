@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.13.1] - 2026-11-01
+
+### Añadido
+- Pestaña Buscador en Prospección e interruptor de licencia del buscador por empresa en el Centro de control.
+
+### Corregido
+- El buscador descarta correos con dominio casi igual al del sitio y reintenta si el informe sale vacío.
+
 ## [1.13.0] - 2026-11-01
 
 ### Añadido
