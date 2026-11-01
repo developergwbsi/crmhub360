@@ -51,6 +51,31 @@ El paso de la cadencia y la variante usada se guardan en `agent_leads` / `agent_
 - **F5 – Centro de control «Motor comercial»:** panel maestro (agentes, volumen, respuestas, variantes ganadoras, nichos, cola de aprobación, interruptor de emergencia). Se diseña **multiempresa** desde el inicio: hoy vende DigitalAlliance Hub; mañana puede venderse como servicio a otras empresas.
 - **F6 – Entregabilidad:** dominios de correo alternos con SPF/DKIM/DMARC y calentamiento por tramos (máx. 40/día por casilla al inicio), WhatsApp por la API oficial con plantillas, monitor de calidad del número (ya existe el monitor de líneas).
 
-## 5. Decisiones que fijan el diseño
+## 5. Decisiones tomadas
 
-Ver las preguntas planteadas al equipo: canal de WhatsApp (oficial con permiso vs. no oficial en frío), países de arranque, autonomía inicial y por dónde empezar.
+- **WhatsApp:** API oficial (Meta) y solo a quien dio permiso o ya escribió; a los demás, primero correo.
+- **Países:** Colombia y otros (el diseño ya trae reglas de horario por país: CO, MX, PE, CL, AR, EC, PA, ES, US; los demás usan un horario conservador).
+- **Autonomía:** autónomo desde el día 1, con tope diario de leads, cuota de correos por remitente, interruptor del comercial virtual y modo prueba disponible.
+- **Alcance de esta entrega:** F0, F1 y F2.
+
+## 6. Estado de la construcción
+
+| Fase | Estado | Dónde |
+|---|---|---|
+| F0 Cumplimiento | Hecha | `compliance.py` (no contactar, consentimiento, bajas, horarios legales, enlace de baja, cuotas), `ingest.apply_optout` |
+| F1 Prospectos | Hecha | `prospects.py`, menú **Prospección** (`views/prospects.js`) |
+| F2 Salida y variantes | Hecha | `agent.py` (`outbound`, `pick_variant`, `form_problems`), plantilla Meta en `whatsapp.send_template` |
+| F3 Cierre | Pendiente | |
+| F4 Optimización diaria | Pendiente (las métricas por variante ya se registran) | |
+| F5 Panel en el Centro de control | Pendiente | |
+| F6 Entregabilidad (DNS, calentamiento) | Parcial: cuota diaria por remitente; falta SPF/DKIM/DMARC y calentamiento por tramos | |
+
+Ajuste frente al plan: **no se agregaron estados nuevos al CRM** («Pausado (frío)» y «Demo agendada»). El «pausado» se ve en la bitácora del comercial virtual y el lead queda en «En Enfriamiento/Contactado»; la demo agendada se verá como reunión con videollamada en la fase F3. Así no se toca el pipeline existente.
+
+## 7. Para ponerlo en marcha en producción
+
+1. En el **Centro de control**, activar el comercial virtual de la empresa `prod` (`limits.agent = auto`).
+2. En `prod`: configurar el correo saliente (dominio propio con SPF, DKIM y DMARC) y la línea oficial de WhatsApp (Meta) con su plantilla aprobada.
+3. Entrenar al comercial virtual (empresa, servicios, FAQ, objetivo) y definir variantes en **Prospección → Secuencia**.
+4. Empezar en modo prueba, revisar la bitácora y luego pasar a envío real con el tope diario bajo.
+
