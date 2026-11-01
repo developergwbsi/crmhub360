@@ -2,8 +2,15 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.13.0)
+## Sin publicar (después de v1.13.1)
 
+- `3e73639` 2026-11-01 — Versión 1.14.0
+- `b638ddf` 2026-11-01 — Buscadores web por empresa: Serper, Brave y Google con clave propia o prestada, y pantalla Integraciones → Buscadores
+- `56e4817` 2026-11-01 — Correo propio por empresa: principal y en frío, con buzón IMAP, prueba de conexión y modo propio o prestado
+
+## v1.13.1
+
+- `1f86e8a` 2026-11-01 — Versión 1.13.1
 - `698ec0c` 2026-11-01 — Versión 1.13.1
 - `bb4a75a` 2026-11-01 — Buscador: reintento al estructurar el informe
 - `a913590` 2026-11-01 — Buscador: pestaña en Prospección, interruptor de licencia en el Centro de control y control de erratas en el dominio del correo

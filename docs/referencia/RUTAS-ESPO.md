@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **158** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **165** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -94,6 +94,10 @@ Total: **158** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/lineTest` | CrmHub.lineTest | POST /CrmHub/lineTest. Admin. Hub: POST /v1/lines/test. */ |
 | GET | `/CrmHub/lines` | CrmHub.lines | GET /CrmHub/lines. Admin. Hub: GET /v1/lines. */ |
 | GET | `/CrmHub/linesActive` | CrmHub.linesActive | Líneas encendidas por canal: para elegir «enviar desde» (cualquier usuario del CRM). */ |
+| GET | `/CrmHub/mailConfig` | CrmHub.mailConfig | GET /CrmHub/mailConfig. Admin. Correo de la empresa (principal y en frío). Hub: GET /v1/mail-config. */ |
+| POST | `/CrmHub/mailConfigClear` | CrmHub.mailConfigClear | POST /CrmHub/mailConfigClear. Admin. {role}. Quita el correo propio. Hub: DELETE /v1/mail-config/{role}. */ |
+| POST | `/CrmHub/mailConfigSave` | CrmHub.mailConfigSave | POST /CrmHub/mailConfigSave. Admin. {role: main/cold, smtp:{…}, imap:{…}}. Hub: PUT /v1/mail-config/{role}. */ |
+| POST | `/CrmHub/mailConfigTest` | CrmHub.mailConfigTest | POST /CrmHub/mailConfigTest. Admin. {role}. Prueba SMTP/IMAP sin enviar ni leer correos. Hub: POST /v1/mail-config/{role}/test. */ |
 | POST | `/CrmHub/meet/create` | CrmHub.meetCreate | POST /CrmHub/meet/create. Usuario con edición del lead. Hub: POST /v1/meet/rooms. Devuelve el enlace del cliente y el del anfitrión. */ |
 | POST | `/CrmHub/meet/end` | CrmHub.meetEnd | POST /CrmHub/meet/end. Usuario con edición del lead. Hub: POST /v1/meet/rooms/{código}/end. Cierra la sala de videollamada del lead. */ |
 | POST | `/CrmHub/meet/host` | CrmHub.meetHost | POST /CrmHub/meet/host. Usuario con acceso a la reunión. Hub: GET /v1/meet/rooms/{código}/host. Devuelve el enlace de entrada del anfitrión de la videollamada de una reunión. */ |
@@ -134,6 +138,9 @@ Total: **158** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/recPlay` | CrmHub.recPlay | GET /CrmHub/recPlay?id=. Usuario dueño (o con alcance «todos»). Direcciones de reproducción y descarga (vencen en 4 horas). Hub: GET /v1/rec/{id}/play. */ |
 | POST | `/CrmHub/recStart` | CrmHub.recStart | POST /CrmHub/recStart. Usuario. {title?, audio?, mime?}. Crea la grabación y devuelve la dirección y llave para subir el video. Hub: POST /v1/rec/start. */ |
 | POST | `/CrmHub/recUpdate` | CrmHub.recUpdate | POST /CrmHub/recUpdate. Usuario dueño (o con alcance «todos»). {id, title?, share?}. Hub: POST /v1/rec/{id}/update. */ |
+| GET | `/CrmHub/searchConfig` | CrmHub.searchConfig | GET /CrmHub/searchConfig. Admin. Buscador web de la empresa. Hub: GET /v1/search-config. */ |
+| POST | `/CrmHub/searchConfigSave` | CrmHub.searchConfigSave | POST /CrmHub/searchConfigSave. Admin. {engine, api_key, cx}. Hub: PUT /v1/search-config. */ |
+| POST | `/CrmHub/searchConfigTest` | CrmHub.searchConfigTest | POST /CrmHub/searchConfigTest. Admin. Prueba el buscador con una consulta real. Hub: POST /v1/search-config/test. */ |
 | GET | `/CrmHub/simConfig` | CrmHub.simConfig | GET /CrmHub/simConfig. Usuario (no API ni portal). Hub: GET /v1/sim/config. */ |
 | POST | `/CrmHub/simDelete` | CrmHub.simDelete | POST /CrmHub/simDelete. Usuario (no API ni portal). Hub: GET y DELETE /v1/sim/runs/{id}. */ |
 | GET | `/CrmHub/simRun` | CrmHub.simRun | GET /CrmHub/simRun. Usuario (no API ni portal). Hub: GET /v1/sim/runs/{id}. */ |

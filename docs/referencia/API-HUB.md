@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **181** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **188** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -97,6 +97,10 @@ Total: **181** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/lines/enabled` | `lines_enabled` | Enciende o apaga una línea. |
 | POST | `/v1/lines/send-test` | `lines_send_test` | Envía un mensaje de prueba por una línea. |
 | POST | `/v1/lines/test` | `lines_test` | Prueba la conexión de una línea. |
+| GET | `/v1/mail-config` | `mail_config_get` | Correo de la empresa (principal y en frío): si lo provee el sistema o es propio, y los datos no secretos de cada uno. |
+| DELETE | `/v1/mail-config/{role}` | `mail_config_clear` | — |
+| PUT | `/v1/mail-config/{role}` | `mail_config_save` | Guarda el correo propio de la empresa (SMTP de salida y buzón IMAP). Solo si el Centro de control dejó esa función como «Propio». |
+| POST | `/v1/mail-config/{role}/test` | `mail_config_test` | Prueba de conexión SMTP e IMAP con los datos guardados (no envía ni lee correos). |
 | POST | `/v1/meet/invite` | `meet_invite` | Envía la invitación por correo (con «Agregar al calendario» y .ics) de una videollamada programada. |
 | GET | `/v1/meet/rooms` | `meet_list` | Salas recientes de la empresa (o de un lead). |
 | POST | `/v1/meet/rooms` | `meet_create` | Crea una sala y devuelve el enlace del cliente y el del anfitrión (el del anfitrión no se comparte). |
@@ -156,6 +160,9 @@ Total: **181** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | DELETE | `/v1/rec/{rid}` | `rec_delete` | — |
 | GET | `/v1/rec/{rid}/play` | `rec_play` | — |
 | POST | `/v1/rec/{rid}/update` | `rec_update` | — |
+| GET | `/v1/search-config` | `search_config_get` | Buscador web de la empresa: cómo está (del sistema, prestado o propio) y los datos no secretos de su buscador propio. |
+| PUT | `/v1/search-config` | `search_config_save` | Guarda el buscador propio de la empresa (motor, clave, cx). Solo si el Centro de control dejó el buscador en «Propio». |
+| POST | `/v1/search-config/test` | `search_config_test` | Prueba el buscador que usa la empresa con una búsqueda real (consume una consulta). |
 | GET | `/v1/sim/config` | `sim_config` | Verificación de configuración y pasos disponibles del simulador. |
 | GET | `/v1/sim/runs` | `sim_list` | Lista las simulaciones del tenant (opcionalmente de un usuario). |
 | POST | `/v1/sim/runs` | `sim_start` | Inicia una simulación del proceso comercial y devuelve su id. |
