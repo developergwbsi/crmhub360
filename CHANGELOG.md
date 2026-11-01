@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.14.0] - 2026-11-01
+
 ### Añadido
 - **Buscadores web por empresa.** El buscador de prospectos puede usar la búsqueda web de Claude (por defecto) o **Serper, Brave o Google Programmable Search** con clave. Cada empresa trae el suyo en *Integraciones → Buscadores* (con prueba de conexión y guía para sacar la clave) o usa uno prestado por el Centro de control, que tiene un nuevo tipo de proveedor «Buscador web» y la opción de servicio «Buscador web» por empresa.
 
