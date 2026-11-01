@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.12.2] - 2026-11-01
+
 ### Añadido
 - **Respuestas de clientes por el correo entrante de Resend**, sin necesidad de un buzón IMAP: Resend recibe la respuesta en el dominio y avisa al Hub por webhook firmado; el Hub la importa al CRM, asignada al usuario que escribió (alias `remitente+idUsuario@dominio`). Se configura en el proveedor de correo del Centro de control con el campo «secreto del webhook».
 
