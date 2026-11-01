@@ -2,6 +2,11 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
+## Sin publicar (después de v1.11.2)
+
+- `0455310` 2026-11-01 — Versión 1.12.0
+- `d042b4c` 2026-11-01 — Motor comercial F5: panel maestro en el Centro de control e interruptor de emergencia
+
 ## v1.11.2
 
 - `590c7ad` 2026-11-01 — Versión 1.11.2
