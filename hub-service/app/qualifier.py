@@ -86,3 +86,23 @@ async def run(tenant: dict, limit: int = 30) -> dict:
         pr = await prospects.promote(tenant, ids=ok[:room])
         out["passed"] = pr.get("created", 0)
     return out
+
+
+def stats(slug: str) -> dict:
+    """Resumen del calificador: cuántos prospectos hay por grado y cuántos pasaron a Valeria."""
+    with db.pool.connection() as c:
+        rows = c.execute("SELECT enrichment->'qualifier'->>'grade' g, status, count(*) n FROM prospects WHERE tenant=%s AND enrichment ? 'qualifier' GROUP BY 1, 2", (slug,)).fetchall()
+    grades, passed = {}, 0
+    for r in rows:
+        grades[r["g"]] = grades.get(r["g"], 0) + r["n"]
+        if r["status"] == "imported":
+            passed += r["n"]
+    return {"grades": grades, "passed": passed}
+
+
+def save(slug: str, body: dict) -> dict:
+    new = {"enabled": bool(body.get("enabled", True)), "min_grade": body.get("min_grade") if body.get("min_grade") in ("A", "B", "C") else "B",
+           "daily_pass": max(1, min(50, int(body.get("daily_pass") or 5))), "rules": str(body.get("rules") or "").strip()[:3000]}
+    with db.pool.connection() as c:
+        c.execute("UPDATE tenants SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), '{qualifier}', %s::jsonb, true) WHERE slug=%s", (json.dumps(new), slug))
+    return new

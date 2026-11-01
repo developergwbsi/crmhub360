@@ -2489,6 +2489,67 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/pipeline/run', [], 600);
     }
 
+    /** GET /CrmHub/proposals. Admin. Biblioteca de propuestas y brochures que usan los agentes. Hub: GET /v1/proposals. */
+    public function getActionProposals(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/proposals', null, 20);
+    }
+
+    /** POST /CrmHub/proposalSave. Admin. {slug?, title, product, kind, summary, link}. Crea material propio (sin slug) o edita (con slug). Hub: POST|PUT /v1/proposals. */
+    public function postActionProposalSave(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = json_decode(json_encode($request->getParsedBody()), true) ?: [];
+        $slug = preg_replace('/[^a-z0-9-]/', '', (string) ($d['slug'] ?? ''));
+        unset($d['slug']);
+        return (object) ($slug ? $this->hubCall('PUT', '/v1/proposals/' . $slug, $d, 20) : $this->hubCall('POST', '/v1/proposals', $d, 20));
+    }
+
+    /** POST /CrmHub/proposalActive. Admin. {slug, active}. Hub: PUT /v1/proposals/{slug}/active. */
+    public function postActionProposalActive(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('PUT', '/v1/proposals/' . preg_replace('/[^a-z0-9-]/', '', (string) ($d->slug ?? '')) . '/active', ['active' => !empty($d->active)], 20);
+    }
+
+    /** POST /CrmHub/proposalDelete. Admin. {slug}. Hub: DELETE /v1/proposals/{slug}. */
+    public function postActionProposalDelete(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('DELETE', '/v1/proposals/' . preg_replace('/[^a-z0-9-]/', '', (string) ($d->slug ?? '')), null, 20);
+    }
+
+    /** POST /CrmHub/proposalsSeed. Admin. Crea o restaura las presentaciones estándar. Hub: POST /v1/proposals/seed. */
+    public function postActionProposalsSeed(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('POST', '/v1/proposals/seed', [], 20);
+    }
+
+    /** GET /CrmHub/qualifier. Admin. Agente calificador (configuración y resumen). Hub: GET /v1/qualifier. */
+    public function getActionQualifier(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/qualifier', null, 20);
+    }
+
+    /** POST /CrmHub/qualifierSave. Admin. {enabled, min_grade, daily_pass, rules}. Hub: PUT /v1/qualifier. */
+    public function postActionQualifierSave(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('PUT', '/v1/qualifier', json_decode(json_encode($request->getParsedBody()), true) ?: [], 20);
+    }
+
+    /** POST /CrmHub/qualifierRun. Admin. Califica ahora los pendientes y pasa los buenos a Valeria. Hub: POST /v1/qualifier/run. */
+    public function postActionQualifierRun(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('POST', '/v1/qualifier/run', [], 300);
+    }
+
     /** GET /CrmHub/finder. Estado del buscador de prospectos (licencia, configuración, última pasada). Hub: GET /v1/finder. */
     public function getActionFinder(Request $request): \stdClass
     {

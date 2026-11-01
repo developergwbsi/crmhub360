@@ -1332,5 +1332,69 @@
             "controller": "CrmHub",
             "action": "pipelineRun"
         }
+    },
+    {
+        "route": "/CrmHub/proposals",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "proposals"
+        }
+    },
+    {
+        "route": "/CrmHub/proposalSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "proposalSave"
+        }
+    },
+    {
+        "route": "/CrmHub/proposalActive",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "proposalActive"
+        }
+    },
+    {
+        "route": "/CrmHub/proposalDelete",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "proposalDelete"
+        }
+    },
+    {
+        "route": "/CrmHub/proposalsSeed",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "proposalsSeed"
+        }
+    },
+    {
+        "route": "/CrmHub/qualifier",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "qualifier"
+        }
+    },
+    {
+        "route": "/CrmHub/qualifierSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "qualifierSave"
+        }
+    },
+    {
+        "route": "/CrmHub/qualifierRun",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "qualifierRun"
+        }
     }
 ]

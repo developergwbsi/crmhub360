@@ -11,6 +11,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS proposals (
     tenant TEXT NOT NULL, slug TEXT NOT NULL, title TEXT NOT NULL, product TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL DEFAULT 'brochure', summary TEXT NOT NULL DEFAULT '',
     html TEXT NOT NULL DEFAULT '', active BOOLEAN NOT NULL DEFAULT true, views INT NOT NULL DEFAULT 0, updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (tenant, slug));
+ALTER TABLE proposals ADD COLUMN IF NOT EXISTS ext_url TEXT NOT NULL DEFAULT '';
 """
 
 
@@ -25,8 +26,58 @@ def url(tenant: str, slug: str) -> str:
 
 def catalog(tenant: str) -> list[dict]:
     with db.pool.connection() as c:
-        rows = c.execute("SELECT slug, title, product, kind, summary FROM proposals WHERE tenant=%s AND active ORDER BY (product='crm_hub_360') DESC, slug", (tenant,)).fetchall()
-    return [{**dict(r), "url": url(tenant, r["slug"])} for r in rows]
+        rows = c.execute("SELECT slug, title, product, kind, summary, ext_url FROM proposals WHERE tenant=%s AND active ORDER BY (product='crm_hub_360') DESC, slug", (tenant,)).fetchall()
+    return [{**dict(r), "url": r["ext_url"] or url(tenant, r["slug"])} for r in rows]
+
+
+def listing(tenant: str) -> list[dict]:
+    with db.pool.connection() as c:
+        rows = c.execute("SELECT slug, title, product, kind, summary, active, views, ext_url, updated_at FROM proposals WHERE tenant=%s ORDER BY (product='crm_hub_360') DESC, slug", (tenant,)).fetchall()
+    return [{**dict(r), "updated_at": r["updated_at"].isoformat(), "own": bool(r["ext_url"]), "url": r["ext_url"] or url(tenant, r["slug"])} for r in rows]
+
+
+def _slugify(t: str) -> str:
+    import re, unicodedata
+    t = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", t).strip("-")[:50] or "material"
+
+
+def create_link(tenant: str, title: str, product: str, kind: str, summary: str, link: str) -> str:
+    """Material propio de la empresa: un enlace (PDF, página, video) que los agentes pueden enviar. Solo http(s) públicos."""
+    import re
+    if not re.match(r"^https://[^\s]{4,500}$", link or ""):
+        raise ValueError("El enlace debe empezar por https:// y ser público.")
+    from . import httpgen
+    try:
+        httpgen.check_url(link)
+    except Exception:
+        raise ValueError("Ese enlace apunta a una dirección interna o no es válido.")
+    base = _slugify(title); slug, n = base, 2
+    with db.pool.connection() as c:
+        while c.execute("SELECT 1 FROM proposals WHERE tenant=%s AND slug=%s", (tenant, slug)).fetchone():
+            slug = f"{base}-{n}"; n += 1
+        c.execute("INSERT INTO proposals (tenant, slug, title, product, kind, summary, html, ext_url) VALUES (%s,%s,%s,%s,%s,%s,'',%s)", (tenant, slug, title[:120], product[:40], kind[:30] or "enlace", summary[:300], link))
+    return slug
+
+
+def update_meta(tenant: str, slug: str, title: str, product: str, kind: str, summary: str, link: str | None) -> bool:
+    with db.pool.connection() as c:
+        row = c.execute("SELECT ext_url FROM proposals WHERE tenant=%s AND slug=%s", (tenant, slug)).fetchone()
+        if not row:
+            return False
+        ext = row["ext_url"]
+        if row["ext_url"] and link:
+            import re
+            if not re.match(r"^https://[^\s]{4,500}$", link):
+                raise ValueError("El enlace debe empezar por https://")
+            ext = link
+        c.execute("UPDATE proposals SET title=%s, product=%s, kind=%s, summary=%s, ext_url=%s, updated_at=now() WHERE tenant=%s AND slug=%s", (title[:120], product[:40], kind[:30], summary[:300], ext, tenant, slug))
+    return True
+
+
+def delete(tenant: str, slug: str) -> bool:
+    with db.pool.connection() as c:
+        return c.execute("DELETE FROM proposals WHERE tenant=%s AND slug=%s", (tenant, slug)).rowcount > 0
 
 
 def catalog_text(tenant: str) -> str:
@@ -43,7 +94,7 @@ def catalog_text(tenant: str) -> str:
 
 def get_page(tenant: str, slug: str) -> str | None:
     with db.pool.connection() as c:
-        r = c.execute("SELECT html FROM proposals WHERE tenant=%s AND slug=%s AND active", (tenant, slug)).fetchone()
+        r = c.execute("SELECT html FROM proposals WHERE tenant=%s AND slug=%s AND active AND ext_url=''", (tenant, slug)).fetchone()
         if r:
             c.execute("UPDATE proposals SET views = views + 1 WHERE tenant=%s AND slug=%s", (tenant, slug))
     return r["html"] if r else None

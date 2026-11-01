@@ -2473,10 +2473,71 @@ async def pipeline_run(tenant: dict = Depends(tenant_auth)):
 
 @app.get("/v1/proposals")
 def proposals_list(tenant: dict = Depends(tenant_auth)):
-    """Material (presentaciones, propuestas) que los agentes pueden enviar."""
-    with db.pool.connection() as c:
-        rows = c.execute("SELECT slug, title, product, kind, summary, active, views, updated_at FROM proposals WHERE tenant=%s ORDER BY slug", (tenant["slug"],)).fetchall()
-    return {"items": [{**dict(r), "updated_at": r["updated_at"].isoformat(), "url": proposals.url(tenant["slug"], r["slug"])} for r in rows]}
+    """Material (presentaciones, propuestas, enlaces propios) que los agentes pueden enviar."""
+    return {"items": proposals.listing(tenant["slug"])}
+
+
+class ProposalReq(BaseModel):
+    title: str
+    product: str = ""
+    kind: str = "enlace"
+    summary: str = ""
+    link: str = ""
+
+
+@app.post("/v1/proposals")
+def proposals_create(req: ProposalReq, tenant: dict = Depends(tenant_auth)):
+    """Agrega material propio de la empresa: un enlace (PDF, página, video) que los agentes enviarán."""
+    if not req.title.strip():
+        raise HTTPException(422, "Escribe un nombre para el material.")
+    try:
+        return {"slug": proposals.create_link(tenant["slug"], req.title.strip(), req.product, req.kind, req.summary, req.link.strip())}
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.put("/v1/proposals/{slug}")
+def proposals_update(slug: str, req: ProposalReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        ok = proposals.update_meta(tenant["slug"], slug, req.title.strip() or slug, req.product, req.kind, req.summary, req.link.strip() or None)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    if not ok:
+        raise HTTPException(404, "No existe")
+    return {"ok": True}
+
+
+@app.delete("/v1/proposals/{slug}")
+def proposals_delete(slug: str, tenant: dict = Depends(tenant_auth)):
+    if not proposals.delete(tenant["slug"], slug):
+        raise HTTPException(404, "No existe")
+    return {"ok": True}
+
+
+@app.get("/v1/qualifier")
+def qualifier_get(tenant: dict = Depends(tenant_auth)):
+    """Agente calificador de la empresa: configuración, reglas por defecto y resumen de grados."""
+    return {**qualifier.config(tenant), "default_rules": qualifier.DEFAULT_RULES, "licensed": finder.licensed(tenant), "name": "calificador_" + tenant["slug"], "stats": qualifier.stats(tenant["slug"])}
+
+
+@app.put("/v1/qualifier")
+def qualifier_save(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    if not finder.licensed(tenant):
+        raise HTTPException(403, "El buscador (y su calificador) no está incluido en la licencia de esta empresa.")
+    return qualifier.save(tenant["slug"], body)
+
+
+@app.post("/v1/qualifier/run")
+async def qualifier_run(tenant: dict = Depends(tenant_auth)):
+    """Califica ahora los prospectos pendientes y pasa a Valeria los de grado suficiente."""
+    if not finder.licensed(tenant):
+        raise HTTPException(403, "El buscador (y su calificador) no está incluido en la licencia de esta empresa.")
+    if agent.engine_paused(tenant):
+        raise HTTPException(409, "El motor comercial está pausado por el interruptor de emergencia.")
+    try:
+        return await qualifier.run(tenant)
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo calificar: {str(e)[:200]}")
 
 
 @app.post("/v1/proposals/seed")

@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **Comercial virtual → Agentes de prospección**: tarjetas del **agente buscador** y del **agente calificador**, cada uno con su configuración (el calificador con sus reglas de calificación editables, grado mínimo, tope diario y resumen de grados), junto a Valeria. Existen mientras la licencia incluya el buscador.
+- **Comercial virtual → Propuestas y brochures**: biblioteca del material que envían los agentes, con las presentaciones estándar y **material propio** (enlaces a PDF, páginas o videos), visitas, y opciones de ver, copiar enlace, editar, apagar y quitar.
+
 ## [1.15.0] - 2026-11-01
 
 ### Añadido
