@@ -4,6 +4,8 @@
 
 ## Sin publicar (después de v1.12.0)
 
+- `4aff229` 2026-11-01 — Versión 1.12.1
+- `a4dfbe7` 2026-11-01 — Correo: proveedor con buzón de respuestas aparte (Resend y similares) para no perder las respuestas de los clientes
 - `28895c3` 2026-11-01 — Guía de arranque: política de proveedores de correo (Resend no admite correo en frío)
 - `23cf0f3` 2026-11-01 — Guía para encender la prospección en producción y plantilla CSV de prospectos
 
