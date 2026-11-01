@@ -2,8 +2,15 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.16.0)
+## Sin publicar (después de v1.17.0)
 
+- `69d128a` 2026-11-01 — Versión 1.17.1
+- `4b46d88` 2026-11-01 — Correos: nombre de la empresa con espacio duro también en la firma y el pie de baja
+- `ac31798` 2026-11-01 — Prospección: título, pestañas, tarjetas, botones, buscador y filtros fijos; la lista se desplaza con sus encabezados fijos
+
+## v1.17.0
+
+- `132ed20` 2026-11-01 — Versión 1.17.0
 - `6f3ab85` 2026-11-01 — Versión 1.17.0
 - `927a069` 2026-11-01 — bin/desplegar-version: publica una versión con un solo comando
 - `e83bfbd` 2026-11-01 — Core360 ampliado (planta conectada, turnos, contabilidad), oferta indicada por el equipo y un solo enlace de material en el correo en frío
