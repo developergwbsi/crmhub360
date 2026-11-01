@@ -14,7 +14,7 @@ ADDR = re.compile(r"^[^@\s,;<>]{1,64}@[^@\s,;<>]{1,190}\.[A-Za-z]{2,}$")
 
 def plus_alias(cfg: dict, user_id: str) -> str:
     """Alias del buzón para las respuestas de este usuario (solo proveedores que lo permiten, p. ej. Gmail)."""
-    addr = cfg["from_address"]
+    addr = cfg.get("reply_address") or cfg["from_address"]   # con un proveedor que solo envía (Resend…), las respuestas van a otro buzón real
     if not cfg.get("plus"):
         return addr
     local, _, domain = addr.partition("@")

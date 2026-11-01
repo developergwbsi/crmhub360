@@ -33,6 +33,10 @@ No se escribe en frío desde el dominio principal ni desde el Gmail de la empres
 
 Mientras tanto, conversa con correos reales (equipo, amigos) desde ese buzón para que tenga historial.
 
+### Cómo cargar Resend en el Centro de control
+
+*Proveedores aliados → + Agregar proveedor → tipo «Proveedor de correo» → preset **Resend***: servidor `smtp.resend.com`, puerto 465, seguridad SSL, usuario `resend`, **contraseña = tu API key** de Resend, correo remitente de un dominio **verificado** en Resend (p. ej. `ventas@crm.digitalalliancehub.site`). **Buzón de respuestas (obligatorio con Resend):** un buzón real que recibe lo que contestan los clientes (p. ej. `valeria@digitalalliancehub.site` en Zoho, con IMAP activado y contraseña de aplicación) y su servidor IMAP (`imap.zoho.com`). Luego: *Empresas → DigitalAlliance Hub → Servicios → Correo* y elige ese proveedor. Envía el correo de prueba y responde desde otra cuenta para comprobar que la respuesta llega al CRM.
+
 ### Qué proveedor de correo usar (importante)
 
 - **Resend** (y servicios parecidos de envío por API: SendGrid, Mailgun, Postmark…) **prohíben el correo en frío**: su política de uso exige que cada destinatario haya dado permiso (opt-in), prohíbe listas compradas o extraídas y suspende cuentas con **quejas > 0,08 %** o **rebotes > 4 %**. Sirve muy bien para correo **con permiso**: confirmaciones de demo, invitaciones a videollamadas, respuestas a quien escribió, formularios web, correos del CRM. SMTP de Resend: `smtp.resend.com`, puerto 465 (SSL) o 587 (STARTTLS), usuario `resend`, contraseña = la API key.

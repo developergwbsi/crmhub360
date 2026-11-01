@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **Correo con proveedores que solo envían (Resend, SendGrid…) y buzón de respuestas aparte.** En el Centro de control, el proveedor de correo ahora admite un **buzón de respuestas** (correo, servidor IMAP y contraseña): los correos salen por el proveedor (con su dominio verificado) y las respuestas de los clientes llegan a ese buzón real, que el sistema lee como siempre. Antes, cambiar a un proveedor que solo envía habría hecho que las respuestas de los clientes se perdieran. Trae el preset de **Resend** (`smtp.resend.com`, usuario `resend`, contraseña = API key). Recordatorio: Resend no admite correo en frío; úsalo para correo con permiso.
+
 ## [1.12.0] - 2026-11-01
 
 ### Añadido

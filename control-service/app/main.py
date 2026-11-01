@@ -974,7 +974,7 @@ KINDS = {
     "generic_whatsapp": {"label": "Otro proveedor de WhatsApp (API HTTP)", "channels": ["whatsapp"], "secrets": ["auth_secret"]},
     "generic_sms": {"label": "Proveedor de SMS (API HTTP)", "channels": ["sms"], "secrets": ["auth_secret"]},
     "generic_voice": {"label": "Central / proveedor de llamadas (API HTTP)", "channels": ["voice"], "secrets": ["auth_secret"]},
-    "email": {"label": "Proveedor de correo (SMTP: Gmail, Outlook, SendGrid…)", "channels": ["email"], "secrets": ["password"]},
+    "email": {"label": "Proveedor de correo (SMTP: Gmail, Outlook, SendGrid, Resend…)", "channels": ["email"], "secrets": ["password", "reply_password"]},
     "ai": {"label": "Motor de IA (Anthropic, OpenAI y compatibles, Ollama)", "channels": ["ai"], "secrets": ["api_key"]},
 }
 
@@ -1050,6 +1050,21 @@ def _clean_fields(kind: str, fields: dict, old: dict) -> dict:
         out["host"] = str(out["host"]).strip()
         out["security"] = "" if out.get("security") in ("NONE", "", None) else out["security"]
         out["from_address"] = str(out.get("from_address") or out.get("user")).strip()
+        # buzón de respuestas (opcional): para proveedores que solo envían (Resend, SendGrid…) las respuestas de los clientes llegan a un buzón real que el Hub lee por IMAP
+        ru = str(out.get("reply_user") or "").strip()
+        if ru:
+            if not re.match(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[A-Za-z]{2,}$", ru):
+                raise HTTPException(400, "El buzón de respuestas debe ser un correo completo")
+            if not out.get("reply_password"):
+                raise HTTPException(400, "Falta la contraseña del buzón de respuestas")
+            out["reply_user"] = ru
+            known = {"gmail.com": "imap.gmail.com", "googlemail.com": "imap.gmail.com", "outlook.com": "outlook.office365.com", "hotmail.com": "outlook.office365.com", "yahoo.com": "imap.mail.yahoo.com", "zoho.com": "imap.zoho.com"}
+            out["reply_host"] = str(out.get("reply_host") or "").strip() or known.get(ru.partition("@")[2].lower(), "")   # con dominio propio (p. ej. Zoho) hay que escribirlo
+            if not out["reply_host"]:
+                raise HTTPException(400, "Escribe el servidor IMAP del buzón de respuestas (p. ej. imap.zoho.com)")
+        else:
+            out["reply_user"] = out["reply_host"] = ""
+            out["reply_password"] = ""
         if "gmail" in out["host"] or "google" in out["host"]:
             out["password"] = str(out.get("password", "")).replace(" ", "")
     return out
@@ -1269,11 +1284,13 @@ def set_company_mailbox(slug: str, mail: Optional[dict]) -> bool:
     with db() as c:
         row = c.execute("SELECT settings FROM tenants WHERE slug=%s", (slug,)).fetchone()
         settings = dict(row["settings"] or {})
-        host = IMAP_HOSTS.get((mail or {}).get("host", ""))
+        reply = bool(mail and mail.get("reply_user") and mail.get("reply_password") and mail.get("reply_host"))   # proveedor que solo envía: el buzón de respuestas es otro
+        host = (mail or {}).get("reply_host") if reply else IMAP_HOSTS.get((mail or {}).get("host", ""))
+        box_user, box_pass = ((mail or {}).get("reply_user"), (mail or {}).get("reply_password")) if reply else ((mail or {}).get("user"), (mail or {}).get("password"))
         old = settings.get("mailbox") or {}
-        if mail and host and mail.get("user") and mail.get("password"):
-            same = old.get("user") == mail["user"] and old.get("host") == host
-            settings["mailbox"] = {"enabled": True, "host": host, "port": 993, "user": mail["user"], "password": mail["password"], "folder": "INBOX",
+        if mail and host and box_user and box_pass:
+            same = old.get("user") == box_user and old.get("host") == host
+            settings["mailbox"] = {"enabled": True, "host": host, "port": 993, "user": box_user, "password": box_pass, "folder": "INBOX",
                                    "since": old.get("since") if same else time.strftime("%Y-%m-%d", time.gmtime()), "last_uid": old.get("last_uid", 0) if same else 0}
             ok = True
         else:
@@ -1281,9 +1298,9 @@ def set_company_mailbox(slug: str, mail: Optional[dict]) -> bool:
             ok = False
         # envío «como el usuario»: el Hub manda con SMTP propio (nombre, firma y Reply-To del usuario) y las respuestas vuelven por un alias personal
         if mail and mail.get("host") and mail.get("from_address"):
-            plus = any(k in mail["host"] for k in ("gmail", "google", "zoho"))
+            plus = any(k in (mail["reply_host"] if reply else mail["host"]) + (mail["reply_user"] if reply else "") for k in ("gmail", "google", "zoho"))
             settings["mailout"] = {"host": mail["host"], "port": int(mail.get("port") or 587), "security": mail.get("security") or "", "user": mail.get("user") or "",
-                                   "password": mail.get("password") or "", "from_address": mail["from_address"], "plus": plus}
+                                   "password": mail.get("password") or "", "from_address": mail["from_address"], "plus": plus, **({"reply_address": mail["reply_user"]} if reply else {})}
         else:
             settings.pop("mailout", None)
         c.execute("UPDATE tenants SET settings=%s WHERE slug=%s", (json.dumps(settings), slug))
@@ -1304,7 +1321,8 @@ async def set_company_mail(t: dict, mode: str) -> None:
             raise HTTPException(400, "Proveedor de correo inexistente")
         f = p["fields"]
         mail = {"host": f["host"], "port": f.get("port") or 587, "security": f.get("security", "TLS"), "user": f.get("user", ""), "password": f.get("password", ""),
-                "from_address": f["from_address"], "enabled": True}
+                "from_address": f["from_address"], "enabled": True,
+                **({"reply_user": f["reply_user"], "reply_password": f.get("reply_password", ""), "reply_host": f.get("reply_host", "")} if f.get("reply_user") else {})}
         mode = "shared"
     async with espo(t) as c:
         found = (await c.get("/InboundEmail", params={"where[0][type]": "equals", "where[0][attribute]": "name", "where[0][value]": SYS_ACCOUNT, "select": "id,emailAddress"})).json().get("list", [])

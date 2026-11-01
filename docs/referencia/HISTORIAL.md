@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.11.2)
+## Sin publicar (después de v1.12.0)
 
+- `28895c3` 2026-11-01 — Guía de arranque: política de proveedores de correo (Resend no admite correo en frío)
+- `23cf0f3` 2026-11-01 — Guía para encender la prospección en producción y plantilla CSV de prospectos
+
+## v1.12.0
+
+- `3d4a1b3` 2026-11-01 — Versión 1.12.0
 - `0455310` 2026-11-01 — Versión 1.12.0
 - `d042b4c` 2026-11-01 — Motor comercial F5: panel maestro en el Centro de control e interruptor de emergencia
 
