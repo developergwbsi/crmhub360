@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **166** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **174** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -122,6 +122,11 @@ Total: **166** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/processTest` | CrmHub.processTest | POST /CrmHub/processTest. Admin. Hub: POST /v1/processes/test. */ |
 | GET | `/CrmHub/processes` | CrmHub.processes | GET /CrmHub/processes. Admin. Hub: GET /v1/processes. */ |
 | POST | `/CrmHub/processesSave` | CrmHub.processesSave | POST /CrmHub/processesSave. Admin. Hub: PUT /v1/processes. */ |
+| POST | `/CrmHub/proposalActive` | CrmHub.proposalActive | POST /CrmHub/proposalActive. Admin. {slug, active}. Hub: PUT /v1/proposals/{slug}/active. */ |
+| POST | `/CrmHub/proposalDelete` | CrmHub.proposalDelete | POST /CrmHub/proposalDelete. Admin. {slug}. Hub: DELETE /v1/proposals/{slug}. */ |
+| POST | `/CrmHub/proposalSave` | CrmHub.proposalSave | POST /CrmHub/proposalSave. Admin. {slug?, title, product, kind, summary, link}. Crea material propio (sin slug) o edita (con slug). Hub: POST/PUT /v1/proposals. */ |
+| GET | `/CrmHub/proposals` | CrmHub.proposals | GET /CrmHub/proposals. Admin. Biblioteca de propuestas y brochures que usan los agentes. Hub: GET /v1/proposals. */ |
+| POST | `/CrmHub/proposalsSeed` | CrmHub.proposalsSeed | POST /CrmHub/proposalsSeed. Admin. Crea o restaura las presentaciones estándar. Hub: POST /v1/proposals/seed. */ |
 | GET | `/CrmHub/prospects` | CrmHub.prospects | GET /CrmHub/prospects?status=&batch=&q=. Prospectos con su puntaje, conteos por estado, lotes y el perfil de cliente ideal. Hub: GET /v1/prospects. */ |
 | POST | `/CrmHub/prospectsDelete` | CrmHub.prospectsDelete | POST /CrmHub/prospectsDelete. {ids}. Borra prospectos que aún no pasaron al CRM. Hub: POST /v1/prospects/delete. */ |
 | POST | `/CrmHub/prospectsEnrich` | CrmHub.prospectsEnrich | POST /CrmHub/prospectsEnrich. Enriquece con IA los prospectos pendientes (en segundo plano). Hub: POST /v1/prospects/enrich. */ |
@@ -133,6 +138,9 @@ Total: **166** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/push/subscribe` | CrmHub.pushSubscribe | POST /CrmHub/push/subscribe. Usuario. Hub: POST /v1/push/subscribe. */ |
 | POST | `/CrmHub/push/test` | CrmHub.pushTest | Envía una notificación de prueba a los dispositivos del propio usuario. */ |
 | POST | `/CrmHub/push/unsubscribe` | CrmHub.pushUnsubscribe | POST /CrmHub/push/unsubscribe. Usuario. Hub: POST /v1/push/unsubscribe. */ |
+| GET | `/CrmHub/qualifier` | CrmHub.qualifier | GET /CrmHub/qualifier. Admin. Agente calificador (configuración y resumen). Hub: GET /v1/qualifier. */ |
+| POST | `/CrmHub/qualifierRun` | CrmHub.qualifierRun | POST /CrmHub/qualifierRun. Admin. Califica ahora los pendientes y pasa los buenos a Valeria. Hub: POST /v1/qualifier/run. */ |
+| POST | `/CrmHub/qualifierSave` | CrmHub.qualifierSave | POST /CrmHub/qualifierSave. Admin. {enabled, min_grade, daily_pass, rules}. Hub: PUT /v1/qualifier. */ |
 | POST | `/CrmHub/reassign` | CrmHub.reassign | POST /CrmHub/reassign. Usuarios con permiso de asignación y edición del registro. */ |
 | POST | `/CrmHub/recDelete` | CrmHub.recDelete | POST /CrmHub/recDelete. Usuario dueño (o con alcance «todos»). {id}. Hub: DELETE /v1/rec/{id}. */ |
 | GET | `/CrmHub/recList` | CrmHub.recList | GET /CrmHub/recList. Usuario (no API ni portal). Sus grabaciones; quien tiene alcance «todos» ve las de toda la empresa. Hub: GET /v1/rec. */ |

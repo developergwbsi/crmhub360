@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **193** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **199** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -117,8 +117,11 @@ Total: **193** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/processes` | `proc_list` | Procesos configurados, campos disponibles, máximo y catálogo. |
 | PUT | `/v1/processes` | `proc_save` | Valida y guarda los procesos del tenant (settings.processes). |
 | POST | `/v1/processes/test` | `proc_test` | Prueba una definición contra un lead real (o datos de ejemplo) sin guardar nada en el lead. |
-| GET | `/v1/proposals` | `proposals_list` | Material (presentaciones, propuestas) que los agentes pueden enviar. |
+| GET | `/v1/proposals` | `proposals_list` | Material (presentaciones, propuestas, enlaces propios) que los agentes pueden enviar. |
+| POST | `/v1/proposals` | `proposals_create` | Agrega material propio de la empresa: un enlace (PDF, página, video) que los agentes enviarán. |
 | POST | `/v1/proposals/seed` | `proposals_seed` | Crea (o actualiza) las presentaciones estándar de los productos de la empresa. |
+| DELETE | `/v1/proposals/{slug}` | `proposals_delete` | — |
+| PUT | `/v1/proposals/{slug}` | `proposals_update` | — |
 | PUT | `/v1/proposals/{slug}/active` | `proposals_active` | — |
 | GET | `/v1/prospects` | `prospects_list` | — |
 | POST | `/v1/prospects/delete` | `prospects_delete` | — |
@@ -160,6 +163,9 @@ Total: **193** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/push/send` | `push_send` | Envía una notificación push a usuarios del tenant. |
 | POST | `/v1/push/subscribe` | `push_subscribe` | Registra la suscripción push de un usuario. |
 | POST | `/v1/push/unsubscribe` | `push_unsubscribe` | Elimina una suscripción push. |
+| GET | `/v1/qualifier` | `qualifier_get` | Agente calificador de la empresa: configuración, reglas por defecto y resumen de grados. |
+| PUT | `/v1/qualifier` | `qualifier_save` | — |
+| POST | `/v1/qualifier/run` | `qualifier_run` | Califica ahora los prospectos pendientes y pasa a Valeria los de grado suficiente. |
 | GET | `/v1/rec` | `rec_list` | — |
 | POST | `/v1/rec/start` | `rec_start` | — |
 | DELETE | `/v1/rec/{rid}` | `rec_delete` | — |
