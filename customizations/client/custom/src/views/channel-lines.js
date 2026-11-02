@@ -118,7 +118,7 @@ define('custom:views/channel-lines', ['view', 'custom:ui'], function (Dep, ChUi)
             const act = a.dataset.act, id = a.dataset.id;
             if (act === 'ch') { this.ch = a.dataset.k; try { sessionStorage.setItem('crmhub-ln-ch', this.ch); } catch (x) { /* nada */ } this.draw(); }
             else if (act === 'add') { this.form(null); }
-            else if (act === 'presets') { this.presetsPanel(); }
+            else if (act === 'presets') { try { sessionStorage.setItem('crmhub-int-tab', 'respuestas'); } catch (x) { /* privado */ } const t = document.querySelector('[data-action="tab"][data-tab="respuestas"]'); if (t) { t.click(); } else { this.presetsPanel(); } }
             else if (act === 'edit') { this.form(this.card(id)); }
             else if (act === 'resp') { e.preventDefault && e.preventDefault(); this.respDialog(this.card(id)); }
             else if (act === 'test') { this.testConn(id); }

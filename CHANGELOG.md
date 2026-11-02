@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Cambiado
+- **Respuestas automáticas con pestaña propia:** ahora hay una pestaña «Respuestas automáticas» en *Integraciones* y otra en *Comercial virtual*, con el formulario completo en la página (indicadores de estado, saludo, fuera de horario, menú, palabras clave, acciones y respaldo) en lugar de un cuadro emergente. El botón de WhatsApp y la tarjeta de Integraciones llevan a esa pestaña.
+
 ## [1.24.3] - 2026-11-02
 
 ### Corregido

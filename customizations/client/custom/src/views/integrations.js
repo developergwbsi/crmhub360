@@ -72,7 +72,7 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
             const opts = (map, cur) => [{value: '', label: 'Sin configurar'}].concat(Object.keys(map).map(k => ({value: k, label: map[k]}))).map(o => ({...o, selected: o.value === cur}));
             const smsOptions = opts(s.sms.providers, s.sms.provider), voiceOptions = opts(s.voice.providers, s.voice.provider);
             const tabs = [
-                {key: 'canales', icon: 'fas fa-comments', label: 'Canales de mensajería'}, {key: 'correo', icon: 'fas fa-envelope', label: 'Correo'}, {key: 'buscadores', icon: 'fas fa-microchip', label: 'Motor de IA y buscador'}, {key: 'creditos', icon: 'fas fa-coins', label: 'Saldo y recargas'}, {key: 'formularios', icon: 'fas fa-file-lines', label: 'Formularios web'},
+                {key: 'canales', icon: 'fas fa-comments', label: 'Canales de mensajería'}, {key: 'correo', icon: 'fas fa-envelope', label: 'Correo'}, {key: 'buscadores', icon: 'fas fa-microchip', label: 'Motor de IA y buscador'}, {key: 'respuestas', icon: 'fas fa-message', label: 'Respuestas automáticas'}, {key: 'creditos', icon: 'fas fa-coins', label: 'Saldo y recargas'}, {key: 'formularios', icon: 'fas fa-file-lines', label: 'Formularios web'},
                 {key: 'meta', icon: 'fab fa-facebook', label: 'Meta'}, {key: 'reglas', icon: 'fas fa-sliders', label: 'Servicios y filtros'},
                 {key: 'sistema', icon: 'fas fa-gear', label: 'Sistema'},
             ].map(t => ({...t, active: t.key === this.tab}));
@@ -309,8 +309,9 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                 if (sc) { h += kp('buscadores', 'ok', 'fas fa-magnifying-glass', 'Buscador web', sc.mode === 'own' ? 'El tuyo' : 'Con créditos', esc(((sc.engines || {})[(sc.active || {}).engine]) || '')); }
                 if (pr) { h += `<a class="ch-kpi ${pr.enabled ? 'ok' : 'warn'}" data-presets="1"><span class="ic"><i class="fas fa-message"></i></span><div><span>Respuestas automáticas</span><b>${pr.enabled ? 'Activas' : 'Apagadas'}</b><small>${pr.enabled ? (pr.fallback ? 'también como respaldo' : 'según la línea') : 'configúralas en WhatsApp'}</small></div></a>`; }
                 box.innerHTML = h ? `<div class="ch-kpis">${h}</div>` : '';
-                box.onclick = e => { const pa = e.target.closest('[data-presets]'); if (pa) { const t = this.el.querySelector('[data-action="tab"][data-tab="canales"]'); if (t) { t.click(); } setTimeout(() => { const b = this.el.querySelector('[data-act="presets"]'); if (b) { b.click(); } }, 600); return; } const a = e.target.closest('[data-goto]'); if (a) { const b = this.el.querySelector(`[data-action="tab"][data-tab="${a.dataset.goto}"]`); if (b) { b.click(); } } };
+                box.onclick = e => { const pa = e.target.closest('[data-presets]'); if (pa) { const t = this.el.querySelector('[data-action="tab"][data-tab="respuestas"]'); if (t) { t.click(); } return; } const a = e.target.closest('[data-goto]'); if (a) { const b = this.el.querySelector(`[data-action="tab"][data-tab="${a.dataset.goto}"]`); if (b) { b.click(); } } };
             });
+            this.createView('presets', 'custom:views/presets-config', {selector: '[data-role="presets"]'}).then(v => v.render());
             this.createView('wallet', 'custom:views/wallet', {selector: '[data-role="wallet"]'}).then(v => v.render());
             this.createView('ai', 'custom:views/ai-config', {selector: '[data-role="ai"]'}).then(v => v.render());
             this.createView('search', 'custom:views/search-config', {selector: '[data-role="search"]'}).then(v => v.render());
