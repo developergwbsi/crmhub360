@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.24.2)
+## Sin publicar (después de v1.24.3)
 
+- `165a41e` 2026-11-02 — Versión 1.24.4
+- `fe9d2b3` 2026-11-02 — Respuestas automáticas con pestaña propia en Integraciones y Comercial virtual
+
+## v1.24.3
+
+- `b8c08c9` 2026-11-02 — Versión 1.24.3
 - `df48b96` 2026-11-02 — Versión 1.24.3
 - `82424e5` 2026-11-02 — Parte de arriba fija (título, indicadores y pestañas) en las pantallas propias
 
