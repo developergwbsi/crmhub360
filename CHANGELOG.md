@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Cambiado
+- **Usuarios, Equipos y Campañas** estrenan franja de indicadores (usuarios activos, administradores, regulares y sin equipo; equipos, personas activas y sin equipo; campañas activas, en planificación y completadas) y una lista más cuidada: buscador a todo el ancho, tabla en tarjeta redondeada y encabezado suave.
+- **Banco de conocimiento, Mis plantillas, Simulador del proceso comercial, Consultas web y Formularios internos** con indicadores en el diseño de la plataforma (el simulador muestra qué canales están listos para la prueba; las plantillas, cuántas hay por canal; las consultas y los formularios, cuántos hay y cuántos están activos).
+
+### Corregido
+- En **Mensajes masivos** el botón «Nueva campaña» ya no queda montado sobre la tarjeta: el encabezado de las páginas propias ordena título y botón en una fila y la tarjeta ocupa todo el ancho.
+- En «Mis plantillas» el ícono del canal seleccionado ya no se pierde.
+
 ## [1.23.1] - 2026-11-02
 
 ### Cambiado

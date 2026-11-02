@@ -1,0 +1,5 @@
+{
+    "views": {
+        "list": "custom:views/campaign-list"
+    }
+}

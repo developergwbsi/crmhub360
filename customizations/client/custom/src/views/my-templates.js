@@ -46,10 +46,13 @@ define('custom:views/my-templates', ['view', 'custom:ui', 'custom:tpl', 'custom:
             if (!this.data0) { root.innerHTML = '<div class="ch-muted" style="padding:24px">Cargando…</div>'; return; }
             const max = this.data0.max || 10, ch = this.channel, list = Tpl.forChannel(this.data0, ch);
             const tabs = Object.keys(Tpl.CH).map(k => { const n = Tpl.forChannel(this.data0, k).length;
-                return `<a class="ch-tpl-tab ${k === ch ? 'on' : ''}" data-act="tab" data-ch="${k}"><span class="${Tpl.CH[k].icon}" style="color:${k === ch ? '#fff' : Tpl.CH[k].color}"></span> ${Tpl.CH[k].label} <small>${n}/${max}</small></a>`; }).join('') +
+                return `<a class="ch-tpl-tab ${k === ch ? 'on' : ''}" data-act="tab" data-ch="${k}"><span class="${Tpl.CH[k].icon}" style="color:${Tpl.CH[k].color}"></span> ${Tpl.CH[k].label} <small>${n}/${max}</small></a>`; }).join('') +
                 Object.keys(LOCKED).map(k => `<a class="ch-tpl-tab lock" title="Próximamente"><span class="fas fa-lock"></span> ${LOCKED[k].label} <small>Próximamente</small></a>`).join('');
+            const total = Object.keys(Tpl.CH).reduce((a, k) => a + Tpl.forChannel(this.data0, k).length, 0);
+            const kp = Object.keys(Tpl.CH).slice(0, 3).map(k => { const n = Tpl.forChannel(this.data0, k).length; return `<div class="ch-kpi"><span class="ic"><i class="${Tpl.CH[k].icon}"></i></span><div><span>${Tpl.CH[k].label}</span><b>${n} <small>de ${max}</small></b></div></div>`; }).join('');
+            const strip = `<div class="ch-kpis"><div class="ch-kpi ok"><span class="ic"><i class="fas fa-file-lines"></i></span><div><span>Plantillas en total</span><b>${total}</b><small>solo tú las ves</small></div></div>${kp}</div>`;
             const head = `<div class="ch-sim-head"><h3><span class="fas fa-file-lines"></span> Mis plantillas</h3>
-                <p class="ch-muted">Tus propios mensajes listos para usar: son privados, solo tú los ves y puedes tener hasta ${max} por canal. Úsalos desde el panel de correo, WhatsApp, Telegram o SMS de un lead, cuenta o contacto.</p></div><div class="ch-tpl-tabs">${tabs}</div>`;
+                <p class="ch-muted">Tus propios mensajes listos para usar: son privados, solo tú los ves y puedes tener hasta ${max} por canal. Úsalos desde el panel de correo, WhatsApp, Telegram o SMS de un lead, cuenta o contacto.</p></div>${strip}<div class="ch-tpl-tabs">${tabs}</div>`;
             if (this.editing && ch === 'email') {   // el diseñador necesita todo el ancho
                 root.innerHTML = head + this.emailEditorHtml(); this.bindEmail(root); return;
             }

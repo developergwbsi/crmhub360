@@ -1733,3 +1733,15 @@ a.ch-kpi { color: inherit; text-decoration: none; cursor: pointer; transition: t
 img.avatar { border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--ch-surface, #fff), 0 2px 8px rgba(15, 23, 42, .28); background: var(--ch-soft); }
 .navbar img.avatar, #navbar img.avatar { box-shadow: 0 0 0 2px var(--ch-surface, #fff), 0 0 0 3px rgba(79, 70, 229, .45), 0 2px 8px rgba(15, 23, 42, .3); }
 .field[data-name="avatar"] img.avatar, .avatar-container img.avatar { box-shadow: 0 0 0 4px var(--ch-surface, #fff), 0 8px 24px -6px rgba(79, 70, 229, .55); }
+
+/* ===== Encabezados de página y listas estándar (Usuarios, Equipos, Campañas…) ===== */
+.page-header::after { content: ""; display: table; clear: both; }
+.page-header:has(> h3) { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; } .page-header:has(> h3) > .pull-right { float: none; margin-left: auto; }
+.page-header-row { margin-bottom: 4px; } .page-header .header-buttons { margin: 0; }
+.search-container { margin-bottom: 12px; } .search-container .search-row > .form-group.col-lg-7 { width: 100%; flex: 1 1 100%; max-width: 100%; } .search-container .search-row > .form-group.col-lg-5:empty, .search-container .search-row > .form-group.col-md-4:empty { display: none; }
+.search-container .search-row { display: flex; flex-wrap: wrap; } .search-container .input-group { border-radius: 14px; overflow: hidden; box-shadow: var(--ch-shadow); } .search-container .form-control.text-filter { border-radius: 0; height: 42px; }
+.list-container > .list { background: var(--ch-surface); border: 1px solid var(--ch-line); border-radius: 20px; box-shadow: var(--ch-shadow); overflow: hidden; }
+.list-container .table > thead > tr > th { background: var(--ch-soft); font-size: 11.5px; letter-spacing: .05em; padding-top: 12px; padding-bottom: 12px; }
+.list-container .table > tbody > tr.list-row > td { padding-top: 13px; padding-bottom: 13px; } .list-container .table > tbody > tr.list-row:hover > td { background: var(--ch-tint); }
+.list-container .list-buttons-container { margin-bottom: 8px; }
+.ch-studio-kp { flex: none; margin: 0; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } .ch-studio-kp .ch-kpi { padding: 10px 14px; border-radius: 16px; } .ch-studio-kp .ch-kpi .ic { width: 36px; height: 36px; border-radius: 11px; font-size: 14px; } .ch-studio-kp .ch-kpi b { font-size: 21px; } .ch-studio-kp .ch-kpi span { font-size: 10.5px; }

@@ -36,14 +36,15 @@ define('custom:views/knowledge', ['view', 'custom:ui'], function (Dep, ChUi) {
             if (!k) { root.innerHTML = '<div class="ch-muted" style="padding:24px">Cargando…</div>'; return; }
             if (k.error) { root.innerHTML = '<div class="ch-chat-err">No se pudo cargar el banco de conocimiento.</div>'; return; }
             const s = k.stats;
-            const kpi = (l, v, sub) => `<div class="ch-kb-kpi"><span>${l}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
+            const KI = {'Leads reales': 'fa-address-book', 'Cierres': 'fa-handshake', 'Descartados': 'fa-ban', 'Días hasta cerrar': 'fa-hourglass-half'};
+            const kpi = (l, v, sub) => `<div class="ch-kpi ${l === 'Cierres' ? 'ok' : l === 'Descartados' ? 'warn' : ''}"><span class="ic"><i class="fas ${KI[l] || 'fa-chart-simple'}"></i></span><div><span>${l}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</div></div>`;
             const head = `<div class="ch-sim-head"><h3><span class="fas fa-brain"></span> Banco de conocimiento</h3>
                 <p class="ch-muted">Aprende del historial real de tus leads (las simulaciones no cuentan): qué fuentes, servicios, campañas y asesores convierten mejor, cuándo llegan los mejores clientes y cuánto tardan en cerrar.</p>
                 <div class="ch-mail-actions"><button class="btn btn-primary btn-sm" data-act="refresh" ${this.busy ? 'disabled' : ''}><span class="fas fa-rotate"></span> ${this.busy ? 'Analizando…' : 'Actualizar análisis'}</button>
                 <span class="ch-muted">${k.generatedAt ? 'Último análisis: ' + esc(fmt(k.generatedAt)) : 'Aún no se ha generado el análisis.'}</span></div></div>`;
             let body = '';
             if (s) {
-                body = `<div class="ch-kb-kpis">${kpi('Leads reales', s.total)}${kpi('Cierres', s.won, s.rate + '% de los leads')}${kpi('Descartados', s.dead)}${kpi('Días hasta cerrar', s.daysToWinMedian != null ? s.daysToWinMedian : '—', 'mediana')}</div>
+                body = `<div class="ch-kpis">${kpi('Leads reales', s.total)}${kpi('Cierres', s.won, s.rate + '% de los leads')}${kpi('Descartados', s.dead)}${kpi('Días hasta cerrar', s.daysToWinMedian != null ? s.daysToWinMedian : '—', 'mediana')}</div>
                     <div class="ch-sim-card"><h4>Hallazgos</h4><ul class="ch-kb-list">${(s.findings || []).map(f => `<li>${esc(f)}</li>`).join('') || '<li class="ch-muted">Sin hallazgos.</li>'}</ul></div>
                     <div class="ch-sim-card"><h4><span class="fas fa-wand-magic-sparkles"></span> Recomendaciones de la IA</h4>${k.summary ? `<div class="ch-kb-ai">${esc(k.summary)}</div>` : '<div class="ch-muted">Se generan al actualizar el análisis cuando hay suficientes leads (10 o más) y la IA está disponible.</div>'}</div>
                     <div class="ch-kb-cols"><div class="ch-sim-card"><h4>Conversión por fuente</h4>${this.bars(s.bySource)}</div><div class="ch-sim-card"><h4>Conversión por servicio</h4>${this.bars(s.byService)}</div>

@@ -31,14 +31,14 @@ define('custom:views/simulator', ['view', 'custom:ui'], function (Dep, ChUi) {
             const root = this.el && this.el.querySelector('.ch-sim'); if (!root) { return; }
             if (!this.cfg) { root.innerHTML = '<div class="ch-muted" style="padding:24px">Cargando…</div>'; return; }
             if (this.cfg.error) { root.innerHTML = '<div class="ch-chat-err">No se pudo cargar el simulador.</div>'; return; }
-            const c = this.cfg.config || {}, chip = (ok, t) => `<span class="ch-sim-chip ${ok ? 'on' : 'off'}"><span class="fas ${ok ? 'fa-check' : 'fa-minus'}"></span> ${t}</span>`;
+            const c = this.cfg.config || {}, card = (ok, ic, t, sub) => `<div class="ch-kpi sm ${ok ? 'ok' : 'warn'}"><span class="ic"><i class="${ic === 'fa-whatsapp' ? 'fab' : 'fas'} ${ic}"></i></span><div><span>${t}</span><b>${ok ? 'Listo' : 'Sin configurar'}</b><small>${ok ? (sub || 'se usará en la simulación') : 'se omitirá el paso'}</small></div></div>`, chip = (ok, t) => `<span class="ch-sim-chip ${ok ? 'on' : 'off'}"><span class="fas ${ok ? 'fa-check' : 'fa-minus'}"></span> ${t}</span>`;
             const stepsHtml = (this.cfg.steps || []).map(s => {
                 const miss = (s.key === 'welcome' && !c.correo) || (s.key === 'message' && !(c.whatsapp || c.sms));
                 return `<label class="ch-sim-step"><input type="checkbox" data-step="${esc(s.key)}" checked> ${esc(s.label)}${miss ? ' <em>(sin configurar: se omitirá)</em>' : ''}</label>`;
             }).join('');
             root.innerHTML = `<div class="ch-sim-head"><h3><span class="fas fa-flask-vial"></span> Simulador del proceso comercial</h3>
                 <p class="ch-muted">Recorre con un lead de prueba todo lo que esta empresa tiene configurado: registro, correo de bienvenida, mensajes, llamada, estados y conversión a cliente. Los datos quedan marcados como simulación y no cuentan en los reportes.</p>
-                <div>${chip(c.correo, 'Correo de salida')} ${chip(c.whatsapp, 'WhatsApp' + (c.whatsapp ? ' · ' + esc(c.whatsapp) : ''))} ${chip(c.sms, 'SMS')} ${chip(c.buzon, 'Buzón de entrada')}</div></div>
+                </div><div class="ch-kpis">${card(c.correo, 'fa-envelope', 'Correo de salida')}${card(c.whatsapp, 'fa-whatsapp', 'WhatsApp', c.whatsapp ? esc(c.whatsapp) : '')}${card(c.sms, 'fa-comment-sms', 'SMS')}${card(c.buzon, 'fa-inbox', 'Buzón de entrada')}</div>
                 <div class="ch-sim-grid"><div class="ch-sim-card"><h4>Nueva simulación</h4>
                 <label>Nombre del cliente de prueba</label><input data-f="name" value="Cliente de Prueba">
                 <label>Correo de prueba (aquí llegan los correos reales)</label><input data-f="email" value="${esc(this.cfg.email || '')}" placeholder="tucorreo@ejemplo.com">
