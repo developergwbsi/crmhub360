@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **209** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **211** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -23,10 +23,11 @@ Total: **209** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/agent/pending` | `agent_pending` | Mensajes del comercial virtual pendientes de aprobación. |
 | GET | `/v1/agent/stats` | `agent_stats` | Estadísticas del comercial virtual del periodo (1 a 365 días) y sus últimos 40 eventos. |
 | POST | `/v1/agent/test` | `agent_test` | Genera la respuesta de prueba del comercial virtual para un cliente simulado, sin enviar nada. |
-| POST | `/v1/agents` | `agents_create` | Crea un comercial virtual dentro del cupo de la licencia; arranca en manual y en prueba. |
+| POST | `/v1/agents` | `agents_create` | Crea un comercial virtual (los que pasen de los incluidos tienen un costo adicional en la factura); arranca en manual y en prueba. |
 | POST | `/v1/agents/delete` | `agents_delete` | Elimina un comercial virtual (queda al menos uno): sus leads pasan al primero y se quita su peso del reparto. |
 | POST | `/v1/agents/enabled` | `agents_enabled` | Enciende o apaga un comercial virtual. |
 | GET | `/v1/ai/config` | `ai_config` | Configuración del motor de IA de la empresa. |
+| POST | `/v1/ai/mode` | `ai_mode` | La empresa elige: motor de IA de la plataforma (recomendado, se cobra en su factura) o el propio. |
 | PUT | `/v1/ai/own` | `ai_own_save` | Guarda el motor de IA propio (solo si el tenant está en modo «own»); una clave vacía conserva la actual. |
 | POST | `/v1/ai/test` | `ai_test` | Prueba el motor que usa la empresa (o, si se envía un borrador del propio, ese). |
 | POST | `/v1/assistant/{action}` | `assist` | Ejecuta una acción del asistente IA (resumen, respuesta, etc.) sobre un lead y devuelve el texto; lo llama la interfaz de Espo. |
@@ -183,6 +184,7 @@ Total: **209** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/report/send` | `report_send` | Envía ahora el reporte gerencial (como vista previa) a los destinatarios configurados o al indicado. |
 | GET | `/v1/search-config` | `search_config_get` | Buscador web de la empresa: cómo está (del sistema, prestado o propio) y los datos no secretos de su buscador propio. |
 | PUT | `/v1/search-config` | `search_config_save` | Guarda el buscador propio de la empresa (motor, clave, cx). Solo si el Centro de control dejó el buscador en «Propio». |
+| POST | `/v1/search-config/mode` | `search_config_mode` | La empresa elige: buscador de la plataforma (recomendado, se cobra en su factura) o el propio. |
 | POST | `/v1/search-config/test` | `search_config_test` | Prueba el buscador que usa la empresa con una búsqueda real (consume una consulta). |
 | GET | `/v1/sim/config` | `sim_config` | Verificación de configuración y pasos disponibles del simulador. |
 | GET | `/v1/sim/runs` | `sim_list` | Lista las simulaciones del tenant (opcionalmente de un usuario). |

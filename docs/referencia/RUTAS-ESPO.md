@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **182** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **184** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -19,6 +19,7 @@ Total: **182** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/agentStats` | CrmHub.agentStats | GET /CrmHub/agentStats. Admin. Hub: GET /v1/agent/stats. */ |
 | POST | `/CrmHub/agentTest` | CrmHub.agentTest | POST /CrmHub/agentTest. Admin. Hub: POST /v1/agent/test. */ |
 | GET | `/CrmHub/aiConfig` | CrmHub.aiConfig | GET /CrmHub/aiConfig. Admin. Hub: GET /v1/ai/config. */ |
+| POST | `/CrmHub/aiMode` | CrmHub.aiMode | POST /CrmHub/aiMode. Admin. {mode: platform/own}. Hub: POST /v1/ai/mode. */ |
 | POST | `/CrmHub/aiOwnSave` | CrmHub.aiOwnSave | POST /CrmHub/aiOwnSave. Admin. Hub: PUT /v1/ai/own (motor de IA propio). */ |
 | POST | `/CrmHub/aiTest` | CrmHub.aiTest | POST /CrmHub/aiTest. Admin. Hub: POST /v1/ai/test. */ |
 | GET | `/CrmHub/assignees` | CrmHub.assignees | GET /CrmHub/assignees. Usuarios con permiso de asignación. Lista a quién se puede reasignar. */ |
@@ -155,6 +156,7 @@ Total: **182** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/recUpdate` | CrmHub.recUpdate | POST /CrmHub/recUpdate. Usuario dueño (o con alcance «todos»). {id, title?, share?}. Hub: POST /v1/rec/{id}/update. */ |
 | POST | `/CrmHub/reportSend` | CrmHub.reportSend | POST /CrmHub/reportSend. Admin. {to?}. Envía ahora el reporte gerencial del motor comercial (vista previa). Hub: POST /v1/report/send. */ |
 | GET | `/CrmHub/searchConfig` | CrmHub.searchConfig | GET /CrmHub/searchConfig. Admin. Buscador web de la empresa. Hub: GET /v1/search-config. */ |
+| POST | `/CrmHub/searchConfigMode` | CrmHub.searchConfigMode | POST /CrmHub/searchConfigMode. Admin. {mode: platform/own}. Hub: POST /v1/search-config/mode. */ |
 | POST | `/CrmHub/searchConfigSave` | CrmHub.searchConfigSave | POST /CrmHub/searchConfigSave. Admin. {engine, api_key, cx}. Hub: PUT /v1/search-config. */ |
 | POST | `/CrmHub/searchConfigTest` | CrmHub.searchConfigTest | POST /CrmHub/searchConfigTest. Admin. Prueba el buscador con una consulta real. Hub: POST /v1/search-config/test. */ |
 | POST | `/CrmHub/senderAddress` | CrmHub.senderAddress | Solo el usuario API del Hub. {userId, address}: registra la dirección remitente del comercial virtual como una de las direcciones de ese usuario, así los correos que envía el comercial virtual salen en «Enviados» (y no en la «Bandeja de entrada»). */ |
