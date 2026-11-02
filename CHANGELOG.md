@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.22.0] - 2026-11-02
+
 ### Añadido
 - **Créditos y recargas (DigitalAlliance Hub como proveedor de todo).** Cada empresa compra créditos prepagados con los que paga lo que usa de la plataforma: IA de los agentes, búsqueda de prospectos y, si así se define para esa empresa, correo, SMS, WhatsApp y llamadas. Lo que corre con proveedores propios de la empresa no descuenta. Ya no hay motor de IA ni buscador «predeterminados» gratis: la empresa elige entre **los suyos** o **créditos de DigitalAlliance Hub** (recomendado).
 - **Saldo y recargas** (*Integraciones → Saldo y recargas*): saldo, obsequio del mes, lo que cuesta cada cosa, paquetes de recarga con pago en **Wompi** y movimientos. Los créditos se acreditan solo con el evento firmado de Wompi (una sola vez por pago).
