@@ -1643,3 +1643,5 @@ body:has(.list-kanban) #content, body:has(.ch-studio) #content { padding-bottom:
 .ch-pr-src { grid-column: 1 / -1; margin-bottom: 8px; border: 1px solid var(--ch-line, #e2e8f0); border-radius: 10px; padding: 6px 12px; background: var(--ch-card, transparent); }
 .ch-pr-src summary { cursor: pointer; font-weight: 700; font-size: 13px; } .ch-pr-src summary small { font-weight: 400; color: var(--ch-muted); }
 .ch-pr-src[open] { max-height: 38vh; overflow: auto; } .ch-pr-src .ch-pr-tbl { margin-top: 6px; }
+.ch-ac .radio label { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 400; color: inherit; }
+.ch-ac .radio label b { font-weight: 700; }
