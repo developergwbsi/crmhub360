@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS prospects (
     score INT, rules_score INT, status TEXT NOT NULL DEFAULT 'new', reason TEXT NOT NULL DEFAULT '', lead_id TEXT, enrichment JSONB NOT NULL DEFAULT '{}', raw JSONB NOT NULL DEFAULT '{}',
     campaign TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
 ALTER TABLE prospects ADD COLUMN IF NOT EXISTS origin TEXT NOT NULL DEFAULT 'import';
+ALTER TABLE prospects ADD COLUMN IF NOT EXISTS found_by TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS prospects_tenant ON prospects (tenant, status, created_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS prospects_email ON prospects (tenant, email) WHERE email <> '' AND status <> 'rejected';
 CREATE UNIQUE INDEX IF NOT EXISTS prospects_phone ON prospects (tenant, phone) WHERE phone <> '' AND status <> 'rejected';
@@ -78,6 +79,7 @@ def _row_to_dict(r) -> dict:
     d = dict(r)
     for k in ("created_at", "updated_at"):
         d[k] = d[k].isoformat() if d.get(k) else None
+    d["source"] = source_of(d); d["source_label"] = SOURCE_LABEL.get(d["source"], d["source"])
     return d
 
 
@@ -211,7 +213,37 @@ def listing(slug: str, status: str = "", batch: str = "", q: str = "", limit: in
         counts = {r["status"]: r["n"] for r in c.execute("SELECT status, count(*) n FROM prospects WHERE tenant=%s GROUP BY status", (slug,)).fetchall()}
         batches = [r["batch"] for r in c.execute("SELECT batch FROM prospects WHERE tenant=%s GROUP BY batch ORDER BY max(id) DESC LIMIT 30", (slug,)).fetchall()]
         today = c.execute("SELECT count(*) n FROM prospects WHERE tenant=%s AND status='imported' AND updated_at::date = current_date", (slug,)).fetchone()["n"]
-    return {"items": [_row_to_dict(r) for r in rows], "counts": counts, "batches": batches, "promotedToday": today}
+    return {"items": [_row_to_dict(r) for r in rows], "counts": counts, "batches": batches, "promotedToday": today, "sources": by_source(slug)}
+
+
+SOURCE_LABEL = {"claude": "Agente de IA (Claude)", "serper": "Serper", "brave": "Brave", "google": "Google", "bing": "Bing", "import": "Archivo CSV", "solicitado": "Pedido a mano", "unknown": "Buscador (motor sin registrar)"}
+
+
+def source_of(r: dict) -> str:
+    """Quién trajo al prospecto: el motor del buscador, el CSV o un pedido a mano."""
+    if r.get("found_by"):
+        return r["found_by"]
+    if r.get("origin") == "finder":
+        return "solicitado" if str(r.get("batch") or "").startswith("solicitado") else "unknown"
+    return "import"
+
+
+def by_source(slug: str) -> list[dict]:
+    """Efectividad por origen: cuántos trajo, cuántos sirvieron, cuántos pasaron al CRM, se contactaron, respondieron y llegaron a demo."""
+    with db.pool.connection() as c:
+        rows = c.execute("SELECT p.status, p.origin, p.batch, p.found_by, "
+                         "EXISTS(SELECT 1 FROM agent_events e WHERE e.tenant=p.tenant AND e.lead_id=p.lead_id AND e.kind='send') sent, "
+                         "EXISTS(SELECT 1 FROM agent_events e WHERE e.tenant=p.tenant AND e.lead_id=p.lead_id AND e.kind='inbound') replied, "
+                         "EXISTS(SELECT 1 FROM agent_events e WHERE e.tenant=p.tenant AND e.lead_id=p.lead_id AND e.kind='demo' AND e.dry=false) demo "
+                         "FROM prospects p WHERE p.tenant=%s", (slug,)).fetchall()
+    out: dict[str, dict] = {}
+    for r in rows:
+        k = source_of(r); o = out.setdefault(k, {"source": k, "label": SOURCE_LABEL.get(k, k), "total": 0, "ready": 0, "imported": 0, "rejected": 0, "contacted": 0, "replied": 0, "demos": 0})
+        o["total"] += 1
+        if r["status"] in o:
+            o[r["status"]] += 1
+        o["contacted"] += bool(r["sent"]); o["replied"] += bool(r["replied"]); o["demos"] += bool(r["demo"])
+    return sorted(out.values(), key=lambda x: -x["total"])
 
 
 def remove(slug: str, ids: list[int]) -> int:

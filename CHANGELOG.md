@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **Prospección: quién trajo a cada prospecto.** Cada prospecto muestra «Hallado por» (agente de IA con Claude, Serper, Brave, Google, archivo CSV o pedido a mano), y arriba aparece el cuadro «¿Quién trae mejores prospectos?» con, por origen, cuántos trajo, cuántos sirvieron, pasaron al CRM, se rechazaron, se contactaron, respondieron y llegaron a demo. El buscador anota el motor desde ahora; los hallados antes quedan como «motor sin registrar».
+- Las tarjetas «Listos», «En el CRM» y «Rechazados» explican qué significa cada estado.
+
 ## [1.20.1] - 2026-11-02
 
 ### Corregido

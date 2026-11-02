@@ -108,7 +108,7 @@ async def run(tenant: dict, limit: int | None = None) -> dict:
     batch = datetime.now(timezone.utc).strftime("buscador-%Y%m%d-%H%M")
     res = await prospects.import_rows(tenant, rows, batch=batch) if rows else {"batch": batch, "received": 0, "ready": 0, "rejected": 0, "reasons": {}}
     with db.pool.connection() as c:
-        c.execute("UPDATE prospects SET origin='finder' WHERE tenant=%s AND batch=%s", (slug, batch))
+        c.execute("UPDATE prospects SET origin='finder', found_by=%s WHERE tenant=%s AND batch=%s", (eng["engine"], slug, batch))
     _save(slug, {"last_run": {"at": datetime.now(timezone.utc).isoformat(), "found": len(d.get("candidates") or []), "ready": res["ready"], "batch": batch}})
     await prospects.enrich_pending(tenant, limit=n)
     return {"found": len(d.get("candidates") or []), "dropped_no_source_or_contact": dropped, **res}
