@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.23.2] - 2026-11-02
+
 ### Cambiado
 - **Usuarios, Equipos y Campañas** estrenan franja de indicadores (usuarios activos, administradores, regulares y sin equipo; equipos, personas activas y sin equipo; campañas activas, en planificación y completadas) y una lista más cuidada: buscador a todo el ancho, tabla en tarjeta redondeada y encabezado suave.
 - **Banco de conocimiento, Mis plantillas, Simulador del proceso comercial, Consultas web y Formularios internos** con indicadores en el diseño de la plataforma (el simulador muestra qué canales están listos para la prueba; las plantillas, cuántas hay por canal; las consultas y los formularios, cuántos hay y cuántos están activos).
