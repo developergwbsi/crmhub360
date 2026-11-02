@@ -2,8 +2,15 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.24.0)
+## Sin publicar (después de v1.24.1)
 
+- `66a6bc6` 2026-11-02 — Versión 1.24.2
+- `32bccb7` 2026-11-02 — Respuestas automáticas: ruta nueva en la copia del manual y en el CHANGELOG
+- `eee0e71` 2026-11-02 — Respuestas automáticas: botón visible y tarjeta en Integraciones; manual con la ruta nueva
+
+## v1.24.1
+
+- `d2fda1c` 2026-11-02 — Versión 1.24.1
 - `165d743` 2026-11-02 — Versión 1.24.1
 - `98e8328` 2026-11-02 — Manual: ejemplo real de las respuestas automáticas de DigitalAlliance Hub
 

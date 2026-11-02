@@ -852,7 +852,7 @@ Cuando un cliente escribe por WhatsApp y **nadie puede responder** (tus asesores
 
 Cómo configurarlo
 
-1. Entra a **Integraciones → Canales de mensajería → WhatsApp** y pulsa el botón **Respuestas automáticas** (al lado de «Agregar proveedor de WhatsApp»). También sirve la tarjeta **Respuestas automáticas** que aparece arriba en Integraciones: te lleva directo y muestra si están activas.
+1. Entra a **Integraciones → Canales de mensajería → WhatsApp** y pulsa el botón **Respuestas automáticas** (al lado de «Agregar proveedor de WhatsApp»). También puedes pulsar la tarjeta **Respuestas automáticas** que aparece arriba en Integraciones: te lleva directo.
 2. Activa **Mensajes predefinidos activos** y marca **Usarlos también como respaldo**: así solo se envían cuando nadie puede atender, aunque la línea la atiendan personas.
 3. Define el **horario de tus asesores** en «Fuera de horario» (días y horas). Fuera de ese horario, y si ningún comercial virtual está encendido en modo automático, se activan las respuestas.
 4. Escribe tus mensajes: **saludo**, **aviso de fuera de horario**, un **menú de opciones** (el cliente responde con el número) y **palabras clave** (por ejemplo «precio», «pedido»). Hay **ideas listas** para agregar con un clic: horarios y ubicación, medios de pago, hablar con una persona, que me llamen, estado de mi pedido y precios.
