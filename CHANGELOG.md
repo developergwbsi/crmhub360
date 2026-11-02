@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.23.0] - 2026-11-02
+
 ### Cambiado
 - **Diseño unificado de la plataforma** (el de «Saldo y recargas») en *Comercial virtual*, *Prospección* e *Integraciones*: pestañas segmentadas, tarjetas redondeadas con sombra suave, tablas con encabezado suave y etiquetas de color, botones y campos más pulidos, texto de las opciones en minúsculas normales y tema oscuro con las mismas variables.
 - **Franjas de indicadores** con íconos: *Comercial virtual* (comerciales encendidos, en automático, leads activos y mensajes del mes), *Prospección* (contactados, respondieron, demos, pasaron a una persona, listos, en el CRM, pasados hoy y rechazados, todo a lo ancho) e *Integraciones* (saldo de créditos, motor de IA y buscador web, cada una lleva a su pestaña).
