@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.24.1] - 2026-11-02
+
 ### Cambiado
 - **Manual de usuario:** el ejemplo real de las respuestas automáticas de DigitalAlliance Hub (saludo, fuera de horario, menú con presentaciones de los tres productos, demostración, hablar con una persona y palabras clave) y dónde se configuran.
 
