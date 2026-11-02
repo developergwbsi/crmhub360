@@ -344,8 +344,30 @@
         d.set.call(t, 0);
     }
 
+    // Parte de arriba fija de las pantallas propias: título, tarjetas de indicadores y pestañas se apilan, una debajo de otra, bajo el encabezado de la página; solo se desplaza el contenido.
+    var FIX_SEL = '.ch-kpis, .ch-tpl-tabs, .ch-tabbar, .ch-pr-tabs, .ch-sim-head, .ch-rc-top';
+    function fixTop() {
+        var main = document.getElementById('main'); if (!main) { return; }
+        var skipPr = !!main.querySelector('.ch-pr-body.is-list');   // la lista de Prospección ya tiene su propio encabezado fijo
+        var ph = main.querySelector('.page-header');
+        // la altura de la barra superior sale de donde el propio encabezado de página queda pegado (su «top» ya resuelto en píxeles)
+        var bar = ph ? (parseFloat(getComputedStyle(ph).top) || 52) : (parseFloat(getComputedStyle(document.body).getPropertyValue('--top-bar-height')) || 52);
+        var top = bar + (ph ? Math.round(ph.getBoundingClientRect().height) : 0);
+        var list = Array.prototype.filter.call(main.querySelectorAll(FIX_SEL), function (b) {
+            if (!b.offsetParent || b.closest('.ch-dlg-back, .ch-w, .ch-studio, .ch-drawer, .ch-uh, .ch-pane')) { return false; }
+            if (skipPr && (b.classList.contains('ch-pr-tabs') || b.classList.contains('ch-pr-kp'))) { return false; }
+            return true;
+        });
+        list.forEach(function (b, i) {
+            if (!b.classList.contains('ch-fixed')) { b.classList.add('ch-fixed'); }
+            b.style.top = top + 'px'; b.style.zIndex = String(80 - i);
+            top += Math.round(b.getBoundingClientRect().height);
+        });
+    }
+
     function syncSticky() {
         pinNavbar();
+        fixTop();
         var ph = document.querySelector('#main .page-header, .page-header');
         var h = ph ? Math.round(ph.getBoundingClientRect().height) : 0;
         if (h && document.documentElement.style.getPropertyValue('--ch-ph-h') !== h + 'px') { document.documentElement.style.setProperty('--ch-ph-h', h + 'px'); }
@@ -363,9 +385,12 @@
     }
     window.addEventListener('scroll', function () {
         var c = window.scrollY > 60;
+        document.body.classList.toggle('ch-scrolled', window.scrollY > 40);
+        if (!window._chFixRaf) { window._chFixRaf = requestAnimationFrame(function () { window._chFixRaf = 0; fixTop(); }); }   // las alturas cambian al plegar el texto del título: se reacomoda lo fijo
         document.querySelectorAll('.ch-lead-hero:not(.ch-in-modal)').forEach(function (e) { e.classList.toggle('ch-compact', c); });
     }, {passive: true});
     window.addEventListener('resize', syncSticky);
+    setInterval(function () { if (document.getElementById('main')) { fixTop(); } }, 1200);   // por si el contenido cambia de altura sin que el DOM se repinte
     // Modo lectura (soporte): aviso permanente y botones de edición ocultos; los permisos del rol lo impiden de todos modos
     // Favicon propio: desarrollo «CD» (ámbar), producción «CP» (azul) y empresas con la marca de Crm Hub 360
     function paintFavicon() {
