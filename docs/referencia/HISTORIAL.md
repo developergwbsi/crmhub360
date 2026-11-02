@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.20.0)
+## Sin publicar (después de v1.20.1)
 
+- `7a4e9ff` 2026-11-02 — Versión 1.20.2
+- `99c14c2` 2026-11-02 — Prospección: origen de cada prospecto y reporte de efectividad por motor
+
+## v1.20.1
+
+- `949df9f` 2026-11-02 — Versión 1.20.1
 - `c01f8fe` 2026-11-02 — Versión 1.20.1
 - `78898ec` 2026-11-02 — El PDF adjunto lleva la presentación completa
 
