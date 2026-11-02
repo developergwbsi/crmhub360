@@ -528,9 +528,27 @@ def brochures(company: str, wa: str) -> dict:
     return {"crm-hub-360": crm, "gestor360": gestor, "core360": core}
 
 
+PRINT_CSS = """<style>
+@page{size:A4;margin:12mm 11mm}
+body{background:#fff!important;font-size:10.5pt}.wrap{max-width:none!important;padding:0!important}
+.hero{border-radius:14px;padding:9mm 9mm;margin:0 0 6mm;-webkit-print-color-adjust:exact}.hero:after,.btn,header.top{display:none!important}
+h1{font-size:22pt}h2{font-size:15pt;margin:7mm 0 2mm;break-after:avoid}.lead{margin:0 0 4mm;max-width:none}
+.grid{grid-template-columns:repeat(2,1fr)!important;gap:3mm!important}.card{padding:3.5mm;border-radius:3mm;break-inside:avoid}.card h3{font-size:11pt;margin:2mm 0 1mm}.card p{font-size:9.5pt}
+.ic{width:8mm;height:8mm;border-radius:2mm}
+.fig{break-inside:avoid;border-radius:3mm;padding:2.5mm;margin:3mm 0}.fig img{max-width:120mm!important}.fig svg{max-height:75mm}
+.steps div{break-inside:avoid;padding:3mm 4mm 3mm 13mm;border-radius:3mm}.steps div:before{left:3mm;top:2.5mm;width:7mm;height:7mm}
+.cta{break-inside:avoid;border-radius:4mm;padding:7mm;margin:7mm 0 3mm}.cta .btn{display:none}footer{padding:2mm 0}
+</style>"""
+
+
+def pdf_html(page: str) -> str:
+    """La presentación completa (la misma de la página pública) lista para imprimir en A4: el PDF lleva TODO el contenido del enlace."""
+    return page.replace("</head>", PRINT_CSS + "</head>", 1)
+
+
 def seed_defaults(tenant: str, company: str, wa: str) -> int:
-    n, bro = 0, brochures(company, wa)
+    n = 0
     for p in default_pages(company, wa):
-        pdf = make_pdf(nb(bro[p["slug"]], company)) if p["slug"] in bro else None
+        pdf = make_pdf(pdf_html(nb(p["html"], company))) if p["slug"] in ("crm-hub-360", "gestor360", "core360") else None
         upsert(tenant, p["slug"], p["title"], p["product"], p["kind"], p["summary"], nb(p["html"], company), pdf=pdf); n += 1
     return n
