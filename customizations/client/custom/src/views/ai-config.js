@@ -27,11 +27,11 @@ define('custom:views/ai-config', ['view', 'custom:ui', 'custom:tpl'], function (
                     <label>Clave de la API ${o.secretSet ? `<span class="ch-muted">(guardada ${esc(o.secretHint)}; vacía = conservar)</span>` : ''}</label><input data-ai="api_key" type="password" autocomplete="new-password">
                     <div class="ch-chat-err" data-role="err" hidden></div><div class="ch-ag-aiout" data-role="aiout"></div>
                     <div class="ch-mail-actions"><button class="btn btn-primary btn-sm" data-act="aisave"><span class="fas fa-floppy-disk"></span> Guardar y usar mi motor</button><button class="btn btn-default btn-sm" data-act="aitest"><span class="fas fa-vial"></span> Probar</button></div>`;
-            const opt = (k, title, txt) => `<label class="ch-dz-chk"><input type="radio" name="aipick" data-act="aipick" value="${k}" ${pick === k ? 'checked' : ''}> <b>${title}</b> — ${txt}</label>`;
+            const opt = (k, title, txt) => `<div class="radio"><label><input type="radio" name="aipick" data-act="aipick" value="${k}" ${pick === k ? 'checked' : ''}> <b>${title}</b> — ${txt}</label></div>`;
             return `<div class="ch-sim-card"><h5>Motor de IA que usa tu empresa</h5><div class="ch-ag-dec"><b>${esc(src)}</b><div>${esc(e.label)} · ${esc(a.kinds[e.kind] || e.kind)}${e.model ? ' · modelo ' + esc(e.model) : ''}</div></div>
                 <div class="ch-muted">Este mes:</div>${usage}
                 <h5 style="margin-top:14px">¿Con qué motor quieres trabajar?</h5>
-                ${opt('platform', 'El de la plataforma <span class="ch-ln-badge on">Recomendado</span>', 'listo para usar, sin cuentas ni claves; el consumo se suma a tu factura y nosotros lo mantenemos al día.')}
+                ${opt('platform', 'El de la plataforma <span class="label label-primary">Recomendado</span>', 'listo para usar, sin cuentas ni claves; el consumo se suma a tu factura y nosotros lo mantenemos al día.')}
                 ${opt('own', 'El mío', 'usas tu propia cuenta de IA (por ejemplo la tuya de Claude u OpenAI); el consumo lo cobra tu proveedor.')}
                 ${form}${pick === 'platform' ? `<div class="ch-mail-actions"><button class="btn btn-default btn-sm" data-act="aitest"><span class="fas fa-vial"></span> Probar el motor actual</button></div><div class="ch-ag-aiout" data-role="aiout"></div>` : ''}</div>`;
         }
