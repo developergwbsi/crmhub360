@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.24.2] - 2026-11-02
+
 ### Cambiado
 - **Las respuestas automáticas de WhatsApp ahora se encuentran fácil:** botón «Respuestas automáticas» junto a «Agregar proveedor de WhatsApp» (Integraciones → Canales de mensajería) y una tarjeta «Respuestas automáticas» arriba en Integraciones que muestra si están activas y abre el editor. Antes solo aparecían al cambiar quién responde en la línea. El manual de usuario indica la nueva ruta.
 
