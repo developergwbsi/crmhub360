@@ -47,3 +47,6 @@ WhatsApp admite negrilla con `*texto*`: `whatsapp.bold_names(texto, [nombres])` 
 ## Proveedor HTTP genérico
 
 `httpgen.py`: cualquier API REST con plantillas (`{{to}}`, `{{text}}`, `{{from}}`…), autenticación ninguna/Bearer/Basic/cabecera y mapeo de entrantes por ruta JSON. Bloquea destinos locales/privados (anti-SSRF) salvo `ALLOW_LOOPBACK_URLS=1` (solo pruebas).
+
+## Respaldo cuando nadie puede atender
+`presets.py`: con `settings.presets.fallback` activo, los mensajes predefinidos también responden en líneas atendidas por personas cuando **nadie puede atender**: fuera del horario de `off_hours` (que debe estar activo) y sin un comercial virtual encendido en modo automático (`presets.nobody_available`). Cada opción del menú y cada palabra clave lleva una `action`: `reply`, `human` (nota en el lead y aviso al asesor) o `callback` (tarea de llamada de prioridad alta asignada al asesor). Se engancha en `ingest.whatsapp_inbound`.

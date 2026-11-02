@@ -191,7 +191,8 @@ async def whatsapp_inbound(tenant: dict, *, phone: str | None, name: str | None,
         if not is_optout(text):
             try:   # quién responde en esa línea: mensajes predefinidos (el chatbot de Gestor360 se conecta en una fase posterior; mientras tanto lo atienden los asesores)
                 from . import lines, presets
-                if lines.responder_of(tenant, line) == "preset":
+                pc = presets.config(tenant)
+                if lines.responder_of(tenant, line) == "preset" or (pc["enabled"] and pc["fallback"] and presets.nobody_available(tenant, pc)):   # respaldo: nadie puede atender ahora
                     await presets.handle(tenant, lead_id, phone, text)
             except Exception as e:
                 logging.getLogger("crmhub").warning("mensajes predefinidos: %s", str(e)[:100])

@@ -1803,3 +1803,6 @@ body .page-header h3.header-title, .header-title { font-weight: 800; letter-spac
 .record-grid:has(> .side:empty) { grid-template-columns: minmax(0, 1fr) !important; }
 .ch-uh-facts:empty { display: none; }
 .ch-wide-record .record-grid { grid-template-columns: minmax(0, 1fr) !important; } .ch-wide-record .record-grid > .side { display: none; }
+.ch-ln-form .ch-pr-row select[data-o], .ch-ln-form .ch-pr-row select[data-k] { margin-top: 6px; border-radius: 12px; }
+.ch-ln-form .ch-pr-row { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1.1fr) auto; } .ch-ln-form .ch-pr-row select[data-o], .ch-ln-form .ch-pr-row select[data-k] { margin-top: 0; }
+.ch-ln-form .ch-switch { white-space: normal; display: flex; gap: 8px; align-items: flex-start; line-height: 1.4; }
