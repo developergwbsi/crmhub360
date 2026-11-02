@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.23.0)
+## Sin publicar (después de v1.23.1)
 
+- `c0220c4` 2026-11-02 — Versión 1.23.2
+- `3f1ebab` 2026-11-02 — Usuarios, Equipos, Campañas y demás pantallas con indicadores; corrige el botón montado en Mensajes masivos
+
+## v1.23.1
+
+- `2719443` 2026-11-02 — Versión 1.23.1
 - `6366dbc` 2026-11-02 — Versión 1.23.1
 - `8d72cd8` 2026-11-02 — bin/lanzar: respaldo, versión, despliegue y release en un solo paso
 - `9049e31` 2026-11-02 — Avatares de usuario con degradado, iniciales en blanco y aro
