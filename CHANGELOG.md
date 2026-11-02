@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.24.3] - 2026-11-02
+
 ### Corregido
 - **La parte de arriba de las pantallas propias queda fija al desplazarse:** el título, las tarjetas de indicadores y las pestañas se apilan bajo el encabezado de la página (Comercial virtual, Integraciones, Asignación de leads, Estados del pipeline, Procesos, Copias, Organigrama, Grabaciones, Plantillas, Simulador, Banco de conocimiento, Usuarios, Equipos y Campañas); solo se desplaza el contenido. Para ocupar poco espacio, los indicadores se compactan, las pestañas van en una sola fila y la descripción del título se pliega al desplazarse.
 
