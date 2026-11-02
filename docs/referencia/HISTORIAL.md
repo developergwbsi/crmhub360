@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.22.0)
+## Sin publicar (después de v1.22.1)
 
+- `eace789` 2026-11-02 — Versión 1.23.0
+- `80e83ae` 2026-11-02 — Diseño unificado de la plataforma: Comercial virtual, Prospección e Integraciones
+
+## v1.22.1
+
+- `e23bf28` 2026-11-02 — Versión 1.22.1
 - `ec70df8` 2026-11-02 — Versión 1.22.1
 - `7cff278` 2026-11-02 — Saldo y recargas: diseño profesional
 - `5f376e5` 2026-11-02 — Saldo y recargas: las empresas de uso interno también ven los paquetes para probar el pago
