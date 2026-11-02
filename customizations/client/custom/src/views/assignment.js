@@ -24,7 +24,8 @@ define('custom:views/assignment', ['view'], function (Dep) {
             if (!a || a.error) { return {loading: !a, error: !!(a && a.error)}; }
             return {
                 loading: false, balanced: a.method === 'balanced', roundrobin: a.method === 'roundrobin', cap: a.cap,
-                eligibleTotal: a.eligibleTotal, none: a.eligibleTotal === 0,
+                eligibleTotal: a.eligibleTotal, none: a.eligibleTotal === 0, methodLabel: a.method === 'roundrobin' ? 'Rotación' : 'Balanceado', capOn: +a.cap > 0,
+                openTotal: a.users.reduce((t, u) => t + (+u.openLeads || 0), 0), campaignsCount: a.campaigns.length,
                 users: a.users.map(u => ({...u, hasTeams: u.teams.length > 0})),
                 campaigns: a.campaigns.map(c => ({...c, hasTeams: c.teams.length > 0, teamsText: c.teams.join(', ')})),
                 hasCampaigns: a.campaigns.length > 0,

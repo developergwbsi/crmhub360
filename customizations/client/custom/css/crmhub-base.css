@@ -1712,3 +1712,19 @@ a.ch-kpi { color: inherit; text-decoration: none; cursor: pointer; transition: t
 .ch-pr-body.is-list { display: flex; flex-direction: column; grid-template-rows: none; } .ch-pr-body.is-list > * { flex: none; } .ch-pr-body.is-list > .ch-pr-tbl, .ch-pr-body.is-list > .ch-empty { flex: 1 1 auto; min-height: 0; overflow: auto; }
 .ch-pr-body.is-list .ch-kpis.ch-pr-kp { grid-template-columns: repeat(8, minmax(0, 1fr)); } @media (max-width: 1500px) { .ch-pr-body.is-list .ch-kpis.ch-pr-kp { grid-template-columns: repeat(4, minmax(0, 1fr)); } } @media (max-width: 900px) { .ch-pr-body.is-list .ch-kpis.ch-pr-kp { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .ch-pr-body.is-list { align-items: stretch; }
+
+/* ===== Plataforma: diseño unificado, extensión a todas las pantallas propias ===== */
+.page-header { margin-bottom: 14px; } .page-header h3, .ch-sim-head h3, .ch-rc-top h3, .ch-studio-head h3 { font-size: 24px; font-weight: 800; letter-spacing: -.02em; color: var(--ch-ink); }
+.ch-sim-head p, .ch-rc-top p, .ch-studio-head p { color: var(--ch-muted); }
+.page-header ~ .panel, .ch-grid > .panel, .ch-org .panel, .ch-pane .panel, .ch-org-team { border-radius: 20px; border: 1px solid var(--ch-line); box-shadow: var(--ch-shadow); overflow: hidden; background: var(--ch-surface); }
+.page-header ~ .panel > .panel-heading, .ch-grid > .panel > .panel-heading, .ch-org .panel > .panel-heading { background: transparent; border-bottom: 1px solid var(--ch-line); padding: 14px 20px; }
+.page-header ~ .panel .panel-title, .ch-grid > .panel .panel-title, .ch-org .panel .panel-title { font-weight: 700; font-size: 16px; letter-spacing: -.01em; }
+.page-header ~ .panel > .panel-body, .ch-grid > .panel > .panel-body, .ch-org .panel > .panel-body { padding: 18px 20px; }
+.ch-studio-main, .ch-rc-card, .ch-proc-item, .ch-kb-kpi, .ms-box { border-radius: 20px; box-shadow: var(--ch-shadow); }
+.ch-proc-item { border-radius: 16px; padding: 10px 14px; box-shadow: none; } .ch-kb-kpi { padding: 16px 20px; } .ch-kb-kpi b { font-size: 30px; letter-spacing: -.02em; }
+.ch-studio-tabs { gap: 4px; padding: 6px; background: var(--ch-soft); border-bottom: 1px solid var(--ch-line); } .ch-studio-tabs button { border-bottom: 0; border-radius: 12px; padding: 8px 16px; } .ch-studio-tabs button.on { background: var(--ch-surface); color: var(--ch-primary); box-shadow: 0 1px 6px rgba(15, 23, 42, .16); }
+.ch-rc-card { transition: transform .15s, box-shadow .15s; } .ch-rc-card:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -16px rgba(15, 23, 42, .4); }
+.ch-ms { border-radius: 20px; overflow: hidden; border: 1px solid var(--ch-line); box-shadow: var(--ch-shadow); }
+.ch-table { border-radius: 16px; overflow: hidden; } .ch-grid .btn, .ch-org .btn, .ch-studio .btn, .ch-rc .btn, .ch-sim .btn, .ch-kb .btn, .ch-proc .btn, .ch-lbk .btn, .page-header ~ .panel .btn { border-radius: 12px; font-weight: 600; }
+.ch-org-team { padding-bottom: 4px; } .ch-person { padding: 9px 16px; }
+.ch-sim-card h4, .ch-pr-card h4, .ch-sim-head h3 { color: var(--ch-ink); }

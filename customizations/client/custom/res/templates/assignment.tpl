@@ -2,6 +2,12 @@
 {{#if loading}}<div class="ch-muted">Cargando…</div>{{/if}}
 {{#if error}}<div class="ch-warn">No se pudo cargar la configuración.</div>{{/if}}
 {{#unless loading}}{{#unless error}}
+<div class="ch-kpis">
+  <div class="ch-kpi {{#if none}}bad{{else}}ok{{/if}}"><span class="ic"><i class="fas fa-user-check"></i></span><div><span>Habilitados para recibir leads</span><b>{{eligibleTotal}}</b><small>{{#if none}}activa al menos uno{{else}}reciben leads nuevos{{/if}}</small></div></div>
+  <div class="ch-kpi"><span class="ic"><i class="fas fa-shuffle"></i></span><div><span>Método de reparto</span><b>{{methodLabel}}</b><small>{{#if capOn}}tope de {{cap}} leads por asesor{{else}}sin tope por asesor{{/if}}</small></div></div>
+  <div class="ch-kpi"><span class="ic"><i class="fas fa-inbox"></i></span><div><span>Leads abiertos</span><b>{{openTotal}}</b><small>entre todos los asesores</small></div></div>
+  <div class="ch-kpi"><span class="ic"><i class="fas fa-bullhorn"></i></span><div><span>Campañas activas</span><b>{{campaignsCount}}</b></div></div>
+</div>
 <div class="ch-grid">
   <div class="panel panel-default">
     <div class="panel-heading"><h4 class="panel-title">Cómo se reparten los leads nuevos</h4></div>

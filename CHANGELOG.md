@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Cambiado
+- **El diseño unificado llega a todas las pantallas propias**: Asignación de leads, Estados del pipeline, Organigrama, Procesos de leads, Banco de conocimiento, Grabaciones, Mis plantillas, Formularios internos, Consultas web, Reportes y tableros, Copias de leads, Mensajes masivos y Mensajes. Títulos, tarjetas y paneles redondeados con sombra suave, pestañas segmentadas, tarjetas de indicadores, botones y tablas con el mismo aspecto.
+- **Asignación de leads** estrena su franja de indicadores (habilitados para recibir leads, método de reparto, leads abiertos y campañas activas).
+
 ## [1.23.0] - 2026-11-02
 
 ### Cambiado
