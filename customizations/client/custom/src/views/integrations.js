@@ -299,7 +299,7 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
             this.createView('lines', 'custom:views/channel-lines', {selector: '[data-role="lines"]', httpVars: this.state.httpVars || {}}).then(v => v.render());
             this.createView('mail', 'custom:views/mail-config', {selector: '[data-role="mail"]'}).then(v => v.render());
             // franja de indicadores: saldo, motor de IA y buscador, consumo del mes (cada tarjeta lleva a su pestaña)
-            Promise.all([Espo.Ajax.getRequest('CrmHub/wallet').catch(() => null), Espo.Ajax.getRequest('CrmHub/aiConfig').catch(() => null), Espo.Ajax.getRequest('CrmHub/searchConfig').catch(() => null)]).then(([w, ai, sc]) => {
+            Promise.all([Espo.Ajax.getRequest('CrmHub/wallet').catch(() => null), Espo.Ajax.getRequest('CrmHub/aiConfig').catch(() => null), Espo.Ajax.getRequest('CrmHub/searchConfig').catch(() => null), Espo.Ajax.getRequest('CrmHub/presets').catch(() => null)]).then(([w, ai, sc, pr]) => {
                 const box = this.el.querySelector('[data-role="kpis"]'); if (!box) { return; }
                 const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
                 const kp = (tab, cls, ic, label, val, sub) => `<a class="ch-kpi ${cls}" data-goto="${tab}"><span class="ic"><i class="${ic}"></i></span><div><span>${label}</span><b>${val}</b><small>${sub}</small></div></a>`;
@@ -307,8 +307,9 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
                 if (w) { const zero = !w.exempt && w.balance <= 0, low = !w.exempt && w.balance <= (w.low || 0); h += kp('creditos', zero ? 'bad' : low ? 'warn' : 'ok', 'fas fa-coins', 'Saldo de créditos', w.exempt ? 'Uso interno' : Number(w.balance).toLocaleString('es-CO', {maximumFractionDigits: 1}), w.exempt ? 'sin cobro' : zero ? 'sin créditos: recarga' : low ? 'saldo bajo' : 'al día'); }
                 if (ai) { const own = ai.mode === 'own'; h += kp('buscadores', 'ok', 'fas fa-microchip', 'Motor de IA', own ? 'El tuyo' : 'Con créditos', esc((ai.effective || {}).label || '')); }
                 if (sc) { h += kp('buscadores', 'ok', 'fas fa-magnifying-glass', 'Buscador web', sc.mode === 'own' ? 'El tuyo' : 'Con créditos', esc(((sc.engines || {})[(sc.active || {}).engine]) || '')); }
+                if (pr) { h += `<a class="ch-kpi ${pr.enabled ? 'ok' : 'warn'}" data-presets="1"><span class="ic"><i class="fas fa-message"></i></span><div><span>Respuestas automáticas</span><b>${pr.enabled ? 'Activas' : 'Apagadas'}</b><small>${pr.enabled ? (pr.fallback ? 'también como respaldo' : 'según la línea') : 'configúralas en WhatsApp'}</small></div></a>`; }
                 box.innerHTML = h ? `<div class="ch-kpis">${h}</div>` : '';
-                box.onclick = e => { const a = e.target.closest('[data-goto]'); if (a) { const b = this.el.querySelector(`[data-action="tab"][data-tab="${a.dataset.goto}"]`); if (b) { b.click(); } } };
+                box.onclick = e => { const pa = e.target.closest('[data-presets]'); if (pa) { const t = this.el.querySelector('[data-action="tab"][data-tab="canales"]'); if (t) { t.click(); } setTimeout(() => { const b = this.el.querySelector('[data-act="presets"]'); if (b) { b.click(); } }, 600); return; } const a = e.target.closest('[data-goto]'); if (a) { const b = this.el.querySelector(`[data-action="tab"][data-tab="${a.dataset.goto}"]`); if (b) { b.click(); } } };
             });
             this.createView('wallet', 'custom:views/wallet', {selector: '[data-role="wallet"]'}).then(v => v.render());
             this.createView('ai', 'custom:views/ai-config', {selector: '[data-role="ai"]'}).then(v => v.render());

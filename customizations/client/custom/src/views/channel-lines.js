@@ -67,7 +67,7 @@ define('custom:views/channel-lines', ['view', 'custom:ui'], function (Dep, ChUi)
             const cards = sec.cards.map(c => this.cardHtml(c, sec)).join('');
             const empty = ChUi.empty({kind: 'chat', title: `Aún no tienes proveedores de ${CH[this.ch][0]}`, text: 'Agrega el primero con el botón de arriba.', compact: true});
             root.innerHTML = `<div class="ch-tpl-tabs">${tabs}</div><p class="ch-muted ch-ln-hint">${esc(HINT[this.ch])}</p>
-                <div class="ch-ln-bar"><button class="btn btn-primary btn-sm" data-act="add" ${sec.canAdd ? '' : 'disabled'}><span class="fas fa-plus"></span> Agregar proveedor de ${CH[this.ch][0]}</button>${sec.canAdd ? '' : `<span class="ch-muted">${this.ch === 'telegram' ? 'Telegram admite un solo bot.' : 'Llegaste al máximo de proveedores.'}</span>`}</div>
+                <div class="ch-ln-bar"><button class="btn btn-primary btn-sm" data-act="add" ${sec.canAdd ? '' : 'disabled'}><span class="fas fa-plus"></span> Agregar proveedor de ${CH[this.ch][0]}</button>${this.ch === 'whatsapp' ? ' <button class="btn btn-default btn-sm" data-act="presets"><span class="fas fa-message"></span> Respuestas automáticas</button>' : ''}${sec.canAdd ? '' : `<span class="ch-muted">${this.ch === 'telegram' ? 'Telegram admite un solo bot.' : 'Llegaste al máximo de proveedores.'}</span>`}</div>
                 <div class="ch-ln-grid">${cards || `<div class="ch-ln-empty">${empty}</div>`}</div>`;
             root.onclick = e => this.click(e);
             root.onchange = e => { const sw = e.target.closest('[data-sw]'); if (sw) { this.toggle(sw.dataset.sw, sw.checked); } };
@@ -118,6 +118,7 @@ define('custom:views/channel-lines', ['view', 'custom:ui'], function (Dep, ChUi)
             const act = a.dataset.act, id = a.dataset.id;
             if (act === 'ch') { this.ch = a.dataset.k; try { sessionStorage.setItem('crmhub-ln-ch', this.ch); } catch (x) { /* nada */ } this.draw(); }
             else if (act === 'add') { this.form(null); }
+            else if (act === 'presets') { this.presetsPanel(); }
             else if (act === 'edit') { this.form(this.card(id)); }
             else if (act === 'resp') { e.preventDefault && e.preventDefault(); this.respDialog(this.card(id)); }
             else if (act === 'test') { this.testConn(id); }
