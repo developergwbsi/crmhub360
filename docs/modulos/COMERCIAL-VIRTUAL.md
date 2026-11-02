@@ -38,3 +38,6 @@ Los mensajes **proactivos** de WhatsApp (`first` y `followup`) llevan por defect
 ## Seguridad y control
 
 Modo *dry-run* (simula sin enviar), aprobación humana opcional, revelación de que es virtual (`disclose`), temas prohibidos y reglas de escalamiento por empresa, límites por día y ritmo suave entre envíos. El panel gerencial cuenta sus leads aparte (`GET /v1/agent/attended`) y los muestra como «Comercial virtual · nombre».
+
+## Catálogo de productos
+`products.py` (tablas `products` y `lead_products`; endpoints `/v1/products`, `/v1/leads/{id}/products`; pestaña *Productos* de Comercial virtual). Cada producto: nombre, qué es, para quién, beneficios, a quién no ofrecerlo, principal y activo; sin precios. `products.prompt_text` entra al prompt del comercial virtual en todo mensaje (primero, seguimiento y respuesta) y al del calificador, que elige el producto de este catálogo (sin catálogo usa Crm Hub 360, Gestor360 y Core360). `proposals.product` guarda el slug del producto al que pertenece cada material. `products.mark` deja el rastro ofrecido/interesado/compró/no compró por lead; se escribe «ofrecido» al pasar un prospecto al CRM.

@@ -5,7 +5,7 @@ import asyncio
 import json
 import logging
 
-from . import compliance, db, llm, prospects
+from . import compliance, db, llm, products, prospects
 
 log = logging.getLogger("hub.qualifier")
 GRADES = {"A": 90, "B": 70, "C": 45, "D": 10}
@@ -44,15 +44,17 @@ def _company_ctx(tenant: dict) -> str:
 
 async def qualify_one(tenant: dict, row: dict, cfg: dict) -> dict | None:
     icp = prospects.icp(tenant)
-    user = (f"{_company_ctx(tenant)}\n\nCLIENTE IDEAL: {icp['describe']}\n\nREGLAS DE CALIFICACIÓN:\n{cfg['rules']}\n\nPROSPECTO:\nEmpresa: {row['company'] or row['name']}\nContacto: {row['name']} · {row['title'] or '(sin cargo)'}\n"
+    names = products.names(tenant["slug"]) or PRODUCT_NAMES   # el catálogo de la empresa manda; sin catálogo, los productos estándar
+    schema = {**SCHEMA, "properties": {**SCHEMA["properties"], "product": {**SCHEMA["properties"]["product"], "enum": list(names)}}}
+    user = (f"{_company_ctx(tenant)}{products.prompt_text(tenant['slug'])}\n\nCLIENTE IDEAL: {icp['describe']}\n\nREGLAS DE CALIFICACIÓN:\n{cfg['rules']}\n\nPROSPECTO:\nEmpresa: {row['company'] or row['name']}\nContacto: {row['name']} · {row['title'] or '(sin cargo)'}\n"
             f"Sector: {row['industry'] or '(no indica)'}\nCorreo: {row['email'] or '(no tiene)'}\nTeléfono: {'sí' if row['phone'] else 'no'}\nPaís: {row['country']}\n"
             f"Lo que sabemos: {((row.get('raw') or {}).get('por_que') or '')} · Dolor probable: {((row.get('enrichment') or {}).get('pain') or '')}\nFuente pública: {((row.get('raw') or {}).get('fuente_url') or '(no consta)')}")
     try:
-        d = await llm.chat_json(tenant, "Eres el Calificador de prospectos de un equipo comercial B2B. Calificas con rigor y sin inventar datos: si no hay información suficiente, baja el grado y dilo.", user, SCHEMA, 400)
+        d = await llm.chat_json(tenant, "Eres el Calificador de prospectos de un equipo comercial B2B. Calificas con rigor y sin inventar datos: si no hay información suficiente, baja el grado y dilo.", user, schema, 400)
     except Exception as e:
         log.warning("calificar %s: %s", row["id"], str(e)[:120]); return None
     g = d.get("grade") if d.get("grade") in GRADES else "C"
-    q = {"grade": g, "product": d.get("product") if d.get("product") in PRODUCT_NAMES else "crm_hub_360", "angle": str(d.get("angle") or "")[:300], "why": str(d.get("why") or "")[:300], "flags": [str(x)[:60] for x in (d.get("flags") or [])][:6]}
+    q = {"grade": g, "product": d.get("product") if d.get("product") in names else next(iter(names)), "angle": str(d.get("angle") or "")[:300], "why": str(d.get("why") or "")[:300], "flags": [str(x)[:60] for x in (d.get("flags") or [])][:6]}
     en = {**(row.get("enrichment") or {}), "qualifier": q}
     with db.pool.connection() as c:
         c.execute("UPDATE prospects SET enrichment=%s::jsonb, score=%s, updated_at=now() WHERE id=%s", (json.dumps(en), round((row["rules_score"] or 0) * 0.3 + GRADES[g] * 0.7), row["id"]))

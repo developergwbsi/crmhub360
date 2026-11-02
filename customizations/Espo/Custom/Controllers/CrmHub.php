@@ -2539,6 +2539,37 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/pipeline/run', [], 600);
     }
 
+    /** GET /CrmHub/products. Admin. Catálogo de productos que ofrece la empresa. Hub: GET /v1/products. */
+    public function getActionProducts(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/products', null, 20);
+    }
+
+    /** POST /CrmHub/productSave. Admin. {slug?, name, summary, for_whom, benefits, avoid, main, active}. Hub: POST /v1/products. */
+    public function postActionProductSave(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = json_decode(json_encode($request->getParsedBody()), true) ?: [];
+        $keep = array_intersect_key($d, array_flip(['slug', 'name', 'summary', 'for_whom', 'benefits', 'avoid', 'main', 'active']));
+        return (object) $this->hubCall('POST', '/v1/products', $keep, 20);
+    }
+
+    /** POST /CrmHub/productDelete. Admin. {slug}. Hub: DELETE /v1/products/{slug}. */
+    public function postActionProductDelete(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('DELETE', '/v1/products/' . preg_replace('/[^a-z0-9_]/', '', (string) ($d->slug ?? '')), null, 20);
+    }
+
+    /** POST /CrmHub/productsSeed. Admin. Carga los productos estándar de DigitalAlliance Hub. Hub: POST /v1/products/seed. */
+    public function postActionProductsSeed(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('POST', '/v1/products/seed', [], 20);
+    }
+
     /** GET /CrmHub/proposals. Admin. Biblioteca de propuestas y brochures que usan los agentes. Hub: GET /v1/proposals. */
     public function getActionProposals(Request $request): \stdClass
     {

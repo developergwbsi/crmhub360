@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **Catálogo de productos de la empresa** (*Comercial virtual → Productos*): lo que la empresa ofrece, con qué es, para quién, beneficios y a quién no ofrecérselo. Los agentes lo tienen siempre presente al ofrecer (solo ofrecen esos productos y no inventan otros), el calificador elige de ahí el producto de cada prospecto, y las propuestas y brochures se enlazan a un producto. Cada producto muestra cuántos clientes lo recibieron como oferta, se interesaron o lo compraron.
+- **Rastro del producto de cada cliente** (`lead_products`): al pasar un prospecto al CRM queda anotado el producto que se le ofreció; los estados ofrecido, interesado, compró y no compró ya se pueden registrar por cliente (la pantalla para marcarlos desde la ficha viene después).
+
 ## [1.20.4] - 2026-11-02
 
 ### Cambiado

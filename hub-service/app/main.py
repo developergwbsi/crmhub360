@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, brand, chatbot, report, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, brand, chatbot, products, report, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +38,7 @@ async def lifespan(_: FastAPI):
     db.pool.open()
     push.keys()  # crea las claves VAPID la primera vez
     simulate.ensure_schema()
+    products.ensure_schema()
     routing.ensure_schema()
     processes.ensure_schema()
     documents.ensure_schema()
@@ -2550,6 +2551,59 @@ async def pipeline_run(tenant: dict = Depends(tenant_auth)):
         raise HTTPException(403, str(e))
     except Exception as e:
         raise HTTPException(502, f"No se pudo completar: {str(e)[:200]}")
+
+
+class ProductReq(BaseModel):
+    slug: str = ""
+    name: str
+    summary: str = ""
+    for_whom: str = ""
+    benefits: str = ""
+    avoid: str = ""
+    main: bool = False
+    active: bool = True
+
+
+@app.get("/v1/products")
+def products_list(tenant: dict = Depends(tenant_auth)):
+    """Catálogo de productos que ofrece la empresa (lo que siempre tiene presente el comercial virtual)."""
+    return {"items": products.listing(tenant["slug"]), "statuses": products.STATUSES}
+
+
+@app.post("/v1/products")
+def products_save(req: ProductReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return {"slug": products.save(tenant["slug"], req.model_dump())}
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.delete("/v1/products/{slug}")
+def products_delete(slug: str, tenant: dict = Depends(tenant_auth)):
+    if not products.delete(tenant["slug"], slug):
+        raise HTTPException(404, "No existe")
+    return {"ok": True}
+
+
+@app.post("/v1/products/seed")
+def products_seed(tenant: dict = Depends(tenant_auth)):
+    """Carga los productos estándar de DigitalAlliance Hub (Crm Hub 360, Gestor360, Core360) que falten."""
+    return {"created": products.seed_defaults(tenant["slug"])}
+
+
+@app.get("/v1/leads/{lead_id}/products")
+def lead_products_get(lead_id: str, tenant: dict = Depends(tenant_auth)):
+    return {"items": products.of_lead(tenant["slug"], re.sub(r"[^A-Za-z0-9]", "", lead_id)), "statuses": products.STATUSES}
+
+
+@app.post("/v1/leads/{lead_id}/products")
+def lead_products_mark(lead_id: str, body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    """Marca qué producto se ofreció o compró un cliente (status: offered, interested, won, lost)."""
+    slug, st = str(body.get("slug") or ""), str(body.get("status") or "")
+    if st not in products.STATUSES or not slug:
+        raise HTTPException(422, "Elige el producto y el estado.")
+    products.mark(tenant["slug"], re.sub(r"[^A-Za-z0-9]", "", lead_id), slug, st, str(body.get("note") or ""))
+    return {"items": products.of_lead(tenant["slug"], re.sub(r"[^A-Za-z0-9]", "", lead_id))}
 
 
 @app.get("/v1/proposals")

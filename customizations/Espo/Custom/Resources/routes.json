@@ -1476,5 +1476,37 @@
             "controller": "CrmHub",
             "action": "searchConfigMode"
         }
+    },
+    {
+        "route": "/CrmHub/products",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "products"
+        }
+    },
+    {
+        "route": "/CrmHub/productSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "productSave"
+        }
+    },
+    {
+        "route": "/CrmHub/productDelete",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "productDelete"
+        }
+    },
+    {
+        "route": "/CrmHub/productsSeed",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "productsSeed"
+        }
     }
 ]

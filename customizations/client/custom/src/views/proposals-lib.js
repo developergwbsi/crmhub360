@@ -8,13 +8,14 @@
 define('custom:views/proposals-lib', ['view', 'custom:ui'], function (Dep, ChUi) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const reason = xhr => { const r = xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason'); if (xhr) { xhr.errorIsHandled = true; } return r || 'No se pudo completar.'; };
-    const PROD = {crm_hub_360: 'Crm Hub 360', gestor360: 'Gestor360', core360: 'Core360', '': 'General'};
+    let PROD = {crm_hub_360: 'Crm Hub 360', gestor360: 'Gestor360', core360: 'Core360', '': 'General'};   // se reemplaza por los productos del catálogo de la empresa
     return class extends Dep {
         templateContent = '<div class="ch-pl"></div>'
         d = null
         afterRender() { this.load(); }
         load() {
-            Espo.Ajax.getRequest('CrmHub/proposals').then(r => { this.d = r; this.draw(); })
+            Espo.Ajax.getRequest('CrmHub/products').then(p => { if ((p.items || []).length) { PROD = {'': 'General'}; p.items.forEach(x => { PROD[x.slug] = x.name; }); } }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } })
+                .then(() => Espo.Ajax.getRequest('CrmHub/proposals')).then(r => { this.d = r; this.draw(); })
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } const el = this.el.querySelector('.ch-pl'); if (el) { el.innerHTML = '<div class="ch-chat-err">No se pudo cargar la biblioteca.</div>'; } });
         }
         draw() {
@@ -26,7 +27,7 @@ define('custom:views/proposals-lib', ['view', 'custom:ui'], function (Dep, ChUi)
             el.innerHTML = `<div class="ch-pr-card"><h5><span class="fas fa-file-powerpoint"></span> Propuestas y brochures que envían los agentes</h5>` +
                 `<p class="ch-muted">Es el material que Valeria comparte con los prospectos —el correo lleva el enlace y también el PDF adjunto—: en el primer correo siempre va el de <b>Crm Hub 360</b>; si piden información o una propuesta, el que corresponda. Sin precios ni promesas de resultado. Las <b>visitas</b> muestran a quién le interesó.</p>` +
                 `<p><button class="btn btn-primary" data-a="add"><span class="fas fa-plus"></span> Agregar material propio (enlace)</button> <button class="btn btn-default" data-a="seed">Restaurar presentaciones estándar</button></p>` +
-                (items.length ? `<div class="ch-pr-tbl"><table><thead><tr><th>Material</th><th>Producto</th><th>Tipo</th><th>Visitas</th><th>Estado</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
+                (items.length ? `<div class="ch-pr-tbl"><table><thead><tr><th>Material</th><th>Producto (del catálogo)</th><th>Tipo</th><th>Visitas</th><th>Estado</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
                     : '<p class="ch-muted">Aún no hay material. Pulsa «Restaurar presentaciones estándar» para crear las de Crm Hub 360, Gestor360 y Core360.</p>') + '</div>';
             const fail = xhr => Espo.Ui.error(reason(xhr)), done = m => () => { Espo.Ui.success(m); this.load(); };
             const bySlug = e => items.find(i => i.slug === e.target.closest('tr').dataset.s);

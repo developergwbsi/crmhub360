@@ -286,6 +286,13 @@ async def promote(tenant: dict, ids: list[int] | None = None, limit: int | None 
             _mark(r["id"], "imported", "", lead_id)
             out["created"] += 1
             try:
+                from . import products
+                pq = (en.get("qualifier") or {}).get("product") or (r.get("raw") or {}).get("oferta")
+                if pq:
+                    products.mark(slug, lead_id, str(pq), "offered", "Producto elegido al pasar el prospecto al CRM")
+            except Exception:
+                pass
+            try:
                 await agent.on_lead(tenant, lead_id, agent_id, decided=bool(agent_id))
             except Exception as e:
                 log.warning("encolar en el comercial virtual: %s", str(e)[:100])

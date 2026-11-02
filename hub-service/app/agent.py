@@ -6,7 +6,7 @@ from psycopg.types.json import Jsonb
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from . import compliance, db, emailcheck, llm, mailout, proposals, prospects, push, routing, sms, whatsapp
+from . import compliance, db, emailcheck, llm, mailout, products, proposals, prospects, push, routing, sms, whatsapp
 from .espo import Espo
 
 log = logging.getLogger("hub.agent")
@@ -866,6 +866,11 @@ async def decide(tenant: dict, cfg: dict, lead: dict, hist: list[dict], kind: st
     if variant and kind in ("first", "followup"):
         user += (f"\n\nPROSPECCIÓN EN FRÍO (la persona NO nos ha escrito antes): {OUTBOUND_RULES.get(channel, '')}\nGANCHO DE ESTE MENSAJE (úsalo como enfoque, con tus palabras, sin copiarlo): {variant['angle']}\n"
                  "Sé específico con su sector o situación si lo conoces, no inventes datos, no prometas resultados y no presiones.")
+    if kind in ("first", "followup", "reply"):
+        try:
+            user += products.prompt_text(tenant["slug"])   # lo que la empresa ofrece: siempre presente, en cualquier canal
+        except Exception:
+            pass
     if kind in ("first", "followup", "reply") and channel == "email":
         try:
             user += proposals.catalog_text(tenant["slug"])
