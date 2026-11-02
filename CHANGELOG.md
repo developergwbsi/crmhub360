@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.23.1] - 2026-11-02
+
 ### Cambiado
 - **Avatares de usuario renovados:** quien no ha subido su foto ahora tiene un avatar con degradado profundo (nueve combinaciones, siempre la misma para la misma persona), brillo suave e iniciales en blanco, en lugar del círculo plano pastel con letras. Todos los avatares llevan un aro limpio con sombra y el del menú superior un anillo de color. La foto subida por el usuario se sigue mostrando igual.
 
