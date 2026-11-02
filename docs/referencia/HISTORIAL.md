@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.23.4)
+## Sin publicar (después de v1.24.0)
 
+- `165d743` 2026-11-02 — Versión 1.24.1
+- `98e8328` 2026-11-02 — Manual: ejemplo real de las respuestas automáticas de DigitalAlliance Hub
+
+## v1.24.0
+
+- `d1b1b98` 2026-11-02 — Versión 1.24.0
 - `3803e8a` 2026-11-02 — Versión 1.24.0
 - `9a5197f` 2026-11-02 — Respuestas automáticas de respaldo con acciones y manual de usuario con créditos y recargas
 

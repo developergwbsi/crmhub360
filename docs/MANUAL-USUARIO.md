@@ -865,6 +865,24 @@ Cada opción o palabra clave puede, además de responder, hacer una **acción**:
 - **Avisar a una persona del equipo**: deja una nota en el lead y le llega una notificación a su asesor para que escriba apenas pueda.
 - **Crear una tarea de llamada**: crea una tarea de prioridad alta para que lo llamen, asignada a su asesor.
 
+Ejemplo real: los mensajes de DigitalAlliance Hub
+
+Así los dejó configurados DigitalAlliance Hub para su propio WhatsApp (puedes copiar la idea y cambiar los textos por los de tu negocio). Horario de los asesores: **lunes a viernes, de 8:00 a. m. a 6:00 p. m., hora de Colombia**.
+
+| Pieza | Qué responde | Acción |
+|---|---|---|
+| **Saludo** | Da la bienvenida y avisa que una persona los atiende en un momento. | Solo responder |
+| **Fuera de horario** | Explica el horario de atención y que una persona responde apenas abran. | Solo responder |
+| **Menú 1, 2 y 3** | Conocer Crm Hub 360, Gestor360 o Core360: un resumen de dos frases y el enlace a su presentación. | Solo responder |
+| **Menú 4** · Agendar una demostración | Confirma que una persona escribe apenas abran para acordar la demostración de 15 minutos. | Crear tarea de llamada |
+| **Menú 5** · Hablar con una persona | Avisa que se notificó a una persona del equipo. | Avisar a una persona |
+| **Menú 6** · Horarios y contacto | Horario y sitio web. | Solo responder |
+| **Palabras «precio», «costo», «cotización»…** | No da valores: pide que cuenten su caso para enviar una propuesta. | Avisar a una persona |
+| **Palabras «demo», «demostración», «agendar»…** | Confirma que una persona los contacta para la demostración. | Crear tarea de llamada |
+| **Palabras «soporte», «ayuda», «falla»…** | Pide que cuenten qué ocurre y avisa a una persona. | Avisar a una persona |
+
+**Dónde está en el sistema:** **Integraciones → Canales de mensajería → WhatsApp → «Escribir los mensajes predefinidos»**. Con el respaldo activo, estos mensajes solo salen cuando nadie puede atender; mientras el comercial virtual esté encendido en modo automático, es él quien responde.
+
 Reglas de cuidado: no se repite el saludo en las horas que definas, se envían máximo 3 respuestas por hora a cada cliente, no contesta a quien pidió la baja ni a quien ya atiende un comercial virtual, y lo que no encaja lo atiende una persona. Cuando el comercial virtual está en línea, él responde y estos mensajes no se envían.
 
 
@@ -888,20 +906,3 @@ Las funciones de IA y la captación automática se pausan. Contacta al administr
 
 Menú de usuario → Preferencias → Cambiar contraseña.
 
-### Ejemplo real: los mensajes de DigitalAlliance Hub
-
-Configuración de DigitalAlliance Hub para su propio WhatsApp (copia la idea y cambia los textos). Horario de los asesores: lunes a viernes, de 8:00 a. m. a 6:00 p. m., hora de Colombia.
-
-| Pieza | Qué responde | Acción |
-|---|---|---|
-| Saludo | Bienvenida y aviso de que una persona los atiende en un momento | Solo responder |
-| Fuera de horario | Horario de atención y que una persona responde apenas abran | Solo responder |
-| Menú 1, 2 y 3 | Conocer Crm Hub 360, Gestor360 o Core360: resumen y enlace a su presentación | Solo responder |
-| Menú 4 · Agendar una demostración | Una persona escribe apenas abran para acordar la demo de 15 minutos | Crear tarea de llamada |
-| Menú 5 · Hablar con una persona | Avisa que se notificó a una persona del equipo | Avisar a una persona |
-| Menú 6 · Horarios y contacto | Horario y sitio web | Solo responder |
-| «precio», «costo», «cotización»… | No da valores: pide que cuenten su caso para enviar una propuesta | Avisar a una persona |
-| «demo», «demostración», «agendar»… | Confirma que una persona los contacta | Crear tarea de llamada |
-| «soporte», «ayuda», «falla»… | Pide que cuenten qué ocurre y avisa a una persona | Avisar a una persona |
-
-Dónde está: *Integraciones → Canales de mensajería → WhatsApp → «Escribir los mensajes predefinidos»*. Con el respaldo activo, solo salen cuando nadie puede atender; mientras el comercial virtual esté encendido en modo automático, es él quien responde.
