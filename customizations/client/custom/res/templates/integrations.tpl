@@ -2,6 +2,7 @@
 {{#if loading}}<div class="ch-muted">Cargando…</div>{{/if}}
 {{#if error}}<div class="ch-warn">No se pudo consultar el servicio de integraciones. Intenta de nuevo en unos minutos.</div>{{/if}}
 {{#unless loading}}{{#unless error}}
+<div data-role="kpis"></div>
 <div class="ch-tabbar" role="tablist">
   {{#each tabs}}<button type="button" role="tab" class="ch-tabbtn {{#if active}}active{{/if}}" data-action="tab" data-tab="{{key}}"><span class="{{icon}}"></span> {{label}}</button>{{/each}}
 </div>
