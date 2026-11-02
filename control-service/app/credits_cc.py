@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS wallet_orders (
 SERVICES = {"ai_in": "IA: por cada 1.000 tokens leídos", "ai_out": "IA: por cada 1.000 tokens escritos", "search": "Búsqueda web (cada consulta)", "email": "Correo (por destinatario)",
             "sms": "SMS (por segmento)", "whatsapp": "WhatsApp (por mensaje)", "voice": "Llamada (por minuto)"}
 CHANNELS = {"email": "Correo", "sms": "SMS", "whatsapp": "WhatsApp", "voice": "Llamadas"}
-DEFAULT = {"price_cop": 50, "min_topup": 1000, "packs": [{"credits": 1000, "price": 50000}, {"credits": 5000, "price": 225000}, {"credits": 20000, "price": 800000}],
+DEFAULT = {"price_cop": 50, "min_topup": 1000, "low": 200, "packs": [{"credits": 1000, "price": 50000}, {"credits": 5000, "price": 225000}, {"credits": 20000, "price": 800000}],
            "costs": {"ai_in": 0.3, "ai_out": 1.5, "search": 2, "email": 0.2, "sms": 3, "whatsapp": 1, "voice": 5}, "wompi": {"env": "sandbox", "public_key": "", "integrity_secret": "", "events_secret": ""}}
 ns = None
 

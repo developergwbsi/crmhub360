@@ -310,7 +310,7 @@
     const c = r.config, w = c.wompi, cost = k => (c.costs[k] != null ? c.costs[k] : 0);
     const packRow = (p = {}) => `<tr><td><input type="number" min="1" data-pk="credits" value="${p.credits || ''}" placeholder="Créditos"></td><td><input type="number" min="1" data-pk="price" value="${p.price || ''}" placeholder="Precio en COP"></td><td><button class="btn sm" data-x="rm">Quitar</button></td></tr>`;
     const rows = r.items.map(t => `<tr data-s="${esc(t.slug)}"><td><div class="name">${esc(t.name)}</div><div class="mut">${esc(t.slug)}${t.exempt ? ' · uso interno (sin cobro)' : ''}</div></td>` +
-      `<td><b>${num(t.balance, 1)}</b></td><td>${num(t.used_month, 1)}</td><td>${num(t.grant, 0)}</td><td>${t.billed.length ? t.billed.map(k => esc(r.channels[k])).join(', ') : '—'}</td>` +
+      `<td><b style="${!t.exempt && t.balance <= (c.low || 0) ? 'color:#dc2626' : ''}">${num(t.balance, 1)}</b></td><td>${num(t.used_month, 1)}</td><td>${num(t.grant, 0)}</td><td>${t.billed.length ? t.billed.map(k => esc(r.channels[k])).join(', ') : '—'}</td>` +
       `<td style="white-space:nowrap"><button class="btn sm" data-a="adj">Ajustar saldo</button> <button class="btn sm" data-a="set">Reglas</button> <button class="btn sm" data-a="led">Movimientos</button></td></tr>`).join('');
     main.innerHTML = `<h2>Créditos y recargas</h2><p class="sub">Cada empresa compra créditos y con ellos paga lo que usa de la plataforma (IA, búsqueda, correo, SMS, WhatsApp y llamadas). Lo que corre con sus propios proveedores no descuenta.</p><div data-cr>
       <div class="card" style="padding:16px;margin-bottom:14px"><h3 style="margin:0 0 10px">Precios y paquetes</h3>

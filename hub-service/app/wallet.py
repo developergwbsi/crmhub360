@@ -30,7 +30,7 @@ SERVICES = {"ai_in": "IA: por cada 1.000 tokens leídos", "ai_out": "IA: por cad
             "sms": "SMS (por segmento)", "whatsapp": "WhatsApp (por mensaje)", "voice": "Llamada (por minuto)"}
 CHANNELS = ("email", "sms", "whatsapp", "voice")
 # valores de ejemplo hasta que el Centro de control fije los definitivos
-DEFAULT_CFG = {"price_cop": 50, "min_topup": 1000, "packs": [{"credits": 1000, "price": 50000}, {"credits": 5000, "price": 225000}, {"credits": 20000, "price": 800000}],
+DEFAULT_CFG = {"price_cop": 50, "min_topup": 1000, "low": 200, "packs": [{"credits": 1000, "price": 50000}, {"credits": 5000, "price": 225000}, {"credits": 20000, "price": 800000}],
                "costs": {"ai_in": 0.3, "ai_out": 1.5, "search": 2, "email": 0.2, "sms": 3, "whatsapp": 1, "voice": 5},
                "wompi": {"env": "sandbox", "public_key": "", "integrity_secret": "", "events_secret": ""}}
 _cache: dict = {"at": 0, "cfg": DEFAULT_CFG}
@@ -186,7 +186,7 @@ def public(tenant: dict) -> dict:
     s, c = settings_of(tenant), cfg()
     with db.pool.connection() as cn:
         led = cn.execute("SELECT at, kind, credits, balance_after, service, note FROM wallet_ledger WHERE tenant=%s ORDER BY at DESC, id DESC LIMIT 60", (tenant["slug"],)).fetchall()
-    return {"balance": balance(tenant["slug"]), "exempt": s["exempt"], "grant": s["grant"], "billed": s["billed"], "price_cop": c["price_cop"], "min_topup": c["min_topup"], "packs": c["packs"],
+    return {"balance": balance(tenant["slug"]), "exempt": s["exempt"], "grant": s["grant"], "billed": s["billed"], "price_cop": c["price_cop"], "min_topup": c["min_topup"], "low": c["low"], "packs": c["packs"],
             "costs": {k: {"label": v, "credits": c["costs"].get(k, 0)} for k, v in SERVICES.items()}, "wompi": bool(c["wompi"].get("public_key") and c["wompi"].get("integrity_secret")), "sandbox": c["wompi"].get("env") != "prod",
             "ledger": [{**dict(r), "at": r["at"].isoformat(), "credits": float(r["credits"]), "balance_after": float(r["balance_after"])} for r in led],
             "own": {"ai": own_ai(tenant), "search": own_search(tenant)}}
