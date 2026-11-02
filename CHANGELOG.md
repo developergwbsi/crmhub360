@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Cambiado
+- **Integraciones → «Motor de IA y buscador»**: el motor de IA de la empresa (con su consumo del mes, la prueba y, si el proveedor lo habilita, el motor propio con su clave) pasa a Integraciones, junto al buscador web. La pestaña «Motor de IA» de Comercial virtual queda con un botón que lleva allí.
+
 ## [1.20.3] - 2026-11-02
 
 ### Corregido

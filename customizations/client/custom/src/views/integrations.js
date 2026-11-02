@@ -72,7 +72,7 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
             const opts = (map, cur) => [{value: '', label: 'Sin configurar'}].concat(Object.keys(map).map(k => ({value: k, label: map[k]}))).map(o => ({...o, selected: o.value === cur}));
             const smsOptions = opts(s.sms.providers, s.sms.provider), voiceOptions = opts(s.voice.providers, s.voice.provider);
             const tabs = [
-                {key: 'canales', icon: 'fas fa-comments', label: 'Canales de mensajería'}, {key: 'correo', icon: 'fas fa-envelope', label: 'Correo'}, {key: 'buscadores', icon: 'fas fa-magnifying-glass', label: 'Buscadores'}, {key: 'formularios', icon: 'fas fa-file-lines', label: 'Formularios web'},
+                {key: 'canales', icon: 'fas fa-comments', label: 'Canales de mensajería'}, {key: 'correo', icon: 'fas fa-envelope', label: 'Correo'}, {key: 'buscadores', icon: 'fas fa-microchip', label: 'Motor de IA y buscador'}, {key: 'formularios', icon: 'fas fa-file-lines', label: 'Formularios web'},
                 {key: 'meta', icon: 'fab fa-facebook', label: 'Meta'}, {key: 'reglas', icon: 'fas fa-sliders', label: 'Servicios y filtros'},
                 {key: 'sistema', icon: 'fas fa-gear', label: 'Sistema'},
             ].map(t => ({...t, active: t.key === this.tab}));
@@ -298,6 +298,7 @@ define('custom:views/integrations', ['view', 'custom:ui'], function (Dep, ChUi) 
             // proveedores por canal (WhatsApp, SMS, llamadas, Telegram): vista propia con un cuadro por proveedor
             this.createView('lines', 'custom:views/channel-lines', {selector: '[data-role="lines"]', httpVars: this.state.httpVars || {}}).then(v => v.render());
             this.createView('mail', 'custom:views/mail-config', {selector: '[data-role="mail"]'}).then(v => v.render());
+            this.createView('ai', 'custom:views/ai-config', {selector: '[data-role="ai"]'}).then(v => v.render());
             this.createView('search', 'custom:views/search-config', {selector: '[data-role="search"]'}).then(v => v.render());
             if (this.services) { this.renderServices(); }
             if (this.forms) { this.renderForms(); }
