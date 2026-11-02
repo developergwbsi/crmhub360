@@ -30,7 +30,7 @@ define('custom:views/search-config', ['view', 'custom:ui'], function (Dep, ChUi)
                 `<p class="text-muted">Con esto busca en internet el <b>buscador de prospectos</b> (Prospección → Buscador). Hoy usa: <b>${esc((d.engines || {})[a.engine] || a.engine)}</b>.</p>`;
             const pick = this.pick || (d.mode === 'own' ? 'own' : 'platform');
             const opt = (k, title, txt) => `<div class="radio"><label><input type="radio" name="scpick" data-pick="${k}" ${pick === k ? 'checked' : ''}> <b>${title}</b> — ${txt}</label></div>`;
-            h += `<h5>¿Con qué buscador quieres trabajar?</h5>` + opt('platform', 'El de la plataforma <span class="label label-primary">Recomendado</span>', 'listo para usar, sin cuentas ni claves; el consumo se suma a tu factura.') + opt('own', 'El mío', 'Serper, Brave o Google con tu propia clave; el consumo lo cobra tu proveedor.');
+            h += `<h5>¿Con qué buscador quieres trabajar?</h5>` + opt('platform', 'Con créditos de DigitalAlliance Hub <span class="label label-primary">Recomendado</span>', 'usas nuestro buscador, sin cuentas ni claves; cada búsqueda descuenta créditos de tu saldo.') + opt('own', 'El mío', 'Serper, Brave o Google con tu propia clave; el consumo lo cobra tu proveedor y no descuenta créditos.');
             if (pick === 'own') {
                 const eng = own.engine || 'serper';
                 h += `<div class="form-group"><label>Buscador</label><select class="form-control" data-k="engine">${Object.entries(d.engines).map(([k, l]) => `<option value="${k}" ${eng === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>` +
@@ -39,7 +39,7 @@ define('custom:views/search-config', ['view', 'custom:ui'], function (Dep, ChUi)
                     `<div class="form-group" data-role="cxg"><label>Identificador del buscador (cx) — solo Google</label><input class="form-control" data-k="cx" value="${esc(own.cx)}"></div></div>` +
                     `<p><button class="btn btn-primary" data-a="save"><span class="fas fa-floppy-disk"></span> Guardar y usar mi buscador</button> <button class="btn btn-default" data-a="test"><span class="fas fa-plug"></span> Probar (usa 1 búsqueda)</button> <span class="small" data-role="status"></span></p>`;
             } else {
-                h += (d.mode === 'loaned' ? '<p>Hoy usas un buscador que te presta la plataforma.</p>' : '<p>Hoy usas la búsqueda web de la plataforma.</p>') +
+                h += (d.mode === 'loaned' ? '<p>Hoy usas un buscador que te presta la plataforma.</p>' : '<p>Hoy usas el buscador de DigitalAlliance Hub con tus créditos.</p>') +
                     '<p><button class="btn btn-default" data-a="test"><span class="fas fa-plug"></span> Probar (usa 1 búsqueda)</button> <span class="small" data-role="status"></span></p>';
             }
             h += `<h5>Recomendados</h5><ul class="small">${(d.recommended || []).map(r => `<li><b>${esc((d.engines || {})[r.engine] || r.engine)}</b> — ${esc(r.note)}</li>`).join('')}</ul></div></div>`;
@@ -50,7 +50,7 @@ define('custom:views/search-config', ['view', 'custom:ui'], function (Dep, ChUi)
             el.querySelectorAll('[data-pick]').forEach(r => { r.onchange = () => {
                 const v = r.dataset.pick;
                 if (v === 'own' && !d.hasOwn) { this.pick = 'own'; this.draw(); return; }
-                Espo.Ajax.postRequest('CrmHub/searchConfigMode', {mode: v}).then(x => { this.d = x; this.pick = null; Espo.Ui.success(v === 'own' ? 'Ahora usas tu propio buscador' : 'Ahora usas el buscador de la plataforma'); this.draw(); }).catch(xhr => { Espo.Ui.error(reason(xhr)); this.pick = null; this.draw(); });
+                Espo.Ajax.postRequest('CrmHub/searchConfigMode', {mode: v}).then(x => { this.d = x; this.pick = null; Espo.Ui.success(v === 'own' ? 'Ahora usas tu propio buscador' : 'Ahora usas créditos de DigitalAlliance Hub'); this.draw(); }).catch(xhr => { Espo.Ui.error(reason(xhr)); this.pick = null; this.draw(); });
             }; });
             const sv = el.querySelector('[data-a=save]');
             if (sv) { sv.onclick = () => { status('Guardando…'); Espo.Ajax.postRequest('CrmHub/searchConfigSave', {engine: q('engine').value, api_key: q('api_key').value, cx: q('cx').value.trim()}).then(() => { Espo.Ui.success('Listo: ahora usas tu propio buscador'); this.pick = null; this.load(); }).catch(xhr => { status(''); Espo.Ui.error(reason(xhr)); }); }; }

@@ -2335,6 +2335,21 @@ class CrmHub
         return (object) $this->hubCall('PUT', '/v1/ai/own', ['kind' => (string) ($d->kind ?? ''), 'model' => (string) ($d->model ?? ''), 'base_url' => (string) ($d->base_url ?? ''), 'api_key' => (string) ($d->api_key ?? ''), 'workspace_id' => (string) ($d->workspace_id ?? '')], 20);
     }
 
+    /** GET /CrmHub/wallet. Admin. Saldo de créditos, paquetes y movimientos. Hub: GET /v1/wallet. */
+    public function getActionWallet(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('GET', '/v1/wallet', null, 20);
+    }
+
+    /** POST /CrmHub/walletCheckout. Admin. {credits, redirect}. Enlace de pago de Wompi. Hub: POST /v1/wallet/checkout. */
+    public function postActionWalletCheckout(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/wallet/checkout', ['credits' => (float) ($d->credits ?? 0), 'redirect' => (string) ($d->redirect ?? '')], 20);
+    }
+
     /** POST /CrmHub/aiMode. Admin. {mode: platform|own}. Hub: POST /v1/ai/mode. */
     public function postActionAiMode(Request $request): \stdClass
     {

@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, brand, chatbot, products, report, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import bi, brand, chatbot, products, report, wallet, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +39,7 @@ async def lifespan(_: FastAPI):
     push.keys()  # crea las claves VAPID la primera vez
     simulate.ensure_schema()
     products.ensure_schema()
+    wallet.ensure_schema()
     routing.ensure_schema()
     processes.ensure_schema()
     documents.ensure_schema()
@@ -2562,6 +2563,40 @@ class ProductReq(BaseModel):
     avoid: str = ""
     main: bool = False
     active: bool = True
+
+
+@app.exception_handler(wallet.NoBalance)
+async def _no_balance(request, exc):
+    """Sin créditos: 402 con un mensaje claro (el CRM lo muestra y ofrece recargar)."""
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=402, content={"detail": str(exc)}, headers={"X-Status-Reason": "Sin creditos"})
+
+
+@app.get("/v1/wallet")
+def wallet_get(tenant: dict = Depends(tenant_auth)):
+    """Saldo de créditos de la empresa, paquetes de recarga, lo que cuesta cada cosa y los últimos movimientos."""
+    return wallet.public(tenant)
+
+
+@app.post("/v1/wallet/checkout")
+def wallet_checkout(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    """Enlace de pago (Wompi) para comprar créditos."""
+    try:
+        return {"url": wallet.checkout_url(tenant, float(body.get("credits") or 0), str(body.get("redirect") or ""))}
+    except (ValueError, TypeError) as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/ingest/{slug}/wompi")
+async def wompi_events(slug: str, request: Request):
+    """Eventos de Wompi (un solo enlace para toda la plataforma): se acreditan las recargas aprobadas, verificando la firma."""
+    try:
+        return wallet.handle_event(await request.json())
+    except PermissionError:
+        raise HTTPException(401, "Firma inválida")
+    except Exception as e:
+        log.warning("evento de Wompi: %s", str(e)[:120])
+        raise HTTPException(400, "Evento no válido")
 
 
 @app.get("/v1/products")

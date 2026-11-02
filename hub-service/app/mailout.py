@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 
-from . import usage
+from . import usage, wallet
 from .espo import Espo
 
 ADDR = re.compile(r"^[^@\s,;<>]{1,64}@[^@\s,;<>]{1,190}\.[A-Za-z]{2,}$")
@@ -77,6 +77,8 @@ async def send(tenant: dict, req: dict) -> dict:
     cfg = (tenant.get("settings") or {}).get("mailout") or {}
     if not cfg.get("host") or not cfg.get("from_address"):
         raise LookupError("Esta empresa no tiene el correo del Centro de control configurado.")
+    if cfg.get("source") != "own":
+        wallet.require(tenant, "email")   # el correo de la plataforma se paga con créditos si la empresa lo tiene así
     to, cc = _addrs(req.get("to")), _addrs(req.get("cc"))
     if not to:
         raise ValueError("Escribe al menos un destinatario.")

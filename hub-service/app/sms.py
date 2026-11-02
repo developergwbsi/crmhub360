@@ -1,6 +1,6 @@
 """SMS: Twilio o cualquier proveedor por API HTTP. El remitente puede ser un número largo, un código corto o un ID alfanumérico
 (lo que tu proveedor haya habilitado para tu cuenta)."""
-from . import httpgen, lines, twilio, usage
+from . import httpgen, lines, twilio, usage, wallet
 from .espo import Espo
 from .ingest import normalize_phone
 
@@ -25,6 +25,7 @@ def info(text: str) -> dict:
 async def send_text(tenant: dict, phone: str, text: str, lead: dict | None = None, agent: str = "") -> None:
     """Envía un SMS por el proveedor configurado, sin dejar nota; ValueError si no hay proveedor."""
     tenant = lines.effective(tenant, "sms")
+    wallet.require(tenant, "sms")
     p = provider(tenant)
     if p == "twilio":
         res = await twilio.post(tenant, "Messages.json", {**twilio.sender(tenant, "twilio_sms_from"), "To": phone, "Body": text})

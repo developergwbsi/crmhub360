@@ -1,6 +1,6 @@
 """Llamadas desde el CRM (click-to-call): el proveedor/central llama PRIMERO al teléfono o extensión del asesor y, al contestar,
 lo conecta con el cliente. La troncal SIP vive en el proveedor (Twilio, Telnyx…) o en tu central (Asterisk/FreePBX, 3CX…)."""
-from . import config, httpgen, lines, twilio, usage
+from . import config, httpgen, lines, twilio, usage, wallet
 from .espo import Espo
 from .ingest import normalize_phone
 
@@ -40,6 +40,7 @@ async def test_call(tenant: dict, to: str) -> None:
 async def call(tenant: dict, lead_id: str, agent_phone: str, agent: str, agent_id: str = "", line_id: str | None = None) -> dict:
     """Click-to-call: registra la llamada (Call) en EspoCRM y hace que el proveedor llame primero al asesor y, al contestar, lo conecte con el cliente. Devuelve {ok, callId, provider}."""
     tenant = lines.effective(tenant, "voice", line_id)
+    wallet.require(tenant, "voice")
     p = provider(tenant)
     if not p:
         raise ValueError("Las llamadas desde el CRM no están configuradas (Integraciones → Telefonía).")

@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from . import agent, db, finder, qualifier, report
+from . import agent, db, finder, qualifier, report, wallet
 
 log = logging.getLogger("hub.pipeline")
 
@@ -44,6 +44,9 @@ async def worker() -> None:
             for t in rows:
                 t = dict(t)
                 if agent.engine_paused(t) or not _due(t):
+                    continue
+                if not wallet.has_funds(t):   # sin créditos y sin motor propio: el ciclo espera a que recarguen
+                    finder._save(t["slug"], {"pipeline_last": {"at": datetime.now(timezone.utc).isoformat(), "error": wallet.MSG}})
                     continue
                 try:
                     r = await run_once(t)

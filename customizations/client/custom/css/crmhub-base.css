@@ -1650,3 +1650,7 @@ body:has(.list-kanban) #content, body:has(.ch-studio) #content { padding-bottom:
 .ch-nichos-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; } .ch-nicho { display: inline-flex; gap: 6px; align-items: center; background: #eef2ff; color: #3730a3; border-radius: 999px; padding: 3px 12px; font-size: 13px; }
 .ch-nicho.off { background: #fef3c7; color: #92400e; } .ch-nicho a { cursor: pointer; text-decoration: none; font-weight: 700; } .ch-nicho-add { display: flex; gap: 8px; margin-top: 6px; } .ch-nicho-add input { flex: 1; }
 .ch-nicho-sug { cursor: pointer; display: inline-block; margin: 2px 6px 2px 0; font-size: 12.5px; }
+.ch-wl-top { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; } .ch-wl-bal { min-width: 170px; background: #eef2ff; border-radius: 14px; padding: 14px 20px; text-align: center; } .ch-wl-bal.low { background: #fee2e2; }
+.ch-wl-bal span, .ch-wl-bal small { display: block; color: #475569; font-size: 12.5px; } .ch-wl-bal b { display: block; font-size: 34px; line-height: 1.1; } .ch-wl-info { flex: 1; min-width: 260px; }
+.ch-wl-packs { display: flex; gap: 12px; flex-wrap: wrap; } .ch-wl-pack { border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px 18px; text-align: center; min-width: 150px; } .ch-wl-pack b { display: block; font-size: 24px; } .ch-wl-pack span, .ch-wl-pack small { display: block; color: #64748b; }
+.ch-wl-pack button { margin-top: 8px; } .ch-wl-led { max-height: 360px; overflow: auto; }

@@ -18,7 +18,7 @@ define('custom:views/ai-config', ['view', 'custom:ui', 'custom:tpl'], function (
 
                 aiHtml() {
             const a = this.ai; if (!a) { return '<div class="ch-muted" style="padding:20px">Cargando…</div>'; }
-            const e = a.effective, src = {local: 'IA local del sistema', own: 'Motor propio de tu empresa'}[e.source] || 'Motor de la plataforma (se cobra en tu factura)';
+            const e = a.effective, src = {local: 'IA local del sistema', own: 'Motor propio de tu empresa'}[e.source] || 'Con créditos de DigitalAlliance Hub';
             const usage = (a.usage || []).map(u => `<div>${esc(u.engine)} · <b>${u.calls}</b> consultas · ${(u.tokens_in / 1000).toFixed(1)}k tokens de entrada / ${(u.tokens_out / 1000).toFixed(1)}k de salida</div>`).join('') || ChUi.empty({kind: 'chart', title: 'Sin consultas este mes', text: 'Aquí verás el consumo de IA.', compact: true});
             const pick = this.pick || (a.mode === 'own' ? 'own' : 'platform'), o = a.own;
             const form = pick !== 'own' ? '' : `<div class="ch-ag-row2"><div><label>Proveedor</label><select data-ai="kind">${Object.keys(a.kinds).map(k => `<option value="${k}" ${o.kind === k ? 'selected' : ''}>${esc(a.kinds[k])}</option>`).join('')}</select></div><div><label>Modelo</label><input data-ai="model" value="${esc(o.model)}" placeholder="claude-haiku-5-5 · gpt-4o-mini"></div></div>
@@ -31,15 +31,15 @@ define('custom:views/ai-config', ['view', 'custom:ui', 'custom:tpl'], function (
             return `<div class="ch-sim-card"><h5>Motor de IA que usa tu empresa</h5><div class="ch-ag-dec"><b>${esc(src)}</b><div>${esc(e.label)} · ${esc(a.kinds[e.kind] || e.kind)}${e.model ? ' · modelo ' + esc(e.model) : ''}</div></div>
                 <div class="ch-muted">Este mes:</div>${usage}
                 <h5 style="margin-top:14px">¿Con qué motor quieres trabajar?</h5>
-                ${opt('platform', 'El de la plataforma <span class="label label-primary">Recomendado</span>', 'listo para usar, sin cuentas ni claves; el consumo se suma a tu factura y nosotros lo mantenemos al día.')}
-                ${opt('own', 'El mío', 'usas tu propia cuenta de IA (por ejemplo la tuya de Claude u OpenAI); el consumo lo cobra tu proveedor.')}
+                ${opt('platform', 'Con créditos de DigitalAlliance Hub <span class="label label-primary">Recomendado</span>', 'usas nuestro motor de IA, sin cuentas ni claves; cada consulta descuenta créditos de tu saldo (Integraciones → Saldo y recargas).')}
+                ${opt('own', 'El mío', 'usas tu propia cuenta de IA (por ejemplo la tuya de Claude u OpenAI); el consumo lo cobra tu proveedor y no descuenta créditos.')}
                 ${form}${pick === 'platform' ? `<div class="ch-mail-actions"><button class="btn btn-default btn-sm" data-act="aitest"><span class="fas fa-vial"></span> Probar el motor actual</button></div><div class="ch-ag-aiout" data-role="aiout"></div>` : ''}</div>`;
         }
 
         aiPick(v) {
             const a = this.ai;
             if (v === 'own' && !a.own.saved) { this.pick = 'own'; this.draw(); return; }   // aún no tiene motor propio: se muestra el formulario
-            Espo.Ajax.postRequest('CrmHub/aiMode', {mode: v}).then(r => { this.ai = r; this.pick = null; Espo.Ui.success(v === 'own' ? 'Ahora usas tu propio motor de IA' : 'Ahora usas el motor de la plataforma'); this.draw(); })
+            Espo.Ajax.postRequest('CrmHub/aiMode', {mode: v}).then(r => { this.ai = r; this.pick = null; Espo.Ui.success(v === 'own' ? 'Ahora usas tu propio motor de IA' : 'Ahora usas créditos de DigitalAlliance Hub'); this.draw(); })
                 .catch(xhr => { Espo.Ui.error(Tpl.reason(xhr, 'No se pudo cambiar.')); if (xhr) { xhr.errorIsHandled = true; } this.pick = null; this.draw(); });
         }
 

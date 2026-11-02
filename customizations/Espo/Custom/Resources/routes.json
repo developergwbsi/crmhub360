@@ -1508,5 +1508,21 @@
             "controller": "CrmHub",
             "action": "productsSeed"
         }
+    },
+    {
+        "route": "/CrmHub/wallet",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "wallet"
+        }
+    },
+    {
+        "route": "/CrmHub/walletCheckout",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "walletCheckout"
+        }
     }
 ]

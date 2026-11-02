@@ -6,7 +6,7 @@ import time
 
 import httpx
 
-from . import config, httpgen, lines, routing, twilio, usage
+from . import config, httpgen, lines, routing, twilio, usage, wallet
 from .espo import Espo
 from .ingest import normalize_phone
 
@@ -136,6 +136,7 @@ def _err(r: httpx.Response) -> str:
 async def send_text(tenant: dict, phone: str, text: str, *, kind: str = "text") -> None:
     """Envía un texto por el proveedor configurado, sin dejar nota; ValueError si el proveedor lo rechaza o no hay configuración."""
     tenant = lines.effective(tenant, "whatsapp")
+    wallet.require(tenant, "whatsapp")
     p = provider(tenant)
     number = wa_number(phone)
     ext = ""
@@ -220,6 +221,7 @@ async def send_menu_phone(tenant: dict, phone: str, menu: dict, intro: str = "",
     """Envía un mensaje con opciones. Nativo (lista/botones) con Meta Cloud API —y con Evolution si se pidió, aunque WhatsApp puede no mostrarlo—;
     en cualquier otro caso, o si el nativo falla, como texto numerado. Devuelve {text, native}."""
     tenant = lines.effective(tenant, "whatsapp")
+    wallet.require(tenant, "whatsapp")
     p, number = provider(tenant), wa_number(phone)
     body = (intro or menu["body"]).strip()[:1024]
     opts = menu["options"]

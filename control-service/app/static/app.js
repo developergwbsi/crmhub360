@@ -120,7 +120,7 @@
   function shell() {
     $app.innerHTML = `<div class="top"><div class="brand"><i>◆</i><span>Crm Hub 360 <small>· Centro de control</small></span></div><span class="grow"></span>
       <button class="btn sm" id="acc"><span id="who">Mi cuenta</span></button><button class="btn sm" id="out">Salir</button></div>
-      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="lineas">Líneas WhatsApp</button><button class="tab" data-t="consumo">Consumo</button><button class="tab" data-t="motor">Motor comercial</button><button class="tab" data-t="monitor">Monitor de canales<span class="tabdot" id="mon-badge" hidden></span></button><button class="tab" data-t="actividad">Actividad</button></div>
+      <div class="tabs"><button class="tab" data-t="empresas">Empresas</button><button class="tab" data-t="base">Base de producción</button><button class="tab" data-t="proveedores">Proveedores aliados</button><button class="tab" data-t="servicios">Servicios de consulta</button><button class="tab" data-t="correo">Correo general</button><button class="tab" data-t="bienvenida">Plantillas de correo</button><button class="tab" data-t="lineas">Líneas WhatsApp</button><button class="tab" data-t="consumo">Consumo</button><button class="tab" data-t="creditos">Créditos y recargas</button><button class="tab" data-t="motor">Motor comercial</button><button class="tab" data-t="monitor">Monitor de canales<span class="tabdot" id="mon-badge" hidden></span></button><button class="tab" data-t="actividad">Actividad</button></div>
       <main id="main"></main>`;
     document.getElementById('acc').onclick = accountDialog;
     document.getElementById('out').onclick = async () => { try { await api('POST', '/logout'); } catch (e) { /* ya cerrada */ } renderLogin(); };
@@ -300,6 +300,61 @@
     qr();
   }
 
+
+  // ---------- Créditos y recargas: DigitalAlliance Hub es el proveedor; cada empresa paga con créditos prepagados lo que usa de la plataforma
+  async function drawCredits() {
+    const main = document.getElementById('main');
+    if (!main.querySelector('[data-cr]')) { main.innerHTML = '<h2>Créditos y recargas</h2><p class="sub">Cargando…</p><div data-cr></div>'; }
+    let r; try { r = await api('GET', '/credits'); } catch (e) { main.innerHTML = `<h2>Créditos y recargas</h2><div class="err">${esc(e.message)}</div>`; return; }
+    if (state.tab !== 'creditos') { return; }
+    const c = r.config, w = c.wompi, cost = k => (c.costs[k] != null ? c.costs[k] : 0);
+    const packRow = (p = {}) => `<tr><td><input type="number" min="1" data-pk="credits" value="${p.credits || ''}" placeholder="Créditos"></td><td><input type="number" min="1" data-pk="price" value="${p.price || ''}" placeholder="Precio en COP"></td><td><button class="btn sm" data-x="rm">Quitar</button></td></tr>`;
+    const rows = r.items.map(t => `<tr data-s="${esc(t.slug)}"><td><div class="name">${esc(t.name)}</div><div class="mut">${esc(t.slug)}${t.exempt ? ' · uso interno (sin cobro)' : ''}</div></td>` +
+      `<td><b>${num(t.balance, 1)}</b></td><td>${num(t.used_month, 1)}</td><td>${num(t.grant, 0)}</td><td>${t.billed.length ? t.billed.map(k => esc(r.channels[k])).join(', ') : '—'}</td>` +
+      `<td style="white-space:nowrap"><button class="btn sm" data-a="adj">Ajustar saldo</button> <button class="btn sm" data-a="set">Reglas</button> <button class="btn sm" data-a="led">Movimientos</button></td></tr>`).join('');
+    main.innerHTML = `<h2>Créditos y recargas</h2><p class="sub">Cada empresa compra créditos y con ellos paga lo que usa de la plataforma (IA, búsqueda, correo, SMS, WhatsApp y llamadas). Lo que corre con sus propios proveedores no descuenta.</p><div data-cr>
+      <div class="card" style="padding:16px;margin-bottom:14px"><h3 style="margin:0 0 10px">Precios y paquetes</h3>
+        <div class="grid2"><label>Precio de un crédito (COP)<input type="number" min="0" step="any" id="cr-price" value="${c.price_cop}"></label><label>Recarga mínima (créditos)<input type="number" min="1" id="cr-min" value="${c.min_topup}"></label></div>
+        <h4 style="margin:12px 0 6px">Cuántos créditos cuesta cada cosa</h4><div class="grid2">${Object.entries(r.services).map(([k, l]) => `<label>${esc(l)}<input type="number" min="0" step="any" data-co="${k}" value="${cost(k)}"></label>`).join('')}</div>
+        <h4 style="margin:12px 0 6px">Paquetes de recarga</h4><table><thead><tr><th>Créditos</th><th>Precio (COP)</th><th></th></tr></thead><tbody id="cr-packs">${c.packs.map(packRow).join('')}</tbody></table><p><button class="btn sm" id="cr-addp">+ Agregar paquete</button></p>
+        <h4 style="margin:12px 0 6px">Pagos con Wompi</h4><div class="grid2"><label>Entorno<select id="wp-env"><option value="sandbox" ${w.env !== 'prod' ? 'selected' : ''}>Pruebas (sandbox)</option><option value="prod" ${w.env === 'prod' ? 'selected' : ''}>Producción</option></select></label><label>Llave pública<input id="wp-pub" value="${esc(w.public_key)}" placeholder="pub_test_… / pub_prod_…"></label>
+          <label>Secreto de integridad ${w.has_integrity ? '<span class="mut">(guardado; vacío = conservar)</span>' : ''}<input type="password" id="wp-int" autocomplete="new-password"></label><label>Secreto de eventos ${w.has_events ? '<span class="mut">(guardado; vacío = conservar)</span>' : ''}<input type="password" id="wp-evt" autocomplete="new-password"></label></div>
+        <p class="mut">En el panel de Wompi pega esta dirección como URL de eventos: <b>${esc(r.webhook)}</b>. Las recargas se acreditan solo con el evento firmado de Wompi. Las llaves se guardan aquí y nunca viajan al navegador de las empresas.</p>
+        <p><button class="btn primary" id="cr-save">Guardar</button></p></div>
+      <div class="card">${r.items.length ? `<table><thead><tr><th>Empresa</th><th>Saldo (créditos)</th><th>Usados este mes</th><th>Obsequio mensual</th><th>Canales que se cobran</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : ''}</div>
+      <p class="mut" style="margin-top:10px">El <b>obsequio mensual</b> se acredita una vez al mes. Los canales marcados en «Reglas» se pagan con créditos aunque la línea sea de la plataforma; el resto corre con el proveedor de la empresa. Las empresas de uso interno no se cobran ni se bloquean.</p></div>`;
+    const $ = id => document.getElementById(id);
+    $('cr-addp').onclick = () => { $('cr-packs').insertAdjacentHTML('beforeend', packRow()); };
+    $('cr-packs').onclick = e => { const b = e.target.closest('[data-x=rm]'); if (b) { b.closest('tr').remove(); } };
+    $('cr-save').onclick = async () => {
+      const packs = [...document.querySelectorAll('#cr-packs tr')].map(tr => ({credits: +tr.querySelector('[data-pk=credits]').value, price: +tr.querySelector('[data-pk=price]').value}));
+      const costs = {}; document.querySelectorAll('[data-co]').forEach(i => { costs[i.dataset.co] = +i.value; });
+      try { await api('PUT', '/credits/config', {price_cop: +$('cr-price').value, min_topup: +$('cr-min').value, packs, costs, wompi: {env: $('wp-env').value, public_key: $('wp-pub').value, integrity_secret: $('wp-int').value, events_secret: $('wp-evt').value}}); toast('Guardado'); drawCredits(); } catch (e) { toast(e.message); }
+    };
+    main.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { const t = r.items.find(x => x.slug === b.closest('tr').dataset.s); ({adj: () => creditAdjust(t), set: () => creditRules(t, r), led: () => creditLedger(t)})[b.dataset.a](); });
+  }
+  function creditAdjust(t) {
+    const m = modal(`<h3>Ajustar saldo de ${esc(t.name)}</h3><p class="mut">Saldo actual: ${num(t.balance, 1)} créditos. Un número positivo acredita (por ejemplo, una recarga cobrada por transferencia); uno negativo descuenta.</p>
+      <label>Créditos<input type="number" step="any" id="ad-c" placeholder="Ej.: 5000 o -200"></label><label>Motivo (queda en el libro)<input id="ad-n" maxlength="160" placeholder="Ej.: Recarga por transferencia, factura 123"></label><div class="err" id="ad-e" hidden></div>
+      <div class="foot"><button class="btn" data-x="c">Cancelar</button><button class="btn primary" data-x="k">Aplicar</button></div>`);
+    m.el.querySelector('[data-x=c]').onclick = m.close;
+    m.el.querySelector('[data-x=k]').onclick = async () => { try { await api('POST', `/credits/${t.slug}/adjust`, {credits: +m.el.querySelector('#ad-c').value, note: m.el.querySelector('#ad-n').value}); m.close(); toast('Saldo ajustado'); drawCredits(); } catch (e) { const er = m.el.querySelector('#ad-e'); er.hidden = false; er.textContent = e.message; } };
+  }
+  function creditRules(t, r) {
+    const m = modal(`<h3>Reglas de ${esc(t.name)}</h3><label>Obsequio mensual de créditos<input type="number" min="0" step="any" id="ru-g" value="${t.grant}"></label>
+      <p class="mut" style="margin:10px 0 4px">Canales que se pagan con créditos (la IA y la búsqueda de la plataforma siempre se pagan, salvo que la empresa use las suyas):</p>
+      ${Object.entries(r.channels).map(([k, l]) => `<label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" data-b="${k}" ${t.billed.includes(k) ? 'checked' : ''}> ${esc(l)}</label>`).join('')}
+      <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:10px"><input type="checkbox" id="ru-x" ${t.exempt ? 'checked' : ''}> Uso interno: no se cobra ni se bloquea</label><div class="foot"><button class="btn" data-x="c">Cancelar</button><button class="btn primary" data-x="k">Guardar</button></div>`);
+    m.el.querySelector('[data-x=c]').onclick = m.close;
+    m.el.querySelector('[data-x=k]').onclick = async () => { try { await api('PUT', `/credits/${t.slug}/settings`, {grant: +m.el.querySelector('#ru-g').value, billed: [...m.el.querySelectorAll('[data-b]:checked')].map(i => i.dataset.b), exempt: m.el.querySelector('#ru-x').checked}); m.close(); toast('Reglas guardadas'); drawCredits(); } catch (e) { toast(e.message); } };
+  }
+  async function creditLedger(t) {
+    const d = await api('GET', `/credits/${t.slug}/ledger`).catch(() => ({items: [], orders: []}));
+    const K = {topup: 'Recarga', grant: 'Obsequio', usage: 'Consumo', adjust: 'Ajuste'};
+    const m = modal(`<h3>Movimientos de ${esc(t.name)}</h3><div class="card" style="max-height:380px;overflow:auto"><table><thead><tr><th>Cuándo</th><th>Tipo</th><th>Créditos</th><th>Saldo</th><th>Detalle</th></tr></thead><tbody>${d.items.map(x => `<tr><td>${esc(new Date(x.at).toLocaleString('es-CO'))}</td><td>${esc(K[x.kind] || x.kind)}</td><td>${x.credits > 0 ? '+' : ''}${num(x.credits, 2)}</td><td>${num(x.balance_after, 1)}</td><td>${esc(x.service || x.note || '')}</td></tr>`).join('') || '<tr><td colspan="5" class="mut">Sin movimientos</td></tr>'}</tbody></table></div><div class="foot"><button class="btn primary" data-x="k">Cerrar</button></div>`, 'wide');
+    m.el.querySelector('[data-x=k]').onclick = m.close;
+  }
+
   // ---------- Consumo y tarifas: lo que se envía por empresa, lo que nos cuesta y lo que se cobra
   const CH_LABEL = {whatsapp: 'WhatsApp', sms: 'SMS', voice: 'Llamadas', email: 'Correo'};
   const CH_UNIT = {whatsapp: 'mensajes', sms: 'segmentos', voice: 'llamadas / min', email: 'correos'};
@@ -428,7 +483,7 @@
 
   function draw() {
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.t === state.tab));
-    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, servicios: drawLookups, correo: drawMail, bienvenida: drawTemplates, monitor: drawMonitor, consumo: drawUsage, motor: drawMotor, lineas: drawLines, actividad: drawActivity}[state.tab])();
+    ({empresas: drawCompanies, base: drawBase, proveedores: drawProviders, servicios: drawLookups, correo: drawMail, bienvenida: drawTemplates, monitor: drawMonitor, consumo: drawUsage, creditos: drawCredits, motor: drawMotor, lineas: drawLines, actividad: drawActivity}[state.tab])();
     if (state.tab !== 'monitor') { clearInterval(state.monTimer); }
   }
 

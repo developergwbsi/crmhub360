@@ -5,6 +5,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Añadido
+- **Créditos y recargas (DigitalAlliance Hub como proveedor de todo).** Cada empresa compra créditos prepagados con los que paga lo que usa de la plataforma: IA de los agentes, búsqueda de prospectos y, si así se define para esa empresa, correo, SMS, WhatsApp y llamadas. Lo que corre con proveedores propios de la empresa no descuenta. Ya no hay motor de IA ni buscador «predeterminados» gratis: la empresa elige entre **los suyos** o **créditos de DigitalAlliance Hub** (recomendado).
+- **Saldo y recargas** (*Integraciones → Saldo y recargas*): saldo, obsequio del mes, lo que cuesta cada cosa, paquetes de recarga con pago en **Wompi** y movimientos. Los créditos se acreditan solo con el evento firmado de Wompi (una sola vez por pago).
+- **Sin créditos, se detiene** lo que usa la plataforma (IA, buscador, ciclo diario del motor comercial, y los canales cobrados) con un aviso claro; lo que corre con proveedores propios sigue.
+- **Centro de control → Créditos y recargas**: precio del crédito, recarga mínima, paquetes, créditos que cuesta cada servicio, llaves de Wompi (pruebas o producción), saldo por empresa, obsequio mensual, canales que se cobran, marca de «uso interno» (sin cobro) y ajuste manual de saldo con motivo; todo auditado.
+
+### Cambiado
+- Las empresas de uso interno (dev, prod y gestor-360) quedan marcadas «sin cobro» para no frenar el motor comercial.
+
+### Añadido
 - **Nichos de mercado a elección de la empresa** (*Prospección → Cliente ideal*): los nichos son fichas que se agregan y se quitan (con sugeridos de un clic); el buscador trabaja los nichos por turnos, yendo cada vez al que menos prospectos ha traído en los últimos 14 días, y los nichos puestos en pausa por falta de respuestas se pueden reanudar desde la misma ficha.
 
 ### Corregido

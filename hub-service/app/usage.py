@@ -9,7 +9,7 @@ import json
 import logging
 import time
 
-from . import db
+from . import db, wallet
 
 log = logging.getLogger("hub.usage")
 SCHEMA = """
@@ -63,6 +63,8 @@ def record(tenant: dict | str, channel: str, provider: str = "", *, units: float
         with db.pool.connection() as c:
             c.execute("INSERT INTO usage_events (tenant, channel, provider, line_id, direction, kind, units, status, ext_id, currency, cost, price, meta) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                       (slug, channel, provider, line_id, direction, kind, units, status, ext_id or "", cur, round(cost * units, 4), round(price * units, 4), json.dumps(meta or {})))
+        if direction == "out" and channel in wallet.CHANNELS and units > 0:
+            wallet.charge(tenant, channel, units, note=f"{channel} · {provider}")   # solo si la empresa paga ese canal con créditos (lo decide wallet.billed)
     except Exception:
         log.warning("no se pudo registrar el consumo", exc_info=True)
 

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from . import config, db, httpgen, ollama
+from . import config, db, httpgen, ollama, wallet
 
 log = logging.getLogger("hub.llm")
 REMOTE_SEM = asyncio.Semaphore(6)
@@ -53,6 +53,8 @@ def resolve(tenant: dict | None) -> dict:
 
 # ---------------- uso (para cobrar y vigilar)
 def _usage(tenant: str, cfg: dict, calls: int, tin: int, tout: int) -> None:
+    if cfg.get("source") != "own":   # con el motor propio no se descuentan créditos; con el de la plataforma sí
+        wallet.charge_tokens(tenant, tin, tout, cfg.get("model") or "")
     mon = datetime.now(timezone.utc).strftime("%Y-%m")
     try:
         with db.pool.connection() as c:
@@ -162,6 +164,8 @@ async def _ollama(cfg: dict, system: str, user: str, schema: dict | None, max_to
 
 async def _run(tenant: dict | None, system: str, user: str, schema: dict | None, max_tokens: int | None, temp: float):
     cfg = resolve(tenant)
+    if tenant and cfg.get("source") != "own":
+        wallet.require(tenant, "ai")   # sin créditos y sin motor propio: no se usa la IA de la plataforma
     if cfg["kind"] != "ollama" and not cfg["api_key"]:
         raise RuntimeError("El motor de IA no tiene la clave de API configurada.")
     fn = {"anthropic": _anthropic, "openai": _openai, "ollama": _ollama}.get(cfg["kind"])
@@ -204,6 +208,9 @@ async def web_search(tenant: dict | None, system: str, user: str, max_uses: int 
     """Investiga en internet con la herramienta de búsqueda web de Anthropic y devuelve el informe en texto (con las direcciones de las fuentes).
     Solo con un motor Anthropic; el costo son los tokens más el cargo por búsqueda de Anthropic."""
     cfg = resolve(tenant)
+    if tenant and cfg.get("source") != "own":
+        wallet.require(tenant, "ai")
+        wallet.charge(tenant, "search", 1, note="Búsqueda web con IA")
     if cfg["kind"] != "anthropic" or not cfg["api_key"]:
         raise RuntimeError("La búsqueda web de Claude necesita un motor de IA de Anthropic con su clave configurada.")
     base = (cfg["base_url"] or DEFAULT_URL["anthropic"]).rstrip("/")

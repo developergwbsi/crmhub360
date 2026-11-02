@@ -9,6 +9,9 @@
 <div class="ch-pane" data-pane="correo" style="display:none">
   <div data-role="mail"></div>
 </div>
+<div class="ch-pane" data-pane="creditos" style="display:none">
+  <div data-role="wallet"></div>
+</div>
 <div class="ch-pane" data-pane="buscadores" style="display:none">
   <div data-role="ai"></div>
   <div data-role="search"></div>
