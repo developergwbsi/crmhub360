@@ -53,12 +53,26 @@ def _save(slug: str, patch: dict) -> None:
         c.execute("UPDATE tenants SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), '{finder}', COALESCE(settings->'finder','{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps(patch), slug))
 
 
-def _brief(tenant: dict, cfg: dict, n: int, already: list[str]) -> str:
+def _next_niche(tenant: dict, slug: str) -> str:
+    """El nicho de mercado que toca trabajar: entre los activos (no en pausa), el que menos prospectos trajo en los últimos 14 días. Así todos los nichos agregados se trabajan por turnos."""
+    icp = prospects.icp(tenant)
+    paused = set(icp.get("paused_niches") or [])
+    niches = [x for x in icp["industries"] if x not in paused]
+    if len(niches) < 2:
+        return niches[0] if niches else ""
+    with db.pool.connection() as c:
+        rows = c.execute("SELECT lower(industry) i FROM prospects WHERE tenant=%s AND origin='finder' AND created_at > now() - interval '14 days'", (slug,)).fetchall()
+    inds = [r["i"] for r in rows]
+    return min(niches, key=lambda n: sum(1 for i in inds if n in i or i in n))
+
+
+def _brief(tenant: dict, cfg: dict, n: int, already: list[str], niche: str = "") -> str:
     icp = prospects.icp(tenant)
     ag = ((tenant.get("settings") or {}).get("agents") or [{}])[0].get("config") or (tenant.get("settings") or {}).get("agent") or {}
     co = ag.get("company") or {}
     return (f"EMPRESA QUE VENDE: {tenant.get('name')}\n{co.get('about', '')}\n\nLO QUE OFRECE:\n{co.get('services', '')}\n\nCLIENTE IDEAL: {icp['describe']}\n"
             f"Sectores: {', '.join(icp['industries'])}\nPaíses: {', '.join(icp['countries']) or 'cualquiera'}\nCargos que deciden: {', '.join(icp['titles'])}\n"
+            f"{('NICHO DE ESTA BÚSQUEDA (busca solo en este sector): ' + niche) if niche else ''}\n"
             f"{('ENFOQUE DE ESTA BÚSQUEDA: ' + cfg['focus']) if cfg['focus'] else ''}\n\n"
             f"TAREA: busca en internet hasta {n} empresas reales que encajen y que NO estén en esta lista de ya conocidas: {', '.join(already[:80]) or '(ninguna)'}.\n"
             "Para cada una entrega el correo o teléfono de NEGOCIO que ella misma publica (su sitio web, página de contacto o un directorio público) y la dirección exacta de esa fuente. "
@@ -79,7 +93,8 @@ async def run(tenant: dict, limit: int | None = None) -> dict:
     if room == 0:
         return {"found": 0, "ready": 0, "rejected": 0, "reason": "Se alcanzó el tope diario del buscador."}
     n = min(n, room)
-    brief = _brief(tenant, cfg, n, known)
+    niche = _next_niche(tenant, slug)
+    brief = _brief(tenant, cfg, n, known, niche)
     eng = searchengines.resolve(tenant)
     if eng["engine"] == "claude":
         report = await llm.web_search(tenant, "Eres un investigador comercial riguroso. Solo reportas lo que verificaste en una página pública y siempre citas su dirección. Respondes en español.",

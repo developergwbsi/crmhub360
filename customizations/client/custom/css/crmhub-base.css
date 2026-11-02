@@ -1646,3 +1646,7 @@ body:has(.list-kanban) #content, body:has(.ch-studio) #content { padding-bottom:
 .ch-ac .radio label { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 400; color: inherit; }
 .ch-ac .radio label b { font-weight: 700; }
 .ch-pd table td:first-child, .ch-pd table th:first-child { width: 55%; }
+
+.ch-nichos-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; } .ch-nicho { display: inline-flex; gap: 6px; align-items: center; background: #eef2ff; color: #3730a3; border-radius: 999px; padding: 3px 12px; font-size: 13px; }
+.ch-nicho.off { background: #fef3c7; color: #92400e; } .ch-nicho a { cursor: pointer; text-decoration: none; font-weight: 700; } .ch-nicho-add { display: flex; gap: 8px; margin-top: 6px; } .ch-nicho-add input { flex: 1; }
+.ch-nicho-sug { cursor: pointer; display: inline-block; margin: 2px 6px 2px 0; font-size: 12.5px; }

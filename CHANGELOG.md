@@ -4,6 +4,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- **Nichos de mercado a elección de la empresa** (*Prospección → Cliente ideal*): los nichos son fichas que se agregan y se quitan (con sugeridos de un clic); el buscador trabaja los nichos por turnos, yendo cada vez al que menos prospectos ha traído en los últimos 14 días, y los nichos puestos en pausa por falta de respuestas se pueden reanudar desde la misma ficha.
+
+### Corregido
+- Guardar el cliente ideal ya no borra los nichos que el sistema había puesto en pausa.
+
 ## [1.21.0] - 2026-11-02
 
 ### Añadido

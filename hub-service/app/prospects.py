@@ -35,7 +35,7 @@ def ensure_schema() -> None:
 # ---------------- configuración del ICP
 def icp(tenant: dict) -> dict:
     raw = ((tenant.get("settings") or {}).get("prospecting") or {})
-    return {**DEFAULT_ICP, **{k: v for k, v in raw.items() if k in DEFAULT_ICP}}
+    return {**DEFAULT_ICP, **{k: v for k, v in raw.items() if k in DEFAULT_ICP}, "paused_niches": list(raw.get("paused_niches") or [])}
 
 
 def clean_icp(new: dict) -> dict:
@@ -49,7 +49,7 @@ def clean_icp(new: dict) -> dict:
 def save_icp(slug: str, new: dict) -> dict:
     clean = clean_icp(new)
     with db.pool.connection() as c:
-        c.execute("UPDATE tenants SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), '{prospecting}', %s::jsonb, true) WHERE slug=%s", (json.dumps(clean), slug))
+        c.execute("UPDATE tenants SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), '{prospecting}', COALESCE(settings->'prospecting','{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps(clean), slug))   # se mezcla: no borra los nichos en pausa
     return clean
 
 
