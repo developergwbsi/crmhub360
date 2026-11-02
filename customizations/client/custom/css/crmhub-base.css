@@ -1645,3 +1645,4 @@ body:has(.list-kanban) #content, body:has(.ch-studio) #content { padding-bottom:
 .ch-pr-src[open] { max-height: 38vh; overflow: auto; } .ch-pr-src .ch-pr-tbl { margin-top: 6px; }
 .ch-ac .radio label { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 400; color: inherit; }
 .ch-ac .radio label b { font-weight: 700; }
+.ch-pd table td:first-child, .ch-pd table th:first-child { width: 55%; }
