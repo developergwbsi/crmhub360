@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.24.0] - 2026-11-02
+
 ### Añadido
 - **Respuestas automáticas de respaldo cuando nadie puede atender:** los mensajes predefinidos de WhatsApp ahora pueden activarse como respaldo —fuera del horario de los asesores y sin comercial virtual en línea— aunque la línea la atiendan personas. Cada opción del menú y cada palabra clave puede, además de responder, **avisar a una persona del equipo** (nota en el lead y notificación a su asesor) o **crear una tarea de llamada**. El editor trae ideas listas para agregar con un clic: horarios y ubicación, medios de pago, hablar con una persona, que me llamen, estado de mi pedido y precios.
 
