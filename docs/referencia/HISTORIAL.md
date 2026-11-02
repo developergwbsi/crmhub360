@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.23.2)
+## Sin publicar (después de v1.23.3)
 
+- `be4898e` 2026-11-02 — Versión 1.23.4
+- `26de3c0` 2026-11-02 — Administración en tarjetas y encabezado de perfil en la ficha de usuario y Preferencias
+
+## v1.23.3
+
+- `a46182c` 2026-11-02 — Versión 1.23.3
 - `b5c9360` 2026-11-02 — Versión 1.23.3
 - `7739b2c` 2026-11-02 — Indicadores en Procesos, Copias, Pipeline, Organigrama y Grabaciones; panel de notificaciones y pantallas del sistema renovados
 
