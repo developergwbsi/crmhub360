@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.20.1] - 2026-11-02
+
 ### Corregido
 - **El PDF que se adjunta a los correos ya trae toda la información de la presentación.** Antes era un resumen de 2 páginas con menos contenido que el enlace; ahora se genera a partir de la misma presentación (Crm Hub 360, Gestor360 y Core360), con todas sus secciones e ilustraciones.
 
