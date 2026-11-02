@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.24.1)
+## Sin publicar (después de v1.24.2)
 
+- `df48b96` 2026-11-02 — Versión 1.24.3
+- `82424e5` 2026-11-02 — Parte de arriba fija (título, indicadores y pestañas) en las pantallas propias
+
+## v1.24.2
+
+- `288730e` 2026-11-02 — Versión 1.24.2
 - `66a6bc6` 2026-11-02 — Versión 1.24.2
 - `32bccb7` 2026-11-02 — Respuestas automáticas: ruta nueva en la copia del manual y en el CHANGELOG
 - `eee0e71` 2026-11-02 — Respuestas automáticas: botón visible y tarjeta en Integraciones; manual con la ruta nueva
