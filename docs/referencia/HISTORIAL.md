@@ -2,8 +2,15 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.21.0)
+## Sin publicar (después de v1.22.0)
 
+- `ec70df8` 2026-11-02 — Versión 1.22.1
+- `7cff278` 2026-11-02 — Saldo y recargas: diseño profesional
+- `5f376e5` 2026-11-02 — Saldo y recargas: las empresas de uso interno también ven los paquetes para probar el pago
+
+## v1.22.0
+
+- `f35d5e1` 2026-11-02 — Versión 1.22.0
 - `6327e67` 2026-11-02 — Versión 1.22.0
 - `90181bb` 2026-11-02 — Créditos: aviso de saldo bajo
 - `886a27d` 2026-11-02 — Créditos y recargas: billetera prepago, cobro por uso, Wompi, Centro de control y Saldo y recargas
