@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Publica la base de producción con la versión actual y actualiza prod, gestor-360 y dev (y reaplica la interfaz de prod y gestor-360).
+# Uso: bin/publicar-release "nota del release"
+set -euo pipefail
+cd "$(dirname "$0")/.."
+./bin/crmhub release:publish --note "${1:-Versión $(cat VERSION)}"
+for t in prod gestor-360 dev; do ./bin/crmhub tenant:upgrade "$t" --release current; done
+./bin/crmhub tenant:ui prod
+./bin/crmhub tenant:ui gestor-360
+echo "✓ Release publicado y empresas actualizadas."
