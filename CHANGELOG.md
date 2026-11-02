@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.23.3] - 2026-11-02
+
 ### Cambiado
 - **Procesos de leads, Copias y limpieza de leads, Estados del pipeline, Organigrama y Grabaciones** con franja de indicadores en el diseño de la plataforma (procesos y ejecuciones con error; leads, copias y espacio; estados abiertos, cerrados y ocultos; equipos, personas y gente sin equipo; grabaciones y espacio usado).
 - **Panel de notificaciones** renovado: encabezado con degradado, tarjeta redondeada con sombra, filas con más aire y resaltado al pasar el cursor.
