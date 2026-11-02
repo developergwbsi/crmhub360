@@ -852,7 +852,7 @@ Cuando un cliente escribe por WhatsApp y **nadie puede responder** (tus asesores
 
 Cómo configurarlo
 
-1. Entra a **Integraciones → Canales de mensajería → WhatsApp** y, en tu línea, pulsa **cambiar** junto a «Cuando un cliente escribe responde», o **Agregar / Editar**, y abre **Escribir los mensajes predefinidos**.
+1. Entra a **Integraciones → Canales de mensajería → WhatsApp** y pulsa el botón **Respuestas automáticas** (al lado de «Agregar proveedor de WhatsApp»). También sirve la tarjeta **Respuestas automáticas** que aparece arriba en Integraciones: te lleva directo y muestra si están activas.
 2. Activa **Mensajes predefinidos activos** y marca **Usarlos también como respaldo**: así solo se envían cuando nadie puede atender, aunque la línea la atiendan personas.
 3. Define el **horario de tus asesores** en «Fuera de horario» (días y horas). Fuera de ese horario, y si ningún comercial virtual está encendido en modo automático, se activan las respuestas.
 4. Escribe tus mensajes: **saludo**, **aviso de fuera de horario**, un **menú de opciones** (el cliente responde con el número) y **palabras clave** (por ejemplo «precio», «pedido»). Hay **ideas listas** para agregar con un clic: horarios y ubicación, medios de pago, hablar con una persona, que me llamen, estado de mi pedido y precios.
@@ -881,7 +881,7 @@ Así los dejó configurados DigitalAlliance Hub para su propio WhatsApp (puedes 
 | **Palabras «demo», «demostración», «agendar»…** | Confirma que una persona los contacta para la demostración. | Crear tarea de llamada |
 | **Palabras «soporte», «ayuda», «falla»…** | Pide que cuenten qué ocurre y avisa a una persona. | Avisar a una persona |
 
-**Dónde está en el sistema:** **Integraciones → Canales de mensajería → WhatsApp → «Escribir los mensajes predefinidos»**. Con el respaldo activo, estos mensajes solo salen cuando nadie puede atender; mientras el comercial virtual esté encendido en modo automático, es él quien responde.
+**Dónde está en el sistema:** **Integraciones → Canales de mensajería → WhatsApp → botón «Respuestas automáticas»** (o la tarjeta «Respuestas automáticas» de arriba, que muestra si están activas). Con el respaldo activo, estos mensajes solo salen cuando nadie puede atender; mientras el comercial virtual esté encendido en modo automático, es él quien responde.
 
 Reglas de cuidado: no se repite el saludo en las horas que definas, se envían máximo 3 respuestas por hora a cada cliente, no contesta a quien pidió la baja ni a quien ya atiende un comercial virtual, y lo que no encaja lo atiende una persona. Cuando el comercial virtual está en línea, él responde y estos mensajes no se envían.
 
