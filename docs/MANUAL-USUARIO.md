@@ -37,6 +37,8 @@
 - [5k. Grabaciones (pantalla y videollamadas)](#5k-grabaciones-pantalla-y-videollamadas)
 - [5l. Prospección (comerciales virtuales que salen a vender)](#5l-prospección-comerciales-virtuales-que-salen-a-vender)
 - [9e. Procesos de leads, copias de leads y lectura de documentos](#9e-procesos-de-leads-copias-de-leads-y-lectura-de-documentos)
+- [9f. Créditos, costos y recargas](#9f-créditos-costos-y-recargas)
+- [9g. Respuestas automáticas cuando nadie puede atender](#9g-respuestas-automáticas-cuando-nadie-puede-atender)
 - [10. Preguntas frecuentes](#10-preguntas-frecuentes)
 
 ## 1. Ingreso y navegación
@@ -604,7 +606,7 @@ Probar, resultados y motor de IA
 
 - **Probar**: simulas a un cliente y ves cómo respondería, sin enviar nada.
 - **Resultados y trazabilidad**: leads atendidos, mensajes, tiempo de primera respuesta, resultados por comercial y todo lo que hizo con su porqué.
-- **Motor de IA**: ahora se configura en **Integraciones → Motor de IA y buscador**. Eliges entre **créditos de DigitalAlliance Hub** (recomendado; cada consulta descuenta créditos, ver 9f) o **el tuyo** (tu cuenta de Claude, OpenAI u otro compatible, que no descuenta créditos).
+- **Motor de IA**: ahora se configura en **Integraciones → Motor de IA y buscador**. Eliges entre **créditos de DigitalAlliance Hub** (recomendado: sin cuentas ni claves; cada consulta descuenta créditos, ver 9f) o **el tuyo** (tu cuenta de Claude, OpenAI u otro compatible, que no descuenta créditos). Aquí queda un botón que te lleva allí.
 
 En el lead
 
@@ -811,6 +813,61 @@ Copias de leads
 Menú **Copias de leads**: **Crear copia** guarda todos los leads con sus notas, tareas, llamadas y reuniones; puedes **descargarla** (archivo .json) o **restaurarla** (recupera lo que falte sin tocar los leads que ya existen). **Limpiar todos los leads** los quita para empezar de nuevo: antes crea una copia automática y exige escribir **LIMPIAR**. No toca correos, cuentas, contactos ni oportunidades.
 
 
+## 9f. Créditos, costos y recargas
+
+*Visible para: Gerente*
+
+Crm Hub 360 funciona con **créditos prepagados**, como una billetera. Con ellos pagas lo que usas de **DigitalAlliance Hub**: el motor de IA de tus agentes, el buscador de prospectos y, si tu empresa lo tiene así, el correo, los SMS, WhatsApp y las llamadas. Lo que corre con **tus propios proveedores** (tu motor de IA, tu buscador, tu correo, tu WhatsApp) **no descuenta créditos**.
+
+Dónde ver tu saldo
+
+**Integraciones → Saldo y recargas** (solo administradores). Arriba verás tu **saldo** con su equivalente en pesos y un estado: **Al día**, **Saldo bajo** o **Sin créditos**. También los créditos usados este mes, tu **obsequio mensual** y la última recarga. Cada movimiento queda en una lista que puedes filtrar por entradas y consumo.
+
+Cuánto cuesta cada cosa
+
+La misma pantalla muestra una tarjeta por servicio con su costo en créditos y en pesos: la IA se cobra por cada 1.000 tokens (lo que lee y lo que escribe el motor), la búsqueda por consulta, el correo por destinatario, el SMS por segmento, el WhatsApp por mensaje saliente y las llamadas por minuto. **Lo que entra** (por ejemplo un WhatsApp que te escribe un cliente) no se cobra.
+
+Cómo recargar
+
+1. Entra a **Integraciones → Saldo y recargas** y elige un paquete (los más grandes traen un precio menor por crédito).
+2. Pulsa **Recargar**: se abre la página de pago segura de **Wompi** (tarjeta, PSE u otros medios).
+3. Cuando el pago se aprueba, tus créditos aparecen en tu saldo en unos segundos. Cada pago se acredita una sola vez.
+
+Si los pagos en línea aún no están activos para tu empresa, la pantalla te lo dice: pide la recarga a tu proveedor y te la acreditamos a mano.
+
+Si te quedas sin créditos
+
+Lo que usa los servicios de la plataforma **se detiene con un aviso claro**: el comercial virtual y el buscador no trabajan, y los canales cobrados no envían. Recarga y siguen solos. Lo que corre con tus proveedores propios sigue funcionando. Para no frenarte, el aviso de **saldo bajo** aparece antes de llegar a cero.
+
+Comerciales virtuales adicionales
+
+Tu licencia incluye una cantidad de comerciales virtuales. Puedes crear **todos los que necesites**: cada comercial adicional tiene un costo que se suma a tu factura, y el sistema te lo avisa antes de crearlo.
+
+
+## 9g. Respuestas automáticas cuando nadie puede atender
+
+*Visible para: Gerente*
+
+Cuando un cliente escribe por WhatsApp y **nadie puede responder** (tus asesores están fuera de horario y no hay un comercial virtual en línea), el sistema puede contestar solo con un **chatbot muy corto**, sin IA: saluda, avisa el horario y entrega la información que el cliente suele necesitar con urgencia.
+
+Cómo configurarlo
+
+1. Entra a **Integraciones → Canales de mensajería → WhatsApp** y, en tu línea, pulsa **cambiar** junto a «Cuando un cliente escribe responde», o **Agregar / Editar**, y abre **Escribir los mensajes predefinidos**.
+2. Activa **Mensajes predefinidos activos** y marca **Usarlos también como respaldo**: así solo se envían cuando nadie puede atender, aunque la línea la atiendan personas.
+3. Define el **horario de tus asesores** en «Fuera de horario» (días y horas). Fuera de ese horario, y si ningún comercial virtual está encendido en modo automático, se activan las respuestas.
+4. Escribe tus mensajes: **saludo**, **aviso de fuera de horario**, un **menú de opciones** (el cliente responde con el número) y **palabras clave** (por ejemplo «precio», «pedido»). Hay **ideas listas** para agregar con un clic: horarios y ubicación, medios de pago, hablar con una persona, que me llamen, estado de mi pedido y precios.
+
+Acciones
+
+Cada opción o palabra clave puede, además de responder, hacer una **acción**:
+
+- **Solo responder**: envía el mensaje con la información.
+- **Avisar a una persona del equipo**: deja una nota en el lead y le llega una notificación a su asesor para que escriba apenas pueda.
+- **Crear una tarea de llamada**: crea una tarea de prioridad alta para que lo llamen, asignada a su asesor.
+
+Reglas de cuidado: no se repite el saludo en las horas que definas, se envían máximo 3 respuestas por hora a cada cliente, no contesta a quien pidió la baja ni a quien ya atiende un comercial virtual, y lo que no encaja lo atiende una persona. Cuando el comercial virtual está en línea, él responde y estos mensajes no se envían.
+
+
 ## 10. Preguntas frecuentes
 
 *Visible para: Comercial, Director, Gerente*
@@ -831,23 +888,3 @@ Las funciones de IA y la captación automática se pausan. Contacta al administr
 
 Menú de usuario → Preferencias → Cambiar contraseña.
 
-## 9f. Créditos, costos y recargas
-
-Crm Hub 360 funciona con **créditos prepagados**, como una billetera. Con ellos pagas lo que usas de DigitalAlliance Hub: el motor de IA de tus agentes, el buscador de prospectos y, si tu empresa lo tiene así, el correo, los SMS, WhatsApp y las llamadas. Lo que corre con **tus propios proveedores** no descuenta créditos.
-
-- **Dónde ver tu saldo:** *Integraciones → Saldo y recargas* (solo administradores): saldo con su equivalente en pesos y un estado (Al día, Saldo bajo o Sin créditos), créditos usados este mes, obsequio mensual, última recarga y la lista de movimientos (filtro de entradas y consumo).
-- **Cuánto cuesta cada cosa:** la IA se cobra por cada 1.000 tokens (lo que lee y lo que escribe), la búsqueda por consulta, el correo por destinatario, el SMS por segmento, el WhatsApp por mensaje saliente y las llamadas por minuto. Lo que entra no se cobra.
-- **Cómo recargar:** elige un paquete (los más grandes traen menor precio por crédito) y pulsa *Recargar*; se abre el pago seguro de Wompi. Al aprobarse, los créditos aparecen en unos segundos y cada pago se acredita una sola vez. Si los pagos en línea no están activos, pide la recarga a tu proveedor.
-- **Si te quedas sin créditos:** lo que usa los servicios de la plataforma se detiene con un aviso claro (el comercial virtual, el buscador y los canales cobrados). Recarga y siguen solos; lo que corre con proveedores propios sigue funcionando.
-- **Comerciales virtuales adicionales:** puedes crear todos los que necesites; cada adicional tiene un costo que se suma a tu factura y el sistema te avisa antes de crearlo.
-
-## 9g. Respuestas automáticas cuando nadie puede atender
-
-Cuando un cliente escribe por WhatsApp y nadie puede responder (tus asesores están fuera de horario y no hay un comercial virtual en línea), el sistema puede contestar solo con un chatbot muy corto, sin IA: saluda, avisa el horario y entrega la información que el cliente suele necesitar con urgencia.
-
-1. *Integraciones → Canales de mensajería → WhatsApp* → tu línea → **Escribir los mensajes predefinidos**.
-2. Activa **Mensajes predefinidos activos** y marca **Usarlos también como respaldo** (solo se envían cuando nadie puede atender, aunque la línea la atiendan personas).
-3. Define el **horario de tus asesores** en «Fuera de horario»: fuera de él, y sin un comercial virtual encendido en modo automático, se activan las respuestas.
-4. Escribe saludo, aviso de fuera de horario, un menú de opciones y palabras clave; hay ideas listas con un clic (horarios y ubicación, medios de pago, hablar con una persona, que me llamen, estado de mi pedido y precios).
-
-Cada opción o palabra clave puede además hacer una **acción**: *solo responder*, *avisar a una persona del equipo* (nota en el lead y notificación a su asesor) o *crear una tarea de llamada* (prioridad alta, asignada a su asesor). No se repite el saludo en las horas que definas, se envían máximo 3 respuestas por hora a cada cliente y no contesta a quien pidió la baja ni a quien ya atiende un comercial virtual.
