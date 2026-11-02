@@ -4,6 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Corregido
+- El cuadro «¿Quién trae mejores prospectos?» de Prospección ocupa todo el ancho y se despliega con un clic, para no quitarle espacio a la lista.
+
 ## [1.20.2] - 2026-11-02
 
 ### Añadido
