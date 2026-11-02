@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Respaldo, versión, despliegue de los contenedores, publicación del release y actualización de las empresas, en un solo paso.
+# Uso: bin/lanzar X.Y.Z "nota del release"
+set -euo pipefail
+cd "$(dirname "$0")/.."
+V="${1:?Uso: bin/lanzar X.Y.Z \"nota\"}"
+./bin/backup
+bin/desplegar-version "$V"
+bin/publicar-release "${2:-Versión $V}"
