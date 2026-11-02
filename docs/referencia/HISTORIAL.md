@@ -2,8 +2,14 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.23.1)
+## Sin publicar (después de v1.23.2)
 
+- `b5c9360` 2026-11-02 — Versión 1.23.3
+- `7739b2c` 2026-11-02 — Indicadores en Procesos, Copias, Pipeline, Organigrama y Grabaciones; panel de notificaciones y pantallas del sistema renovados
+
+## v1.23.2
+
+- `1678e7f` 2026-11-02 — Versión 1.23.2
 - `c0220c4` 2026-11-02 — Versión 1.23.2
 - `3f1ebab` 2026-11-02 — Usuarios, Equipos, Campañas y demás pantallas con indicadores; corrige el botón montado en Mensajes masivos
 
