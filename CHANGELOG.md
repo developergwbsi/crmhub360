@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.22.1] - 2026-11-02
+
 ### Cambiado
 - **Saldo y recargas con un diseño renovado:** tarjeta de saldo destacada (cambia de color si el saldo está bajo o en cero) con su equivalente en pesos, usados del mes, obsequio mensual y última recarga; paquetes de recarga con el precio por crédito, el ahorro y el más elegido; lo que cuesta cada servicio en créditos y en pesos; y movimientos con filtros de entradas y consumo. Las empresas de uso interno también ven los paquetes para poder probar el pago.
 
