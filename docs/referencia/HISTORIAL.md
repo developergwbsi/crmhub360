@@ -2,8 +2,16 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.22.1)
+## Sin publicar (después de v1.23.0)
 
+- `6366dbc` 2026-11-02 — Versión 1.23.1
+- `8d72cd8` 2026-11-02 — bin/lanzar: respaldo, versión, despliegue y release en un solo paso
+- `9049e31` 2026-11-02 — Avatares de usuario con degradado, iniciales en blanco y aro
+- `d4d9352` 2026-11-02 — Diseño unificado en todas las pantallas propias; indicadores en Asignación de leads
+
+## v1.23.0
+
+- `3ab32ab` 2026-11-02 — Versión 1.23.0
 - `eace789` 2026-11-02 — Versión 1.23.0
 - `80e83ae` 2026-11-02 — Diseño unificado de la plataforma: Comercial virtual, Prospección e Integraciones
 
