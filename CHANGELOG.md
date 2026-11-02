@@ -5,6 +5,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Cambiado
+- **Avatares de usuario renovados:** quien no ha subido su foto ahora tiene un avatar con degradado profundo (nueve combinaciones, siempre la misma para la misma persona), brillo suave e iniciales en blanco, en lugar del círculo plano pastel con letras. Todos los avatares llevan un aro limpio con sombra y el del menú superior un anillo de color. La foto subida por el usuario se sigue mostrando igual.
+
+### Cambiado
 - **El diseño unificado llega a todas las pantallas propias**: Asignación de leads, Estados del pipeline, Organigrama, Procesos de leads, Banco de conocimiento, Grabaciones, Mis plantillas, Formularios internos, Consultas web, Reportes y tableros, Copias de leads, Mensajes masivos y Mensajes. Títulos, tarjetas y paneles redondeados con sombra suave, pestañas segmentadas, tarjetas de indicadores, botones y tablas con el mismo aspecto.
 - **Asignación de leads** estrena su franja de indicadores (habilitados para recibir leads, método de reparto, leads abiertos y campañas activas).
 
