@@ -1772,3 +1772,34 @@ body .page-header h3.header-title, .header-title { font-weight: 800; letter-spac
 .tabs.middle-tabs, .tabs.btn-group { display: flex; flex-wrap: wrap; gap: 4px; padding: 5px; background: var(--ch-soft); border: 1px solid var(--ch-line); border-radius: 16px; margin-bottom: 16px; }
 .tabs.middle-tabs > .btn, .tabs.btn-group > .btn { border: 0 !important; border-radius: 12px !important; padding: 8px 16px; font-weight: 600; color: var(--ch-muted); background: transparent; box-shadow: none; }
 .tabs.middle-tabs > .btn.active, .tabs.btn-group > .btn.active { background: var(--ch-surface) !important; color: var(--ch-primary) !important; box-shadow: 0 1px 6px rgba(15, 23, 42, .16); }
+
+/* ===== Encabezado de perfil (ficha de usuario y Preferencias) ===== */
+.ch-uh { display: flex; flex-wrap: wrap; gap: 22px; align-items: center; justify-content: space-between; border-radius: 24px; padding: 26px 30px; margin: 4px 0 18px; color: #fff; background: linear-gradient(135deg, #312e81 0%, #4f46e5 55%, #0891b2 100%); box-shadow: 0 14px 36px -16px rgba(79, 70, 229, .6); position: relative; overflow: hidden; }
+.ch-uh::after { content: ""; position: absolute; right: -70px; top: -90px; width: 300px; height: 300px; border-radius: 50%; background: rgba(255, 255, 255, .08); pointer-events: none; }
+.ch-uh-main { display: flex; gap: 22px; align-items: center; min-width: 0; z-index: 1; } .ch-uh-av { width: 92px; height: 92px; border-radius: 50% !important; box-shadow: 0 0 0 4px rgba(255, 255, 255, .85), 0 10px 26px -8px rgba(0, 0, 0, .5) !important; background: #fff; flex: none; object-fit: cover; }
+.ch-uh-t h2 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.02em; color: #fff; } .ch-uh-t p { margin: 2px 0 10px; opacity: .88; font-size: 14.5px; }
+.ch-uh-chips { display: flex; flex-wrap: wrap; gap: 6px; } .ch-uh-chip { font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 12px; border-radius: 999px; background: rgba(255, 255, 255, .2); border: 1px solid rgba(255, 255, 255, .35); } .ch-uh-chip.ok { background: rgba(34, 197, 94, .35); border-color: rgba(134, 239, 172, .7); } .ch-uh-chip.off { background: rgba(248, 113, 113, .35); }
+.ch-uh-facts { display: grid; grid-template-columns: repeat(2, minmax(150px, 1fr)); gap: 12px 28px; z-index: 1; } .ch-uh-facts span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; opacity: .8; font-weight: 700; } .ch-uh-facts b { font-size: 14px; font-weight: 600; word-break: break-word; }
+@media (max-width: 800px) { .ch-uh-facts { grid-template-columns: 1fr; } .ch-uh-main { flex-direction: column; align-items: flex-start; } }
+
+/* ===== Fichas a todo el ancho ===== */
+.record-grid { display: flex; gap: 16px; align-items: flex-start; } .record-grid > .left { flex: 1 1 auto; width: auto !important; float: none !important; min-width: 0; } .record-grid > .side { flex: 0 0 340px; width: 340px !important; float: none !important; }
+.record-grid > .side:empty { display: none; }
+.record .panel, .record .middle > .panel { border-radius: 20px; }
+.record .panel-heading, .record .panel-title { font-weight: 700; }
+.record .cell label.control-label, .record .field-label { font-size: 11.5px; letter-spacing: .05em; }
+
+/* ===== Administración: secciones en tarjetas, a todo el ancho ===== */
+.admin-content > .row > .col-md-7 { width: 100%; float: none; } .admin-content > .row > .admin-right-column:has(.notifications-panel-container:empty), .admin-content > .row > .admin-right-column:empty { display: none; }
+.admin-content .admin-search-container { margin-bottom: 18px; } .admin-content .admin-search-container input { height: 48px; border-radius: 16px; font-size: 15px; padding-left: 18px; }
+.admin-tables-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 18px; align-items: start; }
+.admin-content-section { background: var(--ch-surface); border: 1px solid var(--ch-line); border-radius: 22px; box-shadow: var(--ch-shadow); padding: 18px 22px 10px; margin: 0 !important; overflow: hidden; }
+.admin-content-section > h4 { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font-size: 17px; font-weight: 800; letter-spacing: -.01em; } .admin-content-section > h4::before { content: ""; width: 6px; height: 22px; border-radius: 4px; background: linear-gradient(#4f46e5, #0891b2); }
+.admin-content-section .table-admin-panel { margin: 0; background: transparent; box-shadow: none; border: 0; } .admin-content-section .table-admin-panel td { border-top: 1px solid var(--ch-line) !important; padding: 11px 6px; vertical-align: middle; }
+.admin-content-section .table-admin-panel tr:first-child td { border-top: 0 !important; } .admin-content-section .table-admin-panel tr:hover td { background: var(--ch-tint); }
+.admin-content-section .table-admin-panel td:first-child { width: 42%; font-weight: 600; } .admin-content-section .table-admin-panel td:first-child a { color: var(--ch-ink); font-weight: 700; } .admin-content-section .table-admin-panel td:last-child { color: var(--ch-muted); font-size: 13px; }
+.admin-content-section .table-admin-panel td:first-child .fas, .admin-content-section .table-admin-panel td:first-child .far, .admin-content-section .table-admin-panel td:first-child i { color: var(--ch-primary); }
+
+.record-grid:has(> .side:empty) { grid-template-columns: minmax(0, 1fr) !important; }
+.ch-uh-facts:empty { display: none; }
+.ch-wide-record .record-grid { grid-template-columns: minmax(0, 1fr) !important; } .ch-wide-record .record-grid > .side { display: none; }

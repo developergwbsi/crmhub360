@@ -1,0 +1,5 @@
+{
+    "views": {
+        "edit": "custom:views/preferences-edit"
+    }
+}

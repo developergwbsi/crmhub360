@@ -1,5 +1,7 @@
 {
     "views": {
-        "list": "custom:views/user-list"
+        "list": "custom:views/user-list",
+        "detail": "custom:views/user-detail",
+        "edit": "custom:views/user-edit"
     }
 }

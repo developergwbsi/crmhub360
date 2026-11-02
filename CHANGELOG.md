@@ -4,6 +4,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Cambiado
+- **Administración**: las secciones pasan de una columna angosta a tarjetas en dos columnas a todo el ancho (cada tarjeta con su título y sus opciones con ícono y descripción), con el buscador más grande.
+- **Ficha del usuario (ver y editar) y Preferencias** estrenan un encabezado de perfil con degradado: avatar grande, nombre, usuario, etiquetas de estado, tipo y roles, y los datos clave (equipos, correo, teléfono y último acceso). Preferencias ocupa todo el ancho.
+
 ## [1.23.3] - 2026-11-02
 
 ### Cambiado
