@@ -2,6 +2,12 @@
 {{#if loading}}<div class="ch-muted">Cargando…</div>{{/if}}
 {{#if error}}<div class="ch-warn">No se pudo cargar la configuración.</div>{{/if}}
 {{#unless loading}}{{#unless error}}
+<div class="ch-kpis">
+  <div class="ch-kpi"><span class="ic"><i class="fas fa-bars-progress"></i></span><div><span>Estados</span><b>{{stagesCount}}</b><small>columnas del Kanban</small></div></div>
+  <div class="ch-kpi ok"><span class="ic"><i class="fas fa-lock-open"></i></span><div><span>Abiertos</span><b>{{openCount}}</b><small>cuentan como lead abierto</small></div></div>
+  <div class="ch-kpi"><span class="ic"><i class="fas fa-flag-checkered"></i></span><div><span>Cerrados</span><b>{{closedCount}}</b></div></div>
+  <div class="ch-kpi"><span class="ic"><i class="fas fa-eye-slash"></i></span><div><span>Ocultos en el Kanban</span><b>{{hiddenCount}}</b></div></div>
+</div>
 <div class="ch-grid">
   <div class="panel panel-default">
     <div class="panel-heading"><h4 class="panel-title">Estados de los leads (columnas del Kanban)</h4></div>

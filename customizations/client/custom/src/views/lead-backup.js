@@ -33,7 +33,10 @@ define('custom:views/lead-backup', ['view', 'custom:ui'], function (Dep, ChUi) {
                 <button class="btn btn-default btn-sm" data-act="dl" data-id="${b.id}" ${dis}><span class="fas fa-download"></span> Descargar</button>
                 <button class="btn btn-default btn-sm" data-act="restore" data-id="${b.id}" ${dis}><span class="fas fa-clock-rotate-left"></span> Restaurar</button>
                 <a data-act="del" data-id="${b.id}" title="Eliminar copia"><span class="far fa-trash-can"></span></a></div>`).join('');
-            root.innerHTML = `<div class="ch-sim-head"><h3><span class="fas fa-box-archive"></span> Copias y limpieza de leads</h3>
+            const kp = (cls, ic, label, val, sub) => `<div class="ch-kpi ${cls}"><span class="ic"><i class="fas ${ic}"></i></span><div><span>${label}</span><b>${val}</b>${sub ? `<small>${sub}</small>` : ''}</div></div>`;
+            const its = d.items || [], tot = its.reduce((a, b) => a + (b.size || 0), 0), last = its[0];
+            const strip = `<div class="ch-kpis">${kp('', 'fa-address-book', 'Leads actuales', d.leads, 'con sus notas y tareas')}${kp(its.length ? 'ok' : 'warn', 'fa-box-archive', 'Copias guardadas', its.length, its.length ? 'puedes restaurarlas' : 'crea la primera')}${kp('', 'fa-clock-rotate-left', 'Última copia', last ? esc(fmt(last.createdAt).split(',')[0]) : '—', last ? esc(fmt(last.createdAt).split(',').slice(1).join(',').trim() + ' · ' + (REASON[last.reason] || last.reason)) : '')}${kp('', 'fa-hard-drive', 'Espacio de las copias', size(tot))}</div>`;
+            root.innerHTML = strip + `<div class="ch-sim-head"><h3><span class="fas fa-box-archive"></span> Copias y limpieza de leads</h3>
                 <p class="ch-muted">Guarda una copia de todos tus leads (con sus notas, tareas, llamadas y reuniones) y, si lo necesitas, déjalos en blanco para empezar de nuevo. Antes de limpiar, el sistema siempre crea una copia que puedes restaurar.</p></div>
                 <div class="ch-sim-card"><h4>Leads actuales: <b>${d.leads}</b></h4>
                 <div class="ch-mail-actions"><button class="btn btn-primary btn-sm" data-act="create" ${dis}><span class="fas fa-copy"></span> ${this.busy === 'create' ? 'Creando copia…' : 'Crear copia ahora'}</button>

@@ -27,7 +27,8 @@ define('custom:views/orgchart', ['view'], function (Dep) {
             const s = this.state;
             if (!s || s.error) { return {loading: !s, error: !!(s && s.error)}; }
             return {
-                loading: false, canManage: s.canManage,
+                loading: false, canManage: s.canManage, teamsCount: s.teams.length, managersCount: s.managers.length, unassignedCount: s.unassigned.length,
+                peopleCount: s.teams.reduce((a, t) => a + t.directors.length + t.members.length, 0) + s.managers.length,
                 managers: s.managers.map(decorate), unassigned: s.unassigned.map(decorate),
                 teams: s.teams.map(t => ({...t, directors: t.directors.map(decorate), members: t.members.map(decorate),
                     count: t.directors.length + t.members.length})),

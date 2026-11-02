@@ -26,7 +26,7 @@ define('custom:views/pipeline', ['view'], function (Dep) {
             const label = v => this.getLanguage().translateOption(v, 'status', 'Lead');
             const sel = cur => s.options.map(o => ({value: o, label: label(o), selected: o === cur}));
             return {
-                loading: false,
+                loading: false, stagesCount: s.options.length, closedCount: s.closed.length, openCount: s.options.length - s.closed.length, hiddenCount: s.ignored.length,
                 stages: s.options.map((o, i) => ({n: i + 1, label: label(o), tone: style[o] || 'default',
                     hidden: s.ignored.includes(o), closed: s.closed.includes(o)})),
                 optNew: sel(s.new), optReview: sel(s.review), optQualified: sel(s.qualified),

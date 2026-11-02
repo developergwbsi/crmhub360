@@ -2,6 +2,12 @@
 {{#if loading}}<div class="ch-muted">Cargando…</div>{{/if}}
 {{#if error}}<div class="ch-warn">No se pudo cargar el organigrama.</div>{{/if}}
 {{#unless loading}}{{#unless error}}
+<div class="ch-kpis">
+  <div class="ch-kpi"><span class="ic"><i class="fas fa-people-group"></i></span><div><span>Equipos</span><b>{{teamsCount}}</b></div></div>
+  <div class="ch-kpi"><span class="ic"><i class="fas fa-users"></i></span><div><span>Personas</span><b>{{peopleCount}}</b><small>directores y asesores</small></div></div>
+  <div class="ch-kpi {{#if unassignedCount}}warn{{else}}ok{{/if}}"><span class="ic"><i class="fas fa-user-slash"></i></span><div><span>Sin equipo</span><b>{{unassignedCount}}</b><small>{{#if unassignedCount}}no reciben leads por equipo{{else}}todos tienen equipo{{/if}}</small></div></div>
+  <div class="ch-kpi"><span class="ic"><i class="fas fa-user-tie"></i></span><div><span>Dirección</span><b>{{managersCount}}</b></div></div>
+</div>
 {{#if canManage}}
 <div class="ch-org-actions">
   <a class="btn btn-primary" href="#Team/create"><span class="fas fa-users"></span> Crear equipo</a>

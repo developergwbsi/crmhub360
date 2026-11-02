@@ -1745,3 +1745,30 @@ img.avatar { border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--
 .list-container .table > tbody > tr.list-row > td { padding-top: 13px; padding-bottom: 13px; } .list-container .table > tbody > tr.list-row:hover > td { background: var(--ch-tint); }
 .list-container .list-buttons-container { margin-bottom: 8px; }
 .ch-studio-kp { flex: none; margin: 0; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } .ch-studio-kp .ch-kpi { padding: 10px 14px; border-radius: 16px; } .ch-studio-kp .ch-kpi .ic { width: 36px; height: 36px; border-radius: 11px; font-size: 14px; } .ch-studio-kp .ch-kpi b { font-size: 21px; } .ch-studio-kp .ch-kpi span { font-size: 10.5px; }
+
+/* ===== Panel de notificaciones ===== */
+.notifications-panel-container .panel { border-radius: 20px; border: 1px solid var(--ch-line); box-shadow: 0 24px 60px -22px rgba(15, 23, 42, .5); overflow: hidden; background: var(--ch-surface); }
+#notifications-panel .panel-heading { background: linear-gradient(135deg, #312e81, #4f46e5 60%, #0891b2); color: #fff; padding: 14px 18px; border: 0; }
+#notifications-panel .panel-heading .text-solid { font-weight: 800 !important; font-size: 16px !important; letter-spacing: -.01em; }
+#notifications-panel .panel-heading a, #notifications-panel .panel-heading .text-solid { color: rgba(255, 255, 255, .92) !important; font-weight: 600; font-size: 12.5px; } #notifications-panel .panel-heading a:hover { color: #fff !important; text-decoration: underline; }
+#notifications-panel .panel-body { padding: 0; } #notifications-panel .list-group { margin: 0; }
+#notifications-panel .list-group-item { padding: 14px 18px; border: 0; border-bottom: 1px solid var(--ch-line); background: transparent; transition: background .12s; } #notifications-panel .list-group-item:hover { background: var(--ch-tint); }
+#notifications-panel .list-group-item:last-child { border-bottom: 0; } #notifications-panel .list-group-item.list-row .avatar, #notifications-panel .list-group-item img.avatar { box-shadow: 0 0 0 2px var(--ch-surface); }
+#notifications-panel .list-group-item .stream-head-text-container, #notifications-panel .list-group-item .cell { line-height: 1.45; }
+#notifications-panel .show-more { padding: 8px 14px; background: var(--ch-soft); } #notifications-panel .show-more .btn { border-radius: 12px; font-weight: 600; }
+
+/* ===== Administración, Preferencias y Acerca de ===== */
+body .page-header h3.header-title, .header-title { font-weight: 800; letter-spacing: -.02em; }
+.admin-content .panel { border: 1px solid var(--ch-line); box-shadow: var(--ch-shadow); overflow: hidden; background: var(--ch-surface); }
+.admin-content .panel-heading, .admin-content .panel-title { font-weight: 700; }
+.admin-content table.table > tbody > tr > td { padding-top: 12px; padding-bottom: 12px; } .admin-content table.table > tbody > tr:hover > td { background: var(--ch-tint); }
+.admin-content .admin-search-container input, .admin-content input.form-control[placeholder="Buscar"] { border-radius: 14px; height: 44px; box-shadow: var(--ch-shadow); }
+.record .detail-button-container, .record .button-container { margin-bottom: 14px; }
+.record .nav-tabs, .tabs.nav-tabs, ul.nav.nav-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 5px; background: var(--ch-soft); border: 1px solid var(--ch-line); border-radius: 16px; margin-bottom: 16px; }
+.record .nav-tabs > li, ul.nav.nav-tabs > li { float: none; margin: 0; } .record .nav-tabs > li > a, ul.nav.nav-tabs > li > a { border: 0 !important; border-radius: 12px !important; padding: 8px 16px; font-weight: 600; color: var(--ch-muted); background: transparent; margin: 0; }
+.record .nav-tabs > li.active > a, ul.nav.nav-tabs > li.active > a { background: var(--ch-surface) !important; color: var(--ch-primary) !important; box-shadow: 0 1px 6px rgba(15, 23, 42, .16); }
+.record .panel, .record .middle { border-radius: 20px; box-shadow: var(--ch-shadow); overflow: hidden; }
+
+.tabs.middle-tabs, .tabs.btn-group { display: flex; flex-wrap: wrap; gap: 4px; padding: 5px; background: var(--ch-soft); border: 1px solid var(--ch-line); border-radius: 16px; margin-bottom: 16px; }
+.tabs.middle-tabs > .btn, .tabs.btn-group > .btn { border: 0 !important; border-radius: 12px !important; padding: 8px 16px; font-weight: 600; color: var(--ch-muted); background: transparent; box-shadow: none; }
+.tabs.middle-tabs > .btn.active, .tabs.btn-group > .btn.active { background: var(--ch-surface) !important; color: var(--ch-primary) !important; box-shadow: 0 1px 6px rgba(15, 23, 42, .16); }
