@@ -2335,6 +2335,22 @@ class CrmHub
         return (object) $this->hubCall('PUT', '/v1/ai/own', ['kind' => (string) ($d->kind ?? ''), 'model' => (string) ($d->model ?? ''), 'base_url' => (string) ($d->base_url ?? ''), 'api_key' => (string) ($d->api_key ?? ''), 'workspace_id' => (string) ($d->workspace_id ?? '')], 20);
     }
 
+    /** POST /CrmHub/aiMode. Admin. {mode: platform|own}. Hub: POST /v1/ai/mode. */
+    public function postActionAiMode(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/ai/mode', ['mode' => (string) ($d->mode ?? '')], 20);
+    }
+
+    /** POST /CrmHub/searchConfigMode. Admin. {mode: platform|own}. Hub: POST /v1/search-config/mode. */
+    public function postActionSearchConfigMode(Request $request): \stdClass
+    {
+        $this->admin();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/search-config/mode', ['mode' => (string) ($d->mode ?? '')], 20);
+    }
+
     /** POST /CrmHub/aiTest. Admin. Hub: POST /v1/ai/test. */
     public function postActionAiTest(Request $request): \stdClass
     {

@@ -1460,5 +1460,21 @@
             "controller": "CrmHub",
             "action": "reportSend"
         }
+    },
+    {
+        "route": "/CrmHub/aiMode",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "aiMode"
+        }
+    },
+    {
+        "route": "/CrmHub/searchConfigMode",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "searchConfigMode"
+        }
     }
 ]

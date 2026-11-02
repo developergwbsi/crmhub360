@@ -89,7 +89,10 @@ def init(deps) -> None:
             if st.get("engine_paused"):
                 alerts.append("Pausada por el Centro de control.")
             rate = round(m.get("replied", 0) * 100 / m["contacted"], 1) if m.get("contacted") else None
-            items.append({"slug": t["slug"], "name": t["name"], "kind": t["kind"], "status": t["status"], "licensed": licensed, "agents": ags, "activeOutbound": len(active_out), "paused": bool(st.get("engine_paused")),
+            included = max(1, int((st.get("limits") or {}).get("agents") or 1))
+            if len(ags) > included:
+                alerts.append(f"{len(ags) - included} comercial(es) virtual(es) adicional(es) sobre los {included} incluidos: se suman a su factura.")
+            items.append({"slug": t["slug"], "name": t["name"], "kind": t["kind"], "status": t["status"], "licensed": licensed, "agents": ags, "included": included, "activeOutbound": len(active_out), "paused": bool(st.get("engine_paused")),
                           "paused_niches": ((st.get("prospecting") or {}).get("paused_niches") or []), "m": m, "rate": rate, "alerts": alerts})
             if t["status"] == "active":
                 for k in tot:

@@ -5,6 +5,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Cambiado
+- **Comercial virtual sin tope:** la empresa puede crear todos los comerciales virtuales que quiera. Si pasa de los incluidos en su licencia, se le avisa (en pantalla y con una confirmación) que cada adicional tiene un costo que se suma a su factura; el Centro de control muestra los adicionales a facturar de cada empresa.
+- **Motor de IA y buscador, a elección de la empresa:** cada empresa elige entre el de la plataforma (recomendado, listo para usar y se cobra en su factura) y el propio (su cuenta y su clave), sin tener que pedirlo al proveedor. Puede volver a la plataforma cuando quiera.
+
+### Corregido
+- Guardar el buscador propio de una empresa que nunca había configurado uno no guardaba nada.
+
+### Cambiado
 - **Integraciones → «Motor de IA y buscador»**: el motor de IA de la empresa (con su consumo del mes, la prueba y, si el proveedor lo habilita, el motor propio con su clave) pasa a Integraciones, junto al buscador web. La pestaña «Motor de IA» de Comercial virtual queda con un botón que lleva allí.
 
 ## [1.20.3] - 2026-11-02

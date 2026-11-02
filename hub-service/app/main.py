@@ -1568,10 +1568,9 @@ class DispatchReq(BaseModel):
 
 @app.post("/v1/agents")
 async def agents_create(req: AgentNewReq, tenant: dict = Depends(tenant_auth)):
-    """Crea un comercial virtual dentro del cupo de la licencia; arranca en manual y en prueba."""
+    """Crea un comercial virtual (los que pasen de los incluidos tienen un costo adicional en la factura); arranca en manual y en prueba."""
     lst = agent._raw_agents(tenant)
-    if len(lst) >= agent.slots(tenant):
-        raise HTTPException(403, f"Tu licencia incluye {agent.slots(tenant)} comercial(es) virtual(es). Para tener más, contacta con soporte de Crm Hub 360.")
+    # sin tope: los comerciales por encima de los incluidos en la licencia se suman a la factura de la empresa (se avisa en pantalla y en el Centro de control)
     src = next((a for a in agent.agents(tenant) if a["id"] == req.cloneFrom), None)
     cfg = json.loads(json.dumps(src["config"])) if src else agent.clean_config({})
     cfg["mode"], cfg["dry_run"] = "manual", True   # un comercial nuevo arranca en prueba y en manual hasta que lo entrenes y lo actives
@@ -1714,7 +1713,7 @@ def _ai_public(tenant: dict) -> dict:
     k = own.get("api_key") or ""
     return {"mode": ai.get("mode") or "global", "kinds": llm.KINDS, "usage": llm.usage(tenant["slug"]),
             "effective": {"label": eff["label"], "kind": eff["kind"], "model": eff["model"], "source": eff["source"]},
-            "own": {"kind": own.get("kind") or "anthropic", "model": own.get("model") or "", "base_url": own.get("base_url") or "", "workspace_id": own.get("workspace_id") or "", "secretSet": bool(k), "secretHint": ("…" + k[-4:]) if k else ""}}
+            "own": {"kind": own.get("kind") or "anthropic", "model": own.get("model") or "", "base_url": own.get("base_url") or "", "workspace_id": own.get("workspace_id") or "", "saved": bool(own.get("kind")), "secretSet": bool(k), "secretHint": ("…" + k[-4:]) if k else ""}}
 
 
 @app.get("/v1/ai/config")
@@ -1727,8 +1726,6 @@ async def ai_config(tenant: dict = Depends(tenant_auth)):
 async def ai_own_save(req: AiOwnReq, tenant: dict = Depends(tenant_auth)):
     """Guarda el motor de IA propio (solo si el tenant está en modo «own»); una clave vacía conserva la actual."""
     ai = (tenant.get("settings") or {}).get("ai") or {}
-    if (ai.get("mode") or "global") != "own":
-        raise HTTPException(403, "Tu empresa usa el motor de IA del sistema. Si quieres usar el tuyo, pídelo a tu proveedor.")
     if req.kind not in llm.KINDS:
         raise HTTPException(422, "Tipo de motor no válido.")
     url = req.base_url.strip()[:300]
@@ -1742,15 +1739,43 @@ async def ai_own_save(req: AiOwnReq, tenant: dict = Depends(tenant_auth)):
     own = {"kind": req.kind, "model": req.model.strip()[:80], "base_url": url, "api_key": req.api_key.strip()[:500] or old.get("api_key", ""), "workspace_id": _re.sub(r"[^\w\-]", "", req.workspace_id)[:80]}
     with db.pool.connection() as c:
         c.execute("UPDATE tenants SET settings = jsonb_set(settings, '{ai}', COALESCE(settings->'ai', '{}'::jsonb) || jsonb_build_object('own', %s::jsonb), true) WHERE slug = %s", (json.dumps(own), tenant["slug"]))
+    _set_mode(tenant, "ai", "own")
     llm._cache["at"] = 0
-    return {**_ai_public({**tenant, "settings": {**(tenant.get("settings") or {}), "ai": {**ai, "own": own}}})}
+    return _ai_public(db.get_tenant(tenant["slug"]))
+
+
+def _set_mode(tenant: dict, key: str, mode: str) -> None:
+    """Cambia entre «el de la plataforma» y «el propio» (ai o search). Al pasar al propio se recuerda el modo anterior (global o proveedor del Centro de control) para poder volver."""
+    cur = ((tenant.get("settings") or {}).get(key) or {})
+    now = cur.get("mode") or "global"
+    patch = {}
+    if mode == "own":
+        if now != "own":
+            patch = {"mode": "own", "platform_mode": now}
+    else:
+        if now == "own":
+            patch = {"mode": cur.get("platform_mode") or "global"}
+    if patch:
+        with db.pool.connection() as c:
+            c.execute("UPDATE tenants SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), %s, COALESCE(settings->%s,'{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", ("{" + key + "}", key, json.dumps(patch), tenant["slug"]))
+    llm._cache["at"] = 0
+
+
+@app.post("/v1/ai/mode")
+async def ai_mode(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    """La empresa elige: motor de IA de la plataforma (recomendado, se cobra en su factura) o el propio."""
+    mode = "own" if body.get("mode") == "own" else "platform"
+    if mode == "own" and not (((tenant.get("settings") or {}).get("ai") or {}).get("own") or {}).get("kind"):
+        raise HTTPException(422, "Primero guarda los datos de tu motor propio.")
+    _set_mode(tenant, "ai", mode)
+    return _ai_public(db.get_tenant(tenant["slug"]))
 
 
 @app.post("/v1/ai/test")
 async def ai_test(req: AiOwnReq | None = None, tenant: dict = Depends(tenant_auth)):
     """Prueba el motor que usa la empresa (o, si se envía un borrador del propio, ese)."""
     cfg = llm.resolve(tenant)
-    if req and req.kind and (((tenant.get("settings") or {}).get("ai") or {}).get("mode") == "own"):
+    if req and req.kind:
         old = (((tenant.get("settings") or {}).get("ai") or {}).get("own") or {})
         cfg = {"kind": req.kind, "model": req.model.strip(), "base_url": req.base_url.strip(), "api_key": req.api_key.strip() or old.get("api_key", ""), "workspace_id": req.workspace_id.strip(), "check_url": True}
     try:
@@ -2471,15 +2496,13 @@ def search_config_get(tenant: dict = Depends(tenant_auth)):
     st, mode = searchengines.settings_of(tenant), searchengines.mode_of(tenant)
     own = st.get("own") or {}
     res = searchengines.resolve(tenant)
-    return {"mode": "own" if mode == "own" else ("loaned" if mode.startswith("provider:") else "global"), "editable": mode == "own", "active": {"engine": res["engine"], "source": res["source"]},
+    return {"mode": "own" if mode == "own" else ("loaned" if mode.startswith("provider:") else "global"), "editable": True, "hasOwn": bool(own.get("engine")), "active": {"engine": res["engine"], "source": res["source"]},
             "own": {"engine": own.get("engine") or "", "cx": own.get("cx") or "", "hasKey": bool(own.get("api_key"))}, "engines": searchengines.ENGINES, "recommended": searchengines.RECOMMENDED}
 
 
 @app.put("/v1/search-config")
 async def search_config_save(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
     """Guarda el buscador propio de la empresa (motor, clave, cx). Solo si el Centro de control dejó el buscador en «Propio»."""
-    if searchengines.mode_of(tenant) != "own":
-        raise HTTPException(403, "El buscador lo provee el sistema. Pide al administrador del servicio que lo deje como «Propio» para configurar el tuyo.")
     eng = str(body.get("engine") or "")
     if eng not in searchengines.ENGINES:
         raise HTTPException(422, "Elige un motor de búsqueda de la lista.")
@@ -2492,7 +2515,18 @@ async def search_config_save(body: dict = Body(...), tenant: dict = Depends(tena
         raise HTTPException(422, "Google Programmable Search necesita el identificador del buscador (cx).")
     own = {"engine": eng, "api_key": key if eng != "claude" else "", "cx": cx if eng == "google" else ""}
     with db.pool.connection() as c:
-        c.execute("UPDATE tenants SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), '{search,own}', %s::jsonb, true) WHERE slug=%s", (json.dumps(own), tenant["slug"]))
+        c.execute("UPDATE tenants SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), '{search}', COALESCE(settings->'search','{}'::jsonb) || jsonb_build_object('own', %s::jsonb), true) WHERE slug=%s", (json.dumps(own), tenant["slug"]))
+    _set_mode(db.get_tenant(tenant["slug"]), "search", "own")
+    return search_config_get(db.get_tenant(tenant["slug"]))
+
+
+@app.post("/v1/search-config/mode")
+async def search_config_mode(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    """La empresa elige: buscador de la plataforma (recomendado, se cobra en su factura) o el propio."""
+    mode = "own" if body.get("mode") == "own" else "platform"
+    if mode == "own" and not (searchengines.settings_of(tenant).get("own") or {}).get("engine"):
+        raise HTTPException(422, "Primero guarda los datos de tu buscador propio.")
+    _set_mode(tenant, "search", mode)
     return search_config_get(db.get_tenant(tenant["slug"]))
 
 
