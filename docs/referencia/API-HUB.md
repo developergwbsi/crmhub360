@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **211** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **217** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -92,6 +92,8 @@ Total: **211** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | DELETE | `/v1/kb/notes/{note_id}` | `kb_note_delete` | Borra una nota del banco de conocimiento; 404 si no existe. |
 | POST | `/v1/kb/refresh` | `kb_refresh` | Regenera el banco de conocimiento con el modelo de IA del tenant. |
 | POST | `/v1/leads/qualify` | `leads_qualify` | Califica un lead con IA (servicio sugerido y puntaje) y registra el trabajo. |
+| GET | `/v1/leads/{lead_id}/products` | `lead_products_get` | — |
+| POST | `/v1/leads/{lead_id}/products` | `lead_products_mark` | Marca qué producto se ofreció o compró un cliente (status: offered, interested, won, lost). |
 | GET | `/v1/lines` | `lines_overview` | Líneas de mensajería del tenant por canal. |
 | POST | `/v1/lines` | `lines_save` | Crea o edita una línea de mensajería. |
 | GET | `/v1/lines/active` | `lines_active` | Líneas encendidas por canal (para elegir «enviar desde» al escribir un mensaje). |
@@ -123,6 +125,10 @@ Total: **211** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/processes` | `proc_list` | Procesos configurados, campos disponibles, máximo y catálogo. |
 | PUT | `/v1/processes` | `proc_save` | Valida y guarda los procesos del tenant (settings.processes). |
 | POST | `/v1/processes/test` | `proc_test` | Prueba una definición contra un lead real (o datos de ejemplo) sin guardar nada en el lead. |
+| GET | `/v1/products` | `products_list` | Catálogo de productos que ofrece la empresa (lo que siempre tiene presente el comercial virtual). |
+| POST | `/v1/products` | `products_save` | — |
+| POST | `/v1/products/seed` | `products_seed` | Carga los productos estándar de DigitalAlliance Hub (Crm Hub 360, Gestor360, Core360) que falten. |
+| DELETE | `/v1/products/{slug}` | `products_delete` | — |
 | GET | `/v1/proposals` | `proposals_list` | Material (presentaciones, propuestas, enlaces propios) que los agentes pueden enviar. |
 | POST | `/v1/proposals` | `proposals_create` | Agrega material propio de la empresa: un enlace (PDF, página, video) que los agentes enviarán. |
 | POST | `/v1/proposals/seed` | `proposals_seed` | Crea (o actualiza) las presentaciones estándar de los productos de la empresa. |

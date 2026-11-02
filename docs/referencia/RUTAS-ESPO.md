@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **184** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **188** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -128,6 +128,10 @@ Total: **184** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/processTest` | CrmHub.processTest | POST /CrmHub/processTest. Admin. Hub: POST /v1/processes/test. */ |
 | GET | `/CrmHub/processes` | CrmHub.processes | GET /CrmHub/processes. Admin. Hub: GET /v1/processes. */ |
 | POST | `/CrmHub/processesSave` | CrmHub.processesSave | POST /CrmHub/processesSave. Admin. Hub: PUT /v1/processes. */ |
+| POST | `/CrmHub/productDelete` | CrmHub.productDelete | POST /CrmHub/productDelete. Admin. {slug}. Hub: DELETE /v1/products/{slug}. */ |
+| POST | `/CrmHub/productSave` | CrmHub.productSave | POST /CrmHub/productSave. Admin. {slug?, name, summary, for_whom, benefits, avoid, main, active}. Hub: POST /v1/products. */ |
+| GET | `/CrmHub/products` | CrmHub.products | GET /CrmHub/products. Admin. Catálogo de productos que ofrece la empresa. Hub: GET /v1/products. */ |
+| POST | `/CrmHub/productsSeed` | CrmHub.productsSeed | POST /CrmHub/productsSeed. Admin. Carga los productos estándar de DigitalAlliance Hub. Hub: POST /v1/products/seed. */ |
 | POST | `/CrmHub/proposalActive` | CrmHub.proposalActive | POST /CrmHub/proposalActive. Admin. {slug, active}. Hub: PUT /v1/proposals/{slug}/active. */ |
 | POST | `/CrmHub/proposalDelete` | CrmHub.proposalDelete | POST /CrmHub/proposalDelete. Admin. {slug}. Hub: DELETE /v1/proposals/{slug}. */ |
 | POST | `/CrmHub/proposalSave` | CrmHub.proposalSave | POST /CrmHub/proposalSave. Admin. {slug?, title, product, kind, summary, link}. Crea material propio (sin slug) o edita (con slug). Hub: POST/PUT /v1/proposals. */ |

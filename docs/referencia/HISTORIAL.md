@@ -2,8 +2,16 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.20.3)
+## Sin publicar (después de v1.20.4)
 
+- `23f123c` 2026-11-02 — Versión 1.21.0
+- `19b8b0c` 2026-11-02 — Catálogo de productos de la empresa y rastro del producto de cada cliente
+- `232e638` 2026-11-02 — Motor de IA: texto de las opciones en minúsculas normales
+- `0ffec02` 2026-11-02 — Motor de IA: opciones con el mismo estilo que el buscador
+
+## v1.20.4
+
+- `181d0f2` 2026-11-02 — Versión 1.20.4
 - `ec75769` 2026-11-02 — Versión 1.20.4
 - `b4df796` 2026-11-02 — bin/publicar-release: publica el release y actualiza las empresas
 - `3293088` 2026-11-02 — Comercial virtual sin tope (con aviso de costo) y motor de IA/buscador propios a elección de la empresa
