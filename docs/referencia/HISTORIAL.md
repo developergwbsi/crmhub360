@@ -2,8 +2,18 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.20.4)
+## Sin publicar (después de v1.21.0)
 
+- `6327e67` 2026-11-02 — Versión 1.22.0
+- `90181bb` 2026-11-02 — Créditos: aviso de saldo bajo
+- `886a27d` 2026-11-02 — Créditos y recargas: billetera prepago, cobro por uso, Wompi, Centro de control y Saldo y recargas
+- `7143f20` 2026-11-02 — Documento del modelo de recargas: DigitalAlliance Hub como proveedor de todo
+- `e2505b8` 2026-11-02 — Nichos de mercado: agregar, quitar y trabajar por turnos
+- `14345db` 2026-11-02 — Catálogo de productos: columna del producto más ancha
+
+## v1.21.0
+
+- `149831b` 2026-11-02 — Versión 1.21.0
 - `23f123c` 2026-11-02 — Versión 1.21.0
 - `19b8b0c` 2026-11-02 — Catálogo de productos de la empresa y rastro del producto de cada cliente
 - `232e638` 2026-11-02 — Motor de IA: texto de las opciones en minúsculas normales
