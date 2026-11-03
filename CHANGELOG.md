@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.26.3] - 2026-11-03
+
+### Corregido
+- **Pestañas del escritorio (Panel gerencial / Mi día):** vuelven a quedar a la derecha, junto al menú de tres puntos, donde estaban.
+
 ## [1.26.2] - 2026-11-03
 
 ### Cambiado
