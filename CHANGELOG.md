@@ -6,6 +6,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [1.25.0] - 2026-11-03
 
+### Añadido
+- **Escalado de la prospección por niveles:** un solo control (6 niveles) ajusta a la vez las empresas que busca el buscador, los prospectos que pasan a Valeria y los correos en frío por día. En modo automático evalúa cada noche: sube un nivel con resultados sanos (rebotes y bajas bajo 2 %, días con envíos, respuestas, créditos) y baja si los rebotes llegan al 5 % o las bajas al 3 %. En modo manual solo recomienda. Siempre muestra la recomendación y lo que acarrea cada nivel; subir a mano por encima de lo recomendado pide confirmar. Tarjeta en *Comercial virtual → Agentes de prospección*, manual 9h.
+
 ## [1.24.4] - 2026-11-02
 
 ### Cambiado
