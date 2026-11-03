@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **194** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **197** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -137,6 +137,9 @@ Total: **194** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/proposalSave` | CrmHub.proposalSave | POST /CrmHub/proposalSave. Admin. {slug?, title, product, kind, summary, link}. Crea material propio (sin slug) o edita (con slug). Hub: POST/PUT /v1/proposals. */ |
 | GET | `/CrmHub/proposals` | CrmHub.proposals | GET /CrmHub/proposals. Admin. Biblioteca de propuestas y brochures que usan los agentes. Hub: GET /v1/proposals. */ |
 | POST | `/CrmHub/proposalsSeed` | CrmHub.proposalsSeed | POST /CrmHub/proposalsSeed. Admin. Crea o restaura las presentaciones estándar. Hub: POST /v1/proposals/seed. */ |
+| POST | `/CrmHub/prospectAdd` | CrmHub.prospectAdd | POST /CrmHub/prospectAdd. {changes{...}}. Agrega un prospecto a mano, con registro de quién lo hizo. Hub: POST /v1/prospects/add. */ |
+| POST | `/CrmHub/prospectEdit` | CrmHub.prospectEdit | POST /CrmHub/prospectEdit. {id, changes{name,company,title,email,phone,country,industry,segment,notes}}. Edita un prospecto y deja anotado quién lo cambió. Hub: PUT /v1/prospects/{id}. */ |
+| GET | `/CrmHub/prospectHistory` | CrmHub.prospectHistory | GET /CrmHub/prospectHistory?id=. Bitácora de cambios de un prospecto (quién, cuándo, antes y después). Hub: GET /v1/prospects/{id}/history. */ |
 | GET | `/CrmHub/prospects` | CrmHub.prospects | GET /CrmHub/prospects?status=&batch=&q=. Prospectos con su puntaje, conteos por estado, lotes y el perfil de cliente ideal. Hub: GET /v1/prospects. */ |
 | POST | `/CrmHub/prospectsDelete` | CrmHub.prospectsDelete | POST /CrmHub/prospectsDelete. {ids}. Borra prospectos que aún no pasaron al CRM. Hub: POST /v1/prospects/delete. */ |
 | POST | `/CrmHub/prospectsEnrich` | CrmHub.prospectsEnrich | POST /CrmHub/prospectsEnrich. Enriquece con IA los prospectos pendientes (en segundo plano). Hub: POST /v1/prospects/enrich. */ |

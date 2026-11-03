@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **224** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **227** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -137,6 +137,7 @@ Total: **224** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | PUT | `/v1/proposals/{slug}` | `proposals_update` | — |
 | PUT | `/v1/proposals/{slug}/active` | `proposals_active` | — |
 | GET | `/v1/prospects` | `prospects_list` | — |
+| POST | `/v1/prospects/add` | `prospects_add` | Agrega un prospecto a mano. |
 | POST | `/v1/prospects/delete` | `prospects_delete` | — |
 | POST | `/v1/prospects/enrich` | `prospects_enrich` | — |
 | PUT | `/v1/prospects/icp` | `prospects_icp_save` | — |
@@ -144,6 +145,8 @@ Total: **224** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | POST | `/v1/prospects/niche` | `prospects_niche` | Pausa o reanuda un nicho a mano. |
 | POST | `/v1/prospects/promote` | `prospects_promote` | — |
 | POST | `/v1/prospects/verify` | `prospects_verify` | Comprueba (en segundo plano) que existan los correos de los prospectos listos; los inexistentes pasan a rechazados. |
+| PUT | `/v1/prospects/{pid}` | `prospects_edit` | Edita o completa datos de un prospecto, anotando quién lo cambió. |
+| GET | `/v1/prospects/{pid}/history` | `prospects_history` | — |
 | GET | `/v1/public/meet/_/assets/{name:path}` | `meet_asset` | Archivos estáticos de la sala: página (js y css), fondos virtuales y segmentación de persona (alojados aquí, sin servicios de terceros). |
 | GET | `/v1/public/meet/_/lk.js` | `meet_js` | Cliente de LiveKit para la página de la videollamada. |
 | POST | `/v1/public/meet/_/rec/{rid}/chunk` | `rec_chunk` | — |
