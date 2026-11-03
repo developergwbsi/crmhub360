@@ -67,22 +67,34 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render', 'custom:bi-templa
     }
 
     // Galería de tableros ya armados: se elige uno, se crea (con sus reportes) y queda fijado en Inicio. También se puede ir a armarlo a mano.
+    const ENT = {Lead: 'leads', Opportunity: 'oportunidades', Task: 'tareas', Meeting: 'reuniones', Call: 'llamadas', Account: 'cuentas', Contact: 'contactos'};
+    const ONE = {Lead: 'lead', Opportunity: 'oportunidad', Task: 'tarea', Meeting: 'reunión', Call: 'llamada', Account: 'cuenta', Contact: 'contacto'};
+    const mainEntity = t => { const c = {}; t.reports.forEach(r => { c[r.def.source] = (c[r.def.source] || 0) + 1; }); return Object.keys(c).sort((x, y) => c[y] - c[x])[0]; };
     function gallery(host) {
-        ChUi.panel({title: 'Elige un tablero para tu escritorio', icon: 'fas fa-table-cells-large', close: 'Cerrar', mount: (body, close) => {
+        const pins = host._pins || [];
+        // cuántos registros hay de cada tipo (con los permisos de la persona), para avisar qué tableros se verían vacíos
+        const ents = [...new Set(TPL.list.map(mainEntity))], counts = {};
+        const counted = Promise.all(ents.map(e => Espo.Ajax.getRequest(e, {maxSize: 1, select: 'id'}).then(r => { counts[e] = r.total; }, xhr => { if (xhr) { xhr.errorIsHandled = true; } counts[e] = null; })));
+        counted.then(() => ChUi.panel({title: 'Elige un tablero para tu escritorio', icon: 'fas fa-table-cells-large', close: 'Cerrar', mount: (body, close) => {
             body.classList.add('ch-tpl-body');
-            body.innerHTML = '<p class="ch-muted">Tableros ya armados según lo que hace tu equipo: elige uno y aparece en <b>Inicio</b> con sus gráficas e indicadores. Después puedes editarlo en «Reportes y tableros» o quitarlo cuando quieras.</p><div class="ch-tpl-grid">' +
-                TPL.list.map(t => `<div class="ch-tpl" data-t="${esc(t.id)}"><div class="ic" style="background:${esc(t.color)}1f;color:${esc(t.color)}"><span class="${esc(t.icon)}"></span></div><b>${esc(t.name)}</b><small>${esc(t.desc)}</small><div class="ch-tpl-meta"><b>Ideal si</b> ${esc(t.ideal || '')}</div></div>`).join('') + '</div>' +
+            const info = t => { const e = mainEntity(t), n = counts[e]; return n === null || n === undefined ? {ok: null} : {ok: n > 0, n, label: ENT[e] || e, one: ONE[e] || e}; };
+            const list = TPL.list.slice().sort((x, y) => (info(y).ok === true) - (info(x).ok === true));
+            body.innerHTML = '<p class="ch-muted">Tableros ya armados según lo que hace tu equipo: elige uno y aparece en <b>Inicio</b> con sus gráficas e indicadores. Un tablero solo se llena si ya tienes los datos que mide; por eso cada tarjeta indica si ya hay datos. Después puedes editarlo en «Reportes y tableros» o quitarlo cuando quieras.</p>' +
+                (pins.length ? `<label class="ch-pr-chk"><input type="checkbox" data-rep checked> <b>Reemplazar</b> los ${pins.length === 1 ? 'tablero que ya tengo' : pins.length + ' tableros que ya tengo'} en el escritorio <small>(no se borran: siguen en «Reportes y tableros»)</small></label>` : '') +
+                '<div class="ch-tpl-grid">' + list.map(t => { const i = info(t); return `<div class="ch-tpl" data-t="${esc(t.id)}"><div class="ic" style="background:${esc(t.color)}1f;color:${esc(t.color)}"><span class="${esc(t.icon)}"></span></div><b>${esc(t.name)}</b><small>${esc(t.desc)}</small><div class="ch-tpl-meta"><b>Ideal si</b> ${esc(t.ideal || '')}</div>` +
+                    (i.ok === null ? '' : `<div class="ch-tpl-data ${i.ok ? 'ok' : 'no'}"><span class="fas fa-${i.ok ? 'circle-check' : 'circle-info'}"></span> ${i.ok ? `Con datos: ${i.n} ${esc(i.n === 1 ? i.one : i.label)}` : `Aún sin datos: no tienes ${esc(i.label)} todavía, se vería vacío`}</div>`) + '</div>'; }).join('') + '</div>' +
                 '<p style="margin-top:14px"><a class="btn btn-default" href="#CrmHub/reportes" data-go="1"><span class="fas fa-pen-ruler"></span> Prefiero armar mi propio tablero</a></p>';
             body.onclick = e => {
                 if (e.target.closest('[data-go]')) { close(true); return; }
                 const c = e.target.closest('[data-t]'); if (!c || body.dataset.busy) { return; }
-                const t = TPL.list.find(x => x.id === c.dataset.t); body.dataset.busy = '1';
+                const t = TPL.list.find(x => x.id === c.dataset.t), rep = body.querySelector('[data-rep]'), replace = !!(rep && rep.checked); body.dataset.busy = '1';
                 body.innerHTML = `<p class="ch-muted" style="padding:20px 4px"><span class="fas fa-spinner fa-spin"></span> Armando «${esc(t.name)}»…</p>`;
-                TPL.create(t).then(d => Espo.Ajax.postRequest('CrmHub/biPin', {id: d.id, dateFrom: '', dateTo: '', tab: '', place: 'top'}))
+                (replace ? Promise.all(pins.map(p => Espo.Ajax.postRequest('CrmHub/biUnpin', {id: p.id}))) : Promise.resolve())
+                    .then(() => TPL.create(t)).then(d => Espo.Ajax.postRequest('CrmHub/biPin', {id: d.id, dateFrom: '', dateTo: '', tab: '', place: 'top'}))
                     .then(() => { close(true); Espo.Ui.success('Listo: «' + t.name + '» ya está en tu escritorio.'); host._pins = null; if (host._go) { host._go(); } })
                     .catch(xhr => { close(false); err(xhr); });
             };
-        }});
+        }}));
     }
 
     function manage(root, pins, refresh) {

@@ -4,6 +4,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.26.2] - 2026-11-03
+
+### Cambiado
+- **Inicio con el mismo estilo del resto:** barra de tableros con degradado, pestañas del escritorio segmentadas, panel gerencial y tableros en tarjetas redondeadas con encabezado suave, indicadores con degradado y efecto al pasar el cursor, y sin subrayados. Los indicadores del panel gerencial ya no se pegan arriba ni tapan el contenido al desplazarse.
+
+## [1.26.1] - 2026-11-03
+
+### Corregido
+- **Elegir un tablero ya armado:** cada tarjeta de la galería indica si ya hay datos para llenarlo («Con datos: 7 leads» o «Aún sin datos…»), y los que tienen datos salen primero, para que no quede una tarjeta vacía. Al elegir uno se puede **reemplazar** los tableros que ya estaban en el escritorio (casilla marcada por defecto; no se borran).
+
 ## [1.26.0] - 2026-11-03
 
 ### Añadido

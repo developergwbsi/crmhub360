@@ -354,7 +354,7 @@
         var bar = ph ? (parseFloat(getComputedStyle(ph).top) || 52) : (parseFloat(getComputedStyle(document.body).getPropertyValue('--top-bar-height')) || 52);
         var top = bar + (ph ? Math.round(ph.getBoundingClientRect().height) : 0);
         var list = Array.prototype.filter.call(main.querySelectorAll(FIX_SEL), function (b) {
-            if (!b.offsetParent || b.closest('.ch-dlg-back, .ch-w, .ch-studio, .ch-drawer, .ch-uh, .ch-pane')) { return false; }
+            if (!b.offsetParent || b.closest('.ch-dlg-back, .ch-w, .ch-studio, .ch-drawer, .ch-uh, .ch-pane, .dashlet, .home-content')) { return false; }
             if (skipPr && (b.classList.contains('ch-pr-tabs') || b.classList.contains('ch-pr-kp'))) { return false; }
             return true;
         });

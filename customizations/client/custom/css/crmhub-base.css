@@ -1837,3 +1837,19 @@ body.ch-scrolled .ch-sim-head.ch-fixed p, body.ch-scrolled .ch-rc-top.ch-fixed p
 /* ---- Galería de tableros ya armados (Inicio y Reportes y tableros): ancha y con desplazamiento propio */
 .ch-dlg:has(.ch-tpl-body) { width: min(1120px, 96vw); } .ch-dlg-body.ch-tpl-body { max-height: 72vh; overflow-y: auto; }
 .ch-tpl-body .ch-tpl-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } .ch-tpl-meta { margin-top: 8px; font-size: 12px; color: var(--ch-muted); } .ch-tpl-meta b { color: var(--ch-primary, #4f63e8); }
+.ch-tpl-data { margin-top: 8px; font-size: 12px; font-weight: 600; } .ch-tpl-data.ok { color: #1f9d55; } .ch-tpl-data.no { color: #b7791f; }
+
+/* ======================= Inicio (escritorio): mismo lenguaje visual que el resto ======================= */
+.home-content .ch-hb-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-radius: 20px; padding: 16px 22px; margin: 0 0 16px; color: #fff; background: linear-gradient(135deg, #312e81 0%, #4f46e5 55%, #0891b2 100%); box-shadow: 0 14px 36px -18px rgba(79, 70, 229, .6); font-size: 16px; font-weight: 700; }
+.home-content .ch-hb-top small { color: rgba(255, 255, 255, .8); font-weight: 400; } .home-content .ch-hb-top .fas { margin-right: 6px; opacity: .9; }
+.home-content .ch-hb-top .btn { border: 0; border-radius: 10px; font-weight: 600; } .home-content .ch-hb-top .btn-primary { background: #fff; color: #312e81; } .home-content .ch-hb-top .btn-default { background: rgba(255, 255, 255, .18); color: #fff; } .home-content .ch-hb-top .btn:hover { filter: brightness(.95); }
+.home-content .dashboard-tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--ch-soft); border: 1px solid var(--ch-line); border-radius: 14px; float: left !important; margin: 0 0 12px; }
+.home-content .dashboard-tabs .btn { border: 0; border-radius: 10px; padding: 6px 16px; font-weight: 600; color: var(--ch-muted); background: transparent; } .home-content .dashboard-tabs .btn.active { background: var(--ch-surface); color: var(--ch-primary); box-shadow: 0 1px 4px rgba(20, 28, 60, .14); }
+.home-content .dashlet.panel { border-radius: 18px; border: 1px solid var(--ch-line); box-shadow: var(--default-box-shadow); overflow: hidden; }
+.home-content .dashlet > .panel-heading { background: linear-gradient(135deg, var(--ch-tint2), var(--ch-surface)); border-bottom: 1px solid var(--ch-line); padding: 12px 18px; } .home-content .dashlet .panel-title { font-weight: 700; font-size: 15px; }
+.ch-panel .ch-link, .ch-panel .ch-link * { text-decoration: none !important; } .ch-panel .ch-link { cursor: pointer; }
+.ch-panel .ch-kpi { background: linear-gradient(135deg, var(--ch-surface) 0%, var(--ch-tint) 100%); border-radius: 16px; transition: transform .15s, box-shadow .15s, border-color .15s; } .ch-panel .ch-kpi:hover { transform: translateY(-2px); border-color: var(--ch-primary); box-shadow: 0 12px 26px -16px rgba(79, 70, 229, .55); }
+.ch-panel .ch-box { border-radius: 16px; box-shadow: var(--default-box-shadow); } .ch-panel .ch-box h5 { padding-bottom: 8px; border-bottom: 1px solid var(--ch-line); }
+.ch-panel .ch-bar.ch-link:hover { background: var(--ch-soft); border-radius: 8px; }
+.home-content .ch-hb { border-radius: 18px; box-shadow: var(--default-box-shadow); padding: 12px 14px 14px; } .home-content .ch-hb-head { background: linear-gradient(135deg, var(--ch-tint2), var(--ch-surface)); border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; } .home-content .ch-hb-head h4 { font-weight: 700; }
+.home-content .ch-hb .ch-w { border-radius: 14px; box-shadow: var(--default-box-shadow); }
