@@ -2,8 +2,13 @@
 
 *Generado por `bin/gen-docs` desde git. El resumen curado por versión está en [`CHANGELOG.md`](../../CHANGELOG.md).*
 
-## Sin publicar (después de v1.27.4)
+## Sin publicar (después de v1.27.5)
 
+- `6070a73` 2026-11-03 — Versión 1.27.6
+
+## v1.27.5
+
+- `0dd1370` 2026-11-03 — Versión 1.27.5
 - `489c1a9` 2026-11-03 — Versión 1.27.5
 - `b41e292` 2026-11-03 — Versión 1.27.5
 
