@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.26.4] - 2026-11-03
+
+### Corregido
+- **Inicio con la parte de arriba fija:** el panel «Mis tableros», el selector de periodo y las tarjetas de indicadores del panel gerencial quedan fijos bajo las pestañas del escritorio; solo se desplaza el contenido.
+
 ## [1.26.3] - 2026-11-03
 
 ### Corregido

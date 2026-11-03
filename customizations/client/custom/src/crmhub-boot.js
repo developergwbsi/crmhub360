@@ -345,7 +345,7 @@
     }
 
     // Parte de arriba fija de las pantallas propias: título, tarjetas de indicadores y pestañas se apilan, una debajo de otra, bajo el encabezado de la página; solo se desplaza el contenido.
-    var FIX_SEL = '.ch-kpis, .ch-tpl-tabs, .ch-tabbar, .ch-pr-tabs, .ch-sim-head, .ch-rc-top';
+    var FIX_SEL = '.ch-kpis, .ch-tpl-tabs, .ch-tabbar, .ch-pr-tabs, .ch-sim-head, .ch-rc-top, .home-content > .ch-home-boards > .ch-hb-top, .ch-panel-top';
     function fixTop() {
         var main = document.getElementById('main'); if (!main) { return; }
         var skipPr = !!main.querySelector('.ch-pr-body.is-list');   // la lista de Prospección ya tiene su propio encabezado fijo
@@ -354,7 +354,7 @@
         var bar = ph ? (parseFloat(getComputedStyle(ph).top) || 52) : (parseFloat(getComputedStyle(document.body).getPropertyValue('--top-bar-height')) || 52);
         var top = bar + (ph ? Math.round(ph.getBoundingClientRect().height) : 0);
         var list = Array.prototype.filter.call(main.querySelectorAll(FIX_SEL), function (b) {
-            if (!b.offsetParent || b.closest('.ch-dlg-back, .ch-w, .ch-studio, .ch-drawer, .ch-uh, .ch-pane, .dashlet, .home-content')) { return false; }
+            if (!b.offsetParent || b.closest('.ch-dlg-back, .ch-w, .ch-studio, .ch-drawer, .ch-uh, .ch-pane')) { return false; }
             if (skipPr && (b.classList.contains('ch-pr-tabs') || b.classList.contains('ch-pr-kp'))) { return false; }
             return true;
         });

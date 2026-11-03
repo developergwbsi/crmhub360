@@ -1845,7 +1845,8 @@ body.ch-scrolled .ch-sim-head.ch-fixed p, body.ch-scrolled .ch-rc-top.ch-fixed p
 .home-content .ch-hb-top .btn { border: 0; border-radius: 10px; font-weight: 600; } .home-content .ch-hb-top .btn-primary { background: #fff; color: #312e81; } .home-content .ch-hb-top .btn-default { background: rgba(255, 255, 255, .18); color: #fff; } .home-content .ch-hb-top .btn:hover { filter: brightness(.95); }
 .home-content .dashboard-tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--ch-soft); border: 1px solid var(--ch-line); border-radius: 14px; margin: 0 0 12px 8px; }
 .home-content .dashboard-tabs .btn { border: 0; border-radius: 10px; padding: 6px 16px; font-weight: 600; color: var(--ch-muted); background: transparent; } .home-content .dashboard-tabs .btn.active { background: var(--ch-surface); color: var(--ch-primary); box-shadow: 0 1px 4px rgba(20, 28, 60, .14); }
-.home-content .dashlet.panel { border-radius: 18px; border: 1px solid var(--ch-line); box-shadow: var(--default-box-shadow); overflow: hidden; }
+.home-content .dashlet.panel { border-radius: 18px; border: 1px solid var(--ch-line); box-shadow: var(--default-box-shadow); overflow: visible; } .home-content .dashlet > .panel-heading { border-radius: 17px 17px 0 0; }
+.home-content > .ch-home-boards { display: contents; } .home-content > .ch-home-boards[data-state="loading"] { display: none; } .home-content .ch-home-boards > .ch-hb-top { margin-bottom: 16px; }
 .home-content .dashlet > .panel-heading { background: linear-gradient(135deg, var(--ch-tint2), var(--ch-surface)); border-bottom: 1px solid var(--ch-line); padding: 12px 18px; } .home-content .dashlet .panel-title { font-weight: 700; font-size: 15px; }
 .ch-panel .ch-link, .ch-panel .ch-link * { text-decoration: none !important; } .ch-panel .ch-link { cursor: pointer; }
 .ch-panel .ch-kpi { background: linear-gradient(135deg, var(--ch-surface) 0%, var(--ch-tint) 100%); border-radius: 16px; transition: transform .15s, box-shadow .15s, border-color .15s; } .ch-panel .ch-kpi:hover { transform: translateY(-2px); border-color: var(--ch-primary); box-shadow: 0 12px 26px -16px rgba(79, 70, 229, .55); }
@@ -1853,3 +1854,8 @@ body.ch-scrolled .ch-sim-head.ch-fixed p, body.ch-scrolled .ch-rc-top.ch-fixed p
 .ch-panel .ch-bar.ch-link:hover { background: var(--ch-soft); border-radius: 8px; }
 .home-content .ch-hb { border-radius: 18px; box-shadow: var(--default-box-shadow); padding: 12px 14px 14px; } .home-content .ch-hb-head { background: linear-gradient(135deg, var(--ch-tint2), var(--ch-surface)); border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; } .home-content .ch-hb-head h4 { font-weight: 700; }
 .home-content .ch-hb .ch-w { border-radius: 14px; box-shadow: var(--default-box-shadow); }
+/* Inicio: el panel «Mis tableros», el selector de periodo y los indicadores del panel gerencial quedan fijos al desplazarse */
+.home-content .ch-hb-top.ch-fixed { margin-bottom: 0; padding: 10px 20px; border-radius: 16px; box-shadow: 0 12px 0 0 var(--ch-bg), 0 10px 24px -14px rgba(79, 70, 229, .6); }
+.ch-panel .ch-panel-top.ch-fixed, .ch-panel .ch-kpis.ch-fixed { background: var(--ch-surface); margin: 0; padding: 8px 0; box-shadow: none; }
+.ch-panel .ch-panel-top.ch-fixed { padding-bottom: 4px; }
+.home-content .dashlet[data-name="CrmHubPanel"] > .dashlet-body, .home-content .dashlet[data-name="CrmHubPanel"] .panel-body { overflow: visible !important; }
