@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.26.6] - 2026-11-03
+
+### Cambiado
+- **Prospección, lista de prospectos con columnas separadas:** ahora hay una columna para la **empresa**, otra para la **persona de contacto** (con su cargo), otra para el **correo** y otra para el **teléfono**, en lugar de mezclar el contacto en una sola.
+
 ## [1.26.5] - 2026-11-03
 
 ### Corregido
