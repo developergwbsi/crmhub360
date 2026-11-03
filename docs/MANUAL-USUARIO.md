@@ -39,6 +39,7 @@
 - [9e. Procesos de leads, copias de leads y lectura de documentos](#9e-procesos-de-leads-copias-de-leads-y-lectura-de-documentos)
 - [9f. Créditos, costos y recargas](#9f-créditos-costos-y-recargas)
 - [9g. Respuestas automáticas cuando nadie puede atender](#9g-respuestas-automáticas-cuando-nadie-puede-atender)
+- [9h. Escalado de la prospección: subir el ritmo con criterio](#9h-escalado-de-la-prospección-subir-el-ritmo-con-criterio)
 - [10. Preguntas frecuentes](#10-preguntas-frecuentes)
 
 ## 1. Ingreso y navegación
@@ -885,6 +886,17 @@ Así los dejó configurados DigitalAlliance Hub para su propio WhatsApp (puedes 
 
 Reglas de cuidado: no se repite el saludo en las horas que definas, se envían máximo 3 respuestas por hora a cada cliente, no contesta a quien pidió la baja ni a quien ya atiende un comercial virtual, y lo que no encaja lo atiende una persona. Cuando el comercial virtual está en línea, él responde y estos mensajes no se envían.
 
+
+## 9h. Escalado de la prospección: subir el ritmo con criterio
+
+*Visible para: Gerente*
+
+Cuántas empresas busca el buscador, cuántos prospectos pasan a Valeria y cuántos correos en frío salen por día **no deberían subirse de golpe**. Un control único, el **nivel**, ajusta los tres topes juntos: 1 Arranque (5 correos, 5 pasan, 15 empresas), 2 Calentamiento (10/10/30), 3 Crecimiento (20/15/45), 4 Alto ritmo (35/25/60), 5 Máximo recomendado (50/35/80) y 6 Extremo, solo manual (80/50/100).
+
+- En **Comercial virtual → Agentes de prospección → Escalado de la prospección**.
+- **Automático:** cada noche sube un nivel si hay 3 días con envíos, rebotes y bajas bajo 2 %, respuestas y créditos; baja un nivel con rebotes ≥ 5 % o bajas ≥ 3 % y espera 7 días. Respeta el techo (por defecto nivel 4) y nunca llega solo al 6.
+- **Manual:** solo recomienda; tú eliges el nivel.
+- Siempre muestra la recomendación, las condiciones y lo que acarrea el siguiente nivel. Subir a mano por encima de lo recomendado exige confirmar tras ver las consecuencias.
 
 ## 10. Preguntas frecuentes
 

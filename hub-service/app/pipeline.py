@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from . import agent, db, finder, qualifier, report, wallet
+from . import agent, db, finder, qualifier, ramp, report, wallet
 
 log = logging.getLogger("hub.pipeline")
 
@@ -69,4 +69,16 @@ async def worker() -> None:
                         log.warning("reporte gerencial %s: %s", t["slug"], str(e)[:200])
         except Exception:
             log.exception("reporte gerencial")
+        try:   # escalado de la prospección: evaluación nocturna de resultados (sube, mantiene o baja el ritmo)
+            with db.pool.connection() as c:
+                rows = c.execute("SELECT * FROM tenants WHERE status='active' AND settings->'ramp'->>'enabled' = 'true'").fetchall()
+            for t in rows:
+                t = dict(t)
+                if ramp.due(t):
+                    try:
+                        await ramp.evaluate(t)
+                    except Exception as e:
+                        log.warning("escalado %s: %s", t["slug"], str(e)[:200])
+        except Exception:
+            log.exception("escalado de la prospección")
         await asyncio.sleep(600)

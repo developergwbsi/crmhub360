@@ -12,7 +12,7 @@ import asyncio
 import hmac
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import re
 import secrets
@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import bi, brand, chatbot, products, report, wallet, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import ramp, bi, brand, chatbot, products, report, wallet, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -2780,6 +2780,53 @@ def finder_save(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
             c.execute("UPDATE tenants SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), '{finder,report}', COALESCE(settings->'finder'->'report','{}'::jsonb) || %s::jsonb, true) WHERE slug=%s",
                       (json.dumps({"enabled": bool(r.get("enabled")), "hour": max(0, min(23, int(r.get("hour") if r.get("hour") is not None else 11))), "to": to}), tenant["slug"]))
     return finder.config(db.get_tenant(tenant["slug"]))
+
+
+@app.get("/v1/ramp")
+def ramp_get(tenant: dict = Depends(tenant_auth)):
+    """Escalado de la prospección: nivel actual, niveles con lo que acarrean, recomendación de la regla y su historial."""
+    return ramp.view(tenant)
+
+
+@app.put("/v1/ramp")
+def ramp_save(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    """Activa o apaga la regla, elige modo (auto/manual) y el techo del modo automático (nivel 1 a 5)."""
+    cfg = ramp.config(tenant)
+    patch = {"enabled": bool(body.get("enabled")), "mode": "manual" if body.get("mode") == "manual" else "auto", "max_level": max(1, min(5, int(body.get("max_level") or 4)))}
+    if patch["enabled"] and not cfg["enabled"]:   # al activarla se ancla en el nivel que coincide con los topes actuales (o queda «personalizado» hasta que se elija uno)
+        lvl = ramp.level_of(ramp.actual(tenant))
+        patch.update(level=lvl, level_since=datetime.now(timezone.utc).isoformat())
+    ramp._save(tenant["slug"], patch)
+    return ramp.view(db.get_tenant(tenant["slug"]))
+
+
+@app.post("/v1/ramp/level")
+def ramp_level(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
+    """Sube o baja a mano a un nivel. Subir por encima de lo recomendado exige confirmar (acknowledged) tras ver lo que acarrea; bajar nunca lo exige."""
+    try:
+        lvl = int(body.get("level"))
+    except (TypeError, ValueError):
+        raise HTTPException(422, "Nivel no válido.")
+    if lvl not in ramp.LEVELS:
+        raise HTTPException(422, "Nivel no válido.")
+    warn = ramp.warnings_for(tenant, lvl)
+    cur = ramp.level_of(ramp.actual(tenant)) or 0
+    a = ramp.assess(tenant)
+    needs = lvl > cur and not (lvl == cur + 1 and a["action"] == "up" and lvl <= 5)
+    if needs and not body.get("acknowledged"):
+        return {"confirm_required": True, "level": lvl, "warnings": warn}
+    ramp.apply_level(tenant["slug"], lvl)
+    now = datetime.now(timezone.utc).isoformat()
+    ramp._save(tenant["slug"], {"level": lvl, "level_since": now, **({"frozen_until": None} if lvl >= cur else {})})
+    ramp._log(tenant["slug"], {"at": now, "action": "manual", "applied": True, "from": cur or None, "to": lvl, "reason": "Cambio manual" + (" (confirmado con advertencias)" if needs else ""), "mode": "manual", "metrics": {}})
+    return ramp.view(db.get_tenant(tenant["slug"]))
+
+
+@app.post("/v1/ramp/evaluate")
+async def ramp_evaluate(tenant: dict = Depends(tenant_auth)):
+    """Evalúa ahora (como lo hace cada noche): en modo auto aplica la decisión; en manual solo la muestra."""
+    r = await ramp.evaluate(tenant)
+    return {**ramp.view(db.get_tenant(tenant["slug"])), "result": r}
 
 
 @app.post("/v1/report/send")

@@ -12,11 +12,11 @@ define('custom:views/prospecting-agents', ['view', 'custom:ui'], function (Dep, 
 
     return class extends Dep {
         templateContent = '<div class="ch-pa"></div>'
-        f = null; q = null; s = null
+        f = null; q = null; s = null; r = null
         afterRender() { this.load(); }
         load() {
-            Promise.all([Espo.Ajax.getRequest('CrmHub/finder'), Espo.Ajax.getRequest('CrmHub/qualifier'), Espo.Ajax.getRequest('CrmHub/searchConfig').catch(() => null)])
-                .then(([f, q, s]) => { this.f = f; this.q = q; this.s = s; this.draw(); })
+            Promise.all([Espo.Ajax.getRequest('CrmHub/finder'), Espo.Ajax.getRequest('CrmHub/qualifier'), Espo.Ajax.getRequest('CrmHub/searchConfig').catch(() => null), Espo.Ajax.getRequest('CrmHub/ramp').catch(() => null)])
+                .then(([f, q, s, r]) => { this.f = f; this.q = q; this.s = s; this.r = r; this.draw(); })
                 .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } const el = this.el.querySelector('.ch-pa'); if (el) { el.innerHTML = '<div class="ch-chat-err">No se pudieron cargar los agentes de prospección.</div>'; } });
         }
         draw() {
@@ -51,11 +51,46 @@ define('custom:views/prospecting-agents', ['view', 'custom:ui'], function (Dep, 
                 `<p><button class="btn btn-link btn-sm" data-a="qdefault" ${dis}>Restaurar las reglas recomendadas</button></p>` +
                 `<p><button class="btn btn-primary" data-a="qsave" ${dis}>Guardar</button> <button class="btn btn-default" data-a="qrun" ${lic && q.enabled ? '' : 'disabled'}>Calificar ahora</button></p>` +
                 `<p class="ch-muted">Calificados: ${Object.keys(GR).map(g => `<b>${g}</b> ${st.grades[g] || 0}`).join(' · ')} · pasaron a Valeria: <b>${st.passed}</b></p></div>` +
-                `</div>` +
+                `</div>` + this.rampHtml(lic) +
                 `<div class="ch-pr-card" style="margin-top:12px"><h5><span class="fas fa-user-tie"></span> Valeria · comercial virtual</h5><p class="ch-muted">Escribe el primer correo, responde, envía el material y coordina la agenda con la persona. Cuando hay una demo agendada se detiene y avisa a tu equipo. Su entrenamiento está en las pestañas <b>Mis comerciales</b> y <b>Entrenamiento</b>.</p></div>`;
             this.bind(el);
         }
+        rampHtml(lic) {
+            const r = this.r; if (!r) { return ''; }
+            const a = r.assessment || {}, V = a.values || {}, L = n => (r.levels || []).find(x => x.level === n) || {};
+            const dis = lic ? '' : 'disabled', cur = a.level, m = a.metrics || {};
+            const pct = x => (Math.round((x || 0) * 1000) / 10).toLocaleString('es-CO') + ' %';
+            const tone = a.action === 'down' ? 'bad' : (a.action === 'up' ? 'good' : 'hold');
+            const next = a.next;
+            const tile = (t, v, sub) => `<div class="ch-ramp-k"><small>${t}</small><b>${v}</b><span>${sub}</span></div>`;
+            return `<div class="ch-pr-card ch-ramp" style="margin-top:12px"><h5><span class="fas fa-stairs"></span> Escalado de la prospección <span class="label label-${r.enabled ? 'success' : 'default'}">${r.enabled ? (r.mode === 'auto' ? 'Automático' : 'Manual') : 'Apagado'}</span></h5>` +
+                `<p class="ch-muted">Un solo control para el ritmo: cada nivel fija a la vez cuántas empresas busca el buscador, cuántos prospectos pasan a Valeria y cuántos correos en frío salen por día. En automático sube de a un nivel cuando los resultados lo permiten y baja si hay rebotes o bajas altos. En manual solo te recomienda. Siempre ves aquí lo que acarrea cada paso.</p>` +
+                `<div class="ch-ramp-kpis">${tile('Nivel actual', cur ? `${cur} · ${esc(L(cur).name)}` : 'Personalizado', cur ? 'topes alineados' : 'topes cambiados a mano')}${tile('Correos en frío / día', V.email, 'por remitente')}${tile('Pasan a Valeria / día', V.pass, 'tras calificar')}${tile('Empresas buscadas / día', V.finder, 'buscador')}</div>` +
+                `<div class="ch-ramp-rec ${tone}"><b>${a.action === 'up' ? 'Recomendación: subir' : (a.action === 'down' ? 'Recomendación: bajar' : 'Recomendación: mantener')}</b><p>${esc(a.reason || '')}</p>` +
+                (next && a.action !== 'down' ? `<p class="ch-muted"><b>Si subes a «${esc(next.name)}»</b> (${next.email} correos, ${next.pass} pasan, ${next.finder} empresas por día) esto es lo que acarrea:</p><ul>${(next.implies || []).map(i => `<li>${esc(i)}</li>`).join('')}</ul>` : '') + `</div>` +
+                ((a.checks || []).length ? `<h6 class="ch-ramp-h">Condiciones para subir</h6><ul class="ch-ramp-chk">${a.checks.map(c => `<li class="${c.ok ? 'ok' : 'no'}"><span class="fas fa-${c.ok ? 'circle-check' : 'circle-xmark'}"></span> <b>${esc(c.name)}</b> <small>${esc(c.detail)}</small></li>`).join('')}</ul>` : '') +
+                (m.sends != null ? `<p class="ch-muted">Resultados desde que está en este nivel: <b>${m.sends}</b> correos en frío · <b>${m.bounces}</b> rebotes (${pct(m.bounce_rate)}) · <b>${m.optouts}</b> bajas (${pct(m.optout_rate)}) · <b>${m.replies}</b> respuestas.</p>` : '') +
+                `<h6 class="ch-ramp-h">Niveles <small class="ch-muted">· elige uno a mano cuando quieras</small></h6><div class="ch-ramp-levels">${(r.levels || []).map(x => `<div class="ch-ramp-lv ${x.level === cur ? 'cur' : ''}"><div><b>${x.level} · ${esc(x.name)}</b><small>${x.email} correos · ${x.pass} pasan · ${x.finder} empresas / día</small><details><summary>¿Qué acarrea?</summary><ul>${(x.implies || []).map(i => `<li>${esc(i)}</li>`).join('')}</ul></details></div><button class="btn btn-${x.level === cur ? 'default' : 'primary'} btn-sm" data-lv="${x.level}" ${x.level === cur || !lic ? 'disabled' : ''}>${x.level === cur ? 'Nivel actual' : (cur && x.level < cur ? 'Bajar a este' : 'Poner este nivel')}</button></div>`).join('')}</div>` +
+                `<h6 class="ch-ramp-h">Regla autónoma</h6><div class="ch-pr-g2"><div><label class="ch-pr-chk"><input type="checkbox" data-r="enabled" ${r.enabled ? 'checked' : ''} ${dis}> <b>Evaluar cada noche</b></label></div><div><label>Modo</label><select class="form-control" data-r="mode" ${dis}><option value="auto" ${r.mode === 'auto' ? 'selected' : ''}>Automático: sube y baja solo</option><option value="manual" ${r.mode === 'manual' ? 'selected' : ''}>Manual: solo recomienda</option></select></div></div>` +
+                `<label>Techo del modo automático</label><select class="form-control" data-r="max_level" ${dis}>${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${r.max_level === n ? 'selected' : ''}>${n} · ${esc(L(n).name)} (${L(n).email} correos / día)</option>`).join('')}</select>` +
+                `<p class="ch-muted">Reglas: sube de a un nivel tras ${(r.rules || {}).min_days} días con envíos, con rebotes y bajas por debajo de 2 %, respuestas y créditos. Baja un nivel si los rebotes llegan al 5 % o las bajas al 3 %, y espera ${(r.rules || {}).freeze_days} días antes de volver a subir. Si cambias un tope a mano en otra tarjeta, la regla se pausa hasta que elijas un nivel.</p>` +
+                `<p><button class="btn btn-primary" data-a="rsave" ${dis}>Guardar regla</button> <button class="btn btn-default" data-a="reval" ${lic && r.enabled ? '' : 'disabled'}>Evaluar ahora</button></p>` +
+                ((r.history || []).length ? `<h6 class="ch-ramp-h">Historial</h6><ul class="ch-ramp-hist">${r.history.slice().reverse().slice(0, 8).map(h => `<li><small>${esc(ChUi.fmt.dt(h.at))}</small> <b>${h.action === 'up' ? '↑ Subió' : (h.action === 'down' ? '↓ Bajó' : (h.action === 'manual' ? '✎ Manual' : '·'))}</b> ${h.from || '—'} → ${h.to || '—'}${h.applied ? '' : ' (solo recomendación)'} <span class="ch-muted">${esc(h.reason || '')}</span></li>`).join('')}</ul>` : '') + `</div>`;
+        }
         bind(el) {
+            const rg = k => el.querySelector(`[data-r="${k}"]`);
+            if (rg('enabled')) {
+                const failR = xhr => { Espo.Ui.notify(false); Espo.Ui.error(reason(xhr)); };
+                el.querySelector('[data-a=rsave]').onclick = () => Espo.Ajax.postRequest('CrmHub/rampSave', {enabled: rg('enabled').checked, mode: rg('mode').value, max_level: +rg('max_level').value}).then(() => { Espo.Ui.success('Regla guardada'); this.load(); }).catch(failR);
+                el.querySelector('[data-a=reval]').onclick = () => { Espo.Ui.notify('Evaluando…'); Espo.Ajax.postRequest('CrmHub/rampEvaluate', {}).then(() => { Espo.Ui.notify(false); this.load(); }).catch(failR); };
+                const setLevel = (level, ack) => Espo.Ajax.postRequest('CrmHub/rampLevel', {level, acknowledged: !!ack}).then(res => {
+                    if (res && res.confirm_required) {
+                        return ChUi.confirm({title: `Poner el nivel ${level}`, ok: 'Entiendo, aplicar', danger: true, html: `<p>Esto es lo que debes saber antes de hacerlo:</p><ul>${(res.warnings || []).map(w => `<li>${esc(w)}</li>`).join('')}</ul>`}).then(y => { if (y) { return setLevel(level, true); } });
+                    }
+                    Espo.Ui.success('Nivel actualizado'); this.load();
+                }).catch(failR);
+                el.querySelectorAll('[data-lv]').forEach(b => { b.onclick = () => setLevel(+b.dataset.lv, false); });
+            }
             const g = (sel, k) => el.querySelector(`[data-${sel}="${k}"]`), v = (sel, k) => g(sel, k).value;
             const fail = xhr => { Espo.Ui.notify(false); Espo.Ui.error(reason(xhr)); };
             const A = a => el.querySelector(`[data-a=${a}]`);

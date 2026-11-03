@@ -2705,6 +2705,34 @@ class CrmHub
         return (object) $this->hubCall('PUT', '/v1/finder', json_decode(json_encode($request->getParsedBody()), true) ?: [], 20);
     }
 
+    /** GET /CrmHub/ramp. Escalado de la prospección: nivel, recomendación, consecuencias e historial. Hub: GET /v1/ramp. */
+    public function getActionRamp(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        return (object) $this->hubCall('GET', '/v1/ramp', null, 20);
+    }
+
+    /** POST /CrmHub/rampSave. Admin. {enabled, mode, max_level}. Hub: PUT /v1/ramp. */
+    public function postActionRampSave(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('PUT', '/v1/ramp', json_decode(json_encode($request->getParsedBody()), true) ?: [], 20);
+    }
+
+    /** POST /CrmHub/rampLevel. Admin. {level, acknowledged}. Cambio manual de nivel. Hub: POST /v1/ramp/level. */
+    public function postActionRampLevel(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('POST', '/v1/ramp/level', json_decode(json_encode($request->getParsedBody()), true) ?: [], 30);
+    }
+
+    /** POST /CrmHub/rampEvaluate. Admin. Evalúa ahora los resultados. Hub: POST /v1/ramp/evaluate. */
+    public function postActionRampEvaluate(Request $request): \stdClass
+    {
+        $this->admin();
+        return (object) $this->hubCall('POST', '/v1/ramp/evaluate', [], 30);
+    }
+
     /** POST /CrmHub/finderRun. Admin. {limit}. Una pasada de búsqueda en internet. Hub: POST /v1/finder/run. */
     public function postActionFinderRun(Request $request): \stdClass
     {
