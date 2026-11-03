@@ -74,6 +74,7 @@ def _brief(tenant: dict, cfg: dict, n: int, already: list[str], niche: str = "")
             f"Sectores: {', '.join(icp['industries'])}\nPaíses: {', '.join(icp['countries']) or 'cualquiera'}\nCargos que deciden: {', '.join(icp['titles'])}\n"
             f"{('NICHO DE ESTA BÚSQUEDA (busca solo en este sector): ' + niche) if niche else ''}\n"
             f"{('ENFOQUE DE ESTA BÚSQUEDA: ' + cfg['focus']) if cfg['focus'] else ''}\n\n"
+            "TAMAÑO: busca pymes, micropymes y negocios locales (de 1 a ~200 empleados, con dueño o gerente accesible). NO incluyas grandes empresas, multinacionales, bancos, fintech grandes, cadenas o marcas nacionales conocidas (p. ej. Éxito, Arturo Calle, Bold): ya tienen sus propios sistemas y no son el cliente.\n"
             f"TAREA: busca en internet hasta {n} empresas reales que encajen y que NO estén en esta lista de ya conocidas: {', '.join(already[:80]) or '(ninguna)'}.\n"
             "Para cada una entrega el correo o teléfono de NEGOCIO que ella misma publica (su sitio web, página de contacto o un directorio público) y la dirección exacta de esa fuente. "
             "Reglas estrictas: no adivines ni construyas correos (nada de nombre@dominio supuesto); no uses correos personales; si una empresa no publica contacto, omítela; "

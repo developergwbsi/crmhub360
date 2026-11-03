@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.7] - 2026-11-03
+
+### Corregido
+- **El buscador ya no trae grandes empresas:** al ampliar la búsqueda a pymes y micropymes la primera pasada trajo marcas grandes (Éxito, Arturo Calle, Bold). Ahora la instrucción pide expresamente negocios de 1 a ~200 empleados, excluye multinacionales, cadenas y marcas nacionales conocidas, y las consultas de búsqueda (ahora 6 en vez de 4) apuntan a negocios locales por ciudad, barrio o sector.
+
 ## [1.27.6] - 2026-11-03
 
 ### Añadido

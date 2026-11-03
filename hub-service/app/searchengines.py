@@ -104,8 +104,8 @@ async def report(tenant: dict, brief: str, n: int, cfg: dict) -> str:
     """Informe de investigación con un motor de clave: consultas (IA) → resultados → lectura de páginas → texto con fuentes."""
     if cfg.get("source") != "own":
         wallet.require(tenant, "search")
-    q = await llm.chat_json(tenant, "Generas consultas de búsqueda web para encontrar empresas que serían clientes. Responde solo el JSON.", f"{brief}\n\nDame 4 consultas de búsqueda distintas (con ciudad o sector) para hallar páginas de contacto de empresas candidatas.", QUERIES, 400)
-    qs = [str(x)[:150] for x in (q.get("queries") or [])][:4] or []
+    q = await llm.chat_json(tenant, "Generas consultas de búsqueda web para encontrar empresas que serían clientes. Responde solo el JSON.", f"{brief}\n\nDame 6 consultas de búsqueda distintas (con ciudad, barrio o sector) para hallar páginas de contacto de pymes y negocios locales candidatos; evita consultas que traerían solo grandes marcas o cadenas.", QUERIES, 400)
+    qs = [str(x)[:150] for x in (q.get("queries") or [])][:6] or []
     found, seen = [], set()
     if cfg.get("source") != "own":
         wallet.charge(tenant, "search", len(qs), note="Búsqueda de prospectos")
