@@ -2471,6 +2471,31 @@ class CrmHub
         return (object) $this->hubCall('POST', '/v1/prospects/promote', ['ids' => array_map('intval', (array) ($d->ids ?? [])), 'limit' => isset($d->limit) ? (int) $d->limit : null, 'agentId' => !empty($d->agentId) ? (string) $d->agentId : null], 300);
     }
 
+    /** POST /CrmHub/prospectEdit. {id, changes{name,company,title,email,phone,country,industry,segment,notes}}. Edita un prospecto y deja anotado quién lo cambió. Hub: PUT /v1/prospects/{id}. */
+    public function postActionProspectEdit(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        $d = $request->getParsedBody();
+        $body = ['changes' => json_decode(json_encode($d->changes ?? new \stdClass()), true), 'userId' => $this->user->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName'))];
+        return (object) $this->hubCall('PUT', '/v1/prospects/' . (int) ($d->id ?? 0), $body, 90);
+    }
+
+    /** POST /CrmHub/prospectAdd. {changes{...}}. Agrega un prospecto a mano, con registro de quién lo hizo. Hub: POST /v1/prospects/add. */
+    public function postActionProspectAdd(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        $d = $request->getParsedBody();
+        $body = ['changes' => json_decode(json_encode($d->changes ?? new \stdClass()), true), 'userId' => $this->user->getId(), 'userName' => (string) ($this->user->get('name') ?: $this->user->get('userName'))];
+        return (object) $this->hubCall('POST', '/v1/prospects/add', $body, 90);
+    }
+
+    /** GET /CrmHub/prospectHistory?id=. Bitácora de cambios de un prospecto (quién, cuándo, antes y después). Hub: GET /v1/prospects/{id}/history. */
+    public function getActionProspectHistory(Request $request): \stdClass
+    {
+        $this->prospectGuard();
+        return (object) $this->hubCall('GET', '/v1/prospects/' . (int) $request->getQueryParam('id') . '/history', null, 15);
+    }
+
     /** POST /CrmHub/prospectsDelete. {ids}. Borra prospectos que aún no pasaron al CRM. Hub: POST /v1/prospects/delete. */
     public function postActionProspectsDelete(Request $request): \stdClass
     {

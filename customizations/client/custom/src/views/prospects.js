@@ -71,9 +71,9 @@ define('custom:views/prospects', ['view', 'custom:ui'], function (Dep, ChUi) {
             const d = this.d, c = d.counts || {}, icp = d.icp || {};
             body.classList.add('is-list');   // título, pestañas, tarjetas, botones y filtros quedan fijos; solo la lista se desplaza (con sus encabezados fijos)
             const rows = (d.items || []).map(i => { const [l, k] = ST[i.status] || [i.status, '']; const en = i.enrichment || {};
-                return `<tr><td><input type="checkbox" data-sel="${i.id}" ${this.sel.has(i.id) ? 'checked' : ''} ${i.status === 'imported' ? 'disabled' : ''}></td><td><b>${esc(i.company || i.name)}</b><small>Hallado por: <b>${esc(i.source_label || '—')}</b></small>${i.origin === 'finder' && (i.raw || {}).fuente_url ? `<small>Fuente: <a href="${esc(String((i.raw || {}).fuente_url).split(' ')[0])}" target="_blank" rel="noopener noreferrer">ver página</a></small>` : ''}</td>` +
+                return `<tr><td><input type="checkbox" data-sel="${i.id}" ${this.sel.has(i.id) ? 'checked' : ''} ${i.status === 'imported' ? 'disabled' : ''}></td><td><b>${esc(i.company || i.name)}</b><small>Hallado por: <b>${esc(i.source_label || '—')}</b></small>${i.last_edit ? `<small title="Ver el historial con el lápiz">Editado por <b>${esc(i.last_edit.by || '—')}</b> · ${esc(ChUi.fmt.dt(i.last_edit.at))}</small>` : ''}${i.notes ? `<small class="ch-pr-note">${esc(i.notes.length > 70 ? i.notes.slice(0, 70) + '…' : i.notes)}</small>` : ''}${i.origin === 'finder' && (i.raw || {}).fuente_url ? `<small>Fuente: <a href="${esc(String((i.raw || {}).fuente_url).split(' ')[0])}" target="_blank" rel="noopener noreferrer">ver página</a></small>` : ''}</td>` +
                     `<td>${i.company && i.name && i.name !== i.company ? `<b>${esc(i.name)}</b>` : '<span class="ch-muted">—</span>'}${i.title ? `<small>${esc(i.title)}</small>` : ''}</td><td>${i.email ? esc(i.email) : '<span class="ch-muted">—</span>'}</td><td>${i.phone ? esc(i.phone) : '<span class="ch-muted">—</span>'}</td><td>${esc(i.industry || '—')}<small>${esc(i.country)} · ${esc((i.segment || '').toUpperCase())}</small></td><td>${i.score == null ? '—' : `<span class="ch-pr-sc" title="${esc(en.reason || '')}">${i.score}</span>`}${en.pain ? `<small>${esc(en.pain)}</small>` : ''}</td>` +
-                    `<td><span class="ch-pr-tag ${k}">${l}</span>${i.reason ? `<small>${esc(i.reason)}</small>` : ''}${i.lead_id ? `<small><a href="#Lead/view/${esc(i.lead_id)}">Ver lead</a></small>` : ''}</td></tr>`; }).join('');
+                    `<td><span class="ch-pr-tag ${k}">${l}</span>${i.reason ? `<small>${esc(i.reason)}</small>` : ''}${i.lead_id ? `<small><a href="#Lead/view/${esc(i.lead_id)}">Ver lead</a></small>` : ''}</td><td class="ch-pr-act">${i.status === 'imported' ? '' : `<button class="btn btn-default btn-xs" data-a="pedit" data-id="${i.id}" title="Editar o completar los datos"><span class="fas fa-pen"></span></button>`}</td></tr>`; }).join('');
             const fu = this.fun, pct = (a, b) => b ? Math.round(a * 100 / b) + '%' : '—';
             const funnel = '';
             const src = d.sources || [], best = src.filter(x => x.contacted > 0).sort((a, b) => (b.replied / b.contacted) - (a.replied / a.contacted))[0];
@@ -88,11 +88,11 @@ define('custom:views/prospects', ['view', 'custom:ui'], function (Dep, ChUi) {
                 kp('', 'fas fa-hourglass-half', 'Listos', c.ready || 0, 'aún no están en el CRM', 'Pasó la validación y espera su turno para entrar al CRM') + kp('', 'fas fa-address-book', 'En el CRM', c.imported || 0, 'ya son leads', 'Ya es un lead en el CRM, y el comercial virtual lo atiende') +
                 kp('', 'fas fa-gauge-high', 'Pasados hoy', `${d.promotedToday || 0}/${icp.daily_limit || 0}`, 'tope diario') + kp((c.rejected || 0) ? 'warn' : '', 'fas fa-ban', 'Rechazados', c.rejected || 0, 'no se contactan', 'No se usan: correo inexistente, dominio dudoso o no cumple el cliente ideal') + `</div>`;
             body.innerHTML = srcCard + kpis +
-                `<div class="ch-pr-bar"><button class="btn btn-primary" data-a="import"><span class="fas fa-file-import"></span> Importar CSV</button><button class="btn btn-default" data-a="enrich"><span class="fas fa-wand-magic-sparkles"></span> Enriquecer con IA</button><button class="btn btn-default" data-a="verify" title="Comprueba que cada correo exista, sin enviarle nada"><span class="fas fa-envelope-circle-check"></span> Validar correos</button>` +
+                `<div class="ch-pr-bar"><button class="btn btn-primary" data-a="import"><span class="fas fa-file-import"></span> Importar CSV</button><button class="btn btn-default" data-a="padd" title="Escribe un prospecto a mano"><span class="fas fa-plus"></span> Agregar prospecto</button><button class="btn btn-default" data-a="enrich"><span class="fas fa-wand-magic-sparkles"></span> Enriquecer con IA</button><button class="btn btn-default" data-a="verify" title="Comprueba que cada correo exista, sin enviarle nada"><span class="fas fa-envelope-circle-check"></span> Validar correos</button>` +
                 `<button class="btn btn-success" data-a="promote"><span class="fas fa-paper-plane"></span> Pasar al CRM los mejores</button><button class="btn btn-default" data-a="promotesel" ${this.sel.size ? '' : 'disabled'}>Pasar seleccionados (${this.sel.size})</button><button class="btn btn-default" data-a="del" ${this.sel.size ? '' : 'disabled'}><span class="far fa-trash-can"></span></button><input type="file" accept=".csv,text/csv,.txt" style="display:none" data-file></div>` +
                 `<div class="ch-pr-filters"><input class="form-control" data-f="q" placeholder="Buscar por nombre, empresa, correo o teléfono" value="${esc(this.f.q)}"><select class="form-control" data-f="status"><option value="">Todos los estados</option>${Object.entries(ST).map(([k, v]) => `<option value="${k}" ${this.f.status === k ? 'selected' : ''}>${v[0]}</option>`).join('')}</select>` +
                 `<select class="form-control" data-f="batch"><option value="">Todos los lotes</option>${(d.batches || []).map(b => `<option ${this.f.batch === b ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select></div>` +
-                (rows ? `<div class="ch-pr-tbl"><table><thead><tr><th></th><th>Empresa</th><th>Persona de contacto</th><th>Correo</th><th>Teléfono</th><th>Sector</th><th>Puntaje</th><th>Estado</th></tr></thead><tbody>${rows}</tbody></table></div>`
+                (rows ? `<div class="ch-pr-tbl"><table><thead><tr><th></th><th>Empresa</th><th>Persona de contacto</th><th>Correo</th><th>Teléfono</th><th>Sector</th><th>Puntaje</th><th>Estado</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
                     : ChUi.empty({kind: 'search', title: 'Aún no hay prospectos', text: 'Importa un CSV con columnas como nombre, empresa, cargo, correo, teléfono, país y sector. La IA valida cada fila y calcula qué tan bien encaja con tu cliente ideal.'}));
             const flt = e => { const k = e.target.dataset.f; this.f[k] = e.target.value; clearTimeout(this._t); this._t = setTimeout(() => this.load(), k === 'q' ? 400 : 0); };
             body.querySelectorAll('[data-f]').forEach(x => { x.oninput = flt; x.onchange = flt; });
@@ -100,10 +100,44 @@ define('custom:views/prospects', ['view', 'custom:ui'], function (Dep, ChUi) {
             body.querySelector('[data-file]').onchange = e => { const f = e.target.files[0]; if (f) { this.importFile(f); } e.target.value = ''; };
         }
 
+        // Crear o editar un prospecto a mano. Todo cambio queda anotado (quién, cuándo, antes y después) y se ve en el historial del propio prospecto.
+        editDialog(it) {
+            const isNew = !it, x = it || {};
+            const F = [['company', 'Empresa'], ['name', 'Persona de contacto'], ['title', 'Cargo'], ['email', 'Correo'], ['phone', 'Teléfono'], ['country', 'País (2 letras)'], ['industry', 'Sector']];
+            ChUi.panel({title: isNew ? 'Agregar prospecto' : 'Editar prospecto', icon: 'fas fa-pen', close: 'Cerrar', mount: (body, close) => {
+                body.innerHTML = `<p class="ch-muted">${isNew ? 'Escribe lo que sepas: basta el nombre de la empresa y un correo o un teléfono. Se valida igual que una importación.' : 'Corrige o completa los datos. Cada cambio queda registrado con tu nombre, la fecha, el valor anterior y el nuevo.'}</p>` +
+                    `<div class="ch-pr-g2">${F.map(([k, l]) => `<div><label>${l}</label><input class="form-control" data-e="${k}" value="${esc(x[k] || '')}" ${k === 'email' ? 'type="email"' : ''}></div>`).join('')}` +
+                    `<div><label>Tipo de cliente</label><select class="form-control" data-e="segment"><option value="">Sin definir</option><option value="b2b" ${x.segment === 'b2b' ? 'selected' : ''}>Empresa (B2B)</option><option value="b2c" ${x.segment === 'b2c' ? 'selected' : ''}>Persona (B2C)</option></select></div></div>` +
+                    `<label>Notas <small class="ch-muted">(lo que sepas de ellos, para quien los atienda)</small></label><textarea class="form-control" rows="3" data-e="notes">${esc(x.notes || '')}</textarea>` +
+                    `<div class="ch-pr-err" data-err hidden style="color:#d64545;margin:8px 0"></div>` +
+                    `<p style="margin-top:12px"><button class="btn btn-primary" data-a="save">${isNew ? 'Agregar' : 'Guardar cambios'}</button></p>` +
+                    (isNew ? '' : `<h6 class="ch-ramp-h">Historial de cambios</h6><div data-hist class="ch-muted">Cargando…</div>`);
+                const q = s => body.querySelector(s), err = m => { const e = q('[data-err]'); e.hidden = !m; e.textContent = m || ''; };
+                const reasonOf = xhr => { if (xhr) { xhr.errorIsHandled = true; } return (xhr && xhr.getResponseHeader && xhr.getResponseHeader('X-Status-Reason')) || 'No se pudo guardar.'; };
+                if (!isNew) {
+                    Espo.Ajax.getRequest('CrmHub/prospectHistory', {id: x.id}).then(r => {
+                        const L = r.items || [];
+                        q('[data-hist]').innerHTML = L.length ? '<ul class="ch-ramp-hist">' + L.map(h => `<li><small>${esc(ChUi.fmt.dt(h.at))}</small> <b>${esc(h.by)}</b> ` + (h.action === 'create' ? 'agregó el prospecto' : (h.changes || []).map(c => `${esc(c.label)}: <span class="ch-muted">${esc(c.old || '—')}</span> → <b>${esc(c.new || '—')}</b>`).join(' · ')) + '</li>').join('') + '</ul>' : '<span class="ch-muted">Aún no se ha editado a mano.</span>';
+                    }).catch(() => { q('[data-hist]').textContent = 'No se pudo cargar el historial.'; });
+                }
+                q('[data-a=save]').onclick = () => {
+                    const ch = {};
+                    body.querySelectorAll('[data-e]').forEach(f => { if (isNew ? f.value.trim() !== '' : f.value.trim() !== String(x[f.dataset.e] || '')) { ch[f.dataset.e] = f.value.trim(); } });
+                    if (!Object.keys(ch).length) { err(isNew ? 'Escribe al menos el nombre de la empresa y un correo o teléfono.' : 'No hay cambios que guardar.'); return; }
+                    err(''); Espo.Ui.notify('Guardando…');
+                    Espo.Ajax.postRequest(isNew ? 'CrmHub/prospectAdd' : 'CrmHub/prospectEdit', isNew ? {changes: ch} : {id: x.id, changes: ch})
+                        .then(() => { Espo.Ui.notify(false); Espo.Ui.success(isNew ? 'Prospecto agregado.' : 'Cambios guardados y registrados.'); close(true); this.load(); })
+                        .catch(xhr => { Espo.Ui.notify(false); err(reasonOf(xhr)); });
+                };
+            }});
+        }
+
         listClick(e, body) {
             const ck = e.target.closest('[data-sel]'); if (ck) { const id = +ck.dataset.sel; if (ck.checked) { this.sel.add(id); } else { this.sel.delete(id); } this.drawList(body); return; }
             const b = e.target.closest('[data-a]'); if (!b) { return; } const k = b.dataset.a;
             if (k === 'import') { body.querySelector('[data-file]').click(); }
+            else if (k === 'padd') { this.editDialog(null); }
+            else if (k === 'pedit') { this.editDialog((this.d.items || []).find(x => x.id === +b.dataset.id)); }
             else if (k === 'verify') { Espo.Ajax.postRequest('CrmHub/prospectsVerify', {}).then(r => { Espo.Ui.success(`Comprobando ${r.queued} correos sin enviarles nada; los que no existan pasan a «Rechazado». Recarga en un momento.`); setTimeout(() => this.load(), 20000); }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo iniciar la validación.'); }); }
             else if (k === 'enrich') { Espo.Ajax.postRequest('CrmHub/prospectsEnrich', {}).then(() => { Espo.Ui.success('La IA está analizando los prospectos pendientes; recarga en un momento.'); setTimeout(() => this.load(), 8000); }); }
             else if (k === 'promote' || k === 'promotesel') {

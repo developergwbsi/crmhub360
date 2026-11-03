@@ -1556,5 +1556,29 @@
             "controller": "CrmHub",
             "action": "rampEvaluate"
         }
+    },
+    {
+        "route": "/CrmHub/prospectEdit",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "prospectEdit"
+        }
+    },
+    {
+        "route": "/CrmHub/prospectAdd",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "prospectAdd"
+        }
+    },
+    {
+        "route": "/CrmHub/prospectHistory",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "prospectHistory"
+        }
     }
 ]

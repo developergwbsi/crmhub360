@@ -571,7 +571,9 @@
 <li>El comercial virtual se presenta como asistente virtual y pasa a una persona cuando el cliente lo pide o quiere negociar.</li>
 </ul>
 <div class="ch-warn"><b>Recomendación:</b> empieza con el comercial virtual en <b>modo prueba</b> y el tope diario bajo, revisa los mensajes en su bitácora y sube el volumen poco a poco.</div>
-  </div>
+  <h3>Editar y completar datos de un prospecto</h3>
+<p>En la lista de <b>Prospección</b>, el lápiz de cada fila abre el formulario para corregir o completar empresa, persona de contacto, cargo, correo, teléfono, país, sector, tipo de cliente y notas. <b>Agregar prospecto</b> crea uno a mano. Se valida como una importación (correo existente, teléfono, lista de no contactar y duplicados). <b>Todo cambio queda registrado</b>: quién lo hizo, cuándo, el valor anterior y el nuevo; se ve en el historial del formulario y como «Editado por…» en la lista. Los prospectos que ya son leads se editan desde su ficha.</p>
+</div>
 </div>
 <div class="panel panel-default" id="ch-m-procesos" data-roles="">
   <div class="panel-heading"><h4 class="panel-title">9e. Procesos de leads, copias de leads y lectura de documentos</h4></div>

@@ -805,6 +805,11 @@ empieza con el comercial virtual en
 y el tope diario bajo, revisa los mensajes en su bitácora y sube el volumen poco a poco.
 
 
+
+Editar y completar datos de un prospecto
+
+En la lista de **Prospección**, el lápiz de cada fila abre el formulario para corregir o completar empresa, persona de contacto, cargo, correo, teléfono, país, sector, tipo de cliente y notas. **Agregar prospecto** crea uno a mano. Se valida como una importación (correo existente, teléfono, lista de no contactar y duplicados). **Todo cambio queda registrado**: quién lo hizo, cuándo, el valor anterior y el nuevo; se ve en el historial del formulario y como «Editado por…» en la lista. Los prospectos que ya son leads se editan desde su ficha.
+
 ## 9e. Procesos de leads, copias de leads y lectura de documentos
 
 *Visible para: Admin*

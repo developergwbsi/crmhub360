@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS prospects (
     campaign TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
 ALTER TABLE prospects ADD COLUMN IF NOT EXISTS origin TEXT NOT NULL DEFAULT 'import';
 ALTER TABLE prospects ADD COLUMN IF NOT EXISTS found_by TEXT NOT NULL DEFAULT '';
+ALTER TABLE prospects ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT '';
+CREATE TABLE IF NOT EXISTS prospect_changes (id SERIAL PRIMARY KEY, tenant TEXT NOT NULL, prospect_id INT NOT NULL, at TIMESTAMPTZ NOT NULL DEFAULT now(), user_id TEXT NOT NULL DEFAULT '',
+    user_name TEXT NOT NULL DEFAULT '', action TEXT NOT NULL DEFAULT 'edit', changes JSONB NOT NULL DEFAULT '[]');
+CREATE INDEX IF NOT EXISTS prospect_changes_p ON prospect_changes (tenant, prospect_id, at DESC);
 CREATE INDEX IF NOT EXISTS prospects_tenant ON prospects (tenant, status, created_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS prospects_email ON prospects (tenant, email) WHERE email <> '' AND status <> 'rejected';
 CREATE UNIQUE INDEX IF NOT EXISTS prospects_phone ON prospects (tenant, phone) WHERE phone <> '' AND status <> 'rejected';
@@ -213,10 +217,16 @@ def listing(slug: str, status: str = "", batch: str = "", q: str = "", limit: in
         counts = {r["status"]: r["n"] for r in c.execute("SELECT status, count(*) n FROM prospects WHERE tenant=%s GROUP BY status", (slug,)).fetchall()}
         batches = [r["batch"] for r in c.execute("SELECT batch FROM prospects WHERE tenant=%s GROUP BY batch ORDER BY max(id) DESC LIMIT 30", (slug,)).fetchall()]
         today = c.execute("SELECT count(*) n FROM prospects WHERE tenant=%s AND status='imported' AND updated_at::date = current_date", (slug,)).fetchone()["n"]
-    return {"items": [_row_to_dict(r) for r in rows], "counts": counts, "batches": batches, "promotedToday": today, "sources": by_source(slug)}
+        ids = [r["id"] for r in rows]
+        last = {r["prospect_id"]: r for r in c.execute("SELECT DISTINCT ON (prospect_id) prospect_id, user_name, at FROM prospect_changes WHERE tenant=%s AND prospect_id = ANY(%s) ORDER BY prospect_id, at DESC", (slug, ids)).fetchall()} if ids else {}
+    items = [_row_to_dict(r) for r in rows]
+    for it in items:
+        le = last.get(it["id"])
+        it["last_edit"] = {"by": le["user_name"], "at": le["at"].isoformat()} if le else None
+    return {"items": items, "counts": counts, "batches": batches, "promotedToday": today, "sources": by_source(slug)}
 
 
-SOURCE_LABEL = {"claude": "Agente de IA (Claude)", "serper": "Serper", "brave": "Brave", "google": "Google", "bing": "Bing", "import": "Archivo CSV", "solicitado": "Pedido a mano", "unknown": "Buscador (motor sin registrar)"}
+SOURCE_LABEL = {"claude": "Agente de IA (Claude)", "serper": "Serper", "brave": "Brave", "google": "Google", "bing": "Bing", "import": "Archivo CSV", "solicitado": "Pedido a mano", "unknown": "Buscador (motor sin registrar)", "manual": "Agregado a mano"}
 
 
 def source_of(r: dict) -> str:
@@ -365,3 +375,120 @@ def is_cold(slug: str, lead_id: str) -> bool:
 def _mark(pid: int, status: str, reason: str = "", lead_id: str | None = None) -> None:
     with db.pool.connection() as c:
         c.execute("UPDATE prospects SET status=%s, reason=%s, lead_id=COALESCE(%s, lead_id), updated_at=now() WHERE id=%s", (status, reason, lead_id, pid))
+
+
+# ---------------- edición manual con bitácora (quién cambió qué y cuándo)
+EDIT_FIELDS = {"name": "Persona de contacto", "company": "Empresa", "title": "Cargo", "email": "Correo", "phone": "Teléfono", "country": "País", "industry": "Sector", "segment": "Tipo de cliente", "notes": "Notas"}
+_LIMITS = {"name": 120, "company": 120, "title": 80, "industry": 80, "notes": 1000}
+
+
+def _log_change(slug: str, pid: int, user_id: str, user_name: str, action: str, changes: list[dict]) -> None:
+    with db.pool.connection() as c:
+        c.execute("INSERT INTO prospect_changes (tenant, prospect_id, user_id, user_name, action, changes) VALUES (%s,%s,%s,%s,%s,%s::jsonb)", (slug, pid, user_id[:60], user_name[:120], action, json.dumps(changes)))
+
+
+async def edit(tenant: dict, pid: int, changes: dict, user_id: str, user_name: str) -> dict:
+    """Corrige o completa los datos de un prospecto. Valida igual que la importación y deja anotado quién cambió qué (valor anterior y nuevo)."""
+    slug = tenant["slug"]
+    with db.pool.connection() as c:
+        row = c.execute("SELECT * FROM prospects WHERE tenant=%s AND id=%s", (slug, pid)).fetchone()
+    if not row:
+        raise ValueError("No existe ese prospecto.")
+    row = dict(row)
+    if row["status"] == "imported":
+        raise ValueError("Ya es un lead en el CRM: edítalo desde su ficha.")
+    new: dict = {}
+    for k in EDIT_FIELDS:
+        if k not in changes:
+            continue
+        v = str(changes.get(k) or "").strip()
+        if k in _LIMITS:
+            v = v[:_LIMITS[k]]
+        elif k == "country":
+            v = v.upper()[:2]
+        elif k == "segment":
+            v = v.lower()
+            if v not in ("b2b", "b2c", ""):
+                raise ValueError("El tipo de cliente debe ser B2B o B2C.")
+        elif k == "email":
+            v = compliance.norm_email(v)
+        if v != (row.get(k) or ""):
+            new[k] = v
+    if not new:
+        raise ValueError("No hay cambios que guardar.")
+    country = new.get("country", row["country"]) or "CO"
+    if new.get("email"):
+        ok, why = compliance.email_ok(new["email"])
+        if not ok:
+            raise ValueError(why or "Correo no válido")
+        if compliance.is_dnc(slug, email=new["email"]):
+            raise ValueError("Ese correo está en la lista de no contactar.")
+        vs, vw = await emailcheck.verify(new["email"])
+        if emailcheck.blocks(vs):
+            raise ValueError(vw or "Ese correo no existe.")
+    if new.get("phone"):
+        ph, why = compliance.phone_e164(new["phone"], country)
+        if not ph:
+            raise ValueError(why or "Teléfono no válido")
+        if compliance.is_dnc(slug, phones=[ph]):
+            raise ValueError("Ese teléfono está en la lista de no contactar.")
+        new["phone"] = ph
+        if ph == row["phone"]:
+            new.pop("phone")
+    merged = {**row, **new}
+    if not merged["email"] and not merged["phone"]:
+        raise ValueError("Debe quedar al menos un correo o un teléfono.")
+    if not merged["name"]:
+        merged["name"] = merged["company"] or "Sin nombre"; new["name"] = merged["name"]
+    if not new:
+        raise ValueError("No hay cambios que guardar.")
+    sets, args = [], []
+    for k, v in new.items():
+        sets.append(f"{k}=%s"); args.append(v)
+    contact_fixed = row["status"] == "rejected" and ("email" in new or "phone" in new)
+    profile_changed = any(k in new for k in ("company", "title", "industry", "country", "segment"))
+    if contact_fixed:
+        sets += ["status='ready'", "reason=''"]
+    if (contact_fixed or profile_changed) and (contact_fixed or row["status"] == "ready"):
+        cfg = icp(tenant)
+        rs = rules_score({k: merged.get(k) or "" for k in ("email", "phone", "company", "industry", "title", "country", "segment")}, cfg)
+        sets += ["rules_score=%s", "score=%s", "enrichment='{}'::jsonb"]; args += [rs, rs]
+    if "industry" in new and new["industry"]:
+        sets.append("niche=%s"); args.append(new["industry"].lower()[:60])
+    sets.append("updated_at=now()")
+    try:
+        with db.pool.connection() as c:
+            c.execute(f"UPDATE prospects SET {', '.join(sets)} WHERE tenant=%s AND id=%s", (*args, slug, pid))
+    except Exception as e:
+        if "unique" in str(e).lower() or "duplicate" in str(e).lower():
+            raise ValueError("Ya hay otro prospecto con ese correo o teléfono.")
+        raise
+    _log_change(slug, pid, user_id, user_name, "edit", [{"field": k, "label": EDIT_FIELDS[k], "old": str(row.get(k) or ""), "new": v} for k, v in new.items()])
+    return {"ok": True, "changed": list(new), "reopened": contact_fixed}
+
+
+async def add_manual(tenant: dict, fields: dict, user_id: str, user_name: str) -> dict:
+    """Agrega un prospecto a mano (con las mismas validaciones de la importación) y lo deja registrado."""
+    slug = tenant["slug"]
+    g = lambda k: str(fields.get(k) or "").strip()
+    row = {"nombre": g("name"), "empresa": g("company"), "cargo": g("title"), "correo": g("email"), "telefono": g("phone"), "pais": g("country"), "sector": g("industry")}
+    if not (row["empresa"] or row["nombre"]):
+        raise ValueError("Escribe al menos el nombre de la empresa o de la persona.")
+    batch = datetime.now(timezone.utc).strftime("manual-%Y%m%d")
+    res = await import_rows(tenant, [row], batch=batch)
+    with db.pool.connection() as c:
+        r = c.execute("SELECT id, status, reason FROM prospects WHERE tenant=%s AND batch=%s ORDER BY id DESC LIMIT 1", (slug, batch)).fetchone()
+        if not r:
+            raise ValueError("No se pudo guardar.")
+        if r["status"] == "rejected":
+            c.execute("DELETE FROM prospects WHERE id=%s", (r["id"],))
+            raise ValueError(r["reason"] or "No se pudo agregar: " + ", ".join(res.get("reasons", {})))
+        c.execute("UPDATE prospects SET origin='manual', found_by='manual', notes=%s WHERE id=%s", (g("notes")[:1000], r["id"]))
+    _log_change(slug, r["id"], user_id, user_name, "create", [{"field": "all", "label": "Prospecto agregado a mano", "old": "", "new": row["empresa"] or row["nombre"]}])
+    return {"ok": True, "id": r["id"]}
+
+
+def history(slug: str, pid: int) -> list[dict]:
+    with db.pool.connection() as c:
+        rows = c.execute("SELECT at, user_name, action, changes FROM prospect_changes WHERE tenant=%s AND prospect_id=%s ORDER BY at DESC LIMIT 100", (slug, pid)).fetchall()
+    return [{"at": r["at"].isoformat(), "by": r["user_name"] or "—", "action": r["action"], "changes": r["changes"]} for r in rows]

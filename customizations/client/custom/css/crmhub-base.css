@@ -1859,3 +1859,4 @@ body.ch-scrolled .ch-sim-head.ch-fixed p, body.ch-scrolled .ch-rc-top.ch-fixed p
 .ch-panel .ch-panel-top.ch-fixed, .ch-panel .ch-kpis.ch-fixed { background: var(--ch-surface); margin: 0; padding: 8px 0; box-shadow: none; }
 .ch-panel .ch-panel-top.ch-fixed { padding-bottom: 4px; }
 .home-content .dashlet[data-name="CrmHubPanel"] > .dashlet-body, .home-content .dashlet[data-name="CrmHubPanel"] .panel-body { overflow: visible !important; }
+.ch-pr-act { width: 44px; text-align: right; } .ch-pr-note { font-style: italic; color: var(--ch-muted); max-width: 260px; white-space: normal; }

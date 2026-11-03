@@ -2890,6 +2890,41 @@ async def prospects_promote(req: ProspectPromoteReq, tenant: dict = Depends(tena
     return await prospects.promote(tenant, req.ids or None, req.limit, req.agentId)
 
 
+class ProspectEditReq(BaseModel):
+    """Cambios a un prospecto (solo los campos que se envían) y quién los hace, para dejar la bitácora."""
+    changes: dict = {}
+    userId: str = ""
+    userName: str = ""
+
+
+@app.put("/v1/prospects/{pid}")
+async def prospects_edit(pid: int, req: ProspectEditReq, tasks: BackgroundTasks, tenant: dict = Depends(tenant_auth)):
+    """Edita o completa datos de un prospecto, anotando quién lo cambió."""
+    try:
+        r = await prospects.edit(tenant, pid, req.changes, req.userId, req.userName)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    if r.get("changed") and any(k in r["changed"] for k in ("company", "title", "industry", "country", "segment")):
+        tasks.add_task(prospects.enrich_pending, tenant)   # al cambiar su perfil, se vuelve a analizar con IA
+    return r
+
+
+@app.post("/v1/prospects/add")
+async def prospects_add(req: ProspectEditReq, tasks: BackgroundTasks, tenant: dict = Depends(tenant_auth)):
+    """Agrega un prospecto a mano."""
+    try:
+        r = await prospects.add_manual(tenant, req.changes, req.userId, req.userName)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    tasks.add_task(prospects.enrich_pending, tenant)
+    return r
+
+
+@app.get("/v1/prospects/{pid}/history")
+def prospects_history(pid: int, tenant: dict = Depends(tenant_auth)):
+    return {"items": prospects.history(tenant["slug"], pid)}
+
+
 @app.post("/v1/prospects/delete")
 def prospects_delete(req: ProspectIdsReq, tenant: dict = Depends(tenant_auth)):
     return {"deleted": prospects.remove(tenant["slug"], req.ids)}

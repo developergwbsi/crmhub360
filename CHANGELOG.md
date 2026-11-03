@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.26.7] - 2026-11-03
+
+### Añadido
+- **Prospección: editar y completar datos con registro de quién lo hizo:** cada prospecto tiene un lápiz para corregir empresa, persona de contacto, cargo, correo, teléfono, país, sector, tipo de cliente y notas, y un botón «Agregar prospecto» para escribir uno a mano. Se valida igual que una importación (correo existente, teléfono, lista de no contactar, duplicados). Cada cambio queda en una bitácora con la persona, la fecha, el valor anterior y el nuevo, visible en el historial del prospecto y como «Editado por…» en la lista. Al cambiar su perfil se vuelve a analizar con IA, y un prospecto rechazado por un correo mal escrito vuelve a estar listo al corregirlo.
+
 ## [1.26.6] - 2026-11-03
 
 ### Cambiado
