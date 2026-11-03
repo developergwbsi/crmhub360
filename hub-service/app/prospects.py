@@ -291,7 +291,7 @@ async def promote(tenant: dict, ids: list[int] | None = None, limit: int | None 
                                           (f"Oferta indicada por el equipo: {(r['raw'] or {}).get('oferta')} como producto principal de este contacto." if (r.get("raw") or {}).get("oferta") else ""),
                                           (f"Producto recomendado por el calificador: {(en.get('qualifier') or {}).get('product', '')} (grado {(en.get('qualifier') or {}).get('grade', '')}). Ángulo: {(en.get('qualifier') or {}).get('angle', '')}" if en.get("qualifier") else "")] if x)
             rw = r.get("raw") or {}
-            ficha = "\n".join(x for x in [f"Qué hace (su sitio): {rw['descripcion']}" if rw.get("descripcion") else "", f"WhatsApp: {rw['whatsapp']}" if rw.get("whatsapp") else "",
+            ficha = "\n".join(x for x in [f"Qué hace (su sitio): {rw['descripcion']}" if rw.get("descripcion") else "", f"WhatsApp: {rw['whatsapp']}" if rw.get("whatsapp") else "", f"Teléfonos fijos: {rw['fijos']}" if rw.get("fijos") else "",
                                            f"Otros correos: {rw['otros_correos']}" if rw.get("otros_correos") else "", f"Dirección: {rw['direccion']}" if rw.get("direccion") else "",
                                            f"Sitio: {rw['sitio']}" if rw.get("sitio") else "", f"Redes: {rw['redes']}" if rw.get("redes") else ""] if x)
             if ficha:

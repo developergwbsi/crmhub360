@@ -6,6 +6,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [1.27.5] - 2026-11-03
 
+### Corregido
+- **El buscador lee teléfonos fijos, celulares y direcciones escritos como texto:** antes solo veía los que estaban como enlace (`tel:`, WhatsApp) y se perdía los de sitios que los escriben en la página, como el PBX y la dirección de Plásticos Línea Líder. Los fijos se guardan en la ficha del prospecto, se ven bajo el teléfono en Prospección y viajan a la descripción del lead; el campo de teléfono de contacto sigue siendo solo para celulares.
+
 ## [1.27.4] - 2026-11-03
 
 ### Añadido
