@@ -436,6 +436,7 @@
             if (n) { try { localStorage.setItem('ch-app-name', n); } catch (e) { /* privado */ } paintBrand(); }
             // el nombre del usuario recordado se guarda para la bienvenida del próximo inicio de sesión
             try { if (r && r.user && localStorage.getItem('ch-last-user') === r.user.userName && r.user.name) { localStorage.setItem('ch-last-name', r.user.name); } } catch (e) { /* privado */ }
+            if (r && r.user && r.user.userName !== 'soporte-lectura') { try { Espo.loader.require('custom:pin', function (m) { m.offer(r.user); }); } catch (e) { /* sin PIN */ } }
             if (r && r.user && r.user.userName === 'soporte-lectura') {
                 document.body.classList.add('ch-readonly');
                 if (!document.getElementById('ch-ro')) {
@@ -632,6 +633,11 @@
                 tg.classList.add('ch-has-avatar'); tg.setAttribute('title', nm ? nm + ' · menú' : 'Menú');
                 tg.appendChild(el('<img class="ch-hdr-avatar" alt="" draggable="false" src="?entryPoint=avatar&size=small&id=' + encodeURIComponent(id) + '">'));
             }
+        }
+        var mc = document.querySelector('.menu-container');
+        if (mc && !mc.querySelector('[data-ch-pin]')) {
+            var meA = mc.querySelector('a[href^="#User/view/"]'), meLi = meA && meA.closest('li');
+            if (meLi) { var li = el('<li><a role="button" tabindex="0" data-ch-pin="1"><span class="item-icon fas fa-key"></span><span class="item-text">Mi PIN de ingreso</span></a></li>'); meLi.insertAdjacentElement('afterend', li); li.firstChild.addEventListener('click', function () { Espo.loader.require('custom:pin', function (m) { m.manage(null); }); }); }
         }
         var ab = document.querySelector('.menu-container a[data-name="about"]');
         if (ab && !ab.querySelector('.item-icon')) { ab.insertBefore(el('<span class="item-icon fas fa-circle-info"></span>'), ab.firstChild); }

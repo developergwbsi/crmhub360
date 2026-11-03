@@ -15,14 +15,15 @@ define('custom:views/lead-set', ['view', 'custom:ui'], function (Dep, ChUi) {
 
         setup() {
             this.set = read();
-            this.getHelper().pageTitle.setTitle(this.set ? this.set.title : 'Leads');
+            this.getHelper().pageTitle.setTitle(this.set ? this.set.title : 'Registros');
             if (!this.set || !this.set.ids.length) { return; }
-            this.getCollectionFactory().create('Lead', c => {
+            const scope = this.set.scope || 'Lead';
+            this.getCollectionFactory().create(scope, c => {
                 this.collection = c;
                 c.maxSize = this.getConfig().get('recordsPerPage') || 20;
                 c.where = [{type: 'in', attribute: 'id', value: this.set.ids}];
                 c.fetch().then(() => {
-                    this.createView('list', 'custom:views/record/list-drawer', {collection: c, selector: '.ch-ls-list', scope: 'Lead', pagination: false}, v => {
+                    this.createView('list', 'custom:views/record/list-drawer', {collection: c, selector: '.ch-ls-list', scope, pagination: false}, v => {
                         // la lista base deja escrito «undefined» donde iría la paginación que aquí no se usa
                         v.listenTo(v, 'after:render', () => { const w = document.createTreeWalker(v.el, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { if (n.nodeValue.trim() === 'undefined') { n.nodeValue = ''; } } });
                         if (this.isRendered()) { v.render(); }
@@ -36,10 +37,10 @@ define('custom:views/lead-set', ['view', 'custom:ui'], function (Dep, ChUi) {
             const s = this.set;
             root.querySelector('.ch-ls-title').textContent = s ? s.title : 'Leads';
             if (!s || !s.ids.length) {
-                root.querySelector('.ch-ls-list').innerHTML = '<div class="ch-muted" style="padding:24px">No hay leads para mostrar. Vuelve al tablero y elige una cifra.</div>';
+                root.querySelector('.ch-ls-list').innerHTML = '<div class="ch-muted" style="padding:24px">No hay registros para mostrar. Vuelve al tablero y elige una cifra.</div>';
                 return;
             }
-            root.querySelector('.ch-ls-count').textContent = s.ids.length >= 2000 ? 'Primeros 2000' : s.ids.length + (s.ids.length === 1 ? ' lead' : ' leads');
+            root.querySelector('.ch-ls-count').textContent = s.ids.length >= 2000 ? 'Primeros 2000' : s.ids.length + (s.scope && s.scope !== 'Lead' ? (s.ids.length === 1 ? ' registro' : ' registros') : (s.ids.length === 1 ? ' lead' : ' leads'));
             if (s.assign) {
                 const t = root.querySelector('.ch-ls-tools');
                 t.innerHTML = '<button class="btn btn-primary btn-sm" data-act="auto"><span class="fas fa-shuffle"></span> Repartir automáticamente</button>';
@@ -55,7 +56,7 @@ define('custom:views/lead-set', ['view', 'custom:ui'], function (Dep, ChUi) {
                     Espo.Ui.success(`Asignados ${r.assigned}` + (r.skipped ? ` · sin cambio ${r.skipped}` : ''));
                     this.set.ids = this.set.ids.slice(300).concat(r.assigned ? [] : this.set.ids.slice(0, 300));
                     if (this.collection) { this.collection.fetch(); }
-                    try { this.getBaseController().clearScopeStoredMainView('Lead'); } catch (e) { /* sin lista guardada */ }
+                    try { this.getBaseController().clearScopeStoredMainView(this.set.scope || 'Lead'); } catch (e) { /* sin lista guardada */ }
                 }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo repartir. ¿Tienes permiso de asignación?'); });
             });
         }

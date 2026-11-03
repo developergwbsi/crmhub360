@@ -4,6 +4,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.0] - 2026-11-03
+
+### Añadido
+- **PIN de reingreso:** al entrar con contraseña, si la persona no tiene PIN se le pregunta si quiere crear uno (4 a 6 números, repetido y confirmado con su contraseña; se rechazan los obvios como 1234 o 0000). La próxima vez que vuelve a ese equipo la pantalla de acceso pide solo el PIN, con la opción «Prefiero usar mi contraseña». El PIN va unido al equipo (un código largo guardado en ese navegador), se guarda con hash, tras 5 intentos fallidos se bloquea 15 minutos y los equipos dejan de valer, y no se ofrece a quien usa verificación en dos pasos. En el menú del usuario hay «Mi PIN de ingreso» para cambiarlo (con la contraseña, si lo olvidó), activarlo en este equipo, olvidar este equipo o quitarlo. Hub: `/v1/pin*` (tablas `user_pin` y `pin_device`); CRM: `CrmHub/pin*` y el público `CrmHubPin/login`, que entrega un token de sesión del CRM.
+- **Tableros: las cifras llevan a los registros:** en los tableros del escritorio y de Reportes, pulsar una cifra, una barra o porción de la gráfica, o una fila de la tabla abre la lista de los registros que suma (leads, oportunidades, tareas, reuniones, llamadas, cuentas o contactos), con los permisos de la persona (`CrmHub/biIds`).
+
+### Cambiado
+- **Inicio ya no repite el «Panel gerencial»:** si la persona ya fijó sus tableros en el escritorio, el panel que llega por defecto se oculta (un botón «Ver el panel gerencial» lo vuelve a mostrar y recuerda la elección). Sin tableros fijados, el panel por defecto se sigue viendo.
+
 ## [1.26.7] - 2026-11-03
 
 ### Añadido

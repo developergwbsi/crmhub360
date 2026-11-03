@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **227** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **233** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -118,6 +118,12 @@ Total: **227** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/meet/rooms/{code}/summary` | `meet_summary_get` | Resumen de la reunión de una sala, posterior a `since` (milisegundos); 204 sin cuerpo si aún no está listo. |
 | GET | `/v1/meet/status` | `meet_status` | Servicio de videollamadas habilitado a la empresa: off / video / video_subs. |
 | GET | `/v1/meet/waiting` | `meet_waiting` | Salas con clientes esperando (de toda la empresa); el CRM filtra las del usuario. |
+| DELETE | `/v1/pin` | `pin_remove` | — |
+| PUT | `/v1/pin` | `pin_set` | — |
+| POST | `/v1/pin/device` | `pin_device` | — |
+| POST | `/v1/pin/forget` | `pin_forget` | — |
+| GET | `/v1/pin/status` | `pin_status` | — |
+| POST | `/v1/pin/verify` | `pin_verify` | — |
 | POST | `/v1/pipeline/run` | `pipeline_run` | Una pasada completa ahora mismo: busca, califica y pasa los mejores al comercial virtual. |
 | GET | `/v1/presets` | `presets_get` | Mensajes predefinidos de WhatsApp (saludo, fuera de horario, menú y palabras clave). |
 | PUT | `/v1/presets` | `presets_save` | — |

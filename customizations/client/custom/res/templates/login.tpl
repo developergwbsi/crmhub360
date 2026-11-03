@@ -50,6 +50,14 @@
                     <a role="button" id="ch-notme" tabindex="5">¿No eres tú?</a>
                 </div>
 
+                <div class="crmhub-pin" id="ch-pin" hidden>
+                    <label for="ch-pin-in">Ingresa tu PIN</label>
+                    <input id="ch-pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" class="form-control" placeholder="• • • •">
+                    <div class="crmhub-pin-err" id="ch-pin-err" hidden></div>
+                    <button type="button" class="btn btn-primary crmhub-submit" id="ch-pin-go">Entrar con PIN</button>
+                    <div class="crmhub-forgot"><a role="button" id="ch-pin-pw">Prefiero usar mi contraseña</a></div>
+                </div>
+
                 <div class="form-group cell" data-name="username">
                     <label for="field-userName">{{translate 'Username'}}</label>
                     <input type="text" name="username" id="field-userName" class="form-control" autocapitalize="off"

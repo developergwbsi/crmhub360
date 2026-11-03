@@ -2081,6 +2081,93 @@ class CrmHub
         return (object) $q->run($d);
     }
 
+    /** POST /CrmHub/biIds. Usuario. {source, filters, groups, pick}. Ids de los registros que suma una cifra del tablero (para abrirlos en lista). Solo datos del CRM. */
+    public function postActionBiIds(Request $request): \stdClass
+    {
+        $q = $this->biQuery();
+        $d = json_decode(json_encode($request->getParsedBody()), true) ?: [];
+        if (str_starts_with((string) ($d['source'] ?? ''), 'form:')) {
+            throw new BadRequest('Este dato no tiene lista de registros.');
+        }
+        return (object) $q->ids($d, (array) ($d['pick'] ?? []));
+    }
+
+    // ---------- PIN de reingreso (Hub: /v1/pin*). La contraseña se valida aquí; el PIN y los equipos viven en el Hub.
+    private function pinAllowed(): bool
+    {
+        if (!in_array((string) $this->user->get('type'), ['admin', 'regular'], true)) {
+            return false;
+        }
+        $ud = $this->em->getEntityById('UserData', $this->user->getId());
+        return !($ud && $ud->get('auth2FA'));   // con verificación en dos pasos no se ofrece PIN
+    }
+
+    private function pinPassword(\stdClass $d): void
+    {
+        $pw = (string) ($d->password ?? '');
+        if ($pw === '' || !(new \Espo\Core\Utils\PasswordHash($this->config))->verify($pw, (string) $this->user->get('password'))) {
+            throw new BadRequest('La contraseña no es correcta.');
+        }
+    }
+
+    private function pinLabel(Request $request): string
+    {
+        $ua = (string) $request->getHeader('User-Agent');
+        $os = preg_match('/Windows/i', $ua) ? 'Windows' : (preg_match('/Android/i', $ua) ? 'Android' : (preg_match('/iPhone|iPad/i', $ua) ? 'iPhone/iPad' : (preg_match('/Mac OS/i', $ua) ? 'Mac' : (preg_match('/Linux/i', $ua) ? 'Linux' : 'Equipo'))));
+        $br = preg_match('/Edg\//', $ua) ? 'Edge' : (preg_match('/Chrome\//', $ua) ? 'Chrome' : (preg_match('/Firefox\//', $ua) ? 'Firefox' : (preg_match('/Safari\//', $ua) ? 'Safari' : 'navegador')));
+        return $br . ' en ' . $os;
+    }
+
+    /** GET /CrmHub/pinStatus?device=. Usuario. {hasPin, deviceOk, devices, unavailable}. Hub: GET /v1/pin/status. */
+    public function getActionPinStatus(Request $request): \stdClass
+    {
+        $this->simGuard();
+        if (!$this->pinAllowed()) {
+            return (object) ['unavailable' => true, 'hasPin' => false, 'deviceOk' => false];
+        }
+        $dev = preg_replace('/[^A-Za-z0-9_-]/', '', (string) $request->getQueryParam('device'));
+        return (object) $this->hubCall('GET', '/v1/pin/status?userId=' . urlencode($this->user->getId()) . '&device=' . urlencode($dev), null, 10);
+    }
+
+    /** POST /CrmHub/pinSet. Usuario. {password, pin}. Crea o cambia el PIN y activa este equipo; devuelve {device}. Hub: PUT /v1/pin. */
+    public function postActionPinSet(Request $request): \stdClass
+    {
+        $this->simGuard();
+        if (!$this->pinAllowed()) {
+            throw new Forbidden();
+        }
+        $d = $request->getParsedBody();
+        $this->pinPassword($d);
+        return (object) $this->hubCall('PUT', '/v1/pin', ['userId' => $this->user->getId(), 'pin' => (string) ($d->pin ?? ''), 'label' => $this->pinLabel($request)], 15);
+    }
+
+    /** POST /CrmHub/pinDevice. Usuario. {password}. Activa el PIN que ya tiene en este equipo; devuelve {device}. Hub: POST /v1/pin/device. */
+    public function postActionPinDevice(Request $request): \stdClass
+    {
+        $this->simGuard();
+        if (!$this->pinAllowed()) {
+            throw new Forbidden();
+        }
+        $this->pinPassword($request->getParsedBody());
+        return (object) $this->hubCall('POST', '/v1/pin/device', ['userId' => $this->user->getId(), 'label' => $this->pinLabel($request)], 15);
+    }
+
+    /** POST /CrmHub/pinRemove. Usuario. {password}. Elimina su PIN y todos sus equipos. Hub: DELETE /v1/pin. */
+    public function postActionPinRemove(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $this->pinPassword($request->getParsedBody());
+        return (object) $this->hubCall('DELETE', '/v1/pin?userId=' . urlencode($this->user->getId()), null, 10);
+    }
+
+    /** POST /CrmHub/pinForget. Usuario. {device}. Este equipo deja de entrar con PIN. Hub: POST /v1/pin/forget. */
+    public function postActionPinForget(Request $request): \stdClass
+    {
+        $this->simGuard();
+        $d = $request->getParsedBody();
+        return (object) $this->hubCall('POST', '/v1/pin/forget', ['userId' => $this->user->getId(), 'device' => preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($d->device ?? ''))], 10);
+    }
+
     /** POST /CrmHub/iformWebPreview. Gerente, director o supervisor. {url}: devuelve la página (saneada) para elegir visualmente qué datos traer. Hub: POST /v1/iforms/webpreview. */
     public function postActionIformWebPreview(Request $request): \stdClass
     {

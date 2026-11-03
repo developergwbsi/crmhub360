@@ -1860,3 +1860,18 @@ body.ch-scrolled .ch-sim-head.ch-fixed p, body.ch-scrolled .ch-rc-top.ch-fixed p
 .ch-panel .ch-panel-top.ch-fixed { padding-bottom: 4px; }
 .home-content .dashlet[data-name="CrmHubPanel"] > .dashlet-body, .home-content .dashlet[data-name="CrmHubPanel"] .panel-body { overflow: visible !important; }
 .ch-pr-act { width: 44px; text-align: right; } .ch-pr-note { font-style: italic; color: var(--ch-muted); max-width: 260px; white-space: normal; }
+
+/* Tableros fijados: la cifra, la barra o la fila abren la lista de registros que suman */
+.ch-bi-kpi.ch-link, .ch-bi-tbl tr.ch-link { text-decoration: none; cursor: pointer; }
+.ch-bi-kpi.ch-link:hover .v { text-decoration: underline; text-underline-offset: 4px; }
+.ch-bi-tbl tr.ch-link:hover td { background: var(--ch-primary-soft, rgba(79,99,232,.08)); }
+/* El panel gerencial por defecto se oculta cuando ya hay tableros elegidos en Inicio */
+.home-content.ch-hb-hide-panel .grid-stack-item:has(.dashlet[data-name="CrmHubPanel"]) { display: none !important; }
+.btn[hidden] { display: none !important; }
+
+/* Reingreso con PIN */
+.crmhub-pin { margin: 6px 0 4px; }
+.crmhub-pin label { display: block; font-weight: 600; margin-bottom: 6px; }
+#ch-pin-in, .ch-pin-in { letter-spacing: .5em; text-align: center; font-size: 22px; font-weight: 700; }
+.crmhub-pin-err { color: #b42323; font-size: 13px; margin: 8px 0 0; }
+.crmhub-pin .crmhub-submit { margin-top: 12px; }

@@ -12,6 +12,7 @@
 <ol>
 <li>Entra a la dirección de tu empresa e inicia sesión con tu usuario y contraseña.</li>
 <li>Cambia tu contraseña la primera vez: menú de tu usuario (arriba a la derecha) → <b>Preferencias</b>.</li>
+<li><b>Entrar con un PIN:</b> al iniciar sesión te preguntamos si quieres crear un PIN de 4 a 6 números (lo escribes dos veces y confirmas con tu contraseña). La próxima vez que vuelvas a ese equipo basta el PIN; siempre puedes elegir «Prefiero usar mi contraseña». El PIN solo sirve en los equipos donde lo activaste y se bloquea 15 minutos tras 5 intentos fallidos. Si lo olvidas, entra con tu contraseña y cámbialo en el menú de tu usuario → <b>Mi PIN de ingreso</b> (también puedes quitarlo o activarlo en otro equipo).</li>
 <li>El menú lateral izquierdo da acceso a <b>Leads</b>, cuentas, contactos, oportunidades, tareas y calendario.</li>
 <li><b>Seguridad de la sesión:</b> si dejas de usar la pantalla durante <b>30 minutos</b> (sin mover el mouse, teclear ni tocar), aparece el aviso «¿Sigues ahí?» y, si no respondes en 60 segundos, la sesión se cierra sola. Al volver verás el inicio de sesión con un aviso. Además, una sesión nunca dura más de <b>12 horas</b>, y si cierras el navegador y pasa más de una hora sin usarla, también caduca. Guarda tu trabajo antes de dejar la pantalla sola.</li>
 <li>Usa la lupa superior para buscar cualquier registro por nombre, teléfono o correo.</li>

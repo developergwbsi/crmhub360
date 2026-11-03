@@ -1580,5 +1580,62 @@
             "controller": "CrmHub",
             "action": "prospectHistory"
         }
+    },
+    {
+        "route": "/CrmHub/biIds",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "biIds"
+        }
+    },
+    {
+        "route": "/CrmHub/pinStatus",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "pinStatus"
+        }
+    },
+    {
+        "route": "/CrmHub/pinSet",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "pinSet"
+        }
+    },
+    {
+        "route": "/CrmHub/pinDevice",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "pinDevice"
+        }
+    },
+    {
+        "route": "/CrmHub/pinRemove",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "pinRemove"
+        }
+    },
+    {
+        "route": "/CrmHub/pinForget",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "pinForget"
+        }
+    },
+    {
+        "route": "/CrmHubPin/login",
+        "method": "post",
+        "params": {
+            "controller": "CrmHubPin",
+            "action": "login"
+        },
+        "noAuth": true
     }
 ]

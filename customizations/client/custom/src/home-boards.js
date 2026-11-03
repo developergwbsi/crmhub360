@@ -60,7 +60,7 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render', 'custom:bi-templa
                 if (!w.reportId) { return; }
                 box.innerHTML = '<div class="ch-muted ch-bi-empty">Calculando…</div>';
                 Espo.Ajax.getRequest('CrmHub/biItem', {id: w.reportId}).then(rep => { const t = el.querySelector(`[data-w="${w.id}"] [data-wt]`); if (t && !w.title) { t.textContent = rep.name; }
-                    const d = Object.assign({}, rep.def, w.chart ? {chart: w.chart} : {}); return run(d).then(res => R.draw(box, d, res, Object.assign({color: w.color}, ctxFor(d.source)))); })
+                    const d = Object.assign({}, rep.def, w.chart ? {chart: w.chart} : {}); return run(d).then(res => R.draw(box, d, res, Object.assign({color: w.color, title: w.title || rep.name}, ctxFor(d.source)))); })
                     .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } box.innerHTML = '<div class="ch-muted ch-bi-empty">No disponible.</div>'; });
             });
         });
@@ -135,6 +135,18 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render', 'custom:bi-templa
             .catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } host.dataset.state = 'none'; });
         host._go = go; go();
     }
+    // El «Panel gerencial» que llega por defecto no se repite cuando la persona ya eligió sus tableros: se oculta y puede volver a verlo con un botón
+    const PKEY = 'ch-hb-showpanel', PANEL = '.dashlet[data-name="CrmHubPanel"]';
+    const setHide = (host, on) => { const hc = host.parentNode; if (hc) { hc.classList.toggle('ch-hb-hide-panel', on); } };
+    function panelSwitch(host, low, hasShown) {
+        const show = (() => { try { return localStorage.getItem(PKEY) === '1'; } catch (x) { return false; } })();
+        setHide(host, hasShown && !show);
+        const sync = () => {
+            const has = !!(host.parentNode && host.parentNode.querySelector(PANEL));
+            host.parentNode && host.parentNode.querySelectorAll('.ch-hb-top [data-a=panel]').forEach(b => { b.hidden = !(hasShown && has); b.querySelector('i').textContent = show ? 'Ocultar el panel gerencial' : 'Ver el panel gerencial'; b.firstElementChild.className = 'fas fa-' + (show ? 'eye-slash' : 'eye'); });
+        };
+        sync(); setTimeout(sync, 1200); setTimeout(sync, 3000);
+    }
     const tabOf = () => curTab();
     const tabsDom = () => [].map.call(document.querySelectorAll('.home-content .dashboard-tabs button'), x => x.textContent.trim());
     function draw2(host, go) {
@@ -149,15 +161,16 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render', 'custom:bi-templa
             const inTab = p => !p.tab || !names.length || p.tab === tab || !names.includes(p.tab);   // sin pestaña, o su pestaña ya no existe → se ve en la actual
             const show = pins.filter(p => active(p, today) && inTab(p));
             grids.forEach(g => { try { g.destroy(false); } catch (e) { /* ya no existe */ } }); grids = [];
-            if (!pins.length) { host.dataset.state = 'none'; host.innerHTML = '<div class="ch-hb-top"><span><span class="fas fa-thumbtack"></span> Mis tableros <small class="ch-muted">· aún no tienes ninguno en tu escritorio</small></span><button type="button" class="btn btn-primary btn-xs" data-a="gallery"><span class="fas fa-table-cells-large"></span> Elegir un tablero</button></div>'; low.innerHTML = ''; host.onclick = e => { if (e.target.closest('[data-a=gallery]')) { gallery(host); } }; return; }
+            if (!pins.length) { setHide(host, false); host.dataset.state = 'none'; host.innerHTML = '<div class="ch-hb-top"><span><span class="fas fa-thumbtack"></span> Mis tableros <small class="ch-muted">· aún no tienes ninguno en tu escritorio</small></span><button type="button" class="btn btn-primary btn-xs" data-a="gallery"><span class="fas fa-table-cells-large"></span> Elegir un tablero</button></div>'; low.innerHTML = ''; host.onclick = e => { if (e.target.closest('[data-a=gallery]')) { gallery(host); } }; return; }
             host.dataset.state = show.length ? 'some' : 'none';
             const sec = p => `<section class="ch-hb" data-id="${esc(p.id)}"><div class="ch-hb-head"><h4>${esc(p.name)}</h4><small>${esc(vig(p))}</small><button type="button" class="ch-hb-x" data-a="edit" title="${p.mine ? 'Editar este tablero' : 'Abrir en Reportes y tableros'}"><span class="fas ${p.mine ? 'fa-pen' : 'fa-arrow-up-right-from-square'}"></span></button><button type="button" class="ch-hb-x" data-a="rm" title="Quitar de mi escritorio"><span class="fas fa-xmark"></span></button></div><div class="ch-hb-body"><div class="grid-stack"></div></div></section>`;
             const topList = show.filter(p => p.place !== 'bottom'), lowList = show.filter(p => p.place === 'bottom');
-            const bar = '<div class="ch-hb-top"><span><span class="fas fa-thumbtack"></span> Mis tableros</span><span><button type="button" class="btn btn-primary btn-xs" data-a="gallery"><span class="fas fa-table-cells-large"></span> Elegir un tablero</button> <button type="button" class="btn btn-default btn-xs" data-a="manage"><span class="fas fa-sliders"></span> Administrar</button></span></div>';
+            const bar = '<div class="ch-hb-top"><span><span class="fas fa-thumbtack"></span> Mis tableros</span><span><button type="button" class="btn btn-default btn-xs" data-a="panel" hidden><span class="fas fa-eye"></span> <i>Ver el panel gerencial</i></button> <button type="button" class="btn btn-primary btn-xs" data-a="gallery"><span class="fas fa-table-cells-large"></span> Elegir un tablero</button> <button type="button" class="btn btn-default btn-xs" data-a="manage"><span class="fas fa-sliders"></span> Administrar</button></span></div>';
             host.innerHTML = (topList.length || !lowList.length ? bar : '') + topList.map(sec).join('') + (show.length ? '' : '<div class="ch-muted" style="padding:6px 2px">No hay tableros fijados en esta pestaña.</div>');
             low.innerHTML = (!topList.length && lowList.length ? bar : '') + lowList.map(sec).join('');
             const click = e => {
                 const b = e.target.closest('[data-a]'); if (!b) { return; }
+                if (b.dataset.a === 'panel') { try { localStorage.setItem(PKEY, localStorage.getItem(PKEY) === '1' ? '0' : '1'); } catch (x) { /* sin almacenamiento */ } panelSwitch(host, low, true); return; }
                 if (b.dataset.a === 'gallery') { gallery(host); return; }
                 if (b.dataset.a === 'manage') { manage(host, pins, refetchGo); return; }
                 const sc = b.closest('.ch-hb'); if (!sc) { return; } const id = sc.dataset.id, p = pins.find(x => x.id === id);
@@ -165,6 +178,7 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render', 'custom:bi-templa
                 else if (b.dataset.a === 'rm') { ChUi.confirm({title: 'Quitar del escritorio', ok: 'Quitar', html: `<b>${esc(p.name)}</b> dejará de verse en Inicio. El tablero no se elimina: sigue en «Reportes y tableros».`}).then(y => { if (y) { Espo.Ajax.postRequest('CrmHub/biUnpin', {id}).then(refetchGo); } }); }
             };
             host.onclick = click; low.onclick = click;
+            panelSwitch(host, low, show.length > 0);
             if (!show.length) { return; }
             if (!meta) { try { meta = (await Espo.Ajax.getRequest('CrmHub/biItems')).sources || []; } catch (x) { meta = []; } }
             for (const p of show) {

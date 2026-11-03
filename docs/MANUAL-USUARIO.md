@@ -48,10 +48,11 @@
 
 1. Entra a la dirección de tu empresa e inicia sesión con tu usuario y contraseña.
 2. Cambia tu contraseña la primera vez: menú de tu usuario (arriba a la derecha) → **Preferencias**.
-3. El menú lateral izquierdo da acceso a **Leads**, cuentas, contactos, oportunidades, tareas y calendario.
-4. **Seguridad de la sesión:** si dejas de usar la pantalla durante **30 minutos** (sin mover el mouse, teclear ni tocar), aparece el aviso «¿Sigues ahí?» y, si no respondes en 60 segundos, la sesión se cierra sola. Al volver verás el inicio de sesión con un aviso. Además, una sesión nunca dura más de **12 horas**, y si cierras el navegador y pasa más de una hora sin usarla, también caduca. Guarda tu trabajo antes de dejar la pantalla sola.
-5. Usa la lupa superior para buscar cualquier registro por nombre, teléfono o correo.
-6. Con la flecha de abajo a la izquierda puedes **contraer el menú**; al pasar el mouse sobre cada ícono verás su nombre. Si lo abres desde el modo contraído (☰), el contenido se desplaza en vez de taparse.
+3. **Entrar con un PIN:** al iniciar sesión te preguntamos si quieres crear un PIN de 4 a 6 números (lo escribes dos veces y confirmas con tu contraseña). La próxima vez que vuelvas a ese equipo basta el PIN; siempre puedes elegir «Prefiero usar mi contraseña». El PIN solo sirve en los equipos donde lo activaste y se bloquea 15 minutos tras 5 intentos fallidos. Si lo olvidas, entra con tu contraseña y cámbialo en el menú de tu usuario → **Mi PIN de ingreso** (también puedes quitarlo o activarlo en otro equipo).
+4. El menú lateral izquierdo da acceso a **Leads**, cuentas, contactos, oportunidades, tareas y calendario.
+5. **Seguridad de la sesión:** si dejas de usar la pantalla durante **30 minutos** (sin mover el mouse, teclear ni tocar), aparece el aviso «¿Sigues ahí?» y, si no respondes en 60 segundos, la sesión se cierra sola. Al volver verás el inicio de sesión con un aviso. Además, una sesión nunca dura más de **12 horas**, y si cierras el navegador y pasa más de una hora sin usarla, también caduca. Guarda tu trabajo antes de dejar la pantalla sola.
+6. Usa la lupa superior para buscar cualquier registro por nombre, teléfono o correo.
+7. Con la flecha de abajo a la izquierda puedes **contraer el menú**; al pasar el mouse sobre cada ícono verás su nombre. Si lo abres desde el modo contraído (☰), el contenido se desplaza en vez de taparse.
 
 > El inicio tiene dos pestañas: **Panel gerencial** (indicadores, embudo, servicios, tendencia, origen, rendimiento por asesor y campañas, según tu alcance; puedes cambiar el periodo de 7 días a 12 meses) y **Mi día** (leads recientes, tareas, actividades y la actividad del equipo).
 

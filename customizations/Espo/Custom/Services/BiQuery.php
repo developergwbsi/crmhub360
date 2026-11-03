@@ -179,6 +179,62 @@ class BiQuery
         return ['rows' => $rows];
     }
 
+    /**
+     * Ids de los registros que suma una cifra del tablero: los filtros del reporte y, si se pulsó una barra, porción o fila, el valor de cada grupo ({g1, g2} tal como los devuelve run()).
+     * Devuelve {ids, total}; máximo 2000 (con los permisos del usuario).
+     */
+    public function ids(array $q, array $pick): array
+    {
+        $e = (string) ($q['source'] ?? '');
+        if (!in_array($e, self::ENTITIES, true) || !$this->acl->checkScope($e, 'read')) {
+            throw new Forbidden();
+        }
+        $builder = $this->sbf->create()->from($e)->withAccessControlFilter()->withWhere($this->where($e, (array) ($q['filters'] ?? [])))->buildQueryBuilder();
+        $select = ['id'];
+        $groups = array_slice((array) ($q['groups'] ?? []), 0, 2);
+        $off = $this->tzOffset();
+        foreach ($groups as $i => $g) {
+            if (!array_key_exists('g' . ($i + 1), $pick)) {
+                continue;
+            }
+            $name = (string) ($g['field'] ?? '');
+            $t = self::norm((string) ($this->fieldDef($e, $name)['type'] ?? ''));
+            if (!in_array($t, self::GROUP_TYPES, true)) {
+                throw new BadRequest('Ese campo no se puede usar para agrupar.');
+            }
+            $alias = 'g' . ($i + 1);
+            if (in_array($t, ['date', 'datetime'], true)) {
+                $fn = ['day' => 'DAY', 'week' => 'WEEK_1', 'month' => 'MONTH', 'year' => 'YEAR'][(string) ($g['bucket'] ?? 'month')] ?? 'MONTH';
+                $select[] = ["$fn:(" . ($t === 'datetime' ? "TZ:($name, $off)" : $name) . ')', $alias];
+            } elseif ($t === 'link') {
+                $builder->leftJoin($name);
+                $select[] = [$name . '.name', $alias];
+            } else {
+                $select[] = [$name, $alias];
+            }
+        }
+        $builder->select($select)->limit(0, 20000);
+        $ids = [];
+        foreach ($this->em->getQueryExecutor()->execute($builder->build())->fetchAll(\PDO::FETCH_ASSOC) as $r) {
+            $ok = true;
+            foreach ($pick as $k => $want) {
+                if (!array_key_exists($k, $r)) {
+                    continue;
+                }
+                $v = $r[$k];
+                $v = $v === null || $v === '' ? 'Sin valor' : (is_bool($v) ? ($v ? 'Sí' : 'No') : (string) $v);
+                if ($v !== (string) $want) {
+                    $ok = false;
+                    break;
+                }
+            }
+            if ($ok) {
+                $ids[] = (string) $r['id'];
+            }
+        }
+        return ['ids' => array_slice($ids, 0, 2000), 'total' => count($ids)];
+    }
+
     /** Ids de los leads que el usuario puede ver (null si puede ver todos), para consultar formularios con sus permisos. */
     public function visibleLeadIds(): ?array
     {

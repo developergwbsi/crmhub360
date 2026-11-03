@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **197** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **204** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -27,6 +27,7 @@ Total: **197** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | PUT | `/CrmHub/assignment` | CrmHub.assignment | PUT /CrmHub/assignment. Admin. Guarda la configuración de asignación automática. */ |
 | POST | `/CrmHub/autoAssign` | CrmHub.autoAssign | POST /CrmHub/autoAssign. Quien tiene permiso de asignación. {ids}: reparte esos leads sin asesor con el mismo balanceo del reparto automático (por campaña o grupo general). */ |
 | POST | `/CrmHub/biDelete` | CrmHub.biDelete | POST /CrmHub/biDelete. Usuario. {id}. Hub: DELETE /v1/bi/item. */ |
+| POST | `/CrmHub/biIds` | CrmHub.biIds | POST /CrmHub/biIds. Usuario. {source, filters, groups, pick}. Ids de los registros que suma una cifra del tablero (para abrirlos en lista). Solo datos del CRM. */ |
 | GET | `/CrmHub/biItem` | CrmHub.biItem | GET /CrmHub/biItem?id=. Usuario con acceso. Definición completa de un reporte o tablero. */ |
 | GET | `/CrmHub/biItems` | CrmHub.biItems | GET /CrmHub/biItems. Usuario. Reportes y tableros propios o compartidos con él, y los datos (CRM y formularios) con los que puede armarlos. */ |
 | POST | `/CrmHub/biPin` | CrmHub.biPin | POST /CrmHub/biPin. Usuario. {id, dateFrom?, dateTo?}. Fija (o cambia la vigencia de) un tablero en su escritorio. Hub: PUT /v1/bi/pin. */ |
@@ -118,6 +119,11 @@ Total: **197** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/orgchart` | CrmHub.orgchart | GET /CrmHub/orgchart. Usuarios con permiso de asignación. Organigrama por roles y equipos. */ |
 | GET | `/CrmHub/outboundFunnel` | CrmHub.outboundFunnel | GET /CrmHub/outboundFunnel?days=. Embudo de la prospección (contactados, respondieron, demos, escalados, intención). Hub: GET /v1/agent/funnel. */ |
 | GET | `/CrmHub/outboundStats` | CrmHub.outboundStats | GET /CrmHub/outboundStats?days=. Envíos y respuestas por variante de la secuencia saliente. Hub: GET /v1/agent/outbound/stats. */ |
+| POST | `/CrmHub/pinDevice` | CrmHub.pinDevice | POST /CrmHub/pinDevice. Usuario. {password}. Activa el PIN que ya tiene en este equipo; devuelve {device}. Hub: POST /v1/pin/device. */ |
+| POST | `/CrmHub/pinForget` | CrmHub.pinForget | POST /CrmHub/pinForget. Usuario. {device}. Este equipo deja de entrar con PIN. Hub: POST /v1/pin/forget. */ |
+| POST | `/CrmHub/pinRemove` | CrmHub.pinRemove | POST /CrmHub/pinRemove. Usuario. {password}. Elimina su PIN y todos sus equipos. Hub: DELETE /v1/pin. */ |
+| POST | `/CrmHub/pinSet` | CrmHub.pinSet | POST /CrmHub/pinSet. Usuario. {password, pin}. Crea o cambia el PIN y activa este equipo; devuelve {device}. Hub: PUT /v1/pin. */ |
+| GET | `/CrmHub/pinStatus` | CrmHub.pinStatus | GET /CrmHub/pinStatus?device=. Usuario. {hasPin, deviceOk, devices, unavailable}. Hub: GET /v1/pin/status. */ |
 | GET | `/CrmHub/pipeline` | CrmHub.pipeline | Lo lee cualquier usuario autenticado (incluido el usuario API del Hub). */ |
 | PUT | `/CrmHub/pipeline` | CrmHub.pipeline | PUT /CrmHub/pipeline. Admin. Guarda los estados del pipeline. */ |
 | POST | `/CrmHub/pipelineRun` | CrmHub.pipelineRun | POST /CrmHub/pipelineRun. Admin. Ciclo completo: buscador → calificador → comercial virtual. Hub: POST /v1/pipeline/run. */ |
@@ -199,5 +205,6 @@ Total: **197** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHub/whatsapp/send` | CrmHub.whatsappSend | POST /CrmHub/whatsapp/send. Usuario con edición del lead. Envía por el Hub. */ |
 | POST | `/CrmHub/whatsapp/test` | CrmHub.whatsappTest | POST /CrmHub/whatsapp/test. Admin. Hub: POST /v1/whatsapp/test. */ |
 | POST | `/CrmHub/whatsapp/unlink` | CrmHub.whatsappUnlink | POST /CrmHub/whatsapp/unlink. Admin. Hub: POST /v1/whatsapp/unlink. */ |
+| POST | `/CrmHubPin/login` | CrmHubPin.login | — |
 | POST | `/CrmHubSupport/exchange` | CrmHubSupport.exchange | — |
 | POST | `/Lead/:id/ai/:action` | Lead.aiAssist | — |

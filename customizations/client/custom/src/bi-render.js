@@ -40,8 +40,22 @@ define('custom:bi-render', ['custom:ui'], function (ChUi) {
     function table(el, def, rows, ctx) {
         const groups = def.groups || [], ms = def.measures && def.measures.length ? def.measures : [{fn: 'count'}];
         const head = groups.map(g => `<th>${esc(ctx.fieldLabel(g.field))}</th>`).concat(ms.map(m => `<th class="num">${esc(measureLabel(m, ctx))}</th>`)).join('');
-        const body = rows.map(r => '<tr>' + groups.map((g, i) => `<td>${esc(xLabel(r['g' + (i + 1)]))}</td>`).concat(ms.map((m, i) => `<td class="num">${esc(fmt(m, ctx, r['m' + (i + 1)]))}</td>`)).join('') + '</tr>').join('');
+        const dr = canDrill(def, ctx), body = rows.map((r, ri) => `<tr${dr ? ` class="ch-link" data-ri="${ri}" title="Ver estos registros"` : ''}>` + groups.map((g, i) => `<td>${esc(xLabel(r['g' + (i + 1)]))}</td>`).concat(ms.map((m, i) => `<td class="num">${esc(fmt(m, ctx, r['m' + (i + 1)]))}</td>`)).join('') + '</tr>').join('');
         el.innerHTML = `<div class="ch-bi-tbl"><table class="table"><thead><tr>${head}</tr></thead><tbody>${body || `<tr><td colspan="${groups.length + ms.length}" class="ch-muted">Sin datos con estos filtros.</td></tr>`}</tbody></table></div>`;
+        if (dr) { el.querySelector('tbody').onclick = e => { const tr = e.target.closest('tr[data-ri]'); if (!tr) { return; } const r = rows[+tr.dataset.ri], pick = {}; groups.forEach((g, i) => { pick['g' + (i + 1)] = r['g' + (i + 1)]; }); drill(def, ctx, pick); }; }
+    }
+
+    // Pulsar una cifra, barra, porción o fila abre la lista de los registros que suma (con los permisos de la persona). pick = {g1, g2} como los devuelve el reporte.
+    const SCOPE_ES = {Lead: 'Leads', Opportunity: 'Oportunidades', Task: 'Tareas', Meeting: 'Reuniones', Call: 'Llamadas', Account: 'Cuentas', Contact: 'Contactos'};
+    const canDrill = (def, ctx) => !ctx.preview && ctx.drill !== false && def.source && !String(def.source).startsWith('form:') && SCOPE_ES[def.source];
+    function drill(def, ctx, pick) {
+        const d = {source: def.source, filters: (def.filters || []).filter(f => f.field && f.op), groups: (def.groups || []).filter(g => g.field), pick: pick || {}};
+        Espo.Ajax.postRequest('CrmHub/biIds', d).then(r => {
+            if (!r.ids.length) { Espo.Ui.warning('No hay registros en esa cifra.'); return; }
+            const lbl = pick && Object.keys(pick).length ? ' · ' + Object.keys(pick).sort().map(k => pick[k]).join(' · ') : '';
+            try { sessionStorage.setItem('chLeadSet', JSON.stringify({title: (ctx.title || SCOPE_ES[def.source]) + lbl, ids: r.ids, scope: def.source, assign: false})); } catch (e) { /* sin sessionStorage */ }
+            location.hash = '#CrmHub/leadSet';
+        }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } Espo.Ui.error('No se pudo abrir la lista.'); });
     }
 
     const palette = c => c ? [c].concat(PALETTE.filter(x => x.toLowerCase() !== String(c).toLowerCase())) : PALETTE;
@@ -50,7 +64,9 @@ define('custom:bi-render', ['custom:ui'], function (ChUi) {
         const m = (def.measures && def.measures[0]) || {fn: 'count'};
         const vals = rows.map(r => r.m1).filter(v => v != null);
         const v = !vals.length ? 0 : m.fn === 'min' ? Math.min(...vals) : m.fn === 'max' ? Math.max(...vals) : m.fn === 'avg' ? vals.reduce((a, b) => a + b, 0) / vals.length : vals.reduce((a, b) => a + b, 0);
-        el.innerHTML = `<div class="ch-bi-kpi"><div class="v" title="${esc(fmt(m, ctx, v))}" ${ctx.color ? `style="color:${esc(ctx.color)}"` : ''}>${esc(fmt(m, ctx, v, true))}</div><div class="l">${esc(measureLabel(m, ctx))}</div>${ctx.hint ? `<div class="ch-bi-hint">${esc(ctx.hint)}</div>` : ''}</div>`;
+        const dr = canDrill(def, ctx);
+        el.innerHTML = `<div class="ch-bi-kpi${dr ? ' ch-link' : ''}" ${dr ? 'title="Ver estos registros"' : ''}><div class="v" title="${esc(fmt(m, ctx, v))}" ${ctx.color ? `style="color:${esc(ctx.color)}"` : ''}>${esc(fmt(m, ctx, v, true))}</div><div class="l">${esc(measureLabel(m, ctx))}</div>${ctx.hint ? `<div class="ch-bi-hint">${esc(ctx.hint)}</div>` : ''}</div>`;
+        if (dr) { el.querySelector('.ch-bi-kpi').onclick = () => drill(def, ctx, {}); }
     }
 
     function chart(el, def, rows, ctx) {
@@ -65,6 +81,7 @@ define('custom:bi-render', ['custom:ui'], function (ChUi) {
             labels = rows.map(r => r.g1);
             datasets = ms.map((m, i) => ({label: measureLabel(m, ctx), data: rows.map(r => r['m' + (i + 1)]), backgroundColor: ['pie', 'doughnut'].includes(type) ? rows.map((x, j) => PAL[j % PAL.length]) : PAL[i % PAL.length], borderColor: PAL[i % PAL.length]}));
         }
+        const rawLabels = labels.slice(), rawSeries = groups.length === 2 ? [...new Set(rows.map(r => r.g2))] : [], dr = canDrill(def, ctx);
         labels = labels.map(xLabel);
         el.innerHTML = '<div class="ch-bi-cv"><canvas></canvas></div>';
         return loadLibs(false).then(() => {
@@ -74,7 +91,9 @@ define('custom:bi-render', ['custom:ui'], function (ChUi) {
             el._chart = new window.Chart(cv, {
                 type: circ ? type : line ? 'line' : 'bar',
                 data: {labels, datasets: datasets.map(d => line ? Object.assign(d, {fill: type === 'area', tension: .3, backgroundColor: type === 'area' ? d.borderColor + '33' : d.borderColor, pointRadius: 3}) : d)},
-                options: {responsive: true, maintainAspectRatio: false, indexAxis: type === 'hbar' ? 'y' : 'x', animation: {duration: 350},
+                options: {responsive: true, maintainAspectRatio: false,
+                    onHover: (ev, els) => { if (dr && ev.native && ev.native.target) { ev.native.target.style.cursor = els.length ? 'pointer' : 'default'; } },
+                    onClick: (ev, els) => { if (!dr || !els.length) { return; } const pick = {g1: rawLabels[els[0].index]}; if (rawSeries.length) { pick.g2 = rawSeries[els[0].datasetIndex]; } drill(def, ctx, pick); }, indexAxis: type === 'hbar' ? 'y' : 'x', animation: {duration: 350},
                     plugins: {legend: {display: circ || datasets.length > 1, position: 'bottom', labels: {boxWidth: 10, font: {size: 11}}}, tooltip: {callbacks: {label: c => (c.dataset.label ? c.dataset.label + ': ' : '') + nf.format(c.parsed.y != null && !circ && type !== 'hbar' ? c.parsed.y : c.parsed.x != null && type === 'hbar' ? c.parsed.x : c.parsed)}}},
                     scales: circ ? {} : {x: {stacked: type === 'stacked', grid: {display: false}, ticks: {font: {size: 11}}}, y: {stacked: type === 'stacked', beginAtZero: true, ticks: {font: {size: 11}, precision: datasets.every(d => d.data.every(v => Number.isInteger(v))) ? 0 : undefined, callback: v => nf.format(v)}}}},
             });

@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import ramp, bi, brand, chatbot, products, report, wallet, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import pin as pinmod, ramp, bi, brand, chatbot, products, report, wallet, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -45,6 +45,7 @@ async def lifespan(_: FastAPI):
     documents.ensure_schema()
     iforms.ensure_schema()
     bi.ensure_schema()
+    pinmod.ensure_schema()
     recordings.ensure_schema()
     compliance.ensure_schema()
     prospects.ensure_schema()
@@ -3121,5 +3122,52 @@ def meet_token(code: str, req: MeetJoinReq):
         raise HTTPException(403, str(e))
 
 
+# ---------- PIN de reingreso (el CRM valida la contraseña y entrega la sesión; aquí se guarda el PIN y se cuentan los intentos)
+class PinReq(BaseModel):
+    userId: str
+    pin: str = ""
+    device: str = ""
+    label: str = ""
+
+
+@app.get("/v1/pin/status")
+async def pin_status(userId: str, device: str = "", tenant: dict = Depends(tenant_auth)):
+    return pinmod.status(tenant["slug"], userId, device)
+
+
+@app.put("/v1/pin")
+async def pin_set(req: PinReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return pinmod.set_pin(tenant["slug"], req.userId, req.pin, req.label)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/pin/device")
+async def pin_device(req: PinReq, tenant: dict = Depends(tenant_auth)):
+    try:
+        return pinmod.add_device(tenant["slug"], req.userId, req.label)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/v1/pin/verify")
+async def pin_verify(req: PinReq, tenant: dict = Depends(tenant_auth)):
+    return pinmod.verify(tenant["slug"], req.userId, req.device, req.pin)
+
+
+@app.post("/v1/pin/forget")
+async def pin_forget(req: PinReq, tenant: dict = Depends(tenant_auth)):
+    pinmod.forget_device(tenant["slug"], req.userId, req.device)
+    return {"ok": True}
+
+
+@app.delete("/v1/pin")
+async def pin_remove(userId: str, tenant: dict = Depends(tenant_auth)):
+    pinmod.remove(tenant["slug"], userId)
+    return {"ok": True}
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host=config.HUB_BIND_HOST, port=config.HUB_PORT)
+
