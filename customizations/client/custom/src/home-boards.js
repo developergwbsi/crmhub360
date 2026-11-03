@@ -2,7 +2,7 @@
  * Tableros en el escritorio (Inicio): cada usuario «fija» los tableros de Reportes y tableros que quiere ver al entrar, siempre o solo entre dos fechas, puede tener varios,
  * acomodarlos y quitarlos. Se dibujan arriba de los widgets del escritorio. Endpoints: GET CrmHub/biPins, POST biPin, biUnpin, biPinMove (y biItems/biItem/biRun para dibujarlos).
  */
-define('custom:home-boards', ['custom:ui', 'custom:bi-render'], function (ChUi, R) {
+define('custom:home-boards', ['custom:ui', 'custom:bi-render', 'custom:bi-templates'], function (ChUi, R, TPL) {
     const esc = v => ChUi.esc(v == null ? '' : v);
     const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     const nice = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('es-CO', {day: 'numeric', month: 'short', year: 'numeric'}); };
@@ -66,6 +66,25 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render'], function (ChUi, 
         });
     }
 
+    // Galería de tableros ya armados: se elige uno, se crea (con sus reportes) y queda fijado en Inicio. También se puede ir a armarlo a mano.
+    function gallery(host) {
+        ChUi.panel({title: 'Elige un tablero para tu escritorio', icon: 'fas fa-table-cells-large', close: 'Cerrar', mount: (body, close) => {
+            body.classList.add('ch-tpl-body');
+            body.innerHTML = '<p class="ch-muted">Tableros ya armados según lo que hace tu equipo: elige uno y aparece en <b>Inicio</b> con sus gráficas e indicadores. Después puedes editarlo en «Reportes y tableros» o quitarlo cuando quieras.</p><div class="ch-tpl-grid">' +
+                TPL.list.map(t => `<div class="ch-tpl" data-t="${esc(t.id)}"><div class="ic" style="background:${esc(t.color)}1f;color:${esc(t.color)}"><span class="${esc(t.icon)}"></span></div><b>${esc(t.name)}</b><small>${esc(t.desc)}</small><div class="ch-tpl-meta"><b>Ideal si</b> ${esc(t.ideal || '')}</div></div>`).join('') + '</div>' +
+                '<p style="margin-top:14px"><a class="btn btn-default" href="#CrmHub/reportes" data-go="1"><span class="fas fa-pen-ruler"></span> Prefiero armar mi propio tablero</a></p>';
+            body.onclick = e => {
+                if (e.target.closest('[data-go]')) { close(true); return; }
+                const c = e.target.closest('[data-t]'); if (!c || body.dataset.busy) { return; }
+                const t = TPL.list.find(x => x.id === c.dataset.t); body.dataset.busy = '1';
+                body.innerHTML = `<p class="ch-muted" style="padding:20px 4px"><span class="fas fa-spinner fa-spin"></span> Armando «${esc(t.name)}»…</p>`;
+                TPL.create(t).then(d => Espo.Ajax.postRequest('CrmHub/biPin', {id: d.id, dateFrom: '', dateTo: '', tab: '', place: 'top'}))
+                    .then(() => { close(true); Espo.Ui.success('Listo: «' + t.name + '» ya está en tu escritorio.'); host._pins = null; if (host._go) { host._go(); } })
+                    .catch(xhr => { close(false); err(xhr); });
+            };
+        }});
+    }
+
     function manage(root, pins, refresh) {
         const today = ymd(new Date());
         ChUi.panel({title: 'Tableros de mi escritorio', icon: 'fas fa-thumbtack', mount: (body, close) => {
@@ -73,13 +92,14 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render'], function (ChUi, 
                 body.innerHTML = (pins.length ? '<div class="ch-hb-list">' + pins.map((p, i) => `<div class="ch-hb-row" data-id="${esc(p.id)}"><div><b>${esc(p.name)}</b><small>${esc(vig(p))} · ${p.tab ? 'Pestaña «' + esc(p.tab) + '»' : 'Todas las pestañas'} · ${p.place === 'bottom' ? 'al final' : 'arriba'}${active(p, today) ? '' : ' · <em>no se muestra hoy</em>'}</small></div>` +
                     `<span><button type="button" data-a="up" title="Subir" ${i ? '' : 'disabled'}><span class="fas fa-arrow-up"></span></button><button type="button" data-a="down" title="Bajar" ${i < pins.length - 1 ? '' : 'disabled'}><span class="fas fa-arrow-down"></span></button>` +
                     `<button type="button" data-a="edit" title="Cambiar fechas"><span class="far fa-calendar"></span></button><button type="button" data-a="rm" title="Quitar del escritorio"><span class="fas fa-trash"></span></button></span></div>`).join('') + '</div>' : '<p class="ch-muted">No tienes tableros fijados.</p>') +
-                    '<p style="margin-top:12px"><button type="button" class="btn btn-default" data-a="add"><span class="fas fa-plus"></span> Añadir otro tablero</button> <a class="btn btn-link" href="#CrmHub/reportes" data-a="go">Crear un tablero nuevo</a></p>';
+                    '<p style="margin-top:12px"><button type="button" class="btn btn-default" data-a="add"><span class="fas fa-plus"></span> Añadir otro tablero</button> <button type="button" class="btn btn-default" data-a="gal"><span class="fas fa-table-cells-large"></span> Elegir uno ya armado</button> <a class="btn btn-link" href="#CrmHub/reportes" data-a="go">Crear un tablero nuevo</a></p>';
             };
             paint();
             const reload = () => Espo.Ajax.getRequest('CrmHub/biPins').then(r => { pins = r.pins || []; paint(); refresh(); });
             const onClick = e => {
                 const b = e.target.closest('[data-a]'); if (!b) { return; } const row = b.closest('.ch-hb-row'), id = row && row.dataset.id, p = id && pins.find(x => x.id === id), k = b.dataset.a;
                 if (k === 'go') { close(true); return; }
+                if (k === 'gal') { close(true); gallery(root); return; }
                 if (k === 'up' || k === 'down') { Espo.Ajax.postRequest('CrmHub/biPinMove', {id, up: k === 'up'}).then(reload); }
                 else if (k === 'rm') { Espo.Ajax.postRequest('CrmHub/biUnpin', {id}).then(reload); }
                 else if (k === 'edit') { pinDialog(id, p.name, p).then(ok => { if (ok) { reload(); } }); }
@@ -117,15 +137,16 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render'], function (ChUi, 
             const inTab = p => !p.tab || !names.length || p.tab === tab || !names.includes(p.tab);   // sin pestaña, o su pestaña ya no existe → se ve en la actual
             const show = pins.filter(p => active(p, today) && inTab(p));
             grids.forEach(g => { try { g.destroy(false); } catch (e) { /* ya no existe */ } }); grids = [];
-            if (!pins.length) { host.dataset.state = 'none'; host.innerHTML = ''; low.innerHTML = ''; return; }
+            if (!pins.length) { host.dataset.state = 'none'; host.innerHTML = '<div class="ch-hb-top"><span><span class="fas fa-thumbtack"></span> Mis tableros <small class="ch-muted">· aún no tienes ninguno en tu escritorio</small></span><button type="button" class="btn btn-primary btn-xs" data-a="gallery"><span class="fas fa-table-cells-large"></span> Elegir un tablero</button></div>'; low.innerHTML = ''; host.onclick = e => { if (e.target.closest('[data-a=gallery]')) { gallery(host); } }; return; }
             host.dataset.state = show.length ? 'some' : 'none';
             const sec = p => `<section class="ch-hb" data-id="${esc(p.id)}"><div class="ch-hb-head"><h4>${esc(p.name)}</h4><small>${esc(vig(p))}</small><button type="button" class="ch-hb-x" data-a="edit" title="${p.mine ? 'Editar este tablero' : 'Abrir en Reportes y tableros'}"><span class="fas ${p.mine ? 'fa-pen' : 'fa-arrow-up-right-from-square'}"></span></button><button type="button" class="ch-hb-x" data-a="rm" title="Quitar de mi escritorio"><span class="fas fa-xmark"></span></button></div><div class="ch-hb-body"><div class="grid-stack"></div></div></section>`;
             const topList = show.filter(p => p.place !== 'bottom'), lowList = show.filter(p => p.place === 'bottom');
-            const bar = '<div class="ch-hb-top"><span><span class="fas fa-thumbtack"></span> Mis tableros</span><button type="button" class="btn btn-default btn-xs" data-a="manage"><span class="fas fa-sliders"></span> Administrar</button></div>';
+            const bar = '<div class="ch-hb-top"><span><span class="fas fa-thumbtack"></span> Mis tableros</span><span><button type="button" class="btn btn-primary btn-xs" data-a="gallery"><span class="fas fa-table-cells-large"></span> Elegir un tablero</button> <button type="button" class="btn btn-default btn-xs" data-a="manage"><span class="fas fa-sliders"></span> Administrar</button></span></div>';
             host.innerHTML = (topList.length || !lowList.length ? bar : '') + topList.map(sec).join('') + (show.length ? '' : '<div class="ch-muted" style="padding:6px 2px">No hay tableros fijados en esta pestaña.</div>');
             low.innerHTML = (!topList.length && lowList.length ? bar : '') + lowList.map(sec).join('');
             const click = e => {
                 const b = e.target.closest('[data-a]'); if (!b) { return; }
+                if (b.dataset.a === 'gallery') { gallery(host); return; }
                 if (b.dataset.a === 'manage') { manage(host, pins, refetchGo); return; }
                 const sc = b.closest('.ch-hb'); if (!sc) { return; } const id = sc.dataset.id, p = pins.find(x => x.id === id);
                 if (b.dataset.a === 'edit') { try { sessionStorage.setItem('chBiOpen', JSON.stringify({id, edit: !!(p && p.mine)})); } catch (x) { /* nada */ } location.hash = '#CrmHub/reportes'; }
@@ -141,5 +162,5 @@ define('custom:home-boards', ['custom:ui', 'custom:bi-render'], function (ChUi, 
         })();
     }
 
-    return {mount, pinDialog, refresh: host => { if (host._go) { host._pins ? draw2(host, host._go) : host._go(); } }, syncTab: host => { if (host.dataset.tab !== tabOf() && host._pins) { draw2(host, host._go); } }};
+    return {mount, pinDialog, openGallery: gallery, refresh: host => { if (host._go) { host._pins ? draw2(host, host._go) : host._go(); } }, syncTab: host => { if (host.dataset.tab !== tabOf() && host._pins) { draw2(host, host._go); } }};
 });

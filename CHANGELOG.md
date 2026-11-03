@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.26.0] - 2026-11-03
+
+### Añadido
+- **10 tableros ya armados para el escritorio:** en *Inicio* hay un botón «Elegir un tablero» con una galería (Gerencial comercial, Actividad del equipo, Cartera y cobranza, Oportunidades y ventas y seis nuevos: Captación y marketing, Embudo y conversión, Reuniones y videollamadas, Llamadas y contact center, Clientes y Desempeño por asesor). Cada uno indica para qué actividad sirve; al elegirlo se crea con sus reportes y queda fijado en Inicio. También se puede armar uno propio. La galería se ve igual en *Reportes y tableros → Nuevo tablero*.
+
 ## [1.25.1] - 2026-11-03
 
 ### Corregido

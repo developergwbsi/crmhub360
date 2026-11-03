@@ -485,6 +485,8 @@
 <p>Pulsa los tres puntos de arriba a la derecha → <b>Añadir widget</b>. Verás <b>tarjetas</b> con un dibujo de lo que aparecerá y una descripción; elige una y se agrega. Con <b>Editar escritorio</b> cambias el nombre y el orden de las pestañas. Si un escritorio queda sin widgets, verás un aviso con los botones para empezar a armarlo.</p>
 <h3>Mover y quitar</h3>
 <p>Arrastra un widget para cambiarlo de sitio y estira sus bordes para cambiar el tamaño; el engranaje de cada widget abre sus opciones y la X lo quita. Todo se guarda solo y es solo tuyo.</p>
+<h3>Tableros ya armados</h3>
+<p>Arriba de los widgets de <b>Inicio</b> verás el botón <b>Elegir un tablero</b>. Abre una galería con <b>10 tableros preconfigurados</b> según la actividad de tu equipo: Gerencial comercial, Actividad del equipo, Cartera y cobranza, Oportunidades y ventas, Captación y marketing, Embudo y conversión, Reuniones y videollamadas, Llamadas y contact center, Clientes (cuentas y contactos) y Desempeño por asesor. Cada uno dice «Ideal si…» para que escojas el que encaja. Elige uno y queda en tu escritorio con sus gráficas; si prefieres hacerlo tú, usa <b>Prefiero armar mi propio tablero</b>. Se pueden editar o quitar cuando quieras, y cada persona ve los datos según su propio acceso.</p>
 
 </div>
 </div>
@@ -497,7 +499,7 @@
 <h3>Armar un reporte</h3>
 <p><b>Nuevo reporte</b> y sigue los pasos: <b>1 · Datos</b> (leads, contactos, cuentas, oportunidades, tareas, reuniones, llamadas o las respuestas de un formulario interno), <b>2 · Filtros</b> (estado, fechas, montos, texto…), <b>3 · Agrupar</b> (por estado, asesor, origen, campaña, día, semana, mes o año, y un segundo criterio opcional), <b>4 · Medir</b> (cantidad, suma, promedio, mínimo o máximo) y <b>5 · Cómo verlo</b> (tabla, barras, líneas, áreas, circular, anillo o cifra grande). Arriba ves la <b>vista previa</b> mientras lo armas; si aún no eliges «Agrupar», solo verás una cifra. Pulsa <b>Guardar</b>.</p>
 <h3>Armar un tablero</h3>
-<p><b>Nuevo tablero</b> te deja empezar con una <b>plantilla gerencial ya armada</b> (Gerencial comercial, Actividad del equipo, Cartera y cobranza, Oportunidades y ventas) o en blanco. En un tablero añade <b>Reporte</b>, <b>Texto</b> o <b>Imagen</b>, arrastra las tarjetas para acomodarlas y estira sus bordes para el tamaño. El engranaje de cada tarjeta cambia su <b>título, color y tipo de gráfica</b>; la X la quita. Guarda al terminar.</p>
+<p><b>Nuevo tablero</b> te deja empezar con una <b>plantilla gerencial ya armada</b> (10 en total: Gerencial comercial, Actividad del equipo, Cartera y cobranza, Oportunidades y ventas, Captación y marketing, Embudo y conversión, Reuniones y videollamadas, Llamadas y contact center, Clientes y Desempeño por asesor) o en blanco. En un tablero añade <b>Reporte</b>, <b>Texto</b> o <b>Imagen</b>, arrastra las tarjetas para acomodarlas y estira sus bordes para el tamaño. El engranaje de cada tarjeta cambia su <b>título, color y tipo de gráfica</b>; la X la quita. Guarda al terminar.</p>
 <h3>Compartir y permisos</h3>
 <p>Elige «Compartir»: solo tú, tu equipo o (gerentes y supervisores) toda la empresa, en solo lectura. Cada persona ve los datos según su propio acceso: un asesor solo ve lo suyo o de su equipo, aunque el tablero sea compartido. Con <b>Copiar</b> haces una copia propia de un reporte o tablero ajeno para modificarla.</p>
 

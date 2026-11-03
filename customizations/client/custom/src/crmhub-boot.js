@@ -669,10 +669,11 @@
         box.className = 'ch-home-empty';
         box.innerHTML = window.ChEmpty.html({kind: 'box', title: 'Este escritorio está vacío', text: 'Añade widgets con la información que quieres ver al entrar (leads, tareas, actividad…) o arma tus propios reportes y tableros con gráficas.'}) +
             '<div class="ch-home-empty-act"><button type="button" class="btn btn-primary" data-ch-he="add"><span class="fas fa-plus"></span> Añadir un widget</button>' +
-            '<a class="btn btn-default" href="#CrmHub/reportes"><span class="fas fa-chart-pie"></span> Crear un reporte o tablero</a>' +
+            '<button type="button" class="btn btn-default" data-ch-he="gal"><span class="fas fa-table-cells-large"></span> Elegir un tablero ya armado</button>' + '<a class="btn btn-default" href="#CrmHub/reportes"><span class="fas fa-chart-pie"></span> Crear un reporte o tablero</a>' +
             '<button type="button" class="btn btn-default" data-ch-he="edit"><span class="fas fa-pencil-alt"></span> Editar escritorio</button></div>';
         box.addEventListener('click', function (e) {
             var b = e.target.closest('[data-ch-he]'); if (!b) { return; }
+            if (b.dataset.chHe === 'gal') { var hh = home.querySelector(':scope > .ch-home-boards'); if (hh) { Espo.loader.require('custom:home-boards', function (m) { m.openGallery(hh); }); } return; }
             var a = document.querySelector('.dashboard-buttons [data-action="' + (b.dataset.chHe === 'add' ? 'addDashlet' : 'editTabs') + '"]');
             if (a) { a.click(); }
         });

@@ -1833,3 +1833,7 @@ body.ch-scrolled .ch-sim-head.ch-fixed p, body.ch-scrolled .ch-rc-top.ch-fixed p
 .ch-ramp-chk, .ch-ramp-hist { list-style: none; padding: 0; margin: 0; } .ch-ramp-chk li { padding: 3px 0; } .ch-ramp-chk li.ok .fas { color: #1f9d55; } .ch-ramp-chk li.no .fas { color: #d64545; } .ch-ramp-chk small { color: var(--ch-muted); margin-left: 6px; } .ch-ramp-hist li { padding: 3px 0; border-bottom: 1px solid var(--ch-line); }
 .ch-ramp-levels { display: flex; flex-direction: column; gap: 8px; } .ch-ramp-lv { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border: 1px solid var(--ch-line); border-radius: 12px; padding: 10px 14px; } .ch-ramp-lv.cur { border-color: var(--ch-accent, #3a6ff7); box-shadow: 0 0 0 1px var(--ch-accent, #3a6ff7) inset; }
 .ch-ramp-lv small { display: block; color: var(--ch-muted); } .ch-ramp-lv summary { cursor: pointer; color: var(--ch-accent, #3a6ff7); font-size: 12.5px; margin-top: 4px; } .ch-ramp-lv ul { margin: 6px 0 0; padding-left: 20px; font-size: 13px; }
+
+/* ---- Galería de tableros ya armados (Inicio y Reportes y tableros): ancha y con desplazamiento propio */
+.ch-dlg:has(.ch-tpl-body) { width: min(1120px, 96vw); } .ch-dlg-body.ch-tpl-body { max-height: 72vh; overflow-y: auto; }
+.ch-tpl-body .ch-tpl-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } .ch-tpl-meta { margin-top: 8px; font-size: 12px; color: var(--ch-muted); } .ch-tpl-meta b { color: var(--ch-primary, #4f63e8); }
