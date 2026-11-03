@@ -1524,5 +1524,37 @@
             "controller": "CrmHub",
             "action": "walletCheckout"
         }
+    },
+    {
+        "route": "/CrmHub/ramp",
+        "method": "get",
+        "params": {
+            "controller": "CrmHub",
+            "action": "ramp"
+        }
+    },
+    {
+        "route": "/CrmHub/rampSave",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "rampSave"
+        }
+    },
+    {
+        "route": "/CrmHub/rampLevel",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "rampLevel"
+        }
+    },
+    {
+        "route": "/CrmHub/rampEvaluate",
+        "method": "post",
+        "params": {
+            "controller": "CrmHub",
+            "action": "rampEvaluate"
+        }
     }
 ]

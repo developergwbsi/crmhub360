@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.25.1] - 2026-11-03
+
+### Corregido
+- **Escalado de la prospección:** faltaban registrar las rutas de la tarjeta; ya carga y guarda.
+
 ## [1.25.0] - 2026-11-03
 
 ### Añadido
