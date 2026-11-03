@@ -290,6 +290,12 @@ async def promote(tenant: dict, ids: list[int] | None = None, limit: int | None 
                                           (f"Hallado por el buscador. Fuente pública: {(r['raw'] or {}).get('fuente_url', '')}" if r.get("origin") == "finder" else ""),
                                           (f"Oferta indicada por el equipo: {(r['raw'] or {}).get('oferta')} como producto principal de este contacto." if (r.get("raw") or {}).get("oferta") else ""),
                                           (f"Producto recomendado por el calificador: {(en.get('qualifier') or {}).get('product', '')} (grado {(en.get('qualifier') or {}).get('grade', '')}). Ángulo: {(en.get('qualifier') or {}).get('angle', '')}" if en.get("qualifier") else "")] if x)
+            rw = r.get("raw") or {}
+            ficha = "\n".join(x for x in [f"Qué hace (su sitio): {rw['descripcion']}" if rw.get("descripcion") else "", f"WhatsApp: {rw['whatsapp']}" if rw.get("whatsapp") else "",
+                                           f"Otros correos: {rw['otros_correos']}" if rw.get("otros_correos") else "", f"Dirección: {rw['direccion']}" if rw.get("direccion") else "",
+                                           f"Sitio: {rw['sitio']}" if rw.get("sitio") else "", f"Redes: {rw['redes']}" if rw.get("redes") else ""] if x)
+            if ficha:
+                desc = (desc + "\n" + ficha).strip()
             extra = {"description": desc, "preferredChannel": "Correo" if r["email"] else "WhatsApp", **({"accountName": r["company"]} if r["company"] else {})}
             lead_name = _lead_name(r)
             lead_id = await ingest.upsert_lead(tenant, name=lead_name, phone=r["phone"] or None, email=r["email"] or None, source="Prospección IA", extra=extra, campaign=r["campaign"] or cfg["campaign"] or None)

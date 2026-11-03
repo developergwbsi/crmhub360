@@ -9,7 +9,7 @@ import logging
 import re
 from datetime import datetime, timezone
 
-from . import compliance, db, llm, prospects, searchengines
+from . import compliance, db, llm, prospects, searchengines, sitescan
 
 log = logging.getLogger("hub.finder")
 FREE_MAIL = {"gmail.com", "googlemail.com", "hotmail.com", "outlook.com", "live.com", "yahoo.com", "yahoo.es", "icloud.com", "msn.com", "proton.me", "protonmail.com"}
@@ -116,14 +116,19 @@ async def run(tenant: dict, limit: int | None = None) -> dict:
             email = ""   # correo personal: no se usa en frío
         if email and typo_suspect(email, str(c.get("website") or ""), src):
             email = ""   # dominio casi igual al del sitio: posible errata, no se usa
-        if not email and not phone:
+        if not email and not phone and not sitescan.own_site(str(c.get("website") or "")):
             dropped += 1; continue
         rows.append({"nombre": str(c.get("contact_name") or "")[:120] or c.get("company"), "empresa": c.get("company"), "cargo": c.get("contact_title") or "", "correo": email, "telefono": phone, "pais": "",
                      "sector": c.get("sector") or "", "fuente_url": src[:300], "sitio": str(c.get("website") or "")[:200], "por_que": str(c.get("why") or "")[:300], "ciudad": str(c.get("city") or "")[:80]})
+    improved = await sitescan.complete(rows)   # abre el sitio de cada empresa y recoge lo que publica (correos, WhatsApp, redes)
+    before = len(rows)
+    rows = [r for r in rows if r.get("correo") or r.get("telefono")]
+    dropped += before - len(rows)
     batch = datetime.now(timezone.utc).strftime("buscador-%Y%m%d-%H%M")
     res = await prospects.import_rows(tenant, rows, batch=batch) if rows else {"batch": batch, "received": 0, "ready": 0, "rejected": 0, "reasons": {}}
     with db.pool.connection() as c:
         c.execute("UPDATE prospects SET origin='finder', found_by=%s WHERE tenant=%s AND batch=%s", (eng["engine"], slug, batch))
     _save(slug, {"last_run": {"at": datetime.now(timezone.utc).isoformat(), "found": len(d.get("candidates") or []), "ready": res["ready"], "batch": batch}})
+    await sitescan.backfill(slug)
     await prospects.enrich_pending(tenant, limit=n)
-    return {"found": len(d.get("candidates") or []), "dropped_no_source_or_contact": dropped, **res}
+    return {"site_improved": improved, "found": len(d.get("candidates") or []), "dropped_no_source_or_contact": dropped, **res}

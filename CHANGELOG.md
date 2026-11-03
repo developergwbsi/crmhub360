@@ -4,6 +4,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.4] - 2026-11-03
+
+### Añadido
+- **El buscador de prospectos lee el sitio de cada empresa:** además de lo que traía el motor de búsqueda, ahora abre la portada y las páginas de contacto/sedes del sitio propio de la empresa y recupera el correo de su dominio (prefiere info@, contacto@, comercial@ y descarta contabilidad, nómina, etc.), el teléfono, el WhatsApp, las redes y la dirección. Lo que antes quedaba solo con teléfono ahora puede tener correo. Los prospectos «ready» sin correo se completan igual en cada pasada. No se toman datos de redes sociales ni de fichas en directorios o centros comerciales.
+- **Lo recuperado se ve y viaja al CRM:** la tabla de Prospección muestra, bajo cada empresa, qué hace (descripción de su sitio), la dirección y enlaces a sus redes; bajo el correo, los otros correos que publica; bajo el teléfono, su WhatsApp. Al pasar el prospecto al CRM, todo eso queda en la descripción del lead.
+
+### Corregido
+- **Las tarjetas del tablero abren la misma lista de la barra lateral:** antes «Leads captados», «Sin asesor», etc. llevaban a una pantalla aparte; ahora abren la lista normal del módulo (mismo tablero por etapas, buscador y filtros) ya filtrada, con un aviso arriba que indica de qué cifra viene y un botón «Quitar filtro» (y «Repartir automáticamente» en «Sin asesor»).
+
 ## [1.27.3] - 2026-11-03
 
 ### Añadido

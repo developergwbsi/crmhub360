@@ -626,6 +626,29 @@
 
     // Panel de la campana: pie «Ver todas las notificaciones» y se cierra al abrir cualquier aviso
     var notifClickBound = false;
+    // Cifra del tablero abierta en la lista normal (la misma de la barra lateral): aviso con el origen y botón para quitar el filtro
+    function setBar() {
+        var sc = (location.hash.match(/^#([A-Za-z]+)(?:\/list)?$/) || [])[1], sb = document.querySelector('.content .search-container'), old = document.querySelector('.ch-setbar');
+        var set = null, st = null;
+        try { set = JSON.parse(sessionStorage.getItem('chSetBar') || 'null'); st = JSON.parse((localStorage.getItem('espo-listSearch-' + sc) || '').replace(/^__JSON__:/, '') || 'null'); } catch (e) { /* sin storage */ }
+        var on = !!(sc && sb && set && set.scope === sc && st && st.advanced && st.advanced.id);
+        if (!on) { if (old) { old.remove(); } if (sc && set && set.scope === sc && sb && !(st && st.advanced && st.advanced.id)) { try { sessionStorage.removeItem('chSetBar'); } catch (e) { /* nada */ } } return; }
+        if (old) { return; }
+        var b = el('<div class="ch-setbar"><span class="fas fa-filter"></span><b></b><span class="ch-muted"></span><span class="ch-setbar-tools"></span><button class="btn btn-default btn-sm" data-a="clear"><span class="fas fa-xmark"></span> Quitar filtro</button></div>');
+        b.querySelector('b').textContent = set.title;
+        b.querySelector('.ch-muted').textContent = set.ids.length >= 2000 ? 'Primeros 2000' : set.ids.length + (set.ids.length === 1 ? ' registro' : ' registros');
+        b.querySelector('[data-a=clear]').onclick = function () {
+            try { localStorage.removeItem('espo-listSearch-' + sc); sessionStorage.removeItem('chSetBar'); } catch (e) { /* nada */ }
+            b.remove(); location.reload();
+        };
+        if (set.assign) {
+            var t = b.querySelector('.ch-setbar-tools');
+            t.innerHTML = '<button class="btn btn-primary btn-sm"><span class="fas fa-shuffle"></span> Repartir automáticamente</button>';
+            t.firstChild.onclick = function () { Espo.loader.require('custom:views/lead-set', function (V) { V.autoAssign(set); }); };
+        }
+        sb.parentNode.insertBefore(b, sb);
+    }
+
     function notifPanel() {
         var pn = document.querySelector('#notifications-panel .panel-body');
         if (pn && !pn.querySelector('.ch-notif-all')) { pn.appendChild(el('<a class="ch-notif-all" href="#Notification" data-ch-all="1">Ver todas las notificaciones</a>')); }
@@ -853,7 +876,7 @@
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); notifPanel(); decorateEmpty(); captureViewCtx(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); notifPanel(); setBar(); decorateEmpty(); captureViewCtx(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });
