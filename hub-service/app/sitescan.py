@@ -49,6 +49,19 @@ def _rank(e: str) -> int:
     return 5
 
 
+LAND = re.compile(r"\(?(?:\+?57)?[-\s]*\)?\(?([1-8])\)?[-\s]+(\d{3})[-\s]?(\d{2})[-\s]?(\d{2})(?!\d)")
+MOB = re.compile(r"(?<![\d])(?:\+?57[-\s]*)?(3\d{2})[-\s]?(\d{3})[-\s]?(\d{4})(?!\d)")
+ADDR = re.compile(r"^(?:Calle|Carrera|Cra\.?|Cl\.?|Kr\.?|Avenida|Av\.?|Diagonal|Transversal|Autopista)\s.*\d.*$", re.I)
+
+
+def text_contacts(txt: str) -> tuple[list, list, str]:
+    """Teléfonos fijos, celulares y dirección que la página escribe como texto (no como enlace)."""
+    fijos = {"+57" + "".join(m.groups()) for m in LAND.finditer(txt)}
+    movil = {"+57" + "".join(m.groups()) for m in MOB.finditer(txt)}
+    addr = next((l.strip()[:120] for l in txt.splitlines() if ADDR.match(l.strip()) and len(l.strip()) < 120), "")
+    return sorted(fijos)[:4], sorted(movil)[:4], addr
+
+
 def _wa_number(href: str) -> str:
     m = re.search(r"(?:wa\.me/|phone=)\+?(\d{10,13})", href)
     return m.group(1) if m else ""
@@ -56,7 +69,7 @@ def _wa_number(href: str) -> str:
 
 async def scan(url: str) -> dict:
     """Devuelve {emails, phones, whatsapp, social, address, pages}; vacío si el sitio no abre o no es propio."""
-    out = {"emails": [], "phones": [], "whatsapp": [], "social": [], "address": "", "about": "", "pages": 0}
+    out = {"emails": [], "phones": [], "whatsapp": [], "social": [], "address": "", "about": "", "fijos": [], "pages": 0}
     if not own_site(url):
         return out
     url = url if "//" in url else "https://" + url
@@ -99,6 +112,11 @@ async def scan(url: str) -> dict:
             elif re.search(r"(facebook|instagram|linkedin|tiktok|youtube)\.com/(?!watch|sharer|share)", hr):
                 soc.add(hr.split("?")[0][:120])
         ems.update(e.lower() for e in EM.findall(s.get_text(" ")))
+        fj, mv, ad = text_contacts(webscrape.text_of(ph, 20000))
+        out["fijos"] = sorted(set(out["fijos"]) | set(fj))[:4]
+        tel.update(mv)
+        if ad and not out["address"]:
+            out["address"] = ad
         for sc in s.find_all("script", type="application/ld+json"):
             try:
                 j = json.loads(sc.string or "")
@@ -129,6 +147,8 @@ async def complete(rows: list[dict]) -> int:
             r["correo"], got = d["emails"][0], True
         if not r.get("telefono") and (d["whatsapp"] or d["phones"]):
             r["telefono"], got = ("+" + d["whatsapp"][0]) if d["whatsapp"] else d["phones"][0], True
+        if d["fijos"]:
+            r["fijos"] = ", ".join(d["fijos"])
         if d["whatsapp"]:
             r["whatsapp"] = "+" + d["whatsapp"][0]
         if len(d["emails"]) > 1:
@@ -155,7 +175,7 @@ async def backfill(slug: str, limit: int = 20) -> int:
     await complete(items)
     n = 0
     for it, r in zip(items, rows):
-        extra = {k: it[k] for k in ("whatsapp", "otros_correos", "redes", "direccion", "descripcion", "sitio_leido") if it.get(k)}
+        extra = {k: it[k] for k in ("whatsapp", "otros_correos", "redes", "direccion", "descripcion", "fijos", "sitio_leido") if it.get(k)}
         email = compliance.norm_email(it.get("correo") or "")
         ok = bool(email) and compliance.email_ok(email)[0] and not compliance.is_dnc(slug, email=email, phones=[])
         try:
