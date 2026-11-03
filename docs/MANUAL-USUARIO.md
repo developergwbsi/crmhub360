@@ -689,7 +689,7 @@ Arrastra un widget para cambiarlo de sitio y estira sus bordes para cambiar el t
 
 Tableros ya armados
 
-Arriba de los widgets de **Inicio** verás el botón **Elegir un tablero**. Abre una galería con **10 tableros preconfigurados** según la actividad de tu equipo: Gerencial comercial, Actividad del equipo, Cartera y cobranza, Oportunidades y ventas, Captación y marketing, Embudo y conversión, Reuniones y videollamadas, Llamadas y contact center, Clientes (cuentas y contactos) y Desempeño por asesor. Cada uno dice «Ideal si…» para que escojas el que encaja. Elige uno y queda en tu escritorio con sus gráficas; si prefieres hacerlo tú, usa **Prefiero armar mi propio tablero**. Los tableros que elijas se pueden editar o quitar cuando quieras, y cada persona ve los datos según su propio acceso.
+Arriba de los widgets de **Inicio** verás el botón **Elegir un tablero**. Abre una galería con **10 tableros preconfigurados** según la actividad de tu equipo: Gerencial comercial, Actividad del equipo, Cartera y cobranza, Oportunidades y ventas, Captación y marketing, Embudo y conversión, Reuniones y videollamadas, Llamadas y contact center, Clientes (cuentas y contactos) y Desempeño por asesor. Cada uno dice «Ideal si…» para que escojas el que encaja. Elige uno y queda en tu escritorio con sus gráficas; si prefieres hacerlo tú, usa **Prefiero armar mi propio tablero**. Se pueden editar o quitar cuando quieras, y cada persona ve los datos según su propio acceso.
 
 
 ## 5i. Reportes y tableros
