@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.3] - 2026-11-03
+
+### Añadido
+- **Notificaciones con buscador y tarjetas:** el panel de la campana y la página completa tienen un buscador arriba que filtra por cualquier texto (también lo que se cargue con «Mostrar más»). En la página completa cada aviso es una tarjeta agrupada por día (Hoy, Ayer o la fecha), y el título y el buscador quedan fijos mientras se desplaza la lista.
+
 ## [1.27.2] - 2026-11-03
 
 ### Corregido

@@ -1937,3 +1937,20 @@ body.ch-scrolled .ch-sim-head.ch-fixed p, body.ch-scrolled .ch-rc-top.ch-fixed p
 /* Enlace «Ver todas» al pie del panel de la campana */
 #notifications-panel .ch-notif-all { display: block; padding: 12px 20px; text-align: center; font-weight: 600; border-top: 1px solid var(--ch-line); background: var(--ch-surface); color: var(--ch-primary, #4f63e8); text-decoration: none; }
 #notifications-panel .ch-notif-all:hover { background: var(--ch-soft); }
+
+/* Notificaciones: buscador fijo y tarjetas por día */
+.ch-notif-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--ch-surface); border-bottom: 1px solid var(--ch-line); position: sticky; top: 0; z-index: 5; }
+.ch-notif-bar .fa-magnifying-glass { color: var(--ch-muted); }
+.ch-notif-bar input { flex: 1; border-radius: 12px; height: 36px; }
+.ch-notif-count { font-size: 12.5px; color: var(--ch-muted); white-space: nowrap; }
+.ch-notif-none { padding: 22px; text-align: center; color: var(--ch-muted); }
+#notifications-panel .panel-body { padding-top: 0; }
+#notifications-panel .ch-notif-bar { top: 0; }
+.content .ch-notif-bar { border: 1px solid var(--ch-line); border-radius: 14px; margin-bottom: 12px; box-shadow: 0 6px 18px -14px rgba(15, 23, 42, .4); }
+.content .notification-list { background: transparent; border: 0; box-shadow: none; overflow: visible; border-radius: 0; }
+.content .notification-list ul.list-group { display: flex; flex-direction: column; gap: 10px; }
+.content .notification-list .list-group-item.list-row { background: var(--ch-surface) !important; border: 1px solid var(--ch-line) !important; border-radius: 14px; box-shadow: 0 8px 22px -18px rgba(15, 23, 42, .45); }
+.content .notification-list .list-group-item[hidden], #notifications-panel .list-group-item[hidden] { display: none !important; }
+.ch-notif-day { list-style: none; padding: 10px 4px 0; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ch-muted); }
+.content .notification-list .list, .content .notification-list .list.list-expanded, .content .notification-list ul.list-group { background: transparent !important; border: 0 !important; box-shadow: none !important; border-radius: 0; }
+.content .notification-list, .content .notification-list > * { border-right: 0 !important; border-left: 0 !important; }
