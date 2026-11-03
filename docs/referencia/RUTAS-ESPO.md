@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **190** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **194** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -152,6 +152,10 @@ Total: **190** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | GET | `/CrmHub/qualifier` | CrmHub.qualifier | GET /CrmHub/qualifier. Admin. Agente calificador (configuración y resumen). Hub: GET /v1/qualifier. */ |
 | POST | `/CrmHub/qualifierRun` | CrmHub.qualifierRun | POST /CrmHub/qualifierRun. Admin. Califica ahora los pendientes y pasa los buenos a Valeria. Hub: POST /v1/qualifier/run. */ |
 | POST | `/CrmHub/qualifierSave` | CrmHub.qualifierSave | POST /CrmHub/qualifierSave. Admin. {enabled, min_grade, daily_pass, rules}. Hub: PUT /v1/qualifier. */ |
+| GET | `/CrmHub/ramp` | CrmHub.ramp | GET /CrmHub/ramp. Escalado de la prospección: nivel, recomendación, consecuencias e historial. Hub: GET /v1/ramp. */ |
+| POST | `/CrmHub/rampEvaluate` | CrmHub.rampEvaluate | POST /CrmHub/rampEvaluate. Admin. Evalúa ahora los resultados. Hub: POST /v1/ramp/evaluate. */ |
+| POST | `/CrmHub/rampLevel` | CrmHub.rampLevel | POST /CrmHub/rampLevel. Admin. {level, acknowledged}. Cambio manual de nivel. Hub: POST /v1/ramp/level. */ |
+| POST | `/CrmHub/rampSave` | CrmHub.rampSave | POST /CrmHub/rampSave. Admin. {enabled, mode, max_level}. Hub: PUT /v1/ramp. */ |
 | POST | `/CrmHub/reassign` | CrmHub.reassign | POST /CrmHub/reassign. Usuarios con permiso de asignación y edición del registro. */ |
 | POST | `/CrmHub/recDelete` | CrmHub.recDelete | POST /CrmHub/recDelete. Usuario dueño (o con alcance «todos»). {id}. Hub: DELETE /v1/rec/{id}. */ |
 | GET | `/CrmHub/recList` | CrmHub.recList | GET /CrmHub/recList. Usuario (no API ni portal). Sus grabaciones; quien tiene alcance «todos» ve las de toda la empresa. Hub: GET /v1/rec. */ |
