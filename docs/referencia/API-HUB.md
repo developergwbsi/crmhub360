@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **220** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **224** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -183,6 +183,10 @@ Total: **220** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/qualifier` | `qualifier_get` | Agente calificador de la empresa: configuración, reglas por defecto y resumen de grados. |
 | PUT | `/v1/qualifier` | `qualifier_save` | — |
 | POST | `/v1/qualifier/run` | `qualifier_run` | Califica ahora los prospectos pendientes y pasa a Valeria los de grado suficiente. |
+| GET | `/v1/ramp` | `ramp_get` | Escalado de la prospección: nivel actual, niveles con lo que acarrean, recomendación de la regla y su historial. |
+| PUT | `/v1/ramp` | `ramp_save` | Activa o apaga la regla, elige modo (auto/manual) y el techo del modo automático (nivel 1 a 5). |
+| POST | `/v1/ramp/evaluate` | `ramp_evaluate` | Evalúa ahora (como lo hace cada noche): en modo auto aplica la decisión; en manual solo la muestra. |
+| POST | `/v1/ramp/level` | `ramp_level` | Sube o baja a mano a un nivel. Subir por encima de lo recomendado exige confirmar (acknowledged) tras ver lo que acarrea; bajar nunca lo exige. |
 | GET | `/v1/rec` | `rec_list` | — |
 | POST | `/v1/rec/start` | `rec_start` | — |
 | DELETE | `/v1/rec/{rid}` | `rec_delete` | — |

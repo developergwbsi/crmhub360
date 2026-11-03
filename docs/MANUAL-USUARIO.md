@@ -891,12 +891,30 @@ Reglas de cuidado: no se repite el saludo en las horas que definas, se envían m
 
 *Visible para: Gerente*
 
-Cuántas empresas busca el buscador, cuántos prospectos pasan a Valeria y cuántos correos en frío salen por día **no deberían subirse de golpe**. Un control único, el **nivel**, ajusta los tres topes juntos: 1 Arranque (5 correos, 5 pasan, 15 empresas), 2 Calentamiento (10/10/30), 3 Crecimiento (20/15/45), 4 Alto ritmo (35/25/60), 5 Máximo recomendado (50/35/80) y 6 Extremo, solo manual (80/50/100).
+Cuántas empresas busca el buscador, cuántos prospectos pasan a Valeria y cuántos correos en frío salen por día **no deberían subirse de golpe**: un remitente nuevo que de repente manda muchos correos acaba en spam. Por eso existe un control único, el **nivel**, que ajusta los tres topes juntos.
 
-- En **Comercial virtual → Agentes de prospección → Escalado de la prospección**.
-- **Automático:** cada noche sube un nivel si hay 3 días con envíos, rebotes y bajas bajo 2 %, respuestas y créditos; baja un nivel con rebotes ≥ 5 % o bajas ≥ 3 % y espera 7 días. Respeta el techo (por defecto nivel 4) y nunca llega solo al 6.
-- **Manual:** solo recomienda; tú eliges el nivel.
-- Siempre muestra la recomendación, las condiciones y lo que acarrea el siguiente nivel. Subir a mano por encima de lo recomendado exige confirmar tras ver las consecuencias.
+| Nivel | Correos / día | Pasan a Valeria / día | Empresas buscadas / día |
+|---|---|---|---|
+| 1 · Arranque | 5 | 5 | 15 |
+| 2 · Calentamiento | 10 | 10 | 30 |
+| 3 · Crecimiento | 20 | 15 | 45 |
+| 4 · Alto ritmo | 35 | 25 | 60 |
+| 5 · Máximo recomendado | 50 | 35 | 80 |
+| 6 · Extremo (solo manual) | 80 | 50 | 100 |
+
+Cómo funciona
+
+1. Entra a **Comercial virtual → Agentes de prospección** y baja a la tarjeta **Escalado de la prospección**.
+2. **Modo automático:** cada noche (8:00 p. m.) la regla mide los resultados. **Sube un nivel** si llevas al menos 3 días con envíos, rebotes y bajas por debajo del 2 %, respuestas y créditos. **Baja un nivel** si los rebotes llegan al 5 % o las bajas al 3 %, y espera 7 días antes de volver a subir. Nunca pasa del techo que fijes (por defecto el nivel 4) y nunca llega solo al nivel 6.
+3. **Modo manual:** la regla solo recomienda. Tú eliges el nivel con el botón «Poner este nivel».
+4. Siempre ves la **recomendación**, las **condiciones** que se cumplen o no, y lo que **acarrea** el siguiente nivel: riesgo para la reputación del remitente, más respuestas que atender, más gasto de créditos.
+
+Subir a mano por encima de lo recomendado
+
+Puedes hacerlo, pero el sistema te muestra primero las consecuencias (por ejemplo, saltar varios niveles o subir sin envíos suficientes) y te pide confirmar. Bajar de nivel nunca pide confirmación.
+
+Si cambias a mano un tope suelto (por ejemplo, las empresas por día del buscador), el nivel queda como «Personalizado» y la regla se pausa hasta que elijas un nivel.
+
 
 ## 10. Preguntas frecuentes
 
