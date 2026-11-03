@@ -623,6 +623,21 @@
     }
 
     // Menú de usuario (arriba a la derecha): foto de la persona como botón del menú y el icono que le faltaba a «Acerca»
+
+    // Panel de la campana: pie «Ver todas las notificaciones» y se cierra al abrir cualquier aviso
+    var notifClickBound = false;
+    function notifPanel() {
+        var pn = document.querySelector('#notifications-panel .panel-body');
+        if (pn && !pn.querySelector('.ch-notif-all')) { pn.appendChild(el('<a class="ch-notif-all" href="#Notification" data-ch-all="1">Ver todas las notificaciones</a>')); }
+        if (notifClickBound) { return; }
+        notifClickBound = true;
+        document.addEventListener('click', function (e) {
+            var a = e.target.closest && e.target.closest('#notifications-panel a[href^="#"]');
+            if (!a) { return; }
+            setTimeout(function () { document.body.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, button: 0})); }, 60);   // el panel de Espo se cierra con un clic fuera de él
+        }, true);
+    }
+
     function userMenu() {
         var tg = document.getElementById('nav-menu-dropdown');
         if (!tg) { return; }
@@ -834,7 +849,7 @@
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); decorateEmpty(); captureViewCtx(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); notifPanel(); decorateEmpty(); captureViewCtx(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });

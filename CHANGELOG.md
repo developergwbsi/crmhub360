@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.2] - 2026-11-03
+
+### Corregido
+- **Notificaciones: el panel de la campana ya se cierra** al abrir un aviso (antes se quedaba abierto encima de la pantalla a la que ibas).
+
+### Añadido
+- **Notificaciones: «Ver todas las notificaciones»** al pie del panel de la campana lleva a la página completa (`#Notification`), que ahora ocupa todo el ancho, sin recorte ni barra de desplazamiento interna y con las mismas filas ordenadas del panel.
+
 ## [1.27.1] - 2026-11-03
 
 ### Cambiado
