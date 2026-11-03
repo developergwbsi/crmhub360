@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.26.5] - 2026-11-03
+
+### Corregido
+- **Tableros repetidos en Inicio:** la galería avisa que «Gerencial comercial» es casi igual al «Panel gerencial» que ya trae el escritorio, para no tener el mismo panel dos veces.
+
 ## [1.26.4] - 2026-11-03
 
 ### Corregido
