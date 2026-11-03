@@ -14,11 +14,12 @@ define('custom:pin', ['custom:ui'], function (ChUi) {
             const close = v => { document.removeEventListener('keydown', onKey, true); back.remove(); resolve(v); };
             const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); close(null); } };
             document.addEventListener('keydown', onKey, true);
+            box.addEventListener('click', e => { const b = e.target.closest('.ch-pin-eye'); if (!b) { return; } const i = b.parentNode.querySelector('input'), show = i.type === 'password'; i.type = show ? 'text' : 'password'; b.firstChild.className = show ? 'far fa-eye-slash' : 'far fa-eye'; b.title = show ? 'Ocultar' : 'Ver'; i.focus(); });
             build(box, close); requestAnimationFrame(() => back.classList.add('in'));
         });
     }
     const head = (t, ic) => `<div class="ch-dlg-head"><span class="ch-dlg-ic ${ic || 'fas fa-key'}"></span><h4>${esc(t)}</h4></div>`;
-    const field = (label, name, extra) => `<label class="ch-dlg-label">${esc(label)}</label><input class="form-control ${name === 'pw' ? '' : 'ch-pin-in'}" type="password" data-f="${name}" ${name === 'pw' ? 'autocomplete="current-password"' : 'inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off"'} ${extra || ''}>`;
+    const field = (label, name, extra) => `<label class="ch-dlg-label">${esc(label)}</label><div class="ch-pin-wrap"><input class="form-control ${name === 'pw' ? '' : 'ch-pin-in'}" type="password" data-f="${name}" ${name === 'pw' ? 'autocomplete="current-password"' : 'inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off"'} ${extra || ''}><button type="button" class="ch-pin-eye" tabindex="-1" title="Ver" aria-label="Ver"><span class="far fa-eye"></span></button></div>`;
     const keepUser = u => { if (u && u.userName) { ls.s('ch-last-user', u.userName); if (u.name) { ls.s('ch-last-name', u.name); } } };
 
     // Formulario para crear o cambiar el PIN (pide la contraseña: confirma que eres tú). → true si quedó guardado

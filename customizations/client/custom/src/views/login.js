@@ -55,6 +55,7 @@ define('custom:views/login', ['views/login', 'custom:ui'], function (Dep, ChUi) 
             const toPassword = msg => { $pin.prop('hidden', true); pwParts.show(); if (msg) { Espo.Ui.warning(msg); } setTimeout(() => $('#field-password').focus(), 60); };
             pwParts.hide(); $pin.prop('hidden', false); setTimeout(() => $in.focus(), 80);
             $in.on('input', () => { $in.val($in.val().replace(/\D/g, '').slice(0, 6)); err(''); });
+            $('#ch-pin-eye').on('click', () => { const show = $in.attr('type') === 'password'; $in.attr('type', show ? 'text' : 'password'); $('#ch-pin-eye span').attr('class', show ? 'far fa-eye-slash' : 'far fa-eye'); $in.focus(); });
             $('#ch-pin-pw').on('click', () => toPassword(''));
             $('#ch-notme').on('click', () => { $pin.prop('hidden', true); pwParts.show(); });
             const go = () => {

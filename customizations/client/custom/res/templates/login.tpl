@@ -53,6 +53,7 @@
                 <div class="crmhub-pin" id="ch-pin" hidden>
                     <label for="ch-pin-in">Ingresa tu PIN</label>
                     <input id="ch-pin-in" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" class="form-control" placeholder="• • • •">
+                    <a role="button" id="ch-pin-eye" class="ch-pin-eye" tabindex="-1" title="Ver"><span class="far fa-eye"></span></a>
                     <div class="crmhub-pin-err" id="ch-pin-err" hidden></div>
                     <button type="button" class="btn btn-primary crmhub-submit" id="ch-pin-go">Entrar con PIN</button>
                     <div class="crmhub-forgot"><a role="button" id="ch-pin-pw">Prefiero usar mi contraseña</a></div>

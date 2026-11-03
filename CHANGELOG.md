@@ -4,6 +4,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.1] - 2026-11-03
+
+### Cambiado
+- **PIN: ojo para ver lo que escribes:** los campos de contraseña y PIN de los diálogos del PIN (crear, cambiar, activar, quitar) y el de la pantalla de acceso con PIN tienen el ícono del ojo para mostrar u ocultar lo escrito.
+- **Notificaciones (campana) ordenadas:** cada aviso tiene margen a los costados, el avatar al lado del texto, la fecha debajo alineada con el mensaje, líneas separadoras y un botón «Mostrar más» de ancho completo; el listado se desplaza dentro del panel.
+
 ## [1.27.0] - 2026-11-03
 
 ### Añadido
