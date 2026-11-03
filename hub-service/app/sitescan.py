@@ -49,21 +49,22 @@ def _rank(e: str) -> int:
     return 5
 
 
-LAND = re.compile(r"\(?(?:\+?57)?[-\s]*\)?\(?([1-8])\)?[-\s]+(\d{3})[-\s]?(\d{2})[-\s]?(\d{2})(?!\d)")
+LAND = re.compile(r"(?<!\d)\(?(?:\+?57)?[-\s]*\)?\(?(?<!\d)([1-8])\)?[-\s]+(\d{3})[-\s]?(\d{2})[-\s]?(\d{2})(?!\d)")
+LAND2 = re.compile(r"(?<!\d)\(?(?:\+?57[-\s]*)?60([1-8])\)?[-\s]*(\d{3})[-\s]?(\d{4})(?!\d)")
 MOB = re.compile(r"(?<![\d])(?:\+?57[-\s]*)?(3\d{2})[-\s]?(\d{3})[-\s]?(\d{4})(?!\d)")
 ADDR = re.compile(r"^(?:Calle|Carrera|Cra\.?|Cl\.?|Kr\.?|Avenida|Av\.?|Diagonal|Transversal|Autopista)\s.*\d.*$", re.I)
 
 
 def text_contacts(txt: str) -> tuple[list, list, str]:
     """Teléfonos fijos, celulares y dirección que la página escribe como texto (no como enlace)."""
-    fijos = {"+57" + "".join(m.groups()) for m in LAND.finditer(txt)}
+    fijos = {"+57" + "".join(m.groups()) for m in LAND.finditer(txt)} | {"+57" + "".join(m.groups()) for m in LAND2.finditer(txt)}
     movil = {"+57" + "".join(m.groups()) for m in MOB.finditer(txt)}
     addr = next((l.strip()[:120] for l in txt.splitlines() if ADDR.match(l.strip()) and len(l.strip()) < 120), "")
     return sorted(fijos)[:4], sorted(movil)[:4], addr
 
 
 def _wa_number(href: str) -> str:
-    m = re.search(r"(?:wa\.me/|phone=)\+?(\d{10,13})", href)
+    m = re.search(r"(?:wa\.me/|phone=)\+?(\d{10,12})", href)
     return m.group(1) if m else ""
 
 
@@ -92,7 +93,7 @@ async def scan(url: str) -> dict:
             pages.append(await webscrape.fetch(c, timeout=15))
         except Exception:
             pass
-    ems, tel, wa, soc = set(), set(), set(), set()
+    ems, tel, soc, wac = set(), set(), set(), {}
     m = BeautifulSoup(h, "html.parser").find("meta", attrs={"name": "description"}) or BeautifulSoup(h, "html.parser").find("meta", attrs={"property": "og:description"})
     out["about"] = re.sub(r"\s+", " ", (m.get("content") or "") if m else "").strip()[:280]
     for pu, ph in pages:
@@ -108,9 +109,9 @@ async def scan(url: str) -> dict:
             elif re.search(r"wa\.me|api\.whatsapp\.com|web\.whatsapp\.com", hr):
                 n = _wa_number(hr)
                 if n:
-                    wa.add(n)
+                    wac[n] = wac.get(n, 0) + 1
             elif re.search(r"(facebook|instagram|linkedin|tiktok|youtube)\.com/(?!watch|sharer|share)", hr):
-                soc.add(hr.split("?")[0][:120])
+                soc.add((hr if "profile.php" in hr else hr.split("?")[0])[:120])
         ems.update(e.lower() for e in EM.findall(s.get_text(" ")))
         fj, mv, ad = text_contacts(webscrape.text_of(ph, 20000))
         out["fijos"] = sorted(set(out["fijos"]) | set(fj))[:4]
@@ -127,7 +128,7 @@ async def scan(url: str) -> dict:
                     ad = node["address"]
                     out["address"] = ", ".join(str(ad.get(k)) for k in ("streetAddress", "addressLocality") if ad.get(k))[:160]
     good = sorted({e for e in ems if not any(j in e for j in JUNK) and _same_domain(e, host)}, key=_rank)
-    out.update(emails=[e for e in good if _rank(e) < 9][:5], phones=sorted(tel)[:5], whatsapp=sorted(wa)[:3], social=sorted(soc)[:5], pages=len(pages))
+    out.update(emails=[e for e in good if _rank(e) < 9][:5], phones=sorted(tel)[:5], whatsapp=[n for n, _ in sorted(wac.items(), key=lambda kv: -kv[1])][:1], social=sorted(soc)[:5], pages=len(pages))
     return out
 
 

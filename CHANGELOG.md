@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.6] - 2026-11-03
+
+### Añadido
+- **Segunda pasada del buscador en la tarde:** en Prospección → Buscador hay un campo «Segunda pasada, en la tarde» (vacío = solo una). Cada pasada corre el ciclo completo (busca, califica y pasa al comercial virtual) y el tope diario de empresas se reparte entre las dos.
+
+### Corregido
+- **Lectura de sitios más precisa:** ya no confunde un celular con un teléfono fijo, entiende los fijos con indicativo 60X (p. ej. 605 388 5152), se queda con el WhatsApp que más se repite en el sitio (ignora el de la agencia que lo diseñó, que aparece en el pie) y conserva el enlace completo de los perfiles de Facebook tipo `profile.php?id=…`.
+
 ## [1.27.5] - 2026-11-03
 
 ### Corregido

@@ -2773,6 +2773,7 @@ def finder_save(body: dict = Body(...), tenant: dict = Depends(tenant_auth)):
         raise HTTPException(403, "El buscador no está incluido en la licencia de esta empresa.")
     finder._save(tenant["slug"], {"enabled": bool(body.get("enabled")), "daily_limit": max(1, min(100, int(body.get("daily_limit") or 20))), "focus": str(body.get("focus") or "")[:600],
                                   "auto": bool(body.get("auto")), "hour": max(0, min(23, int(body.get("hour") if body.get("hour") is not None else 9))),
+                                  "hour2": (max(0, min(23, int(body["hour2"]))) if body.get("hour2") not in (None, "") else None),
                                   "autonomy": "auto" if body.get("autonomy") == "auto" else "approval"})
     if isinstance(body.get("report"), dict):   # reporte gerencial por correo: activo, hora local y destinatarios
         r = body["report"]

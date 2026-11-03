@@ -11,10 +11,18 @@ from . import agent, db, finder, qualifier, ramp, report, wallet
 log = logging.getLogger("hub.pipeline")
 
 
+def _hours(tenant: dict) -> list[int]:
+    """Horas locales de las pasadas del día: la principal y, si está configurada, una segunda (p. ej. la tarde)."""
+    c = finder.config(tenant)
+    return sorted({c["hour"], *([c["hour2"]] if c.get("hour2") is not None else [])})
+
+
 async def run_once(tenant: dict) -> dict:
     """Una pasada completa para una empresa: busca, califica y pasa los mejores al comercial virtual."""
     out = {"at": datetime.now(timezone.utc).isoformat()}
-    f = await finder.run(tenant)
+    cfg = finder.config(tenant)
+    per = -(-cfg["daily_limit"] // len(_hours(tenant)))   # el tope diario se reparte entre las pasadas del día
+    f = await finder.run(tenant, limit=per)
     out["finder"] = {k: f.get(k) for k in ("found", "ready", "rejected", "reason")}
     q = await qualifier.run(db.get_tenant(tenant["slug"]))
     out["qualifier"] = q
@@ -22,16 +30,30 @@ async def run_once(tenant: dict) -> dict:
     return out
 
 
-def _due(tenant: dict) -> bool:
+def _due_hour(tenant: dict) -> int | None:
+    """Hora de la pasada que toca ahora (la más reciente ya cumplida que aún no corrió hoy), o None."""
     f = ((tenant.get("settings") or {}).get("finder") or {})
     if not (f.get("enabled") and f.get("auto") and finder.licensed(tenant)):
-        return False
+        return None
     tz = ZoneInfo(((tenant.get("settings") or {}).get("agent") or {}).get("schedule", {}).get("tz") or "America/Bogota")
     now = datetime.now(tz)
+    done = f.get("slots_done") or {}
+    ran = set(done.get("h") or []) if done.get("d") == str(now.date()) else set()
     last = (f.get("pipeline_last") or {}).get("at")
-    if last and datetime.fromisoformat(last).astimezone(tz).date() == now.date():
-        return False
-    return now.hour >= int(f.get("hour") or 9)
+    if not ran and last and datetime.fromisoformat(last).astimezone(tz).date() == now.date():
+        ran = {h for h in _hours(tenant) if h <= datetime.fromisoformat(last).astimezone(tz).hour}   # corrida anterior a las pasadas por turno: cuenta como la de su hora
+    due = [h for h in _hours(tenant) if h <= now.hour and h not in ran]
+    return max(due) if due else None
+
+
+def _mark_slot(tenant: dict, hour: int) -> None:
+    tz = ZoneInfo(((tenant.get("settings") or {}).get("agent") or {}).get("schedule", {}).get("tz") or "America/Bogota")
+    today = str(datetime.now(tz).date())
+    f = ((db.get_tenant(tenant["slug"]).get("settings") or {}).get("finder") or {})
+    done = f.get("slots_done") or {}
+    hs = set(done.get("h") or []) if done.get("d") == today else set()
+    hs.add(hour)
+    finder._save(tenant["slug"], {"slots_done": {"d": today, "h": sorted(hs)}})
 
 
 async def worker() -> None:
@@ -43,8 +65,10 @@ async def worker() -> None:
                 rows = c.execute("SELECT * FROM tenants WHERE status='active' AND settings->'finder'->>'auto' = 'true'").fetchall()
             for t in rows:
                 t = dict(t)
-                if agent.engine_paused(t) or not _due(t):
+                slot = None if agent.engine_paused(t) else _due_hour(t)
+                if slot is None:
                     continue
+                _mark_slot(t, slot)   # se marca antes de correr: si falla no se repite en bucle cada 10 minutos
                 if not wallet.has_funds(t):   # sin créditos y sin motor propio: el ciclo espera a que recarguen
                     finder._save(t["slug"], {"pipeline_last": {"at": datetime.now(timezone.utc).isoformat(), "error": wallet.MSG}})
                     continue
