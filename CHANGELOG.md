@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.10] - 2026-11-04
+
+### Corregido
+- **Leads: la página ya no se desplaza, solo el contenido:** el título, las tarjetas por estado, el buscador con sus filtros y los nombres de cada estado quedan fijos; lo que se desplaza es la lista de leads dentro de cada estado (cada columna con su propio scroll) o, en la vista de tabla, las filas, con el encabezado de la tabla fijo. Se ajusta solo al alto de la ventana; en pantallas pequeñas (celular o menos de 520 px de alto) sigue como antes.
+
 ## [1.27.9] - 2026-11-04
 
 ### Añadido

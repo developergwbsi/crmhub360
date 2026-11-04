@@ -648,6 +648,19 @@
         }
     }
 
+    // Leads: la página no se desplaza; título, tarjetas, filtros y estados quedan fijos y solo se desplaza el contenido de cada columna (o la tabla)
+    function fitLeads() {
+        var d = document.documentElement, on = /^#Lead(\/list)?$/.test(location.hash) && window.innerWidth >= 768 && window.innerHeight >= 520;
+        var t = on && (document.querySelector('.list-kanban .kanban-columns-container') || document.querySelector('.content .list-container > .list'));
+        if (!t) { document.body.classList.remove('ch-fit'); d.style.removeProperty('--ch-kh'); return; }
+        var top = t.getBoundingClientRect().top + window.scrollY, h = Math.max(240, Math.floor(window.innerHeight - top - (t.classList.contains('kanban-columns-container') ? 24 : 46)));
+        if (d.style.getPropertyValue('--ch-kh') !== h + 'px') { d.style.setProperty('--ch-kh', h + 'px'); }
+        document.body.classList.add('ch-fit');
+        if (window.scrollY > 0 && document.documentElement.scrollHeight - window.innerHeight < 40) { window.scrollTo(0, 0); }
+    }
+    window.addEventListener('resize', fitLeads);
+    setInterval(fitLeads, 900);   // las tarjetas y los filtros cambian la altura disponible
+
     // Leads: tarjetas con el conteo por estado arriba de la lista/tablero (clic = filtra por ese estado)
     var LC = [['Nuevo Lead', 'Nuevo lead', '#64748b'], ['En Calificación', 'En calificación', '#4f63e8'], ['Calificado', 'Calificado', '#8b5cf6'], ['En Enfriamiento/Contactado', 'Enfriamiento / contactado', '#f59e0b'], ['Cierre Exitoso', 'Cierre exitoso', '#16a34a'], ['Dead', 'Perdido', '#ef4444'], ['Converted', 'Convertido', '#0ea5e9']];
     var lcCache = null;
@@ -932,7 +945,7 @@
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); notifPanel(); setBar(); leadCards(); kanbanBind(); decorateEmpty(); captureViewCtx(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); notifPanel(); setBar(); leadCards(); fitLeads(); kanbanBind(); decorateEmpty(); captureViewCtx(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });

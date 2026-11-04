@@ -1980,3 +1980,9 @@ body.ch-scrolled .ch-sim-head.ch-fixed p, body.ch-scrolled .ch-rc-top.ch-fixed p
 .search-container .search-row > .form-group:first-child { flex: 1 1 auto; width: auto; max-width: none; min-width: 0; }
 .search-container .search-row > .form-group:nth-child(2) { flex: none; width: auto; max-width: none; padding-left: 0; }
 .search-container .search-row > .form-group:nth-child(2) .view-mode-switcher-buttons-group { float: none; margin: 0; }
+
+/* Leads: la página no se desplaza; solo el contenido de cada estado (o la tabla). Lo demás queda fijo arriba */
+body.ch-fit .list-kanban .kanban-columns-container td.group-column { height: var(--ch-kh); max-height: var(--ch-kh); vertical-align: top; }
+body.ch-fit .list-kanban td.group-column > div { max-height: var(--ch-kh); height: var(--ch-kh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+body.ch-fit .content .list-container > .list { max-height: var(--ch-kh) !important; overflow-y: auto !important; overscroll-behavior: contain; }
+body.ch-fit .content .list-container > .list thead th { position: sticky; top: 0; z-index: 3; background: var(--ch-surface); }
