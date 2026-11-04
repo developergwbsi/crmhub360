@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.11] - 2026-11-04
+
+### Corregido
+- **Buscador: la pasada de la tarde ya no se cae si el modelo devuelve un candidato mal formado:** se ignoran los textos sueltos y se procesan solo los candidatos completos; si algo falla, el motivo queda registrado con detalle.
+
 ## [1.27.10] - 2026-11-04
 
 ### Corregido

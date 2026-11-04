@@ -109,7 +109,7 @@ async def run(tenant: dict, limit: int | None = None) -> dict:
         if d.get("candidates"):
             break
     rows, dropped = [], 0
-    for c in (d.get("candidates") or [])[:n]:
+    for c in [x for x in (d.get("candidates") or []) if isinstance(x, dict)][:n]:   # el modelo a veces devuelve texto suelto en lugar de un objeto
         src, email, phone = str(c.get("source_url") or "").strip(), str(c.get("email") or "").strip().lower(), str(c.get("phone") or "").strip()
         if not re.match(r"^https?://", src):
             dropped += 1; continue

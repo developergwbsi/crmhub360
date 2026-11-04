@@ -76,7 +76,7 @@ async def worker() -> None:
                     r = await run_once(t)
                     log.info("%s: pipeline %s", t["slug"], json.dumps(r, ensure_ascii=False)[:300])
                 except Exception as e:
-                    log.warning("pipeline %s: %s", t["slug"], str(e)[:200])
+                    log.warning("pipeline %s: %s", t["slug"], str(e)[:200], exc_info=True)
                     finder._save(t["slug"], {"pipeline_last": {"at": datetime.now(timezone.utc).isoformat(), "error": str(e)[:200]}})
         except Exception:
             log.exception("ciclo del pipeline")
