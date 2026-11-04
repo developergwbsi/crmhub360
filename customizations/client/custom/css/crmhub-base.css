@@ -1968,3 +1968,15 @@ body.ch-scrolled .ch-sim-head.ch-fixed p, body.ch-scrolled .ch-rc-top.ch-fixed p
 
 /* Tablero de leads: la fila de estados se fija bajo el encabezado de la página sin saltos (igual que la que fija Espo después) */
 .list-kanban .kanban-head-container.ch-kfix { position: fixed; top: var(--ch-ph-h, 58px); margin-top: var(--top-bar-height, 52px); z-index: 85; overflow: hidden; background: var(--ch-bg); padding: 6px 0 4px; }
+
+/* Leads: tarjetas con el conteo por estado, y el selector tabla/tablero en la esquina derecha, en la misma fila del buscador */
+.ch-lcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; margin: 0 0 12px; }
+.ch-lc { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 14px; text-align: left; border: 1px solid var(--ch-line); border-left: 4px solid var(--c, #64748b); border-radius: 12px; background: var(--ch-surface); color: var(--ch-ink); cursor: pointer; transition: border-color .12s, transform .12s; }
+.ch-lc:hover { transform: translateY(-1px); border-color: var(--c); }
+.ch-lc.on { background: color-mix(in srgb, var(--c) 10%, var(--ch-surface)); border-color: var(--c); }
+.ch-lc-n { font-size: 22px; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; }
+.ch-lc-l { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ch-muted); }
+.search-container .search-row { flex-wrap: nowrap; align-items: flex-start; }
+.search-container .search-row > .form-group:first-child { flex: 1 1 auto; width: auto; max-width: none; min-width: 0; }
+.search-container .search-row > .form-group:nth-child(2) { flex: none; width: auto; max-width: none; padding-left: 0; }
+.search-container .search-row > .form-group:nth-child(2) .view-mode-switcher-buttons-group { float: none; margin: 0; }

@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.9] - 2026-11-04
+
+### Añadido
+- **Leads con tarjetas por estado:** arriba de la lista y del tablero hay una tarjeta por estado (Todos, Nuevo lead, En calificación, Calificado, Enfriamiento/contactado, Cierre exitoso; Perdido y Convertido cuando hay) con su cantidad. Un clic filtra la lista por ese estado; «Todos» quita el filtro.
+
+### Corregido
+- **Selector tabla/tablero en la esquina derecha:** los íconos para cambiar entre lista y tablero quedaban en el centro, en una fila aparte; ahora están a la derecha, en la misma fila del buscador.
+
 ## [1.27.8] - 2026-11-04
 
 ### Corregido

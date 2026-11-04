@@ -648,6 +648,40 @@
         }
     }
 
+    // Leads: tarjetas con el conteo por estado arriba de la lista/tablero (clic = filtra por ese estado)
+    var LC = [['Nuevo Lead', 'Nuevo lead', '#64748b'], ['En Calificación', 'En calificación', '#4f63e8'], ['Calificado', 'Calificado', '#8b5cf6'], ['En Enfriamiento/Contactado', 'Enfriamiento / contactado', '#f59e0b'], ['Cierre Exitoso', 'Cierre exitoso', '#16a34a'], ['Dead', 'Perdido', '#ef4444'], ['Converted', 'Convertido', '#0ea5e9']];
+    var lcCache = null;
+    function leadCards() {
+        var on = /^#Lead(\/list)?$/.test(location.hash), sb = document.querySelector('.content .search-container'), box = document.querySelector('.ch-lcards');
+        if (!on || !sb) { return; }
+        var cur = null;
+        try { var st = JSON.parse((localStorage.getItem('espo-listSearch-Lead') || '').replace(/^__JSON__:/, '') || 'null'); cur = st && st.advanced && st.advanced.status && st.advanced.status.value; cur = Array.isArray(cur) && cur.length === 1 ? cur[0] : null; } catch (e) { /* sin storage */ }
+        var draw = function (c) {
+            if (!box) { box = el('<div class="ch-lcards"></div>'); sb.parentNode.insertBefore(box, sb); }
+            var tot = c.total;
+            box.innerHTML = '<button type="button" class="ch-lc' + (cur ? '' : ' on') + '" data-s="" style="--c:#0f172a"><span class="ch-lc-n">' + tot + '</span><span class="ch-lc-l">Todos</span></button>' +
+                LC.filter(function (x) { return c[x[0]] > 0 || ['Dead', 'Converted'].indexOf(x[0]) < 0; }).map(function (x) { return '<button type="button" class="ch-lc' + (cur === x[0] ? ' on' : '') + '" data-s="' + x[0] + '" style="--c:' + x[2] + '"><span class="ch-lc-n">' + c[x[0]] + '</span><span class="ch-lc-l">' + x[1] + '</span></button>'; }).join('');
+            box.onclick = function (e) {
+                var b = e.target.closest('.ch-lc'); if (!b) { return; }
+                var v = b.dataset.s;
+                try {
+                    localStorage.setItem('espo-listSearch-Lead', '__JSON__:' + JSON.stringify({advanced: v ? {status: {type: 'in', attribute: 'status', value: [v], data: {type: 'anyOf', valueList: [v]}}} : {}, bool: {}, presetName: null, primary: null}));
+                    sessionStorage.removeItem('chSetBar');
+                } catch (err) { /* sin storage */ }
+                location.reload();
+            };
+        };
+        if (lcCache && Date.now() - lcCache.at < 60000) { if (!box || box.dataset.at !== String(lcCache.at)) { draw(lcCache.c); box.dataset.at = String(lcCache.at); } return; }
+        if (lcCache && lcCache.busy) { return; }
+        lcCache = {at: 0, busy: true, c: (lcCache && lcCache.c) || null};
+        var q = function (s) { return Espo.Ajax.getRequest('Lead', {maxSize: 1, select: 'id', where: s ? [{type: 'equals', attribute: 'status', value: s}] : []}).then(function (r) { return r.total || 0; }); };
+        Promise.all([q('')].concat(LC.map(function (x) { return q(x[0]); }))).then(function (v) {
+            var c = {total: v[0]}; LC.forEach(function (x, i) { c[x[0]] = v[i + 1]; });
+            lcCache = {at: Date.now(), c: c};
+            draw(c); box.dataset.at = String(lcCache.at);
+        }).catch(function () { lcCache = null; });
+    }
+
     // Cifra del tablero abierta en la lista normal (la misma de la barra lateral): aviso con el origen y botón para quitar el filtro
     function setBar() {
         var sc = (location.hash.match(/^#([A-Za-z]+)(?:\/list)?$/) || [])[1], sb = document.querySelector('.content .search-container'), old = document.querySelector('.ch-setbar');
@@ -898,7 +932,7 @@
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); notifPanel(); setBar(); kanbanBind(); decorateEmpty(); captureViewCtx(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); notifPanel(); setBar(); leadCards(); kanbanBind(); decorateEmpty(); captureViewCtx(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });
