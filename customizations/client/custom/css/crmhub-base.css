@@ -1965,3 +1965,6 @@ body.ch-scrolled .ch-sim-head.ch-fixed p, body.ch-scrolled .ch-rc-top.ch-fixed p
 /* Prospección: datos que el buscador recupera del sitio de cada empresa */
 .ch-pr .ch-pr-about { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 340px; }
 .ch-pr .ch-pr-soc a { margin-right: 6px; color: #64748b; }
+
+/* Tablero de leads: la fila de estados se fija bajo el encabezado de la página sin saltos (igual que la que fija Espo después) */
+.list-kanban .kanban-head-container.ch-kfix { position: fixed; top: var(--ch-ph-h, 58px); margin-top: var(--top-bar-height, 52px); z-index: 85; overflow: hidden; background: var(--ch-bg); padding: 6px 0 4px; }

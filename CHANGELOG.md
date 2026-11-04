@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.8] - 2026-11-04
+
+### Corregido
+- **Tablero de leads con muchos leads en un estado:** al bajar la página, la fila de estados (nombres y buscadores) se metía debajo del encabezado y reaparecía de golpe más abajo; ahora queda fija justo bajo el encabezado desde el primer momento, alineada con sus columnas, sin saltos.
+
 ## [1.27.7] - 2026-11-03
 
 ### Corregido

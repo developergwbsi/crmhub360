@@ -626,6 +626,28 @@
 
     // Panel de la campana: pie «Ver todas las notificaciones» y se cierra al abrir cualquier aviso
     var notifClickBound = false;
+    // Tablero de leads: la fila de estados se fija bajo el encabezado de la página desde el primer momento (Espo la fija más tarde y, mientras tanto, queda tapada por el encabezado)
+    var kanbanBound = false;
+    function kanbanBind() { if (kanbanBound) { return; } kanbanBound = true; window.addEventListener('scroll', kanbanStick, {passive: true}); window.addEventListener('resize', kanbanStick); }
+    function kanbanStick() {
+        var lk = document.querySelector('.list-kanban'), h = lk && lk.querySelector('.kanban-head-container');
+        if (!h) { return; }
+        var pg = document.querySelector('.page-header'), limit = pg ? pg.getBoundingClientRect().bottom : 52;
+        var on = lk.getBoundingClientRect().top < limit, box = lk.closest('.list-kanban-container') || lk.parentElement;
+        var ph = h.nextElementSibling && h.nextElementSibling.classList.contains('kanban-head-placeholder') ? h.nextElementSibling : null;
+        if (on && !h.classList.contains('ch-kfix')) {
+            h.style.width = (box.getBoundingClientRect().width - 3) + 'px';
+            var cols = lk.querySelector('.kanban-columns-container'); if (h.firstElementChild && cols) { h.firstElementChild.style.width = cols.offsetWidth + 'px'; }
+            if (!box.dataset.chK) { box.dataset.chK = '1'; box.addEventListener('scroll', function () { h.scrollLeft = box.scrollLeft; }, {passive: true}); }
+            h.scrollLeft = box.scrollLeft;
+            if (ph) { ph.style.display = 'block'; ph.style.height = h.offsetHeight + 'px'; }
+            h.classList.add('ch-kfix');
+        } else if (!on && h.classList.contains('ch-kfix')) {
+            h.classList.remove('ch-kfix'); h.style.width = ''; if (h.firstElementChild) { h.firstElementChild.style.width = ''; }
+            if (ph) { ph.style.display = 'none'; ph.style.height = ''; }
+        }
+    }
+
     // Cifra del tablero abierta en la lista normal (la misma de la barra lateral): aviso con el origen y botón para quitar el filtro
     function setBar() {
         var sc = (location.hash.match(/^#([A-Za-z]+)(?:\/list)?$/) || [])[1], sb = document.querySelector('.content .search-container'), old = document.querySelector('.ch-setbar');
@@ -876,7 +898,7 @@
         if (pending) { return; }
         pending = true;
         requestAnimationFrame(function () {
-            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); notifPanel(); setBar(); decorateEmpty(); captureViewCtx(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
+            pending = false; swapStylesheet(resolved()); ensureTools(); colorizeMenu(); syncSticky(); checkReadOnly(); paintBrand(); paintFavicon(); notifPanel(); setBar(); kanbanBind(); decorateEmpty(); captureViewCtx(); navSearch(); userMenu(); paintHomeBoards(); paintHomeEmpty(); decorateWidgets(); dtScan(document); if (window.ChSplit) { window.ChSplit.reconcile(); }
             // EspoCRM reconstruye <body> al arrancar y puede borrar los avisos: se vuelven a poner mientras sigan vigentes
             if (!online && !document.getElementById('ch-net')) { banner('ch-net', 'ch-banner-warn', OFFLINE_HTML); }
         });
