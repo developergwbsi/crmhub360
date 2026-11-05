@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.16] - 2026-11-05
+
+### Corregido
+- **Presentación de Gestor360: se quita la captura de reportes gerenciales**, que mostraba cifras de un cliente real. Se volverá a poner con una captura de una cuenta de pruebas.
+
 ## [1.27.15] - 2026-11-05
 
 ### Mejorado
