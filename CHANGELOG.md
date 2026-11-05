@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.18] - 2026-11-05
+
+### Cambiado
+- Presentaciones: nueva página y PDF de **Listo360** con su chatbot de WhatsApp, y capturas del chatbot en la de Gestor360 (con nombre y logo de ejemplo, sin datos de clientes).
+
 ## [1.27.17] - 2026-11-05
 
 ### Mejorado

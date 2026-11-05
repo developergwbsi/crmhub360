@@ -404,9 +404,10 @@ def default_pages(company: str, wa: str) -> list[dict]:
                         ("T", "Seguimiento en campo", "Visitas a domicilio y ubicación de tus profesionales, para la línea de vehículos.")])
               + '<h2>Chatbots 24/7 por WhatsApp: ventas, servicio al cliente y lo que necesites</h2><p class="lead">Gestor360 incluye un módulo de <b>chatbots configurables</b> que atienden a tus clientes <b>las 24 horas por WhatsApp</b> y por el chat web. No son solo para vender: los armas para <b>ventas</b> (toman el pedido y lo registran en el módulo de ventas), para <b>servicio al cliente (SAC)</b> —consultas, estado de pedidos, peticiones, quejas y reclamos— o para <b>cualquier proceso de atención</b> que tu negocio necesite. Los construyes como agente conversacional o con <b>flujogramas</b> visuales, sin programar, y tu equipo entra solo cuando hace falta.</p>'
               f'<div class="fig">{_img("gestor_chatbot.jpg", "Editor de flujogramas del chatbot de Gestor360", True)}<div class="cap">El editor de flujogramas: cada nodo es un paso de la conversación (datos de ejemplo).</div></div>'
+              f'<div class="phones">{_img("chatbot_wa3.jpg", "Chatbot por WhatsApp: saludo con opciones y categorías")}{_img("chatbot_wa1.jpg", "Chatbot por WhatsApp: producto con botón Me interesa")}{_img("chatbot_wa2.jpg", "Chatbot por WhatsApp: confirmación de pedido con Sí o No")}</div><div class="cap">Así lo ve tu cliente en WhatsApp: saludo con menú de opciones, catálogo por categorías, producto con su precio y confirmación del pedido con un toque (datos de ejemplo).</div>'
               '<p class="lead"><b>Ejemplos de lo que puede hacer tu chatbot:</b></p>'
-              + _cards([("1", "Toma pedidos por ti", "El cliente escribe «quiero un pedido» y el bot le pregunta qué necesita, si es para hoy, por encargo o para empresa, y si prefiere recogerlo en tienda o por domicilio. Si es domicilio, le pide la dirección y el pedido queda creado en ventas."),
-                        ("2", "Muestra tu catálogo", "Presenta tus productos en un carrusel, directamente en la conversación."),
+              + _cards([("1", "Toma pedidos por ti", "El cliente escribe y el bot lo saluda con un menú de opciones («Solicitar un pedido», etc.), le muestra las categorías y le pregunta qué necesita, si es para hoy, por encargo o para empresa, y si prefiere recogerlo en tienda o por domicilio. Si es domicilio, le pide la dirección y el pedido queda creado en ventas."),
+                        ("2", "Muestra tu catálogo", "Presenta tus productos con foto y precio, o te envía el catálogo en PDF por categoría, directamente en la conversación, con botones como «Me interesa» y «Sí / No» para confirmar."),
                         ("3", "Informa el estado del pedido", "El cliente pregunta «¿cómo va mi pedido?» y el bot le responde con su estado, sin que nadie de tu equipo tenga que contestar."),
                         ("4", "Da ubicación y horarios", "Responde dónde queda cada sede, con su dirección y horario, y las preguntas frecuentes de tus clientes."),
                         ("5", "Agenda citas", "Existe una versión de agenda: el cliente elige servicio, profesional y horario libre, y la cita queda confirmada con su aviso."),
@@ -432,6 +433,27 @@ def default_pages(company: str, wa: str) -> list[dict]:
                         ("M", "Hecha a tu medida", "Cada negocio la personaliza con su propia identidad: marca, colores y frase.")])
               + '<h2>Se conecta con tus otras plataformas</h2><p class="lead">Gestor360 se integra con otras plataformas a través de <b>APIs</b>, además de WhatsApp Business, pagos en línea y notificaciones automáticas, y se sincroniza con <b>Core360</b>.</p>'
               '<p class="lead">Y junto con <b>Crm Hub 360</b>, además de ordenar tu operación, consigues clientes nuevos y los atiendes automáticamente: el CRM busca, califica y conversa por ti, y Gestor360 organiza el servicio.</p>')
+    listo = (f'<h2>La app de tus clientes, con chatbot propio</h2><p class="lead">Listo360 es la app que <b>tu cliente final</b> usa para <b>autogestionarse</b>: ve todo lo que ofrece tu sede, agenda, sigue la trazabilidad de sus servicios y pedidos, compra y cotiza, sin llamar ni escribir. Es <b>personalizable para cada cliente de Gestor360</b> —su marca, sus colores y sus sedes— y <b>cada sede tiene su propio chatbot</b> que atiende por WhatsApp las 24 horas.</p>'
+             f'<div class="phones">{_img("listo360_inicio.jpg", "Inicio de Listo360")}{_img("listo360_perfil.jpg", "Información y horarios de la sede en Listo360")}{_img("listo360_login.jpg", "Ingreso y registro de clientes en Listo360")}</div><div class="cap">Listo360 en el celular del cliente: inicio, información de la sede e ingreso (datos de ejemplo).</div>'
+             + '<h2 id="como">Cada sede con su chatbot de WhatsApp</h2><p class="lead">El mismo negocio que usa Listo360 tiene un <b>chatbot propio por WhatsApp</b>, con su nombre y su imagen. El cliente escribe a cualquier hora y el bot lo saluda, le muestra el menú, le presenta el catálogo por categorías y le toma el pedido; también atiende servicio al cliente y, si hace falta, pasa la conversación a una persona.</p>'
+             f'<div class="phones">{_img("chatbot_wa3.jpg", "Chatbot por WhatsApp: saludo con opciones y categorías")}{_img("chatbot_wa1.jpg", "Chatbot por WhatsApp: producto con botón Me interesa")}{_img("chatbot_wa2.jpg", "Chatbot por WhatsApp: confirmación de pedido con Sí o No")}</div><div class="cap">El chatbot de una sede en WhatsApp: saludo y menú, producto con precio y confirmación del pedido (datos de ejemplo).</div>'
+             + _cards([("1", "Saludo y menú de opciones", "Recibe al cliente con tu mensaje de bienvenida y un menú: pedir, ver catálogo, consultar un pedido, hablar con alguien."),
+                       ("2", "Catálogo por categorías", "Muestra tus productos con foto y precio, o envía el catálogo en PDF de la categoría que el cliente elija."),
+                       ("3", "Pedido con un toque", "Botones «Me interesa» y «Sí / No» para confirmar, y el pedido queda registrado en ventas, listo para despacho."),
+                       ("4", "Servicio al cliente (SAC)", "Consultas, estado del pedido, peticiones, quejas y reclamos a cualquier hora, sin que tu equipo tenga que contestar cada mensaje."),
+                       ("5", "Pasa a una persona", "Cuando el cliente lo pide o el bot no sabe, traspasa la conversación a un asesor con todo el contexto."),
+                       ("6", "Con tu marca", "Nombre, imagen y mensajes de tu negocio; el flujo lo armas tú con flujogramas, sin programar.")])
+             + '<h2>Lo que hace el cliente en la app</h2>'
+             + _cards([("L", "Con su propio chat", "Conversan con tu sede desde la app, con el chatbot o con tu equipo."),
+                       ("I", "Toda su información en un solo lugar", "Citas, compras, facturas y el historial de su gestión con cada sede."),
+                       ("A", "Agenda desde la app", "Reservan, reprograman y siguen el estado de su cita en tiempo real, con avisos en el celular."),
+                       ("P", "Pedidos y compras", "Hacen sus pedidos y compran desde la app, sin tener que llamar ni escribir."),
+                       ("Q", "Cotiza", "Piden y reciben cotizaciones de lo que ofrece tu sede."),
+                       ("T", "Trazabilidad", "Siguen el estado de sus servicios y pedidos, etapa por etapa, desde su celular."),
+                       ("S", "Información de tu sede", "Dirección, horarios, contacto, servicios y equipo, siempre al día."),
+                       ("D", "Se instala en cualquier dispositivo", "Es una app instalable en el celular, la tableta o el computador."),
+                       ("M", "Hecha a tu medida", "Cada negocio la personaliza con su propia identidad: marca, colores y frase.")])
+             + '<h2>Parte de Gestor360</h2><p class="lead">Listo360 y su chatbot se conectan con <b>Gestor360</b>: lo que el cliente pide, agenda o compra llega a tu agenda, tu inventario y tu panel de ventas. Y junto con <b>Crm Hub 360</b> consigues clientes nuevos y los atiendes automáticamente.</p>')
     core = (f'<h2>El ERP para fabricar y distribuir</h2><p class="lead">Core360 es la plataforma de gestión empresarial de {_h.escape(company)} para manufactura y distribución: compras, ventas, producción, inventario y materias primas, hasta la fábrica conectada, en un solo sistema.</p>'
             f'<div class="fig">{_svg_chain()}<div class="cap">De la compra de la materia prima a la factura, con una única fuente de verdad.</div></div>'
             + _cards([("C", "Compras", "Requisiciones, órdenes de compra con límite de aprobación, recepción contra la orden, alertas de reposición y facturas de proveedor con conciliación a tres vías."),
@@ -461,6 +483,9 @@ def default_pages(company: str, wa: str) -> list[dict]:
         {"slug": "gestor360", "title": "Gestor360: agenda, nómina, inventario y facturación", "product": "gestor360", "kind": "presentación",
          "summary": "Plataforma de gestión para negocios de servicios y ventas con sedes: vehículos, salud y belleza, panaderías, ferreterías y otras líneas.",
          "html": _shell(company, "Gestor360", "Para negocios de servicios", "Tu negocio, <u>bajo control</u> en una sola plataforma", "Agenda, servicios, productos, nómina, inventario y clientes, con una app hecha a la medida de tu línea de negocio.", gestor, wa, "Conoce Gestor360", "Agenda una demostración de 15 minutos por videollamada, sin compromiso.")},
+        {"slug": "listo360", "title": "Listo360: la app de tus clientes, con su propio chatbot", "product": "gestor360", "kind": "presentación",
+         "summary": "App de autogestión para los clientes de cada sede (agenda, pedidos, cotizaciones, trazabilidad) con chatbot propio por WhatsApp.",
+         "html": _shell(company, "Listo360", "La app de tus clientes", "Tus clientes se <u>autogestionan</u> y un chatbot los atiende 24/7", "Agenda, pedidos, cotizaciones y trazabilidad en su celular, y un chatbot por WhatsApp con tu marca que atiende y toma pedidos a cualquier hora.", listo, wa, "Conoce Listo360", "Agenda una demostración de 15 minutos por videollamada, sin compromiso.")},
         {"slug": "core360", "title": "Core360: ERP para manufactura y distribución", "product": "core360", "kind": "presentación",
          "summary": "ERP para manufactura y distribución: compras, ventas, producción, inventario y materias primas, planta conectada en tiempo real, turnos, finanzas y facturación electrónica.",
          "html": _shell(company, "Core360", "ERP para manufactura y distribución", "Toda tu cadena de abastecimiento, <u>bajo control</u>", "Compras, ventas, producción, inventario, materias primas y planta conectada en tiempo real, en un solo sistema.", core, wa, "Conoce Core360", "Agenda una demostración de 15 minutos por videollamada, sin compromiso.")},
@@ -564,6 +589,6 @@ def pdf_html(page: str) -> str:
 def seed_defaults(tenant: str, company: str, wa: str) -> int:
     n = 0
     for p in default_pages(company, wa):
-        pdf = make_pdf(pdf_html(nb(p["html"], company))) if p["slug"] in ("crm-hub-360", "gestor360", "core360") else None
+        pdf = make_pdf(pdf_html(nb(p["html"], company))) if p["slug"] in ("crm-hub-360", "gestor360", "listo360", "core360") else None
         upsert(tenant, p["slug"], p["title"], p["product"], p["kind"], p["summary"], nb(p["html"], company), pdf=pdf); n += 1
     return n
