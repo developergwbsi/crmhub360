@@ -6,6 +6,7 @@
                 "En Calificación",
                 "Calificado",
                 "En Enfriamiento/Contactado",
+                "Standby",
                 "Cierre Exitoso",
                 "Converted",
                 "Dead"
@@ -16,6 +17,7 @@
                 "En Calificación": "primary",
                 "Calificado": "info",
                 "En Enfriamiento/Contactado": "warning",
+                "Standby": "default",
                 "Cierre Exitoso": "success",
                 "Converted": "success",
                 "Dead": "danger"

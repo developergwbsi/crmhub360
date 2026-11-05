@@ -64,7 +64,7 @@ define('custom:lead-hero', ['custom:agenda'], function (Agenda) {
     }
 
     // Barra de etapas del lead (como el embudo de HubSpot): la actual resaltada, las anteriores completadas; al pulsar otra se cambia el estado
-    const PIPE_SKIP = ['Converted', 'Dead', 'Recycled'];
+    const PIPE_SKIP = ['Converted', 'Dead', 'Recycled', 'Standby'];
     function stepper(view) {
         if ((view.model.entityType || '') !== 'Lead') { return ''; }
         const a = view.model.attributes, lang = view.getLanguage(), all = (view.getMetadata().get('entityDefs.Lead.fields.status.options') || []).filter(Boolean);

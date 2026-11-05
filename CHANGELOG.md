@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.12] - 2026-11-05
+
+### Añadido
+- **Nuevo estado del pipeline de leads: «Standby (en pausa)»:** para leads que se dejan en espera sin perderlos ni cerrarlos. Aparece como columna del tablero, como tarjeta en la página de Leads y en el selector de estado. Mientras un lead está en Standby, el comercial virtual no le escribe ni le da seguimiento; al sacarlo de Standby, el seguimiento se puede retomar.
+
 ## [1.27.11] - 2026-11-04
 
 ### Corregido

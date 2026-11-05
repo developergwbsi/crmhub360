@@ -662,7 +662,7 @@
     setInterval(fitLeads, 900);   // las tarjetas y los filtros cambian la altura disponible
 
     // Leads: tarjetas con el conteo por estado arriba de la lista/tablero (clic = filtra por ese estado)
-    var LC = [['Nuevo Lead', 'Nuevo lead', '#64748b'], ['En Calificación', 'En calificación', '#4f63e8'], ['Calificado', 'Calificado', '#8b5cf6'], ['En Enfriamiento/Contactado', 'Enfriamiento / contactado', '#f59e0b'], ['Cierre Exitoso', 'Cierre exitoso', '#16a34a'], ['Dead', 'Perdido', '#ef4444'], ['Converted', 'Convertido', '#0ea5e9']];
+    var LC = [['Nuevo Lead', 'Nuevo lead', '#64748b'], ['En Calificación', 'En calificación', '#4f63e8'], ['Calificado', 'Calificado', '#8b5cf6'], ['En Enfriamiento/Contactado', 'Enfriamiento / contactado', '#f59e0b'], ['Standby', 'Standby (en pausa)', '#94a3b8'], ['Cierre Exitoso', 'Cierre exitoso', '#16a34a'], ['Dead', 'Perdido', '#ef4444'], ['Converted', 'Convertido', '#0ea5e9']];
     var lcCache = null;
     function leadCards() {
         var on = /^#Lead(\/list)?$/.test(location.hash), sb = document.querySelector('.content .search-container'), box = document.querySelector('.ch-lcards');

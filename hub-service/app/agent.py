@@ -10,7 +10,7 @@ from . import compliance, db, emailcheck, llm, mailout, products, proposals, pro
 from .espo import Espo
 
 log = logging.getLogger("hub.agent")
-CLOSED = ("Cierre Exitoso", "Converted", "Dead")
+CLOSED = ("Cierre Exitoso", "Converted", "Dead", "Standby")   # Standby: en pausa, el comercial virtual no le escribe
 STATUSES = ["", "En Calificación", "Calificado", "En Enfriamiento/Contactado", "Dead"]
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS agent_leads (
