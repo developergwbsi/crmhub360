@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.17] - 2026-11-05
+
+### Mejorado
+- **Presentación de Gestor360: sección de Listo360 con capturas de la app** (inicio, información y horarios de la sede, ingreso de clientes) y tarjetas de cotizar, trazabilidad e información de la sede; texto de autogestión del cliente. Todas las capturas llevan nombre, logo, dirección y teléfono de ejemplo (sin marcas de clientes reales).
+
 ## [1.27.16] - 2026-11-05
 
 ### Corregido

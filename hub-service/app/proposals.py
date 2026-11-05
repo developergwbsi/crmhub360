@@ -167,7 +167,7 @@ h2{font-size:clamp(22px,3.4vw,30px);letter-spacing:-.02em;margin:46px 0 8px}.lea
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}.card h3{margin:10px 0 6px;font-size:17px}.card p{margin:0;color:var(--mut);font-size:15px}
 .ic{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--a),var(--b));color:#fff;display:grid;place-items:center;font-weight:800}
-.fig{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;margin:16px 0}.fig svg{width:100%;height:auto;display:block}.fig img.wide{max-width:100%;border:1px solid var(--line)}.fig img{width:100%;max-width:620px;height:auto;display:block;margin:0 auto;border-radius:14px}.cap{font-size:13px;color:var(--mut);text-align:center;margin-top:6px}
+.fig{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;margin:16px 0}.fig svg{width:100%;height:auto;display:block}.fig img.wide{max-width:100%;border:1px solid var(--line)}.fig img{width:100%;max-width:620px;height:auto;display:block;margin:0 auto;border-radius:14px}.phones{text-align:center;margin:16px 0 4px}.phones img{display:inline-block;vertical-align:top;width:31%;max-width:230px;margin:0 1%;border:1px solid var(--line);border-radius:16px}.cap{font-size:13px;color:var(--mut);text-align:center;margin-top:6px}
 .steps{counter-reset:s;display:grid;gap:12px}.steps div{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px 16px 62px;position:relative}
 .steps div:before{counter-increment:s;content:counter(s);position:absolute;left:16px;top:14px;width:34px;height:34px;border-radius:50%;background:var(--a);color:#fff;display:grid;place-items:center;font-weight:800}
 .cta{background:linear-gradient(135deg,#0f172a,#312e81);color:#fff;border-radius:24px;padding:40px;margin:46px 0;text-align:center}.cta h2{margin-top:0}.cta .btn{background:#22c55e;color:#052e16}.cta .btn.alt{background:transparent;color:#fff}
@@ -419,11 +419,15 @@ def default_pages(company: str, wa: str) -> list[dict]:
               '<h2>Ventas y reportes para decidir</h2><p class="lead">El módulo de ventas te muestra en tiempo real cómo va el negocio: ventas e ingresos del mes, ticket promedio, productos vendidos, el producto más vendido y la <b>proyección del cierre de mes</b>, además de tienda vs. domicilio, tus mejores clientes y el origen de cada venta.</p>'
               f'<div class="fig">{_img("gestor_ventas.jpg", "Intelligence de ventas de Gestor360", True)}<div class="cap">Intelligence de ventas: indicadores y proyección (datos de ejemplo).</div></div>'
               '<p class="lead">Y los <b>reportes gerenciales</b> comparan tus ingresos con la meta de cada día, muestran las citas por estado, los servicios más solicitados y el monitor del día, por sede o de toda la empresa, con descarga a Excel y análisis con IA.</p>'
-              + '<h2>Listo360: la app de tus clientes</h2><p class="lead">Listo360 es la app que <b>tu cliente final</b> usa para relacionarse con tu negocio. Es <b>personalizable para cada cliente de Gestor360</b>: con su marca, sus colores y sus sedes.</p>'
+              + '<h2>Listo360: la app de tus clientes</h2><p class="lead">Listo360 es la app que <b>tu cliente final</b> usa para <b>autogestionarse</b>: ve todo lo que ofrece tu sede, agenda, sigue la trazabilidad de sus servicios y pedidos, compra y cotiza, sin llamar ni escribir. Es <b>personalizable para cada cliente de Gestor360</b>: con su marca, sus colores y sus sedes.</p>'
+              f'<div class="phones">{_img("listo360_inicio.jpg", "Inicio de Listo360")}{_img("listo360_perfil.jpg", "Información y horarios de la sede en Listo360")}{_img("listo360_login.jpg", "Ingreso y registro de clientes en Listo360")}</div><div class="cap">Listo360 en el celular del cliente: inicio, información de la sede e ingreso (datos de ejemplo).</div>'
               + _cards([("L", "Con su propio chat", "Tus clientes conversan con tu sede desde la app, con el chatbot o con tu equipo."),
                         ("I", "Toda su información en un solo lugar", "Citas, compras, facturas y el historial de su gestión con cada sede."),
                         ("A", "Agenda desde la app", "Reservan, reprograman y siguen el estado de su cita en tiempo real, con avisos en el celular."),
-                        ("P", "Pedidos desde la app", "Hacen sus pedidos desde la app, sin tener que llamar ni escribir."),
+                        ("P", "Pedidos y compras desde la app", "Hacen sus pedidos y compran desde la app, sin tener que llamar ni escribir."),
+                        ("Q", "Cotiza desde la app", "Piden y reciben cotizaciones de lo que ofrece tu sede."),
+                        ("T", "Trazabilidad", "Siguen el estado de sus servicios y pedidos, etapa por etapa, desde su celular."),
+                        ("S", "Información de tu sede", "Dirección, horarios, contacto, servicios y equipo, siempre al día."),
                         ("D", "Se instala en cualquier dispositivo", "Es una app instalable en el celular, la tableta o el computador, si el cliente lo desea."),
                         ("M", "Hecha a tu medida", "Cada negocio la personaliza con su propia identidad: marca, colores y frase.")])
               + '<h2>Se conecta con tus otras plataformas</h2><p class="lead">Gestor360 se integra con otras plataformas a través de <b>APIs</b>, además de WhatsApp Business, pagos en línea y notificaciones automáticas, y se sincroniza con <b>Core360</b>.</p>'
@@ -546,7 +550,7 @@ body{background:#fff!important;font-size:10.5pt}.wrap{max-width:none!important;p
 h1{font-size:22pt}h2{font-size:15pt;margin:7mm 0 2mm;break-after:avoid}.lead{margin:0 0 4mm;max-width:none}
 .grid{grid-template-columns:repeat(2,1fr)!important;gap:3mm!important}.card{padding:3.5mm;border-radius:3mm;break-inside:avoid}.card h3{font-size:11pt;margin:2mm 0 1mm}.card p{font-size:9.5pt}
 .ic{width:8mm;height:8mm;border-radius:2mm}
-.fig{break-inside:avoid;border-radius:3mm;padding:2.5mm;margin:3mm 0}.fig img{max-width:120mm!important}.fig svg{max-height:75mm}.fig img.wide{max-width:100%!important;width:100%}
+.fig{break-inside:avoid;border-radius:3mm;padding:2.5mm;margin:3mm 0}.fig img{max-width:120mm!important}.fig svg{max-height:75mm}.fig img.wide{max-width:100%!important;width:100%}.phones{margin:3mm 0 1mm}.phones img{width:30%!important;max-width:none!important;margin:0 1%;border-radius:3mm}
 .steps div{break-inside:avoid;padding:3mm 4mm 3mm 13mm;border-radius:3mm}.steps div:before{left:3mm;top:2.5mm;width:7mm;height:7mm}
 .cta{break-inside:avoid;border-radius:4mm;padding:7mm;margin:7mm 0 3mm}.cta .btn{display:none}footer{padding:2mm 0}
 </style>"""
