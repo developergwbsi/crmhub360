@@ -64,7 +64,10 @@ def _next_niches(tenant: dict, slug: str, k: int = 1) -> list[str]:
     with db.pool.connection() as c:
         rows = c.execute("SELECT lower(industry) i FROM prospects WHERE tenant=%s AND origin='finder' AND created_at > now() - interval '14 days'", (slug,)).fetchall()
     inds = [r["i"] for r in rows]
-    return sorted(niches, key=lambda n: sum(1 for i in inds if n in i or i in n))[:max(1, k)]
+    prio = [x.lower() for x in (((tenant.get("settings") or {}).get("finder") or {}).get("priority_niches") or [])]
+    cov = lambda n: sum(1 for i in inds if n in i or i in n)
+    # primero los nichos prioritarios (los menos cubiertos entre ellos), después el resto por cobertura
+    return sorted(niches, key=lambda n: (n.lower() not in prio, cov(n)))[:max(1, k)]
 
 
 def _brief(tenant: dict, cfg: dict, n: int, already: list[str], niche: str = "") -> str:
@@ -97,6 +100,7 @@ async def run(tenant: dict, limit: int | None = None) -> dict:
     n = min(n, room)
     niches = _next_niches(tenant, slug, k=min(4, max(1, n // 2))) or [""]   # una búsqueda por rubro: cada pasada trabaja varios nichos a la vez
     per = max(1, -(-n // len(niches)))
+    log.info("finder %s: rubros de esta pasada: %s", slug, niches)
     eng = searchengines.resolve(tenant)
 
     async def one(niche: str) -> str:

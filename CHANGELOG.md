@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.19] - 2026-11-05
+
+### Cambiado
+- Buscador: nuevo ajuste `finder.priority_niches`; esos rubros (muebles, colchones y cosméticos en prod) se buscan primero en cada pasada, y el log dice qué rubros trabajó.
+
 ## [1.27.18] - 2026-11-05
 
 ### Cambiado
