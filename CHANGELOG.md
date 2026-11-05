@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.15] - 2026-11-05
+
+### Mejorado
+- **Presentación de Gestor360: los chatbots no son solo de ventas:** la sección del chatbot ahora dice que sirven para ventas, servicio al cliente (SAC: consultas, quejas y reclamos) y cualquier proceso de atención, e incluye dos ejemplos nuevos.
+
 ## [1.27.14] - 2026-11-05
 
 ### Mejorado
