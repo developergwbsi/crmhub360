@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.14] - 2026-11-05
+
+### Mejorado
+- **Presentación de Gestor360 (página y PDF) más completa:** nueva sección del chatbot de ventas y atención 24/7 por WhatsApp (toma pedidos, catálogo, estado del pedido, ubicación y horarios, agenda, traspaso a una persona) con la imagen del editor de flujogramas; seguimiento de pedidos en vivo con el panel de despacho y el rastreador del cliente; y ventas y reportes gerenciales con sus capturas. Las capturas llevan los nombres de clientes difuminados o recortados. Las imágenes anchas ahora ocupan todo el ancho del PDF.
+
 ## [1.27.13] - 2026-11-05
 
 ### Mejorado

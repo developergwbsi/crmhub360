@@ -402,12 +402,22 @@ def default_pages(company: str, wa: str) -> list[dict]:
                         ("M", "Mensajería y campañas", "Chat con tus clientes y campañas por WhatsApp, correo y SMS."),
                         ("E", "Varias sedes", "Branding propio por sede, equipos y comisiones, con vista consolidada de toda la empresa."),
                         ("T", "Seguimiento en campo", "Visitas a domicilio y ubicación de tus profesionales, para la línea de vehículos.")])
-              + '<h2>Chatbots configurables que atienden por ti</h2><p class="lead">Gestor360 incluye un módulo de <b>chatbots configurables</b>: los armas como agentes conversacionales o con <b>flujogramas</b> (flujos de decisión) y atienden a tus clientes mientras tu equipo trabaja.</p>'
-              f'<div class="fig">{_svg_flow()}<div class="cap">Ejemplo: flujograma de un chatbot de agenda.</div></div><p class="lead"><b>Ejemplos de lo que puedes configurar:</b></p>'
-              + _cards([("1", "Chatbot de agenda", "Existe una versión de agenda: el cliente escribe «quiero una cita», elige el servicio, el profesional y un horario libre, y la cita queda confirmada con su aviso."),
-                        ("2", "Chatbot de preguntas frecuentes", "Responde horarios, ubicación, servicios y productos con tus propias respuestas."),
-                        ("3", "Chatbot de seguimiento", "Informa el estado de la cita o del pedido y recuerda la próxima visita."),
-                        ("4", "Traspaso a una persona", "Cuando el cliente lo pide o el bot no sabe, pasa la conversación a tu equipo con todo el contexto.")])
+              + '<h2>Chatbot de ventas y atención 24/7, por WhatsApp</h2><p class="lead">Gestor360 incluye un módulo de <b>chatbots configurables</b> que atiende a tus clientes <b>las 24 horas por WhatsApp</b> y por el chat web, conectado con el módulo de ventas: toma el pedido, lo registra y le informa al cliente cómo va. Lo armas como agente conversacional o con <b>flujogramas</b> visuales, sin programar, y tu equipo entra solo cuando hace falta.</p>'
+              f'<div class="fig">{_img("gestor_chatbot.jpg", "Editor de flujogramas del chatbot de Gestor360", True)}<div class="cap">El editor de flujogramas: cada nodo es un paso de la conversación (datos de ejemplo).</div></div>'
+              '<p class="lead"><b>Lo que puede hacer tu chatbot:</b></p>'
+              + _cards([("1", "Toma pedidos por ti", "El cliente escribe «quiero un pedido» y el bot le pregunta qué necesita, si es para hoy, por encargo o para empresa, y si prefiere recogerlo en tienda o por domicilio. Si es domicilio, le pide la dirección y el pedido queda creado en ventas."),
+                        ("2", "Muestra tu catálogo", "Presenta tus productos en un carrusel, directamente en la conversación."),
+                        ("3", "Informa el estado del pedido", "El cliente pregunta «¿cómo va mi pedido?» y el bot le responde con su estado, sin que nadie de tu equipo tenga que contestar."),
+                        ("4", "Da ubicación y horarios", "Responde dónde queda cada sede, con su dirección y horario, y las preguntas frecuentes de tus clientes."),
+                        ("5", "Agenda citas", "Existe una versión de agenda: el cliente elige servicio, profesional y horario libre, y la cita queda confirmada con su aviso."),
+                        ("6", "Pasa a una persona", "Cuando el cliente lo pide o el bot no sabe, traspasa la conversación a un asesor con todo el contexto.")])
+              + '<p class="lead">Lo pruebas antes de encenderlo con una <b>vista previa</b> en chat web o WhatsApp, y completas el módulo con <b>plantillas de correo</b>, <b>plantillas de Meta</b> para WhatsApp, programación de mensajes, resultados y mensajes personalizados.</p>'
+              '<h2>Seguimiento de pedidos en vivo</h2><p class="lead">Tu equipo ve todos los pedidos activos, finalizados y cancelados en un panel de despacho, con el estado del pago y de la preparación. Y <b>tu cliente sigue su pedido desde el celular</b>: un rastreador en vivo con el código del pedido, el tiempo estimado de llegada y cada etapa —pago confirmado, pedido listo, entregado—.</p>'
+              f'<div class="fig">{_img("gestor_pedidos.jpg", "Panel de despacho y seguimiento del pedido en el celular del cliente", True)}<div class="cap">El panel de despacho y el rastreador que ve el cliente (datos de ejemplo).</div></div>'
+              '<h2>Ventas y reportes para decidir</h2><p class="lead">El módulo de ventas te muestra en tiempo real cómo va el negocio: ventas e ingresos del mes, ticket promedio, productos vendidos, el producto más vendido y la <b>proyección del cierre de mes</b>, además de tienda vs. domicilio, tus mejores clientes y el origen de cada venta.</p>'
+              f'<div class="fig">{_img("gestor_ventas.jpg", "Intelligence de ventas de Gestor360", True)}<div class="cap">Intelligence de ventas: indicadores y proyección (datos de ejemplo).</div></div>'
+              '<p class="lead">Y los <b>reportes gerenciales</b> comparan tus ingresos con la meta de cada día, muestran las citas por estado, los servicios más solicitados y el monitor del día, por sede o de toda la empresa, con descarga a Excel y análisis con IA.</p>'
+              f'<div class="fig">{_img("gestor_reportes.jpg", "Reportes gerenciales de Gestor360", True)}<div class="cap">Reportes gerenciales: ingresos contra la meta (datos de ejemplo).</div></div>'
               + '<h2>Listo360: la app de tus clientes</h2><p class="lead">Listo360 es la app que <b>tu cliente final</b> usa para relacionarse con tu negocio. Es <b>personalizable para cada cliente de Gestor360</b>: con su marca, sus colores y sus sedes.</p>'
               + _cards([("L", "Con su propio chat", "Tus clientes conversan con tu sede desde la app, con el chatbot o con tu equipo."),
                         ("I", "Toda su información en un solo lugar", "Citas, compras, facturas y el historial de su gestión con cada sede."),
@@ -509,7 +519,7 @@ def brochures(company: str, wa: str) -> dict:
                   '<h2>Todo lo que gestiona</h2><p class="lead">Activa solo los módulos que necesitas.</p>'
                   + _bro_cards([("Agenda y turnos", "Reservas en línea, estados y evidencia con fotos."), ("Servicios y productos", "Catálogo, duración, precios y ventas."), ("Inventario", "Stock, alertas de reabastecimiento y costos por servicio."), ("Nómina", "Pre-nómina por comisión."),
                                 ("Cotizaciones", "Se convierten en orden de servicio."), ("Facturación electrónica", "Ante la DIAN, por sede o para toda la empresa."), ("Clientes y CRM", "Historial, fidelización y seguimiento."), ("Reportes", "Ventas, ocupación y rentabilidad."),
-                                ("Chatbots configurables", "Agentes conversacionales o con flujogramas. Hay una versión de agenda: el cliente elige servicio y horario y la cita queda confirmada."),
+                                ("Chatbot de ventas 24/7 por WhatsApp", "Toma pedidos, muestra el catálogo, informa el estado del pedido, da ubicación y horarios, agenda citas y pasa a una persona; se arma con flujogramas, sin programar."), ("Seguimiento de pedidos en vivo", "Panel de despacho para tu equipo y rastreador en el celular del cliente, con tiempo estimado y cada etapa."),
                                 ("Listo360: la app de tus clientes", "Personalizable para cada cliente, con su propio chat; agenda, pedidos y su información con cada sede. Instalable en cualquier dispositivo."),
                                 ("Mensajería y campañas", "WhatsApp, correo y SMS."), ("Varias sedes", "Branding propio y vista consolidada.")])
                   + '<h2>Se conecta con tus otras plataformas</h2><p class="lead">Integración con otras plataformas a través de APIs, WhatsApp Business, pagos en línea y notificaciones; se sincroniza con Core360. Con Crm Hub 360, además de ordenar tu operación, consigues clientes nuevos.</p>', "Conoce Gestor360")
@@ -535,7 +545,7 @@ body{background:#fff!important;font-size:10.5pt}.wrap{max-width:none!important;p
 h1{font-size:22pt}h2{font-size:15pt;margin:7mm 0 2mm;break-after:avoid}.lead{margin:0 0 4mm;max-width:none}
 .grid{grid-template-columns:repeat(2,1fr)!important;gap:3mm!important}.card{padding:3.5mm;border-radius:3mm;break-inside:avoid}.card h3{font-size:11pt;margin:2mm 0 1mm}.card p{font-size:9.5pt}
 .ic{width:8mm;height:8mm;border-radius:2mm}
-.fig{break-inside:avoid;border-radius:3mm;padding:2.5mm;margin:3mm 0}.fig img{max-width:120mm!important}.fig svg{max-height:75mm}
+.fig{break-inside:avoid;border-radius:3mm;padding:2.5mm;margin:3mm 0}.fig img{max-width:120mm!important}.fig svg{max-height:75mm}.fig img.wide{max-width:100%!important;width:100%}
 .steps div{break-inside:avoid;padding:3mm 4mm 3mm 13mm;border-radius:3mm}.steps div:before{left:3mm;top:2.5mm;width:7mm;height:7mm}
 .cta{break-inside:avoid;border-radius:4mm;padding:7mm;margin:7mm 0 3mm}.cta .btn{display:none}footer{padding:2mm 0}
 </style>"""
