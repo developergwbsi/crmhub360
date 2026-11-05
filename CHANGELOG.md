@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.13] - 2026-11-05
+
+### Mejorado
+- **Buscador: una búsqueda por rubro en cada pasada:** en vez de trabajar un solo nicho por pasada, ahora busca en paralelo hasta 4 rubros a la vez (los que menos prospectos han traído en los últimos 14 días, p. ej. muebles, colchones, cosméticos, dulces) y reparte entre ellos el cupo de la pasada. Trae más candidatos y más variados.
+
 ## [1.27.12] - 2026-11-05
 
 ### Añadido

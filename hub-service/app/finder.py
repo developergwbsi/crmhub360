@@ -3,6 +3,7 @@ y deja en Prospectos (origen «finder») solo lo que tiene una fuente pública v
 por la propia empresa o un directorio; los correos personales (gmail, hotmail…) se descartan; cada prospecto guarda la dirección donde se halló.
 Los hallados NUNCA salen por WhatsApp/SMS ni por el proveedor de correo transaccional (Resend): solo por un remitente aparte y con aprobación de una persona (agent._deliver).
 Configuración: settings.finder = {enabled, daily_limit, focus, last_run}. Licencia: settings.limits.finder."""
+import asyncio
 import difflib
 import json
 import logging
@@ -53,17 +54,17 @@ def _save(slug: str, patch: dict) -> None:
         c.execute("UPDATE tenants SET settings = jsonb_set(COALESCE(settings,'{}'::jsonb), '{finder}', COALESCE(settings->'finder','{}'::jsonb) || %s::jsonb, true) WHERE slug=%s", (json.dumps(patch), slug))
 
 
-def _next_niche(tenant: dict, slug: str) -> str:
-    """El nicho de mercado que toca trabajar: entre los activos (no en pausa), el que menos prospectos trajo en los últimos 14 días. Así todos los nichos agregados se trabajan por turnos."""
+def _next_niches(tenant: dict, slug: str, k: int = 1) -> list[str]:
+    """Los k nichos que toca trabajar: entre los activos (no en pausa), los que menos prospectos trajeron en los últimos 14 días. Así todos los nichos se trabajan por turnos."""
     icp = prospects.icp(tenant)
     paused = set(icp.get("paused_niches") or [])
     niches = [x for x in icp["industries"] if x not in paused]
     if len(niches) < 2:
-        return niches[0] if niches else ""
+        return niches[:1]
     with db.pool.connection() as c:
         rows = c.execute("SELECT lower(industry) i FROM prospects WHERE tenant=%s AND origin='finder' AND created_at > now() - interval '14 days'", (slug,)).fetchall()
     inds = [r["i"] for r in rows]
-    return min(niches, key=lambda n: sum(1 for i in inds if n in i or i in n))
+    return sorted(niches, key=lambda n: sum(1 for i in inds if n in i or i in n))[:max(1, k)]
 
 
 def _brief(tenant: dict, cfg: dict, n: int, already: list[str], niche: str = "") -> str:
@@ -94,18 +95,26 @@ async def run(tenant: dict, limit: int | None = None) -> dict:
     if room == 0:
         return {"found": 0, "ready": 0, "rejected": 0, "reason": "Se alcanzó el tope diario del buscador."}
     n = min(n, room)
-    niche = _next_niche(tenant, slug)
-    brief = _brief(tenant, cfg, n, known, niche)
+    niches = _next_niches(tenant, slug, k=min(4, max(1, n // 2))) or [""]   # una búsqueda por rubro: cada pasada trabaja varios nichos a la vez
+    per = max(1, -(-n // len(niches)))
     eng = searchengines.resolve(tenant)
-    if eng["engine"] == "claude":
-        report = await llm.web_search(tenant, "Eres un investigador comercial riguroso. Solo reportas lo que verificaste en una página pública y siempre citas su dirección. Respondes en español.",
-                                      brief, max_uses=min(10, 2 + n // 2))
-    else:   # buscador con clave (propia o prestada): consultas → resultados → lectura de páginas
-        report = await searchengines.report(tenant, brief, n, eng)
+
+    async def one(niche: str) -> str:
+        brief = _brief(tenant, cfg, per, known, niche)
+        if eng["engine"] == "claude":
+            return await llm.web_search(tenant, "Eres un investigador comercial riguroso. Solo reportas lo que verificaste en una página pública y siempre citas su dirección. Respondes en español.",
+                                        brief, max_uses=min(10, 2 + per // 2))
+        return await searchengines.report(tenant, brief, per, eng)   # buscador con clave (propia o prestada): consultas → resultados → lectura de páginas
+
+    parts = await asyncio.gather(*(one(x) for x in niches), return_exceptions=True)
+    ok = [r for r in parts if not isinstance(r, Exception)]
+    if not ok:
+        raise parts[0]
+    report = "\n\n=====\n\n".join(ok)
     d = {}
     for _ in range(2):   # a veces la primera estructuración sale vacía aunque el informe traiga empresas: se reintenta una vez
         d = await llm.chat_json(tenant, "Extraes datos de un informe de investigación a JSON. Copia solo lo que el informe afirma, con su dirección de fuente; no inventes ni completes datos.",
-                                f"INFORME:\n{report[:20000]}", SCHEMA, 3000)
+                                f"INFORME:\n{report[:40000]}", SCHEMA, 3000)
         if d.get("candidates"):
             break
     rows, dropped = [], 0
