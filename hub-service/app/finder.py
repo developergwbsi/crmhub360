@@ -40,7 +40,7 @@ def typo_suspect(email: str, website: str, source: str) -> bool:
 
 def config(tenant: dict) -> dict:
     f = ((tenant.get("settings") or {}).get("finder") or {})
-    return {"enabled": bool(f.get("enabled")), "daily_limit": max(1, min(100, int(f.get("daily_limit") or 20))), "focus": str(f.get("focus") or "")[:600], "last_run": f.get("last_run"),
+    return {"enabled": bool(f.get("enabled")), "daily_limit": max(1, min(100, int(f.get("daily_limit") or 20))), "focus": str(f.get("focus") or "")[:600], "last_run": f.get("last_run"), "mode": str(f.get("mode") or "maps"),
             "auto": bool(f.get("auto")), "hour": int(f.get("hour") if f.get("hour") is not None else 9), "hour2": (int(f["hour2"]) if f.get("hour2") not in (None, "") else None), "autonomy": "auto" if f.get("autonomy") == "auto" else "approval", "pipeline_last": f.get("pipeline_last"),
             "report": {"enabled": bool((f.get("report") or {}).get("enabled")), "hour": int((f.get("report") or {}).get("hour") if (f.get("report") or {}).get("hour") is not None else 11), "to": list((f.get("report") or {}).get("to") or []), "last": (f.get("report") or {}).get("last")}}
 
@@ -85,6 +85,76 @@ def _brief(tenant: dict, cfg: dict, n: int, already: list[str], niche: str = "")
             "no incluyas datos de personas naturales que no sean la cara pública del negocio.")
 
 
+ZONAS = ["Chapinero", "Teusaquillo", "Barrios Unidos", "Puente Aranda", "Kennedy", "Fontibón", "Engativá", "Suba", "Usaquén", "Los Mártires", "Antonio Nariño", "Bosa", "Tunjuelito", "Ciudad Bolívar", "San Cristóbal", "Rafael Uribe Uribe", "Santa Fe", "Candelaria", "Usme"]
+CHAINS = 1500   # negocios con más reseñas que esto suelen ser cadenas grandes: no son el cliente
+
+
+def _maps_queries(tenant: dict, niches: list[str], k: int) -> list[str]:
+    """Consultas «rubro + zona» que aún no se hicieron en los últimos 45 días (settings.finder.maps_done). Ciudad: settings.finder.city (por defecto Bogotá)."""
+    st = ((tenant.get("settings") or {}).get("finder") or {})
+    city = str(st.get("city") or "Bogotá")
+    lim = datetime.now(timezone.utc).timestamp() - 45 * 86400
+    done = {q for q, t in (st.get("maps_done") or {}).items() if t > lim}
+    zonas = ZONAS if city.lower().startswith("bogot") else [""]
+    out = []
+    for z in zonas:
+        for n in niches:
+            q = f"{n} {z} {city}".replace("  ", " ").strip()
+            if q not in done:
+                out.append((n, q))
+    return out[:k]
+
+
+async def run_maps(tenant: dict, cfg: dict, eng: dict, niches: list[str], n: int) -> dict:
+    """Búsqueda por mapas: negocios reales por rubro y zona, con teléfono y sitio web; el correo se recoge abriendo su sitio."""
+    from . import wallet
+    slug = tenant["slug"]
+    if eng.get("source") != "own":
+        wallet.require(tenant, "search")
+    qs = _maps_queries(tenant, niches, max(2, min(8, n // 4 or 2)))
+    if not qs:
+        return {"found": 0, "ready": 0, "rejected": 0, "reason": "Ya se recorrieron todas las zonas de estos rubros; se repetirán en unas semanas."}
+    if eng.get("source") != "own":
+        wallet.charge(tenant, "search", len(qs), note="Búsqueda de negocios en mapas")
+    res = await asyncio.gather(*(searchengines.places(eng, q) for _, q in qs), return_exceptions=True)
+    if all(isinstance(r, Exception) for r in res):
+        raise res[0]
+    with db.pool.connection() as c:
+        seen = {(r["company"] or "").lower() for r in c.execute("SELECT company FROM prospects WHERE tenant=%s", (slug,)).fetchall()}
+    rows, doms = [], set()
+    for (nich, q), r in zip(qs, res):
+        if isinstance(r, Exception):
+            continue
+        for p in r:
+            name, site = str(p.get("title") or "").strip(), str(p.get("website") or "").strip()
+            if not name or name.lower() in seen or int(p.get("ratingCount") or 0) > CHAINS or not (site or p.get("phoneNumber")):
+                continue
+            dom = _domain(site) if site else ""
+            if dom and dom in doms:
+                continue   # sucursales de la misma empresa: una sola
+            doms.add(dom) if dom else None
+            seen.add(name.lower())
+            rows.append({"nombre": name, "empresa": name, "correo": "", "telefono": str(p.get("phoneNumber") or ""), "pais": "CO", "sector": nich,
+                         "fuente_url": ("https://www.google.com/maps/search/?api=1&query=" + (name + " " + str(p.get("address") or "")).replace(" ", "+"))[:300],
+                         "sitio": site[:200], "por_que": f"Negocio de «{nich}» (Google Maps, {p.get('rating', '?')}★) en {q}", "ciudad": str(p.get("address") or "")[:80]})
+    rows.sort(key=lambda x: not x["sitio"])   # primero los que tienen sitio web: de ahí sale el correo
+    rows = rows[: max(n * 3, 30)]
+    improved = await sitescan.complete(rows)
+    con_correo = [x for x in rows if x.get("correo")]
+    rows = con_correo[:n] + [x for x in rows if not x.get("correo") and x.get("telefono")][: max(0, n // 3)]
+    batch = datetime.now(timezone.utc).strftime("buscador-%Y%m%d-%H%M")
+    out = await prospects.import_rows(tenant, rows, batch=batch) if rows else {"batch": batch, "received": 0, "ready": 0, "rejected": 0, "reasons": {}}
+    with db.pool.connection() as c:
+        c.execute("UPDATE prospects SET origin='finder', found_by='serper-maps' WHERE tenant=%s AND batch=%s", (slug, batch))
+    now = datetime.now(timezone.utc).timestamp()
+    md = {q: t for q, t in (((tenant.get("settings") or {}).get("finder") or {}).get("maps_done") or {}).items() if t > now - 45 * 86400}
+    md.update({q: now for _, q in qs})
+    _save(slug, {"maps_done": md, "last_run": {"at": datetime.now(timezone.utc).isoformat(), "found": len(rows), "ready": out["ready"], "batch": batch}})
+    await sitescan.backfill(slug)
+    await prospects.enrich_pending(tenant, limit=n)
+    return {"site_improved": improved, "found": len(rows), "con_correo": len(con_correo), "queries": [q for _, q in qs], **out}
+
+
 async def run(tenant: dict, limit: int | None = None) -> dict:
     """Una pasada de búsqueda: investiga, valida y guarda los prospectos «ready». No promueve ni envía nada."""
     slug, cfg = tenant["slug"], config(tenant)
@@ -102,6 +172,8 @@ async def run(tenant: dict, limit: int | None = None) -> dict:
     per = max(1, -(-n // len(niches)))
     log.info("finder %s: rubros de esta pasada: %s", slug, niches)
     eng = searchengines.resolve(tenant)
+    if eng["engine"] == "serper" and eng.get("api_key") and cfg["mode"] == "maps":
+        return await run_maps(tenant, cfg, eng, niches, n)
 
     async def one(niche: str) -> str:
         brief = _brief(tenant, cfg, per, known, niche)

@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.34] - 2026-11-06
+
+### Cambiado
+- Buscador de prospectos: con Serper ahora busca negocios en Google Maps por rubro y por zona de Bogotá (hasta 20 por consulta, con teléfono y sitio web), abre el sitio de cada uno para sacar el correo y agrupa sucursales de la misma empresa. Recorre las zonas por turnos y no repite una consulta en 45 días. Antes dependía de la búsqueda web del modelo y traía solo unos 10 por pasada. Para volver al modo anterior: `settings.finder.mode = "web"`.
+
 ## [1.27.33] - 2026-11-05
 
 ### Cambiado

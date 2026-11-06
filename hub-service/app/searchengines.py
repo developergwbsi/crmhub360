@@ -60,6 +60,17 @@ async def _get(url: str, headers: dict, params: dict) -> dict:
     return r.json()
 
 
+async def places(cfg: dict, query: str, page: int = 1) -> list[dict]:
+    """Negocios de Google Maps (Serper): hasta ~20 por consulta, con teléfono, sitio web y dirección. Solo para el motor serper."""
+    if cfg.get("engine") != "serper" or not cfg.get("api_key"):
+        raise RuntimeError("Los mapas necesitan el buscador Serper con clave.")
+    async with httpx.AsyncClient(timeout=30) as c:
+        r = await c.post("https://google.serper.dev/maps", headers={"X-API-KEY": cfg["api_key"], "Content-Type": "application/json"}, json={"q": query, "gl": "co", "hl": "es", "page": page})
+    if r.status_code >= 400:
+        raise RuntimeError(f"Serper respondió {r.status_code}" + (" (clave inválida o sin cupo)" if r.status_code in (400, 401, 403, 429) else ""))
+    return [x for x in (r.json().get("places") or []) if isinstance(x, dict)]
+
+
 async def search(cfg: dict, query: str, n: int = 8) -> list[dict]:
     """Una búsqueda → [{title, url, snippet}] según el motor."""
     e = cfg["engine"]
