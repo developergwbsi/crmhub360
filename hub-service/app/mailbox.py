@@ -121,7 +121,10 @@ async def _route(tenant: dict, espo: Espo, m: dict, account: str) -> tuple[str |
             try:
                 u = await espo.get(f"User/{mt.group(1)}", select="id,isActive")
                 if u.get("id") and u.get("isActive"):
-                    return u["id"], thread.get("parentType"), thread.get("parentId")
+                    ptype, pid = thread.get("parentType"), thread.get("parentId")
+                    if not pid:   # el proveedor de correo cambia el Message-ID y el hilo no se reconoce: se liga por el remitente (lead o contacto con ese correo)
+                        ptype, pid, _ = await _owner(tenant, espo, m["from"])
+                    return u["id"], ptype, pid
             except Exception:
                 pass
     if thread.get("assignedUserId"):
