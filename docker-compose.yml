@@ -108,6 +108,11 @@ services:
       HUB_URL: http://${HUB_BIND_HOST}:${HUB_PORT}
       STT_URL: http://127.0.0.1:8197
       PRESENTER_PORT: ${PRESENTER_PORT:-8196}
+      SIMLI_API_KEY: ${SIMLI_API_KEY:-}
+      SIMLI_FACE_ID: ${SIMLI_FACE_ID:-f735e62c-dce7-4c0b-8e85-1c7e21774c45}
+      AZURE_SPEECH_KEY: ${AZURE_SPEECH_KEY:-}
+      AZURE_SPEECH_REGION: ${AZURE_SPEECH_REGION:-eastus}
+      AZURE_VOICE: ${AZURE_VOICE:-es-CO-SalomeNeural}
 
   # Navegador automático (Chromium con Playwright) para las consultas web con login y navegación: grabar un flujo viendo la página y ejecutarlo sin pantalla.
   # Solo escucha en 127.0.0.1:8198; revisa cada petición para no alcanzar redes privadas; el Hub lo llama con BROWSER_TOKEN.

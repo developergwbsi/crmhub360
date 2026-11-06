@@ -5,3 +5,4 @@ pillow
 httpx==0.27.*
 fastapi==0.115.*
 uvicorn[standard]==0.32.*
+simli-ai

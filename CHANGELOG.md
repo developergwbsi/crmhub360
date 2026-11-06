@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.30] - 2026-11-05
+
+### Añadido
+- Presentadora virtual: cara realista de **Simli** y voz colombiana neural de **Azure** (`es-CO-SalomeNeural`), opcionales por claves en `.env` (`SIMLI_API_KEY`, `SIMLI_FACE_ID`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`, `AZURE_VOICE`). Sin claves, o si fallan, sigue con el avatar dibujado y la voz local.
+
+### Corregido
+- Presentadora virtual: en las salas de prueba la conversación fallaba al entrar el anfitrión (error interno) y la presentadora se iba; ahora los fallos de la conversación quedan en el registro.
+
 ## [1.27.29] - 2026-11-05
 
 ### Añadido
