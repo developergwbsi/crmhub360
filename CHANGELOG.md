@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.20] - 2026-11-05
+
+### Cambiado
+- Correos de Valeria con diseño profesional de empresa: cabecera con la marca, tarjeta con botón «Ver la presentación» por cada presentación enlazada, firma con avatar y WhatsApp, pie con baja de un clic, y cabecera de idioma español.
+
 ## [1.27.19] - 2026-11-05
 
 ### Cambiado

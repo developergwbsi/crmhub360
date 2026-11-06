@@ -925,14 +925,49 @@ def _ensure_disclosure(message: str, cfg: dict, company: str, channel: str) -> s
     return first + sep + intro + (sep + rest.strip() if rest.strip() else "")
 
 
-def _email_html(text: str, persona: str, role: str, company: str) -> str:
-    """Convierte el texto en el HTML del correo del agente, con la firma de persona, cargo y empresa."""
+def _email_html(text: str, persona: str, role: str, company: str, slug: str = "", wa: str = "", footer: str = "", pdf: bool = False) -> str:
+    """Correo profesional del agente (diseño de empresa): cabecera con la marca, mensaje, tarjeta con botón por cada presentación enlazada, firma con avatar y pie.
+    Compatible con los clientes de correo (tablas y estilos en línea, ancho 600 px, se adapta al celular)."""
     e = _html.escape
+    cards = []
+    if slug:
+        try:
+            for p in proposals.catalog(slug):
+                u = p["url"]
+                if u and u in text:
+                    cards.append(p)
+                    text = re.sub(r"[ \t]*" + re.escape(u) + r"/?", "", text)
+        except Exception:
+            pass
     def link(t: str) -> str:   # enlaces pulsables (sin el punto o la coma final)
-        return re.sub(r"(https?://[^\s<]+?)([.,;:!?)]*)(?=\s|<|$)", lambda m: f"<a href='{m.group(1)}' style='color:#4f46e5'>{m.group(1)}</a>{m.group(2)}", t)
-    paras = "".join(f"<p style='margin:0 0 12px'>{link(e(p)).replace(chr(10), '<br>')}</p>" for p in re.split(r"\n{2,}", text.strip()))
-    return (f"<div style='font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#161b2e;max-width:560px'>{paras}"
-            f"<div style='margin-top:16px;padding-top:10px;border-top:2px solid #4f63e8;font-size:13px'><b>{e(persona)}</b><br><span style='color:#5d6678;white-space:nowrap'>{e(role)} · {e(company).replace(' ', chr(160))}</span></div></div>")
+        return re.sub(r"(https?://[^\s<]+?)([.,;:!?)]*)(?=\s|<|$)", lambda m: f"<a href='{m.group(1)}' style='color:#4f46e5;text-decoration:underline'>{m.group(1)}</a>{m.group(2)}", t)
+    paras = []
+    for p in re.split(r"\n{2,}", text.strip()):
+        p = re.sub(r":\s*$", ".", p.strip())
+        if p.strip(" .:"):
+            paras.append(p)
+    body = "".join(f"<p style='margin:0 0 14px;font-size:15.5px;line-height:1.65;color:#1f2540'>{link(e(p)).replace(chr(10), '<br>')}</p>" for p in paras)
+    pre = e((paras[0] if paras else "")[:110])
+    boxes = ""
+    for p in cards:
+        title = (p["title"] or "").split(":")[0]
+        boxes += ("<table role='presentation' width='100%' cellpadding='0' cellspacing='0' style='margin:6px 0 16px;background:#f5f7ff;border:1px solid #dfe5ff;border-radius:12px'><tr><td style='padding:16px 18px'>"
+                  f"<div style='font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6366f1;font-weight:700;margin-bottom:4px'>Presentación</div>"
+                  f"<div style='font-size:17px;font-weight:700;color:#0f172a;margin-bottom:4px'>{e(title)}</div>"
+                  f"<div style='font-size:13.5px;line-height:1.5;color:#475569;margin-bottom:12px'>{e(p.get('summary') or '')}</div>"
+                  f"<a href='{e(p['url'])}' style='display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 20px;border-radius:8px'>Ver la presentación</a>"
+                  + ("<span style='font-size:12.5px;color:#64748b;margin-left:12px'>También va adjunta en PDF</span>" if pdf else "") + "</td></tr></table>")
+    ini = e((persona or company or "?").strip()[:1].upper())
+    wab = (f"<a href='https://wa.me/{e(wa)}' style='color:#16a34a;text-decoration:none;font-weight:600'>Escríbeme por WhatsApp</a>" if wa else "")
+    sig = ("<table role='presentation' cellpadding='0' cellspacing='0' style='margin-top:6px;border-top:1px solid #e5e9f5;padding-top:14px;width:100%'><tr>"
+           f"<td width='48' valign='top' style='padding:14px 12px 0 0'><div style='width:44px;height:44px;line-height:44px;border-radius:22px;background:#4f46e5;color:#fff;text-align:center;font-weight:700;font-size:19px'>{ini}</div></td>"
+           f"<td valign='top' style='padding-top:14px;font-size:13.5px;line-height:1.5;color:#334155'><b style='font-size:15px;color:#0f172a'>{e(persona)}</b><br>{e(role)} · {e(company)}" + (f"<br>{wab}" if wab else "") + "</td></tr></table>")
+    return (f"<div lang='es' style='background:#f3f5fb;padding:22px 10px;font-family:Segoe UI,Arial,Helvetica,sans-serif'><span style='display:none;max-height:0;overflow:hidden;opacity:0'>{pre}</span>"
+            "<table role='presentation' align='center' width='100%' cellpadding='0' cellspacing='0' style='max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e3e8f5'>"
+            f"<tr><td style='background:#312e81;padding:18px 26px'><span style='font-size:18px;font-weight:700;color:#ffffff;letter-spacing:.01em'>{e(company)}</span><span style='color:#a5b4fc;font-size:18px;font-weight:700'>.</span></td></tr>"
+            "<tr><td style='height:4px;background:#6366f1;font-size:0;line-height:0'>&nbsp;</td></tr>"
+            f"<tr><td style='padding:26px 26px 22px'>{body}{boxes}{sig}</td></tr></table>"
+            f"<div style='max-width:600px;margin:0 auto;padding:0 6px'>{footer}</div></div>")
 
 
 def _inbound_recent(slug: str, lead_id: str, hours: int) -> bool:
@@ -995,17 +1030,19 @@ async def _deliver(tenant: dict, cfg: dict, lead: dict, channel: str, message: s
             uid = await mailbox._admin_id(espo) or ""
         subject = subject.strip() or f"{tenant.get('name') or 'Seguimiento'}: tu solicitud"
         message = proposals.nb(message, cname)
-        html_body, headers = _email_html(message, persona, cfg["persona"]["role"], tenant.get("name") or ""), {}
         atts = []
         if ((tenant.get("settings") or {}).get("proposals_attach", True)):   # el correo lleva el enlace de la presentación y también su PDF adjunto
             try:
                 atts = proposals.attachments_for(tenant["slug"], message.replace(proposals.NBSP, " "))
             except Exception as e:
                 log.warning("adjuntos del correo: %s", str(e)[:100])
+        wa = re.sub(r"\D", "", str(((tenant.get("settings") or {}).get("gupshup_source")) or ""))
+        footer, headers = "", {"Content-Language": "es"}
         if proactive and outbound_on(cfg):   # correo en frío: quién escribe y baja de un clic (también en la cabecera List-Unsubscribe)
             url = compliance.unsub_url(tenant["slug"], lead_id)
-            html_body = html_body[:-6] + compliance.unsub_footer(tenant.get("name") or "", url) + "</div>" if html_body.endswith("</div>") else html_body + compliance.unsub_footer(tenant.get("name") or "", url)
-            headers = {"List-Unsubscribe": f"<{url}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"}
+            footer = compliance.unsub_footer(tenant.get("name") or "", url).replace("margin-top:18px;padding-top:10px;border-top:1px solid #e3e7f0;", "margin-top:14px;text-align:center;")
+            headers.update({"List-Unsubscribe": f"<{url}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"})
+        html_body = _email_html(message, persona, cfg["persona"]["role"], tenant.get("name") or "", tenant["slug"], wa, footer, bool(atts))
         await mailout.send(tenant, {"userId": uid, "userName": persona, "to": [lead["emailAddress"]], "subject": subject[:200], "html": html_body, "parentType": "Lead", "parentId": lead_id, "agent": True,
                                     "authorLabel": f"{persona} Virtual", "headers": headers, "attachments": atts})
     _last_send[tenant["slug"]] = time.time()
