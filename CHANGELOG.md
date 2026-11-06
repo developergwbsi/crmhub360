@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.35] - 2026-11-06
+
+### Cambiado
+- Buscador: recorre primero los barrios comerciales e industriales de Bogotá (Siete de Agosto, Doce de Octubre, Primero de Mayo con Carrera 30, Restrepo, Ricaurte, Paloquemao y otros) antes que las localidades; las zonas se pueden cambiar en `settings.finder.zones`. Se añaden los rubros autopartes, repuestos y talleres de vehículos.
+
 ## [1.27.34] - 2026-11-06
 
 ### Cambiado

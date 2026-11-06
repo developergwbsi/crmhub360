@@ -85,6 +85,7 @@ def _brief(tenant: dict, cfg: dict, n: int, already: list[str], niche: str = "")
             "no incluyas datos de personas naturales que no sean la cara pública del negocio.")
 
 
+ZONAS_PRIO = ["Siete de Agosto", "Doce de Octubre", "Primero de Mayo Carrera 30", "Restrepo", "Ricaurte", "Paloquemao", "Quinta Paredes", "San Andresito Carrera 38", "Zona Industrial Montevideo", "Carrera 68", "Alquería"]   # barrios comerciales e industriales donde hay más pymes
 ZONAS = ["Chapinero", "Teusaquillo", "Barrios Unidos", "Puente Aranda", "Kennedy", "Fontibón", "Engativá", "Suba", "Usaquén", "Los Mártires", "Antonio Nariño", "Bosa", "Tunjuelito", "Ciudad Bolívar", "San Cristóbal", "Rafael Uribe Uribe", "Santa Fe", "Candelaria", "Usme"]
 CHAINS = 1500   # negocios con más reseñas que esto suelen ser cadenas grandes: no son el cliente
 
@@ -95,7 +96,7 @@ def _maps_queries(tenant: dict, niches: list[str], k: int) -> list[str]:
     city = str(st.get("city") or "Bogotá")
     lim = datetime.now(timezone.utc).timestamp() - 45 * 86400
     done = {q for q, t in (st.get("maps_done") or {}).items() if t > lim}
-    zonas = ZONAS if city.lower().startswith("bogot") else [""]
+    zonas = list(st.get("zones") or (ZONAS_PRIO + ZONAS)) if city.lower().startswith("bogot") else [""]
     out = []
     for z in zonas:
         for n in niches:
