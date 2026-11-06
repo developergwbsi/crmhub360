@@ -40,11 +40,18 @@ class MeetInvite
             throw new BadRequest('La reunión necesita fecha y una videollamada creada.');
         }
         $end = $meeting->get('dateEnd') ?: date('Y-m-d H:i:s', strtotime($meeting->get('dateStart') . ' UTC') + 3600);
+        $org = $this->user;   // quien organiza: si la reunión la creó una integración (usuario API, p. ej. el comercial virtual), el organizador es el asesor asignado
+        if ($org->isApi() && $meeting->get('assignedUserId')) {
+            $assigned = $this->em->getEntityById('User', $meeting->get('assignedUserId'));
+            if ($assigned) {
+                $org = $assigned;
+            }
+        }
         try {
             return (new HubClient($this->config))->request('POST', '/v1/meet/invite', [
                 'to' => $to['email'], 'toName' => $to['name'], 'title' => (string) $meeting->get('name'), 'startUtc' => (string) $meeting->get('dateStart'), 'endUtc' => (string) $end,
-                'url' => (string) $meeting->get('videoLink'), 'organizerName' => (string) ($this->user->get('name') ?: $this->user->get('userName')), 'organizerEmail' => (string) $this->user->get('emailAddress'),
-                'userId' => $this->user->getId(), 'tz' => (string) ($this->config->get('timeZone') ?: 'America/Bogota'), 'uid' => $meeting->getId() ?: '',
+                'url' => (string) $meeting->get('videoLink'), 'organizerName' => (string) ($org->get('name') ?: $org->get('userName')), 'organizerEmail' => (string) $org->get('emailAddress'),
+                'userId' => $org->getId(), 'tz' => (string) ($this->config->get('timeZone') ?: 'America/Bogota'), 'uid' => $meeting->getId() ?: '',
                 'parentType' => (string) ($to['scope'] ?? $meeting->get('parentType')), 'parentId' => (string) ($to['id'] ?? $meeting->get('parentId')), 'kind' => $kind === 'update' ? 'update' : 'invite',
             ], 30);
         } catch (\RuntimeException $e) {

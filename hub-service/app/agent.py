@@ -955,8 +955,10 @@ def _email_html(text: str, persona: str, role: str, company: str, slug: str = ""
         return "Abrir enlace", "#4f46e5"
     paras, blocks, closing = [], [], ""
     parts = [x.strip() for x in re.split(r"\n{2,}", text.strip()) if x.strip()]
-    if parts and len(parts[-1]) < 45 and re.match(r"(?i)^(un saludo|saludos|cordialmente|atentamente|quedo atento|cordial saludo)", parts[-1]) and "\n" not in parts[-1]:
-        closing = parts.pop().rstrip(",.") + ","   # la despedida va dentro de la firma
+    for i in range(len(parts) - 1, -1, -1):
+        if len(parts[i]) < 45 and re.match(r"(?i)^(un saludo|saludos|cordialmente|atentamente|quedo atento|cordial saludo)", parts[i]) and "\n" not in parts[i]:
+            closing = parts.pop(i).rstrip(",.") + ","   # la despedida va dentro de la firma, aunque el sistema añada algo después
+            break
     for p in parts:
         p = re.sub(r":\s*$", ".", p)
         if cards:   # el enlace ahora va en la tarjeta de abajo

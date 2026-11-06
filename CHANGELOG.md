@@ -4,6 +4,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.25] - 2026-11-05
+
+### Corregido
+- Invitación a videollamada: cuando la reunión la agenda el comercial virtual, el organizador es el asesor asignado (antes salía «hub-api»).
+- Correos de Valeria: la despedida va siempre en la firma, aunque el sistema añada el enlace de la videollamada después.
+
 ## [1.27.24] - 2026-11-05
 
 ### Cambiado
