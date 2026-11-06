@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.21] - 2026-11-05
+
+### Cambiado
+- Presentación de Crm Hub 360 mucho más completa: resumen de todo lo que incluye y secciones nuevas de comerciales virtuales, formularios (captación e internos), captura de datos, canales (correo, SMS, teléfono, WhatsApp, Telegram) e integraciones con proveedores.
+
 ## [1.27.20] - 2026-11-05
 
 ### Cambiado

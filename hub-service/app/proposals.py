@@ -334,7 +334,20 @@ def default_pages(company: str, wa: str) -> list[dict]:
     crm = (f'<h2>Todo lo que necesita tu equipo comercial, en un solo lugar</h2><p class="lead">Crm Hub 360 es el CRM en español con inteligencia artificial del portafolio de {_h.escape(company)}: ordena a tus clientes, atiende por todos los canales, busca clientes nuevos y deja que un equipo de agentes de IA trabaje contigo las 24 horas.</p>'
            f'<div class="fig">{_img("crm_panel.jpg", "Panel gerencial de Crm Hub 360", True)}<div class="cap">Tu panel gerencial en Crm Hub 360: embudo, leads por semana, origen y asesor (datos de prueba).</div></div>'
            f'<div class="fig">{_svg_pipeline()}<div class="cap">Cada oportunidad avanza por tu embudo, a la vista de todo el equipo.</div></div>'
-           '<h2>Un equipo de agentes de IA que trabaja contigo</h2><p class="lead">No es un solo asistente: son varios agentes, cada uno con su entrenamiento, que se pasan el trabajo hasta que tu equipo entra a cerrar.</p>'
+           '<h2>Todo lo que incluye Crm Hub 360</h2><p class="lead">No es solo una libreta de clientes: es la plataforma completa para captar, atender, vender y medir, con todo conectado en la misma ficha.</p>'
+           + _cards([("V", "Comerciales virtuales", "Agentes de IA con nombre y cargo propios que contactan, responden, hacen seguimiento y agendan por WhatsApp, correo, SMS y Telegram, 24/7."),
+                     ("B", "Buscador de clientes", "Investiga en internet empresas que encajan con lo que vendes, verifica su contacto de negocio y las califica antes de escribirles."),
+                     ("F", "Formularios de captación", "Formularios web con plantillas, en enlace, QR o incrustados en tu página: cada respuesta entra como lead, con bienvenida automática."),
+                     ("I", "Formularios internos", "Los formularios de gestión de tu empresa, con etapas, permisos y acciones al guardar: PDF, tareas, cambio de estado y mensajes."),
+                     ("D", "Captura de datos", "Lee PDF con IA, trae datos de páginas web y consulta APIs al entrar un lead, y todo llena la ficha del cliente."),
+                     ("M", "Videollamadas propias", "Reuniones dentro del CRM, con subtítulos, grabación y resumen con acuerdos, sin pagar otra herramienta."),
+                     ("C", "Correo, SMS, teléfono y WhatsApp", "Todos los canales en la misma ficha, con tus propios proveedores o los de la plataforma."),
+                     ("P", "Integraciones y API", "WhatsApp (Meta, Gupshup, Twilio), voz (Twilio, Telnyx, Asterisk, 3CX), tu correo, tu motor de IA, API externa y webhooks firmados."),
+                     ("R", "Reportes y tableros", "Gráficas y tableros por usuario, equipo o empresa, y un reporte gerencial por correo con lo que hizo el ciclo."),
+                     ("K", "Catálogo y propuestas", "Tus productos y presentaciones, que los agentes envían solos según el interés de cada prospecto."),
+                     ("E", "Equipos y reparto", "Roles, equipos y reparto de leads entre personas y comerciales virtuales, con tareas y calendario."),
+                     ("S", "Cumplimiento y seguridad", "Horarios legales, baja de un clic, lista de no contactar, topes y frenos, PIN de reingreso y datos separados por empresa.")])
+           + '<h2>Un equipo de agentes de IA que trabaja contigo</h2><p class="lead">No es un solo asistente: son varios agentes, cada uno con su entrenamiento, que se pasan el trabajo hasta que tu equipo entra a cerrar.</p>'
            f'<div class="fig">{_svg_agents()}<div class="cap">Agentes con funciones distintas que se complementan.</div></div>'
            + f'<div class="fig">{_img("crm_agentes.jpg", "Agentes de prospección en Crm Hub 360", True)}<div class="cap">Los agentes de prospección, con su propia configuración, en la pantalla real de Crm Hub 360.</div></div>'
            + _cards([("B", "Agente buscador", "Investiga en internet empresas que podrían necesitar lo que vendes y guarda solo las que tienen una página pública y un contacto de negocio publicado, con su fuente."),
@@ -354,22 +367,51 @@ def default_pages(company: str, wa: str) -> list[dict]:
            + _cards([("L", "Lector rápido y con IA", "Primero lo lee un lector interno, rápido y sin IA; si quieres más precisión, lo mejoras con IA."),
                      ("D", "Perfiles a tu medida", "Defines qué datos buscar según el documento: crédito, identidad, ingresos, resumen u otros."),
                      ("F", "De documento a formulario", "Los datos pueden llenar tus formularios internos y generar PDF, tareas, cambios de estado y mensajes.")])
-           + '<h2>Todos los canales en una sola ficha</h2><p class="lead">Cada conversación, llamada y reunión con un cliente queda en su historial, sin importar por dónde llegó.</p>'
+           + '<h2>Todos los canales en una sola ficha</h2><p class="lead">Cada conversación, llamada y reunión con un cliente queda en su historial, sin importar por dónde llegó. Escribes y llamas desde el mismo CRM, con tu propio proveedor o con el de la plataforma.</p>'
            f'<div class="fig">{_svg_channels()}<div class="cap">Todo el historial del cliente en un solo lugar.</div></div>'
-           + _cards([("W", "WhatsApp con varios proveedores", "Conecta el que ya tienes: línea propia, API oficial de Meta, Gupshup o Twilio. Varias líneas y un principal."),
-                     ("E", "Correo, SMS y Telegram", "Envía y recibe desde el CRM, con plantillas y firma propia por usuario."),
+           + _cards([("W", "WhatsApp con varios proveedores", "Conecta el que ya tienes: tu línea propia, la API oficial de Meta, Gupshup o Twilio. Varias líneas, cada una con su interruptor, y una principal."),
+                     ("E", "Correo con tu dirección", "Envía y recibe desde el CRM con tu propio correo o buzón, con plantillas, firma por usuario y los adjuntos guardados en la ficha."),
+                     ("S", "SMS", "Mensajes de texto desde la ficha o automáticos, con tu proveedor (como Twilio) o con el de la plataforma."),
+                     ("Z", "Llamadas desde el CRM", "Haz clic para llamar: tu central o proveedor de voz (Twilio, Telnyx, Asterisk/FreePBX, 3CX) llama primero al asesor y lo conecta con el cliente, y la llamada queda registrada."),
+                     ("T", "Telegram", "El cliente escribe al bot de tu empresa y los asesores responden desde el CRM."),
                      ("N", "Mensajes masivos y campañas", "Envíos a grupos de clientes con ritmo controlado, y campañas para medir qué convierte mejor."),
-                     ("Z", "Llamadas", "Llama desde el CRM con tu central o proveedor de voz y deja el registro en la ficha.")])
+                     ("Q", "Plantillas y mensajes aprobados", "Plantillas de correo y de WhatsApp (incluidas las aprobadas por Meta) para escribir rápido y con tu estilo."),
+                     ("A", "Avisos en tiempo real", "Notificaciones en el celular y el navegador cuando un cliente responde, aunque la aplicación esté cerrada.")])
+           + '<h2>Comerciales virtuales: tu equipo comercial 24/7</h2><p class="lead">Un comercial virtual es un agente de IA con <b>nombre, cargo y forma de hablar propios</b>. Atiende a cada lead que entra y lo acompaña hasta que tu equipo cierra la venta. Puedes tener varios, cada uno con su entrenamiento.</p>'
+           + _cards([("1", "Entrenado con tu oferta", "Aprende de tu catálogo de productos: qué vendes, para quién, sus beneficios y cuándo NO ofrecerlo."),
+                     ("2", "Contacta y responde", "Escribe a los leads nuevos, contesta preguntas, maneja objeciones y hace seguimientos en el momento justo."),
+                     ("3", "Habla por donde escribe el cliente", "WhatsApp, correo, SMS y Telegram, con el historial completo en la ficha."),
+                     ("4", "Agenda la demo", "Propone horarios libres de tu calendario y deja la reunión agendada, con su enlace de videollamada."),
+                     ("5", "Comparte material", "Envía la presentación, brochure o propuesta que corresponde al interés de cada prospecto."),
+                     ("6", "Pasa a una persona", "Cuando la conversación lo pide, traspasa el caso a tu equipo con todo el contexto y se detiene."),
+                     ("7", "Cuida tu reputación", "Valida que el correo exista antes de escribir, respeta horarios y topes diarios, y se frena solo si suben los rebotes."),
+                     ("8", "Lo pruebas antes de encenderlo", "Un simulador recorre con un lead de prueba todo lo que configuraste y te dice qué falta.")])
+           + '<h2>Formularios: para captar clientes y para gestionar tu operación</h2><p class="lead">Crm Hub 360 tiene dos tipos de formularios, los dos <b>diseñados por ti, sin programar</b>.</p>'
+           + _cards([("H", "Formularios de captación", "Elige una plantilla, ajústala con tus datos y compártela como enlace, QR o incrustada en tu web o redes sociales. Cada respuesta entra como lead, con el consentimiento registrado, y recibe correo y WhatsApp de bienvenida."),
+                     ("Y", "Califican al entrar", "El lead que llega por un formulario puede calificarse de inmediato y pasar al comercial virtual o a un asesor."),
+                     ("G", "Formularios internos de gestión", "Tu gerente o supervisor diseña los formularios para capturar la información del proceso: campos, condiciones y en qué etapa del lead se ven (pestaña de la ficha o botón)."),
+                     ("X", "Acciones al guardar", "Al guardar un formulario interno puede generar un PDF, crear una tarea, cambiar el estado del lead o enviar un correo o WhatsApp."),
+                     ("B", "Con datos de otras fuentes", "Los formularios internos pueden llenarse con datos de un documento leído o de una página web consultada, para que la persona o la IA decida con ellos."),
+                     ("N", "Sus resultados, medidos", "Reportes y tableros sobre lo que se captura en cada formulario.")])
+           + '<h2>Captura de datos automática</h2><p class="lead">Menos digitación: Crm Hub 360 trae la información al cliente por ti.</p>'
+           + _cards([("P", "Lectura de documentos con IA", "Sube un PDF a la ficha —reporte de buró, cédula, soportes— y detecta el tipo, extrae los datos que le pides y tú los revisas antes de guardarlos."),
+                     ("A", "Procesos al entrar un lead", "Cuando entra un lead, consulta una API o un webhook (buró, validación de identidad, scraping) y guarda la respuesta en la ficha, con reintentos y registro de cada ejecución."),
+                     ("W", "Consultas web", "Trae información de páginas públicas —o con inicio de sesión mediante un navegador automático que repite el flujo que grabas— para decidir sobre un cliente."),
+                     ("V", "Correos verificados", "Comprueba que una dirección exista antes de escribirle, sin enviarle nada.")])
+           + '<h2>Integraciones con tus proveedores y plataformas</h2><p class="lead">Cada empresa puede <b>conectar a sus propios proveedores</b> o usar los de la plataforma. Cambias de proveedor sin perder el historial.</p>'
+           + _cards([("W", "Mensajería", "WhatsApp: línea propia (Evolution), API oficial de Meta, Gupshup y Twilio. SMS con Twilio y otros."),
+                     ("Z", "Telefonía", "Twilio, Telnyx o tu central (Asterisk/FreePBX, 3CX), con llamadas desde el CRM."),
+                     ("E", "Correo", "Tu propio servidor de correo (envío y buzón) o el de la plataforma."),
+                     ("I", "Inteligencia artificial", "Elige tu motor de IA: Claude, OpenAI o un modelo local."),
+                     ("B", "Buscador web", "Tu propia clave de buscador o la de la plataforma, para la búsqueda de clientes."),
+                     ("A", "API externa y webhooks", "API con llaves para conectar tus otras plataformas y webhooks firmados que avisan de cada evento."),
+                     ("G", "Con Gestor360 y Core360", "Se conecta con el resto del portafolio: chatbots de WhatsApp de Gestor360 y el ERP de Core360."),
+                     ("C", "Pagos por créditos", "Pagas con recargas lo que usas de la plataforma; lo que corre con tus proveedores propios no descuenta.")])
            + '<h2>Reuniones y videollamadas propias, sin otro proveedor</h2><p class="lead">Crm Hub 360 trae su <b>propio módulo de reuniones</b>: no necesitas contratar otra herramienta de videollamadas (como Meet o Zoom), porque la reunión se programa, se hace y se registra dentro del CRM.</p>'
            + _cards([("1", "Módulo de reuniones propio", "Programa la reunión desde la ficha o el calendario; el cliente recibe el enlace por correo y entra desde el navegador, sin instalar nada y sin otra plataforma."),
                      ("2", "Subtítulos en vivo", "Subtítulos en español e inglés durante la llamada."),
                      ("3", "Grabación", "Graba videollamadas y pantalla, y las guarda ligadas al cliente."),
                      ("4", "Resumen con acuerdos", "Al terminar, un resumen con puntos clave, acuerdos y pendientes queda como nota en la ficha.")])
-           + '<h2>Automatiza tu operación comercial</h2>'
-           + _cards([("R", "Procesos de leads", "Cuando entra un lead, consulta una API o un webhook (buró, validación de identidad, web scraping) y guarda la respuesta en la ficha."),
-                     ("W", "Consultas web", "Trae información de páginas —incluso con inicio de sesión— para decidir sobre un cliente, con análisis de IA opcional."),
-                     ("H", "Tus propios formularios para captar leads", "Diseña tus formularios (con plantillas) y compártelos como enlace, QR o incrustados en tu web, en tus redes sociales o donde quieras: cada respuesta entra al CRM como lead, con correo y WhatsApp de bienvenida automáticos."),
-                     ("I", "Formularios internos configurables", "Diseña los formularios de gestión de tu empresa: campos, etapas donde se ven y acciones al guardar, como generar un PDF, crear una tarea, cambiar el estado o enviar un mensaje.")])
            + '<h2>Reportes, aprendizaje y control</h2>'
            + _cards([("G", "Reportes y tableros", "Cada usuario arma sus gráficas (barras, líneas, circulares, indicadores) y tableros, y los comparte con su equipo."),
                      ("K", "Banco de conocimiento", "Aprende de tu historial real: qué fuentes, campañas y asesores convierten mejor, y cuándo llegan los mejores clientes."),
