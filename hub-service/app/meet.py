@@ -245,7 +245,13 @@ def knock(code: str, name: str, extra: bool = False, invite: str = "") -> dict:
         if c.execute("SELECT count(*) n FROM meet_knocks WHERE code = %s AND status = 'waiting' AND created_at > now() - interval '15 minutes'", (code,)).fetchone()["n"] >= 20:
             raise ValueError("Hay demasiadas solicitudes esperando. Intenta más tarde.")
         c.execute("INSERT INTO meet_knocks (id, code, name, ref) VALUES (%s,%s,%s,%s)", (kid, code, name, ref))
-    return {"id": kid, "status": "waiting", "host": r["host_name"]}
+        try:   # si la presentadora virtual atiende la sala y el anfitrión no ha tomado el control, el cliente entra directo
+            pr = c.execute("SELECT 1 FROM presenter_runs WHERE code = %s AND ended_at IS NULL AND NOT handoff AND started_at > now() - interval '4 hours'", (code,)).fetchone()
+        except Exception:
+            pr = None
+        if pr:
+            c.execute("UPDATE meet_knocks SET status = 'admitted', decided_at = now() WHERE id = %s", (kid,))
+    return {"id": kid, "status": "admitted" if pr else "waiting", "host": r["host_name"]}
 
 
 async def notify_knock(code: str, name: str) -> None:

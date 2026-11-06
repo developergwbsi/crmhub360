@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.36] - 2026-11-06
+
+### Corregido
+- Videollamadas: si la presentadora virtual atiende la sala, el cliente que abre el enlace entra directo en lugar de esperar en la sala de espera (nadie lo admitía). Si el anfitrión toma el control, vuelve la sala de espera.
+
 ## [1.27.35] - 2026-11-06
 
 ### Cambiado
