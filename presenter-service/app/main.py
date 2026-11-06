@@ -105,6 +105,7 @@ class Req(BaseModel):
     key: str
     name: str = "Valeria"
     role: str = "Asistente virtual"
+    test: bool = False   # prueba: si entra el anfitrión humano ella no cede la palabra (lo trata como el cliente)
 
 
 class Session:
@@ -285,7 +286,10 @@ class Session:
         host = next((p for p in self.humans() if p.identity.startswith("h-")), None)
         self.guest = (guest.name if guest else "") or ""
         if host and not guest:
-            self.standby = True
+            if self.test:
+                self.guest = host.name or ""
+            else:
+                self.standby = True
         if self.slides:
             self.slide_idx = 0
         if not self.standby:
@@ -341,7 +345,7 @@ class Session:
 
             @self.room.on("participant_connected")
             def _pc(p):
-                if p.identity.startswith("h-") and not self.standby:   # llegó el anfitrión humano: ella cede la palabra
+                if p.identity.startswith("h-") and not self.standby and not self.r.test:   # llegó el anfitrión humano: ella cede la palabra
                     self.standby = True
                     self.cancel = True
 

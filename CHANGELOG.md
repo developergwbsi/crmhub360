@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.29] - 2026-11-05
+
+### Añadido
+- Presentadora virtual: salas de prueba (`presenter.test_room`) donde quien entra como anfitrión hace de cliente y ella no cede la palabra.
+
 ## [1.27.28] - 2026-11-05
 
 ### Corregido

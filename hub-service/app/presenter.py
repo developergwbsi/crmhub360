@@ -160,7 +160,7 @@ async def _finish(tenant: dict, r: dict, code: str) -> None:
             log.warning("nota de la demostración: %s", str(e)[:120])
 
 
-async def start(tenant: dict, code: str) -> dict:
+async def start(tenant: dict, code: str, test: bool = False) -> dict:
     """Manda a la presentadora a la sala `code` (de este tenant)."""
     r = _room(code)
     if not r or r["tenant"] != tenant["slug"] or r.get("ended_at"):
@@ -171,7 +171,7 @@ async def start(tenant: dict, code: str) -> dict:
     with db.pool.connection() as c:
         c.execute("INSERT INTO presenter_runs (code, tenant, started_at) VALUES (%s,%s,now()) ON CONFLICT (code) DO UPDATE SET started_at=now(), ended_at=NULL, handoff=false", (code, r["tenant"]))
     async with httpx.AsyncClient(timeout=30) as c:
-        resp = await c.post(f"{URL}/session", headers={"Authorization": f"Bearer {_svc_token()}"}, json={"code": code, "url": LIVEKIT_WS, "token": token, "key": key(code), "name": p.get("name") or "Valeria", "role": "Asistente virtual"})
+        resp = await c.post(f"{URL}/session", headers={"Authorization": f"Bearer {_svc_token()}"}, json={"code": code, "url": LIVEKIT_WS, "token": token, "key": key(code), "name": p.get("name") or "Valeria", "role": "Asistente virtual", "test": test})
     resp.raise_for_status()
     return resp.json()
 
@@ -222,3 +222,10 @@ async def worker() -> None:
         except Exception:
             log.exception("presentadora: ciclo")
         await asyncio.sleep(30)
+
+
+async def test_room(tenant: dict, product: str = "Crm Hub 360", host_name: str = "Anfitrión") -> dict:
+    """Sala nueva de prueba con la presentadora dentro: quien entra con el enlace de anfitrión hace de cliente (ella no cede la palabra)."""
+    r = meet.create(tenant["slug"], "", f"Demo {product} · prueba de la presentadora", host_name, "presenter-test", fresh=True)
+    await start(tenant, r["code"], test=True)
+    return {"hostUrl": r["hostUrl"], "code": r["code"]}

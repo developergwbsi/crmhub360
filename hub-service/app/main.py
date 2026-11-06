@@ -3183,6 +3183,7 @@ class PresenterTurn(BaseModel):
 
 class PresenterStart(BaseModel):
     code: str
+    test: bool = False
 
 
 @app.get("/v1/presenter/{code}/plan")
@@ -3210,7 +3211,7 @@ async def presenter_turn(code: str, req: PresenterTurn):
 async def presenter_start(req: PresenterStart, tenant: dict = Depends(tenant_auth)):
     """Manda a la presentadora virtual a una sala de este tenant (prueba o demostración manual)."""
     try:
-        return await presenter.start(tenant, req.code)
+        return await presenter.start(tenant, req.code, req.test)
     except LookupError as e:
         raise HTTPException(404, str(e))
     except Exception as e:
