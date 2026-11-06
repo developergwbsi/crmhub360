@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.23] - 2026-11-05
+
+### Corregido
+- Correos de Valeria: la versión en texto plano ya no repite el nombre de la empresa ni el texto de vista previa, y la frase «en este enlace» apunta a la tarjeta de la presentación.
+
 ## [1.27.22] - 2026-11-05
 
 ### Corregido

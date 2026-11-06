@@ -53,7 +53,8 @@ def _smtp_send(cfg: dict, msg: EmailMessage, rcpts: list[str]) -> None:
 def plain_of(html: str) -> str:
     """Versión en texto plano de un HTML (para la parte alternativa del correo)."""
     t = re.sub(r"(?is)<(style|script|head).*?</\1>", "", html)
-    t = re.sub(r"(?i)<br\s*/?>|</(p|div|tr|li|h\d)>", "\n", t)
+    t = re.sub(r"(?is)<span[^>]*display:\s*none[^>]*>.*?</span>", "", t)   # texto oculto de vista previa (preheader)
+    t = re.sub(r"(?i)<br\s*/?>|</(p|div|tr|td|li|h\d)>", "\n", t)
     return re.sub(r"\n{3,}", "\n\n", _html.unescape(re.sub(r"<[^>]+>", "", t))).strip()
 
 

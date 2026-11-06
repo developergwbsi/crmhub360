@@ -944,6 +944,9 @@ def _email_html(text: str, persona: str, role: str, company: str, slug: str = ""
     paras = []
     for p in re.split(r"\n{2,}", text.strip()):
         p = re.sub(r":\s*$", ".", p.strip())
+        if cards:   # el enlace ahora va en la tarjeta de abajo
+            p = re.sub(r"(?i)\b(en|con|desde|a través de) (este|el siguiente|el) (enlace|link)\b", "en la tarjeta de abajo", p)
+            p = re.sub(r"(?i)\baquí\b(?=[.\s]*$)", "abajo", p)
         if p.strip(" .:"):
             paras.append(p)
     body = "".join(f"<p style='margin:0 0 14px;font-size:15.5px;line-height:1.65;color:#1f2540'>{link(e(p)).replace(chr(10), '<br>')}</p>" for p in paras)
