@@ -4,6 +4,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.33] - 2026-11-05
+
+### Cambiado
+- Presentadora virtual: si el cliente se desconecta, espera 2 minutos a que vuelva antes de salir (y 15 minutos a que llegue si aún no ha entrado); si el cliente nunca entró, lo anota en el lead, avisa al anfitrión y sugiere reagendar.
+
+### Corregido
+- Presentadora virtual: ya no salta al final de la demo por un número de diapositiva mal devuelto por el modelo (solo cambia de diapositiva si el cliente lo pide), no se va de la sala justo después de despedirse mientras el cliente siga ahí (hasta 15 min), y no se queda colgada si el audio o el Hub tardan.
+
+### Corregido
+- Presentadora virtual: un ruido breve ya no la interrumpe ni se transcribe; hace falta voz sostenida (casi medio segundo), con umbral más alto mientras ella habla, y se descartan palabras sueltas mal entendidas.
+
+### Cambiado
+- Presentadora virtual: nuevo retrato animado (mujer colombiana profesional inventada) dibujado por capas, con labios que se mueven con la voz, parpadeo y balanceo; sustituye al orbe por defecto (`AVATAR_STYLE=orb` lo devuelve).
+
+### Cambiado
+- Presentadora virtual: si el cliente dice o corrige su nombre («me llamo Luis»), lo usa desde ese momento.
+
 ## [1.27.32] - 2026-11-05
 
 ### Cambiado

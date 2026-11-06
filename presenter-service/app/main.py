@@ -27,6 +27,7 @@ from piper import PiperVoice
 from pydantic import BaseModel
 
 from .avatar import H as AH, W as AW, Avatar
+from .face import Face
 
 log = logging.getLogger("presenter")
 logging.basicConfig(level=logging.INFO)
@@ -176,7 +177,7 @@ class Session:
     def __init__(self, r: Req):
         self.r = r
         self.room = rtc.Room()
-        self.av = Avatar(r.name, r.role)
+        self.av = Face(r.name, r.role) if os.environ.get("AVATAR_STYLE", "face") == "face" else Avatar(r.name, r.role)   # retrato animado (por defecto) u orbe de marca
         self.level = 0.0
         self.speaking = False
         self.cancel = False
@@ -190,11 +191,12 @@ class Session:
         self.guest = ""
         self.t0 = time.monotonic()
         self.stop = asyncio.Event()
+        self.seen = False   # ¿ya entró alguna persona a la sala?
         self.noise = 250.0
 
     # ---------- Hub
     async def hub(self, method: str, path: str, body: dict | None = None) -> dict:
-        async with httpx.AsyncClient(timeout=90) as c:
+        async with httpx.AsyncClient(timeout=40) as c:
             resp = await c.request(method, f"{HUB}/v1/presenter/{self.r.code}/{path}", params={"key": self.r.key} if method == "GET" else None, json={**(body or {}), "key": self.r.key} if method != "GET" else None)
         resp.raise_for_status()
         return resp.json()
@@ -313,7 +315,11 @@ class Session:
                 chunk = np.pad(chunk, (0, step - len(chunk)))
             fr = rtc.AudioFrame.create(SR_OUT, 1, step)
             np.frombuffer(fr.data, dtype=np.int16)[:] = chunk
-            await self.asrc.capture_frame(fr)
+            try:
+                await asyncio.wait_for(self.asrc.capture_frame(fr), 3)
+            except asyncio.TimeoutError:
+                log.warning("[%s] el audio no avanza", self.r.code)
+                break
             self.level = min(1.0, float(np.sqrt(np.mean(chunk.astype(np.float32) ** 2))) / 5500.0 * 1.6)
             wait = start + (k + 1) * 0.02 - 0.12 - time.monotonic()   # va ~120 ms por delante del reloj
             if wait > 0:
@@ -321,7 +327,10 @@ class Session:
         if self.cancel or not self.heard.empty():
             self.asrc.clear_queue()
         elif last:
-            await self.asrc.wait_for_playout()
+            try:
+                await asyncio.wait_for(self.asrc.wait_for_playout(), 10)
+            except asyncio.TimeoutError:
+                pass
 
     async def play_simli(self, pcm: np.ndarray) -> None:
         """Con la cara de Simli: se le envía la voz (16 kHz) y ella la devuelve ya sincronizada con los labios; aquí solo se espera lo que dura."""
@@ -347,30 +356,33 @@ class Session:
 
     # ---------- escucha
     async def listen(self, track: rtc.Track, who: str) -> None:
-        """Detecta enunciados del cliente (por volumen), los corta en silencio y los manda a transcribir."""
+        """Detecta enunciados del cliente. Un ruido breve no cuenta: hace falta voz sostenida (≥0,45 s) para que ella calle o para transcribir; mientras ella habla el umbral es más alto."""
         stream = rtc.AudioStream(track, sample_rate=16000, num_channels=1)
-        buf, voiced, last_voice, started = bytearray(), False, 0.0, 0.0
+        buf, voiced, last_voice, started, voiced_s = bytearray(), False, 0.0, 0.0, 0.0
         async for ev in stream:
             if self.stop.is_set():
                 break
             a = np.frombuffer(ev.frame.data, dtype=np.int16)
             rms = float(np.sqrt(np.mean(a.astype(np.float32) ** 2))) if len(a) else 0.0
             now = time.monotonic()
-            thr = max(450.0, self.noise * 3.0)
+            dur = len(a) / 16000.0
+            thr = max(450.0, self.noise * 3.0) * (1.7 if self.speaking else 1.0)
             if rms > thr:
                 if not voiced:
-                    voiced, started = True, now
-                    if self.speaking:   # el cliente la interrumpe: calla
-                        self.cancel = True
+                    voiced, started, voiced_s = True, now, 0.0
+                voiced_s += dur
                 last_voice = now
+                if self.speaking and voiced_s >= 0.45 and not self.cancel:   # voz sostenida: el cliente la interrumpe, ella calla
+                    self.cancel = True
+                    log.info("[%s] interrumpida por %s", self.r.code, who)
             elif not voiced:
                 self.noise = 0.98 * self.noise + 0.02 * rms
             if voiced:
                 buf += a.tobytes()
                 if now - last_voice > 0.7 or now - started > 20:
-                    if len(buf) > 16000 * 2 * 0.5:
+                    if voiced_s >= 0.45:   # menos que eso es un ruido, no una frase
                         await self.utter.put((who, bytes(buf)))
-                    buf, voiced = bytearray(), False
+                    buf, voiced, voiced_s = bytearray(), False, 0.0
 
     async def utterances(self) -> None:
         """Convierte en texto los enunciados y los deja listos para la conversación."""
@@ -384,6 +396,8 @@ class Session:
             w = re.findall(r"\w+", txt.lower())
             if len(w) >= 4 and len(set(w)) / len(w) < 0.4:   # el reconocedor inventa repeticiones («gracias, gracias…») con ruido
                 continue
+            if len(w) < 2 and (not w or w[0] not in ("sí", "si", "no", "claro", "ok", "dale", "listo", "hola", "adelante", "gracias", "bueno", "perfecto", "vale")):   # una sola palabra suelta casi siempre es ruido mal entendido
+                continue
             if len(txt) >= 3:
                 log.info("[%s] %s: %s", self.r.code, who, txt)
                 self.history.append({"who": "cliente", "text": txt})
@@ -394,6 +408,7 @@ class Session:
         return [p for p in self.room.remote_participants.values() if not p.identity.startswith("ai-")]
 
     async def ask(self, kind: str, heard: str = "") -> dict:
+        log.info("[%s] pide turno: %s", self.r.code, kind)
         try:
             return await self.hub("POST", "turn", {"kind": kind, "slide": max(0, self.slide_idx), "heard": heard, "history": self.history[-8:], "guest": self.guest})
         except Exception as e:
@@ -403,13 +418,17 @@ class Session:
     BYE = re.compile(r"\b(me tengo que ir|me voy|tengo que irme|ya me voy|hasta luego|adi[óo]s|chao|chau|nos vemos|hablamos (otro|luego|despu[ée]s)|eso es todo|es todo por ahora)\b", re.I)
 
     async def answer(self, text: str) -> None:
+        m = re.search(r"\b(?:me llamo|mi nombre es|soy)\s+([A-ZÁÉÍÓÚÑa-záéíóúñ]{2,20})", text)
+        if m and m.group(1).lower() not in ("de", "el", "la", "un", "una", "yo", "tu", "su", "muy"):   # el cliente dice (o corrige) su nombre
+            self.guest = m.group(1).capitalize()
         if len(text) < 120 and self.BYE.search(text):   # el cliente se despide: ella se despide y sale de la sala
             n = (self.guest or "").split(" ")[0]
             await self.say(f"Con mucho gusto{', ' + n if n else ''}. Gracias por tu tiempo; un asesor te contactará para continuar. ¡Que tengas un excelente día!")
             self.stop.set()
             return
         r = await self.ask("answer", text)
-        if isinstance(r.get("slide"), int) and 0 <= r["slide"] < len(self.slides):
+        nav = re.search(r"(mu[eé]str|ense[ñn]|volv|regres|anterior|siguiente|diapositiva|pantalla|vamos a|pasemos|ir a|ver (la|el|los|las)|parte de|secci[óo]n)", text, re.I)
+        if nav and isinstance(r.get("slide"), int) and 0 <= r["slide"] < len(self.slides):   # solo salta si el cliente pidió ver otra parte
             self.slide_idx = r["slide"]
         await self.say(r.get("say") or "Disculpa, no te escuché bien. ¿Me lo repites?")
         if r.get("handoff"):
@@ -481,10 +500,11 @@ class Session:
         if not self.standby and not self.stop.is_set():
             c = await self.ask("close")
             await self.say(c.get("say") or "Eso es todo por mi parte. ¿Qué dudas te quedan?")
-            q = await self.wait_question(20)
-            while q and not self.stop.is_set():
-                await self.answer(q)
-                q = await self.wait_question(20)
+            deadline = time.monotonic() + 900   # se queda a disposición hasta 15 min mientras el cliente siga en la sala
+            while not self.stop.is_set() and self.humans() and time.monotonic() < deadline:
+                q = await self.wait_question(5)
+                if q:
+                    await self.answer(q)
 
     # ---------- ciclo de vida
     async def run(self) -> None:
@@ -520,8 +540,10 @@ class Session:
             idle = 0
             while not self.stop.is_set() and not conv.done():
                 await asyncio.sleep(2)
+                if self.humans():
+                    self.seen = True
                 idle = 0 if self.humans() else idle + 2
-                if idle > (15 if self.guest else 120):   # sala sin personas: se va (pronto si ya había conversado)
+                if idle > (120 if self.seen else 900):   # sala sin personas: espera 15 min a que llegue el cliente y 2 min a que vuelva si se cae
                     break
             conv.cancel()
             vl.cancel()
@@ -530,7 +552,7 @@ class Session:
         finally:
             self.stop.set()
             try:
-                await self.hub("POST", "turn", {"kind": "end", "history": self.history[-8:], "guest": self.guest})   # el Hub anota la demostración en el lead
+                await self.hub("POST", "turn", {"kind": "end", "history": self.history[-8:], "guest": self.guest, "slide": 1 if self.seen else 0})   # el Hub anota la demostración en el lead
             except Exception as e:
                 log.warning("cierre en el Hub: %s", str(e)[:100])
             try:

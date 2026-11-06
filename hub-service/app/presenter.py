@@ -91,7 +91,7 @@ async def turn(code: str, b: dict) -> dict:
     slug, kind = r["tenant"], b.get("kind")
     lead_id = r.get("lead_id") or ""
     if kind == "end":
-        await _finish(tenant, r, code)
+        await _finish(tenant, r, code, bool(b.get("slide")))
         return {"say": "", "slide": None, "handoff": False}
     p = _persona(tenant)
     pdf, texts = proposals.slides_pdf(slug, _slug_for(r["title"]))
@@ -153,11 +153,19 @@ async def _handoff(tenant: dict, r: dict, code: str, why: str, standby: bool = T
         log.warning("aviso de traspaso: %s", str(e)[:120])
 
 
-async def _finish(tenant: dict, r: dict, code: str) -> None:
+async def _finish(tenant: dict, r: dict, code: str, seen: bool = True) -> None:
     with db.pool.connection() as c:
         c.execute("UPDATE presenter_runs SET ended_at=now() WHERE code=%s", (code,))
     lines = _log.pop(code, [])
     lead_id = r.get("lead_id") or ""
+    if not seen and not lines and lead_id:   # el cliente nunca entró a la sala
+        try:
+            agent.log_event(r["tenant"], lead_id, "wait", channel="video", title="El cliente no llegó a la demostración", detail="La presentadora esperó 15 minutos en la sala")
+            await push.send(r["tenant"], title="El cliente no llegó a la demo", body="La presentadora esperó 15 minutos y salió de la sala.", url=f"/#Lead/view/{lead_id}", tag=f"crmhub-noshow-{code}", kind="agent", user_id=_host_id(tenant))
+            await Espo(tenant).note(lead_id, "[Presentadora virtual] El cliente no entró a la videollamada; la presentadora esperó 15 minutos. Conviene reagendar.")
+        except Exception as e:
+            log.warning("aviso de demo sin cliente: %s", str(e)[:120])
+        return
     if lead_id and lines:
         try:
             await Espo(tenant).note(lead_id, "[Presentadora virtual] Resumen de la demostración en vivo:\n" + "\n".join(lines)[:6000])
