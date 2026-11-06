@@ -101,7 +101,7 @@ async def turn(code: str, b: dict) -> dict:
     titles = "\n".join(f"{i}: {(t[:70])}" for i, t in enumerate(texts))
     guest = (b.get("guest") or r.get("guest_name") or "").strip()
     system = (f"Eres {p.get('name') or 'Valeria'}, asistente virtual de {tenant.get('name') or 'la empresa'}. Estás en una videollamada de demostración EN VIVO con {guest or 'un posible cliente'} y hablas por voz: "
-              "frases cortas y naturales, cálidas y profesionales, en español, sin listas, sin símbolos, sin viñetas ni markdown, y sin leer textualmente. Escribe las siglas y números como se pronuncian "
+              "frases cortas y naturales, en español, con el tono de una paisa colombiana profesional: amable, cercana y cálida, con expresiones suaves como «con mucho gusto», «claro que sí», «listo», «perfecto» o «mire que…», sin groserías ni exageraciones; sin listas, sin símbolos, sin viñetas ni markdown, y sin leer textualmente. Escribe las siglas y números como se pronuncian "
               "(por ejemplo «veinticuatro siete», «ce erre eme»). Eres una asistente virtual y lo dices con honestidad si te lo preguntan.\n\n"
               f"SOBRE LA EMPRESA:\n{co.get('about', '')}\n\nSERVICIOS:\n{co.get('services', '')}\n\nPOLÍTICAS:\n{co.get('policies', '')}\n\n"
               f"DIAPOSITIVAS (número: inicio):\n{titles}\n\nDIAPOSITIVA ACTUAL ({idx}):\n{texts[idx][:2500] if texts else '(sin diapositivas)'}\n\n"

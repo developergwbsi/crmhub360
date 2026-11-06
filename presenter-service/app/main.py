@@ -4,6 +4,7 @@ local en español (Piper). Si el cliente pide hablar con una persona, o entra el
 
 El Hub la arranca con POST /session (cabecera Authorization: Bearer <token derivado del secreto de LiveKit>). Escucha solo en 127.0.0.1:8196."""
 import asyncio
+import re
 import base64
 import hashlib
 import hmac
@@ -80,9 +81,38 @@ def _azure(text: str) -> tuple[np.ndarray, int] | None:
         return None
 
 
+def _edge(text: str) -> tuple[np.ndarray, int] | None:
+    """Voz neural colombiana (es-CO) del servicio de lectura de Microsoft Edge, sin clave. Es la opción intermedia mientras no haya clave de Azure; si falla, habla la voz local."""
+    if os.environ.get("TTS_EDGE", "1") != "1":
+        return None
+    try:
+        import edge_tts
+        import av
+
+        async def run() -> bytes:
+            out = b""
+            async for ch in edge_tts.Communicate(text, os.environ.get("EDGE_VOICE", AZ_VOICE), rate=os.environ.get("EDGE_RATE", "+0%")).stream():
+                if ch["type"] == "audio":
+                    out += ch["data"]
+            return out
+        mp3 = asyncio.run(run())
+        if not mp3:
+            return None
+        rs = av.AudioResampler(format="s16", layout="mono", rate=24000)
+        chunks = []
+        with av.open(io.BytesIO(mp3)) as c:
+            for fr in c.decode(audio=0):
+                for o in rs.resample(fr):
+                    chunks.append(np.frombuffer(o.to_ndarray().tobytes(), dtype=np.int16))
+        return (np.concatenate(chunks), 24000) if chunks else None
+    except Exception as e:
+        log.warning("voz Edge: %s (se usa la voz local)", str(e)[:120])
+        return None
+
+
 def _native(text: str) -> tuple[np.ndarray, int]:
     text = speakable(text)
-    got = _azure(text)
+    got = _azure(text) or _edge(text)
     if got:
         return got
     buf = io.BytesIO()
@@ -336,6 +366,9 @@ class Session:
             except Exception as e:
                 log.warning("transcripción: %s", str(e)[:120])
                 continue
+            w = re.findall(r"\w+", txt.lower())
+            if len(w) >= 4 and len(set(w)) / len(w) < 0.4:   # el reconocedor inventa repeticiones («gracias, gracias…») con ruido
+                continue
             if len(txt) >= 3:
                 log.info("[%s] %s: %s", self.r.code, who, txt)
                 self.history.append({"who": "cliente", "text": txt})
@@ -352,7 +385,14 @@ class Session:
             log.warning("turno en el Hub: %s", str(e)[:150])
             return {"say": "", "slide": None, "handoff": False}
 
+    BYE = re.compile(r"\b(me tengo que ir|me voy|tengo que irme|ya me voy|hasta luego|adi[óo]s|chao|chau|nos vemos|hablamos (otro|luego|despu[ée]s)|eso es todo|es todo por ahora)\b", re.I)
+
     async def answer(self, text: str) -> None:
+        if len(text) < 120 and self.BYE.search(text):   # el cliente se despide: ella se despide y sale de la sala
+            n = (self.guest or "").split(" ")[0]
+            await self.say(f"Con mucho gusto{', ' + n if n else ''}. Gracias por tu tiempo; un asesor te contactará para continuar. ¡Que tengas un excelente día!")
+            self.stop.set()
+            return
         r = await self.ask("answer", text)
         if isinstance(r.get("slide"), int) and 0 <= r["slide"] < len(self.slides):
             self.slide_idx = r["slide"]
@@ -361,10 +401,15 @@ class Session:
             self.standby = True
 
     async def wait_question(self, secs: float) -> str | None:
+        """Lo que dijo el cliente: si habló en varios trozos, los junta en un solo turno."""
         try:
-            return await asyncio.wait_for(self.heard.get(), secs)
+            txt = await asyncio.wait_for(self.heard.get(), secs)
         except asyncio.TimeoutError:
             return None
+        await asyncio.sleep(0.8)
+        while not self.heard.empty():
+            txt += " " + self.heard.get_nowait()
+        return txt
 
     async def conversation(self) -> None:
         self.heard: asyncio.Queue = asyncio.Queue()
@@ -405,6 +450,8 @@ class Session:
             self.slide_idx = i
             n = await self.ask("narrate")
             await self.say(n.get("say") or "")
+            if self.stop.is_set():
+                break
             q = await self.wait_question(4)
             while q and not self.stop.is_set():   # preguntas del cliente sobre esta diapositiva
                 await self.answer(q)
@@ -455,7 +502,7 @@ class Session:
             while not self.stop.is_set() and not conv.done():
                 await asyncio.sleep(2)
                 idle = 0 if self.humans() else idle + 2
-                if idle > 90:   # sala sin personas: se va
+                if idle > (15 if self.guest else 120):   # sala sin personas: se va (pronto si ya había conversado)
                     break
             conv.cancel()
             vl.cancel()

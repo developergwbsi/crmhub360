@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.31] - 2026-11-05
+
+### Cambiado
+- Presentadora virtual: voz neural colombiana (es-CO) por defecto, imagen de orbe de marca en lugar del dibujo, tono paisa cálido, junta lo que dice el cliente en un solo turno, ignora las repeticiones inventadas por el reconocedor de voz y, si el cliente se despide, se despide y sale de la sala (y se va pronto si la sala se queda sin personas).
+
 ## [1.27.30] - 2026-11-05
 
 ### Añadido
