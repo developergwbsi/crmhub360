@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import pin as pinmod, ramp, bi, brand, chatbot, products, report, wallet, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import pin as pinmod, ramp, bi, brand, chatbot, products, report, wallet, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, presenter, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -59,6 +59,7 @@ async def lifespan(_: FastAPI):
     usage.ensure_schema()
     meet.ensure_schema()
     meet_summary.ensure_schema()
+    presenter.ensure_schema()
     templates.ensure_schema()
     bg = asyncio.create_task(broadcast.worker())
     mb = asyncio.create_task(mailbox.worker())
@@ -66,8 +67,10 @@ async def lifespan(_: FastAPI):
     ms = asyncio.create_task(meet_summary.loop())
     gr = asyncio.create_task(growth.loop())
     pl = asyncio.create_task(pipeline.worker())
+    pr = asyncio.create_task(presenter.worker())
     yield
     pl.cancel()
+    pr.cancel()
     ms.cancel()
     gr.cancel()
     bg.cancel()
@@ -3172,3 +3175,47 @@ async def pin_remove(userId: str, tenant: dict = Depends(tenant_auth)):
 if __name__ == "__main__":
     uvicorn.run(app, host=config.HUB_BIND_HOST, port=config.HUB_PORT)
 
+
+class PresenterTurn(BaseModel):
+    key: str = ""
+    kind: str = "answer"
+    slide: int = 0
+    heard: str = ""
+    history: list[dict] = []
+    guest: str = ""
+
+
+class PresenterStart(BaseModel):
+    code: str
+
+
+@app.get("/v1/presenter/{code}/plan")
+async def presenter_plan(code: str, key: str = ""):
+    """Plan de la presentadora virtual (solo para su servicio, con la clave de la sala)."""
+    if not presenter.key_ok(code, key):
+        raise HTTPException(401, "No autorizado")
+    try:
+        return await asyncio.to_thread(presenter.plan, code)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.post("/v1/presenter/{code}/turn")
+async def presenter_turn(code: str, req: PresenterTurn):
+    if not presenter.key_ok(code, req.key):
+        raise HTTPException(401, "No autorizado")
+    try:
+        return await presenter.turn(code, req.model_dump())
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.post("/v1/presenter/start")
+async def presenter_start(req: PresenterStart, tenant: dict = Depends(tenant_auth)):
+    """Manda a la presentadora virtual a una sala de este tenant (prueba o demostración manual)."""
+    try:
+        return await presenter.start(tenant, req.code)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo iniciar la presentadora: {str(e)[:120]}")

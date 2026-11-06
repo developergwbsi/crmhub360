@@ -96,6 +96,19 @@ services:
       STT_MODEL: ${STT_MODEL:-small}
       STT_THREADS: ${STT_THREADS:-4}
 
+  # Presentadora virtual de las videollamadas: entra a la sala como una participante más (avatar animado, voz local en español y pantalla compartida con las diapositivas).
+  # Solo escucha en 127.0.0.1:8196; el Hub la arranca con un token derivado del secreto de LiveKit. Se activa por empresa en settings.presenter.enabled.
+  presenter:
+    build: ./presenter-service
+    container_name: crmhub-presenter
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      HUB_URL: http://127.0.0.1:${HUB_PORT}
+      STT_URL: http://127.0.0.1:8197
+      PRESENTER_PORT: ${PRESENTER_PORT:-8196}
+
   # Navegador automático (Chromium con Playwright) para las consultas web con login y navegación: grabar un flujo viendo la página y ejecutarlo sin pantalla.
   # Solo escucha en 127.0.0.1:8198; revisa cada petición para no alcanzar redes privadas; el Hub lo llama con BROWSER_TOKEN.
   browser:

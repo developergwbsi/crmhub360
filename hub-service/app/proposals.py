@@ -3,6 +3,7 @@ Cada empresa tiene las suyas (tabla proposals) y puede activarlas o apagarlas; e
 Reglas de contenido: sin precios, sin promesas de resultados, sin testimonios ni cifras inventadas. Las páginas son HTML autocontenido con ilustraciones SVG (sin recursos externos).
 Se sirven en https://<MEET_HOST>/p/<empresa>/<slug> (ver main.py: /v1/public/meet/p/...)."""
 import base64
+import re
 import html as _h
 import os
 
@@ -626,6 +627,40 @@ h1{font-size:22pt}h2{font-size:15pt;margin:7mm 0 2mm;break-after:avoid}.lead{mar
 def pdf_html(page: str) -> str:
     """La presentación completa (la misma de la página pública) lista para imprimir en A4: el PDF lleva TODO el contenido del enlace."""
     return page.replace("</head>", PRINT_CSS + "</head>", 1)
+
+
+SLIDE_CSS = """<style>
+@page{size:1280px 720px;margin:30px 44px}
+body{background:#fff!important;font-size:19px}.wrap{max-width:none!important;padding:0!important}
+header.top,.btn,.hero:after,footer,.cta{display:none!important}
+.hero{break-after:page;padding:150px 70px!important;margin:0!important;border-radius:0!important;-webkit-print-color-adjust:exact}.hero h1{font-size:50px}.hero p{font-size:24px}
+h2{break-before:page;font-size:34px;margin:0 0 12px}.lead{font-size:20px;margin:0 0 12px;max-width:none}
+.grid{grid-template-columns:repeat(3,1fr)!important;gap:12px!important}.card{padding:12px 14px;break-inside:avoid}.card h3{font-size:18px;margin:6px 0 3px}.card p{font-size:14.5px;line-height:1.4}
+.ic{width:30px;height:30px}
+.fig{break-inside:avoid;padding:8px;margin:8px 0}.fig img,.fig img.wide{max-height:430px;width:auto!important;max-width:100%!important;margin:0 auto}.fig svg{max-height:430px;width:100%}.cap{font-size:13px}
+.phones img{width:24%!important;max-width:none!important}
+.steps div{break-inside:avoid}
+</style>"""
+
+
+def slides_pdf(tenant: str, slug: str) -> tuple[bytes | None, list[str]]:
+    """La presentación como diapositivas 16:9 (una por sección) para compartirla en pantalla en una videollamada, con el texto de cada una."""
+    with db.pool.connection() as c:
+        r = c.execute("SELECT html FROM proposals WHERE tenant=%s AND slug=%s AND active AND ext_url=''", (tenant, slug)).fetchone()
+        t = c.execute("SELECT name FROM tenants WHERE slug=%s", (tenant,)).fetchone()
+    if not r:
+        return None, []
+    html = r["html"].replace("</head>", SLIDE_CSS + "</head>", 1)
+    pdf = make_pdf(html)
+    texts: list[str] = []
+    if pdf:
+        try:
+            import io
+            from pypdf import PdfReader
+            texts = [re.sub(r"\s+", " ", (p.extract_text() or "")).strip() for p in PdfReader(io.BytesIO(pdf)).pages]
+        except Exception:
+            texts = []
+    return pdf, texts
 
 
 def seed_defaults(tenant: str, company: str, wa: str) -> int:

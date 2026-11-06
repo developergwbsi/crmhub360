@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.26] - 2026-11-05
+
+### Añadido
+- **Presentadora virtual de videollamadas** (servicio nuevo `presenter`): entra a la sala de la demo como una participante más, con avatar animado, voz local en español y pantalla compartida con las diapositivas de la presentación; escucha al cliente (voz a texto local), responde con el modelo de la empresa, cede la palabra si entra el anfitrión humano o el cliente pide a una persona, avisa al anfitrión y deja la conversación anotada en el lead. Se activa por empresa (`settings.presenter.enabled`) y solo atiende las demos que agendó el comercial virtual; recordatorio al anfitrión antes de cada demo.
+
 ## [1.27.25] - 2026-11-05
 
 ### Corregido
