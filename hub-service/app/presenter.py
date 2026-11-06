@@ -76,7 +76,7 @@ def plan(code: str) -> dict:
             "slides": [{"n": i, "text": t} for i, t in enumerate(texts)], "pdf_b64": base64.b64encode(pdf).decode() if pdf else ""}
 
 
-TURN_SCHEMA = {"type": "object", "properties": {"say": {"type": "string"}, "slide": {"type": ["integer", "null"]}, "handoff": {"type": "boolean"}}, "required": ["say", "handoff"]}
+TURN_SCHEMA = {"type": "object", "properties": {"say": {"type": "string"}, "slide": {"type": ["integer", "null"]}, "handoff": {"type": "boolean"}, "advisor": {"type": "boolean"}}, "required": ["say", "handoff"]}
 
 
 def _speakable(t: str) -> str:
@@ -106,8 +106,8 @@ async def turn(code: str, b: dict) -> dict:
               f"SOBRE LA EMPRESA:\n{co.get('about', '')}\n\nSERVICIOS:\n{co.get('services', '')}\n\nPOLÍTICAS:\n{co.get('policies', '')}\n\n"
               f"DIAPOSITIVAS (número: inicio):\n{titles}\n\nDIAPOSITIVA ACTUAL ({idx}):\n{texts[idx][:2500] if texts else '(sin diapositivas)'}\n\n"
               "REGLAS: usa SOLO la información de arriba; no inventes precios, plazos, cifras ni funciones. Si preguntan por precios, contratos, condiciones o algo que no esté arriba, di que un asesor lo confirmará "
-              "y pon handoff=true. Si el cliente pide hablar con una persona, handoff=true. Si pide ver otra parte, pon en `slide` el número de la diapositiva que corresponde (si no, null). "
-              "Responde SOLO con el JSON pedido: {say, slide, handoff}.")
+              "y pon advisor=true (sigues con la demo; el anfitrión recibe un aviso). Si el cliente pide hablar con una persona o está molesto, pon handoff=true (cedes la palabra). Si pide ver otra parte, pon en `slide` el número de la diapositiva que corresponde (si no, null). "
+              "Responde SOLO con el JSON pedido: {say, slide, handoff, advisor}.")
     hist = "\n".join(f"{'Cliente' if h.get('who') == 'cliente' else 'Tú'}: {h.get('text', '')}" for h in (b.get("history") or [])[-8:])
     task = {"greet": f"Saluda a {guest or 'tu cliente'} en máximo dos frases, preséntate como asistente virtual de {tenant.get('name') or 'la empresa'} y di que lo acompañarás en esta demostración; pregunta si empiezan.",
             "narrate": "Explica esta diapositiva al cliente en 2 a 4 frases habladas (máximo 60 palabras): qué es y para qué le sirve a su negocio. No leas el texto; cuéntalo. No saludes de nuevo.",
@@ -124,8 +124,8 @@ async def turn(code: str, b: dict) -> dict:
         t.append(f"Cliente: {b.get('heard', '')}")
     if say:
         t.append(f"{p.get('name') or 'Valeria'} (asistente virtual): {say}")
-    if handoff:
-        await _handoff(tenant, r, code, b.get("heard") or "")
+    if handoff or d.get("advisor"):
+        await _handoff(tenant, r, code, b.get("heard") or "", standby=handoff)
     return {"say": say, "slide": d.get("slide") if isinstance(d.get("slide"), int) else None, "handoff": handoff}
 
 
@@ -134,15 +134,15 @@ def _host_id(tenant: dict, lead_id: str = "") -> str:
     return ((ag.get("closer") or {}).get("host_user_id")) or ag.get("handoff_user_id") or ""
 
 
-async def _handoff(tenant: dict, r: dict, code: str, why: str) -> None:
+async def _handoff(tenant: dict, r: dict, code: str, why: str, standby: bool = True) -> None:
     with db.pool.connection() as c:
-        row = c.execute("UPDATE presenter_runs SET handoff=true WHERE code=%s AND NOT handoff RETURNING code", (code,)).fetchone()
+        row = c.execute("UPDATE presenter_runs SET handoff=true WHERE code=%s AND NOT handoff RETURNING code", (code,)).fetchone() if standby else c.execute("SELECT code FROM presenter_runs WHERE code=%s", (code,)).fetchone()
     if not row:
         return
     slug, lead_id = r["tenant"], r.get("lead_id") or ""
     try:
-        agent.log_event(slug, lead_id, "escalate", channel="video", title="La presentadora virtual pasa la demo a una persona", detail=why[:300])
-        await push.send(slug, title="Un cliente espera a una persona en la demo", body=(why or "Pidió hablar con un asesor")[:140], url=f"/#Lead/view/{lead_id}" if lead_id else "/", tag=f"crmhub-demo-{code}", kind="agent", user_id=_host_id(tenant))
+        agent.log_event(slug, lead_id, "escalate", channel="video", title="La presentadora virtual pasa la demo a una persona" if standby else "El cliente preguntó algo para un asesor (la demo sigue)", detail=why[:300])
+        await push.send(slug, title="Un cliente espera a una persona en la demo" if standby else "Pregunta para un asesor en la demo", body=(why or "Pidió hablar con un asesor")[:140], url=f"/#Lead/view/{lead_id}" if lead_id else "/", tag=f"crmhub-demo-{code}", kind="agent", user_id=_host_id(tenant))
     except Exception as e:
         log.warning("aviso de traspaso: %s", str(e)[:120])
 

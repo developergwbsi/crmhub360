@@ -296,6 +296,8 @@ class Session:
                 await self.answer(h)
         i = 0
         while i < len(self.slides) and not self.stop.is_set():
+            if not self.humans():   # el cliente se fue: no sigue presentando a una sala vacía
+                break
             if self.standby:
                 await asyncio.sleep(2)
                 if not self.humans():
@@ -318,7 +320,6 @@ class Session:
             while q and not self.stop.is_set():
                 await self.answer(q)
                 q = await self.wait_question(20)
-        await self.ask("end")
 
     # ---------- ciclo de vida
     async def run(self) -> None:
@@ -362,6 +363,10 @@ class Session:
             log.exception("[%s] sesión terminada con error", self.r.code)
         finally:
             self.stop.set()
+            try:
+                await self.hub("POST", "turn", {"kind": "end", "history": self.history[-8:], "guest": self.guest})   # el Hub anota la demostración en el lead
+            except Exception as e:
+                log.warning("cierre en el Hub: %s", str(e)[:100])
             try:
                 await self.room.disconnect()
             except Exception:
