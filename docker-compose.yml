@@ -105,7 +105,7 @@ services:
     network_mode: host
     environment:
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
-      HUB_URL: http://127.0.0.1:${HUB_PORT}
+      HUB_URL: http://${HUB_BIND_HOST}:${HUB_PORT}
       STT_URL: http://127.0.0.1:8197
       PRESENTER_PORT: ${PRESENTER_PORT:-8196}
 

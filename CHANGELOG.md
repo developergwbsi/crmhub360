@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.27] - 2026-11-05
+
+### Corregido
+- Presentadora virtual: las rutas con las que el servicio consulta al Hub no estaban registradas al arrancar (404) y el servicio apuntaba a una dirección donde el Hub no escucha.
+
 ## [1.27.26] - 2026-11-05
 
 ### Añadido

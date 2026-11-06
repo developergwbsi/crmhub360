@@ -3172,10 +3172,6 @@ async def pin_remove(userId: str, tenant: dict = Depends(tenant_auth)):
     return {"ok": True}
 
 
-if __name__ == "__main__":
-    uvicorn.run(app, host=config.HUB_BIND_HOST, port=config.HUB_PORT)
-
-
 class PresenterTurn(BaseModel):
     key: str = ""
     kind: str = "answer"
@@ -3219,3 +3215,7 @@ async def presenter_start(req: PresenterStart, tenant: dict = Depends(tenant_aut
         raise HTTPException(404, str(e))
     except Exception as e:
         raise HTTPException(502, f"No se pudo iniciar la presentadora: {str(e)[:120]}")
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host=config.HUB_BIND_HOST, port=config.HUB_PORT)
