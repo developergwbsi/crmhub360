@@ -2,7 +2,7 @@
 
 FastAPI en `172.28.0.1:8190`. Autenticación: `tenant_auth` (token del tenant, lo usan EspoCRM y el CRM por PHP), `X-Admin-Token` (administración) o ninguna (webhooks y formularios públicos, que se validan por su cuenta).
 
-Total: **233** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
+Total: **236** endpoints. *Generado por `bin/gen-docs` a partir de las docstrings de `hub-service/app/main.py`.*
 
 | Método | Ruta | Función | Descripción |
 |---|---|---|---|
@@ -125,6 +125,9 @@ Total: **233** endpoints. *Generado por `bin/gen-docs` a partir de las docstring
 | GET | `/v1/pin/status` | `pin_status` | — |
 | POST | `/v1/pin/verify` | `pin_verify` | — |
 | POST | `/v1/pipeline/run` | `pipeline_run` | Una pasada completa ahora mismo: busca, califica y pasa los mejores al comercial virtual. |
+| POST | `/v1/presenter/start` | `presenter_start` | Manda a la presentadora virtual a una sala de este tenant (prueba o demostración manual). |
+| GET | `/v1/presenter/{code}/plan` | `presenter_plan` | Plan de la presentadora virtual (solo para su servicio, con la clave de la sala). |
+| POST | `/v1/presenter/{code}/turn` | `presenter_turn` | — |
 | GET | `/v1/presets` | `presets_get` | Mensajes predefinidos de WhatsApp (saludo, fuera de horario, menú y palabras clave). |
 | PUT | `/v1/presets` | `presets_save` | — |
 | GET | `/v1/process/runs` | `proc_runs` | Historial de ejecuciones de procesos (de un lead o del tenant). |
