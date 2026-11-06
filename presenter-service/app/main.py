@@ -185,6 +185,7 @@ class Session:
         self.slides: list[bytes] = []
         self.texts: list[str] = []
         self.utter: asyncio.Queue = asyncio.Queue()
+        self.heard: asyncio.Queue = asyncio.Queue()
         self.history: list[dict] = []
         self.guest = ""
         self.t0 = time.monotonic()
@@ -264,59 +265,73 @@ class Session:
             await asyncio.sleep(max(0.0, 1 / 15 - (time.monotonic() - self.t0 - t)))   # 15 fps, descontando lo que tardó en dibujar
 
     # ---------- voz
+    @staticmethod
+    def _parts(text: str) -> list[str]:
+        """Divide el texto en frases (las muy cortas se unen a la siguiente): se sintetizan a la vez y empieza a hablar con la primera."""
+        out: list[str] = []
+        for x in (x.strip() for x in re.split(r"(?<=[.!?…])\s+", text) if x.strip()):
+            if out and len(out[-1]) < 40:
+                out[-1] += " " + x
+            else:
+                out.append(x)
+        return out or [text]
+
     async def say(self, text: str) -> None:
         """Habla el texto (se puede interrumpir si el cliente empieza a hablar)."""
         text = (text or "").strip()
         if not text or self.stop.is_set():
             return
         log.info("[%s] dice: %s", self.r.code, text[:120])
-        if self.simli:
-            await self.say_simli(text)
-            return
-        pcm = await asyncio.to_thread(synth, text)
+        rate = 16000 if self.simli else SR_OUT
+        tasks = [asyncio.create_task(asyncio.to_thread(synth, p, rate)) for p in self._parts(text)]
         self.cancel = False
         self.speaking = True
-        start = time.monotonic()
-        step = SR_OUT // 50   # 20 ms
         try:
-            for k, i in enumerate(range(0, len(pcm), step)):
-                if self.cancel or self.stop.is_set():
+            for i, t in enumerate(tasks):
+                if self.cancel or self.stop.is_set() or not self.heard.empty():
                     break
-                chunk = pcm[i:i + step]
-                if len(chunk) < step:
-                    chunk = np.pad(chunk, (0, step - len(chunk)))
-                fr = rtc.AudioFrame.create(SR_OUT, 1, step)
-                np.frombuffer(fr.data, dtype=np.int16)[:] = chunk
-                await self.asrc.capture_frame(fr)
-                self.level = min(1.0, float(np.sqrt(np.mean(chunk.astype(np.float32) ** 2))) / 5500.0 * 1.6)
-                wait = start + (k + 1) * 0.02 - 0.12 - time.monotonic()   # va ~120 ms por delante del reloj
-                if wait > 0:
-                    await asyncio.sleep(wait)
-            if self.cancel:
-                self.asrc.clear_queue()
-            else:
-                await self.asrc.wait_for_playout()
+                pcm = await t
+                if self.simli:
+                    await self.play_simli(pcm)
+                else:
+                    await self.play(pcm, i == len(tasks) - 1)
         finally:
+            for t in tasks:
+                t.cancel()
             self.speaking = False
             self.level = 0.0
         self.history.append({"who": "ella", "text": text})
 
-    async def say_simli(self, text: str) -> None:
+    async def play(self, pcm: np.ndarray, last: bool) -> None:
+        start = time.monotonic()
+        step = SR_OUT // 50   # 20 ms
+        for k, i in enumerate(range(0, len(pcm), step)):
+            if self.cancel or self.stop.is_set() or not self.heard.empty():   # el cliente habló (aunque su voz se transcriba con retraso): ella calla
+                break
+            chunk = pcm[i:i + step]
+            if len(chunk) < step:
+                chunk = np.pad(chunk, (0, step - len(chunk)))
+            fr = rtc.AudioFrame.create(SR_OUT, 1, step)
+            np.frombuffer(fr.data, dtype=np.int16)[:] = chunk
+            await self.asrc.capture_frame(fr)
+            self.level = min(1.0, float(np.sqrt(np.mean(chunk.astype(np.float32) ** 2))) / 5500.0 * 1.6)
+            wait = start + (k + 1) * 0.02 - 0.12 - time.monotonic()   # va ~120 ms por delante del reloj
+            if wait > 0:
+                await asyncio.sleep(wait)
+        if self.cancel or not self.heard.empty():
+            self.asrc.clear_queue()
+        elif last:
+            await self.asrc.wait_for_playout()
+
+    async def play_simli(self, pcm: np.ndarray) -> None:
         """Con la cara de Simli: se le envía la voz (16 kHz) y ella la devuelve ya sincronizada con los labios; aquí solo se espera lo que dura."""
-        pcm = await asyncio.to_thread(synth, text, 16000)
-        self.cancel = False
-        self.speaking = True
-        try:
-            await self.simli.send(pcm.tobytes())
-            end = time.monotonic() + len(pcm) / 16000 + 0.4
-            while time.monotonic() < end and not self.stop.is_set():
-                if self.cancel:   # el cliente la interrumpe
-                    await self.simli.clearBuffer()
-                    break
-                await asyncio.sleep(0.05)
-        finally:
-            self.speaking = False
-        self.history.append({"who": "ella", "text": text})
+        await self.simli.send(pcm.tobytes())
+        end = time.monotonic() + len(pcm) / 16000 + 0.2
+        while time.monotonic() < end and not self.stop.is_set():
+            if self.cancel or not self.heard.empty():   # el cliente la interrumpe
+                await self.simli.clearBuffer()
+                break
+            await asyncio.sleep(0.05)
 
     async def transcribe(self, pcm16k: bytes) -> str:
         buf = io.BytesIO()
@@ -352,7 +367,7 @@ class Session:
                 self.noise = 0.98 * self.noise + 0.02 * rms
             if voiced:
                 buf += a.tobytes()
-                if now - last_voice > 0.9 or now - started > 20:
+                if now - last_voice > 0.7 or now - started > 20:
                     if len(buf) > 16000 * 2 * 0.5:
                         await self.utter.put((who, bytes(buf)))
                     buf, voiced = bytearray(), False
@@ -406,13 +421,12 @@ class Session:
             txt = await asyncio.wait_for(self.heard.get(), secs)
         except asyncio.TimeoutError:
             return None
-        await asyncio.sleep(0.8)
+        await asyncio.sleep(0.5)
         while not self.heard.empty():
             txt += " " + self.heard.get_nowait()
         return txt
 
     async def conversation(self) -> None:
-        self.heard: asyncio.Queue = asyncio.Queue()
         asyncio.create_task(self.utterances())
         # espera a que entre alguien (hasta 25 min); si ya hay un anfitrión humano, solo acompaña en silencio
         waited = 0
@@ -449,10 +463,15 @@ class Session:
                 continue
             self.slide_idx = i
             n = await self.ask("narrate")
+            if not self.heard.empty():   # el cliente habló mientras ella preparaba la explicación: primero se le atiende
+                q = await self.wait_question(0.1)
+                if q:
+                    await self.answer(q)
+                    continue
             await self.say(n.get("say") or "")
             if self.stop.is_set():
                 break
-            q = await self.wait_question(4)
+            q = await self.wait_question(2.5)
             while q and not self.stop.is_set():   # preguntas del cliente sobre esta diapositiva
                 await self.answer(q)
                 if self.standby:

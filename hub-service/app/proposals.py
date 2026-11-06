@@ -629,6 +629,8 @@ def pdf_html(page: str) -> str:
     return page.replace("</head>", PRINT_CSS + "</head>", 1)
 
 
+_SLIDES: dict = {}   # (empresa, presentación, versión) → (PDF de diapositivas, texto de cada una)
+
 SLIDE_CSS = """<style>
 @page{size:1280px 720px;margin:30px 44px}
 body{background:#fff!important;font-size:19px}.wrap{max-width:none!important;padding:0!important}
@@ -646,10 +648,12 @@ h2{break-before:page;font-size:34px;margin:0 0 12px}.lead{font-size:20px;margin:
 def slides_pdf(tenant: str, slug: str) -> tuple[bytes | None, list[str]]:
     """La presentación como diapositivas 16:9 (una por sección) para compartirla en pantalla en una videollamada, con el texto de cada una."""
     with db.pool.connection() as c:
-        r = c.execute("SELECT html FROM proposals WHERE tenant=%s AND slug=%s AND active AND ext_url=''", (tenant, slug)).fetchone()
-        t = c.execute("SELECT name FROM tenants WHERE slug=%s", (tenant,)).fetchone()
+        r = c.execute("SELECT html, updated_at FROM proposals WHERE tenant=%s AND slug=%s AND active AND ext_url=''", (tenant, slug)).fetchone()
     if not r:
         return None, []
+    ck = (tenant, slug, r["updated_at"])
+    if ck in _SLIDES:   # generar las diapositivas tarda varios segundos: se guardan hasta que cambie la presentación
+        return _SLIDES[ck]
     html = r["html"].replace("</head>", SLIDE_CSS + "</head>", 1)
     pdf = make_pdf(html)
     texts: list[str] = []
@@ -660,6 +664,10 @@ def slides_pdf(tenant: str, slug: str) -> tuple[bytes | None, list[str]]:
             texts = [re.sub(r"\s+", " ", (p.extract_text() or "")).strip() for p in PdfReader(io.BytesIO(pdf)).pages]
         except Exception:
             texts = []
+    if pdf:
+        for k in [k for k in _SLIDES if k[:2] == (tenant, slug)]:
+            _SLIDES.pop(k, None)
+        _SLIDES[ck] = (pdf, texts)
     return pdf, texts
 
 

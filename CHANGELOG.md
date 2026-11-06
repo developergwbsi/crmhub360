@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.32] - 2026-11-05
+
+### Cambiado
+- Presentadora virtual más ágil: habla frase por frase (empieza con la primera mientras prepara las demás), calla en cuanto el cliente habla aunque su voz se transcriba con retraso, y atiende primero lo que dijo el cliente antes de seguir con la explicación.
+
+### Corregido
+- Presentadora virtual: cada respuesta tardaba entre 15 y 30 segundos porque volvía a generar las diapositivas en cada turno; ahora se guardan. Además no asume el género de la persona (nada de «señora»), y si le preguntan con qué IA funciona, responde con honestidad (modelo, voz y reconocimiento).
+
 ## [1.27.31] - 2026-11-05
 
 ### Cambiado

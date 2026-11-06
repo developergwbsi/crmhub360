@@ -100,9 +100,15 @@ async def turn(code: str, b: dict) -> dict:
     idx = max(0, min(int(b.get("slide") or 0), max(0, len(texts) - 1)))
     titles = "\n".join(f"{i}: {(t[:70])}" for i, t in enumerate(texts))
     guest = (b.get("guest") or r.get("guest_name") or "").strip()
+    try:
+        eng = llm.resolve(tenant)
+        tech = f"Funcionas con inteligencia artificial: el modelo de lenguaje es {eng.get('model') or 'un modelo de lenguaje'} ({'de Anthropic, la familia Claude' if eng.get('kind') == 'anthropic' else eng.get('label') or ''}), con reconocimiento de voz propio y una voz sintética neural colombiana. Si te preguntan con qué agente, motor o tecnología funcionas, díselo con honestidad y sencillez."
+    except Exception:
+        tech = "Funcionas con inteligencia artificial; si te preguntan por tu tecnología, dilo con honestidad."
     system = (f"Eres {p.get('name') or 'Valeria'}, asistente virtual de {tenant.get('name') or 'la empresa'}. Estás en una videollamada de demostración EN VIVO con {guest or 'un posible cliente'} y hablas por voz: "
               "frases cortas y naturales, en español, con el tono de una paisa colombiana profesional: amable, cercana y cálida, con expresiones suaves como «con mucho gusto», «claro que sí», «listo», «perfecto» o «mire que…», sin groserías ni exageraciones; sin listas, sin símbolos, sin viñetas ni markdown, y sin leer textualmente. Escribe las siglas y números como se pronuncian "
-              "(por ejemplo «veinticuatro siete», «ce erre eme»). Eres una asistente virtual y lo dices con honestidad si te lo preguntan.\n\n"
+              "(por ejemplo «veinticuatro siete», «ce erre eme»). Eres una asistente virtual y lo dices con honestidad si te lo preguntan. No asumas el género de la persona: nunca la llames «señor» ni «señora»; trátala por su nombre de pila. "
+              f"{tech}\n\n"
               f"SOBRE LA EMPRESA:\n{co.get('about', '')}\n\nSERVICIOS:\n{co.get('services', '')}\n\nPOLÍTICAS:\n{co.get('policies', '')}\n\n"
               f"DIAPOSITIVAS (número: inicio):\n{titles}\n\nDIAPOSITIVA ACTUAL ({idx}):\n{texts[idx][:2500] if texts else '(sin diapositivas)'}\n\n"
               "REGLAS: usa SOLO la información de arriba; no inventes precios, plazos, cifras ni funciones. Si preguntan por precios, contratos, condiciones o algo que no esté arriba, di que un asesor lo confirmará "
@@ -114,7 +120,7 @@ async def turn(code: str, b: dict) -> dict:
             "answer": f"El cliente dijo: «{b.get('heard', '')}». Respóndele de forma directa en máximo 50 palabras y, si corresponde, invítalo a seguir.",
             "close": "Cierra la demostración: resume en una frase lo visto y di que un asesor lo contactará para los siguientes pasos; pregunta si le queda alguna duda."}.get(kind, "Continúa.")
     try:
-        d = await llm.chat_json(tenant, system, f"CONVERSACIÓN HASTA AHORA:\n{hist or '(inicio)'}\n\nTAREA: {task}", TURN_SCHEMA, 500)
+        d = await llm.chat_json(tenant, system, f"CONVERSACIÓN HASTA AHORA:\n{hist or '(inicio)'}\n\nTAREA: {task}", TURN_SCHEMA, 350)
     except Exception as e:
         log.warning("turno de la presentadora: %s", str(e)[:150])
         d = {"say": "", "slide": None, "handoff": False}
