@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.24] - 2026-11-05
+
+### Cambiado
+- Correos de Valeria: los enlaces (WhatsApp, videollamada, presentación) salen como botones, la tarjeta de la presentación solo va en el primer contacto y la despedida va dentro de la firma. Al contestar, Valeria responde a lo que el cliente dijo (si pide reunión, propone horarios) sin reexplicar ni reenviar material.
+
 ## [1.27.23] - 2026-11-05
 
 ### Corregido
