@@ -4,6 +4,7 @@
 
 ## Sin publicar (después de v1.27.38)
 
+- `c4289fb` 2026-11-07 — Versión 1.27.39
 - `fad25cb` 2026-11-07 — Versión 1.27.39
 
 ## v1.27.38
