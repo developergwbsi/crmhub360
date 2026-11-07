@@ -53,7 +53,7 @@ async def handle(tenant: dict, event: dict) -> bool:
     lead_id, lname = found
     url = str((ev.get("click") or {}).get("link") or "")[:300]
     with db.pool.connection() as c:
-        if kind in ("opened", "delivered") and c.execute("SELECT 1 FROM agent_events WHERE tenant=%s AND lead_id=%s AND kind='mail' AND data->>'event'=%s AND at > now() - interval %s", (slug, lead_id, kind, "30 minutes" if kind == "opened" else "2 minutes")).fetchone():
+        if kind in ("opened", "delivered") and c.execute("SELECT 1 FROM agent_events WHERE tenant=%s AND lead_id=%s AND kind='mail' AND data->>'event'=%s AND at > now() - make_interval(mins => %s)", (slug, lead_id, kind, 30 if kind == "opened" else 2)).fetchone():
             return False   # aperturas repetidas en pocos minutos (precarga de los filtros) y avisos duplicados no se cuentan
     agent.log_event(slug, lead_id, "mail", lead_name=lname or "", channel="email", title=TITLE[kind], detail=url, data={"event": kind, "to": addr, "email_id": ev.get("email_id"), "url": url, "subject": str(ev.get("subject") or "")[:200]})
     if kind in ("opened", "clicked"):

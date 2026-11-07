@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.38] - 2026-11-07
+
+### Corregido
+- Seguimiento de correos: la consulta que evita contar dos veces la misma apertura daba error y no se guardaba ninguna señal.
+
 ## [1.27.37] - 2026-11-07
 
 ### Añadido
