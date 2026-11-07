@@ -1,6 +1,6 @@
 # Rutas de EspoCRM (`/api/v1/...`)
 
-Total: **204** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
+Total: **205** rutas personalizadas (`customizations/Espo/Custom/Resources/routes.json`). La mayoría exige sesión de usuario; las marcadas «admin» solo el administrador. *Generado por `bin/gen-docs`.*
 
 | Método | Ruta | Controlador · acción | Descripción |
 |---|---|---|---|
@@ -208,3 +208,4 @@ Total: **204** rutas personalizadas (`customizations/Espo/Custom/Resources/route
 | POST | `/CrmHubPin/login` | CrmHubPin.login | — |
 | POST | `/CrmHubSupport/exchange` | CrmHubSupport.exchange | — |
 | POST | `/Lead/:id/ai/:action` | Lead.aiAssist | — |
+| POST | `/User/passwordChangeRequest` | Api.PostPasswordChangeRequest | Reemplaza la ruta de EspoCRM (ver la cabecera de la clase). |

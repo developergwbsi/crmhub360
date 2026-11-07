@@ -108,6 +108,10 @@ def espo_routes() -> str:
         docs[(m.group(2), m.group(3).lower())] = " ".join(re.sub(r"^\s*(/\*\*|\*/|\*)\s?", "", l).strip() for l in m.group(1).splitlines() if l.strip() not in ("/**", "*/")).strip()
     rows = []
     for r in routes:
+        if "params" not in r:   # ruta con clase de acción propia (sustituye una de EspoCRM)
+            cls = r.get("actionClassName", "").split("\\")[-1]
+            rows.append((r["route"], r["method"].upper(), "Api", cls, "Reemplaza la ruta de EspoCRM (ver la cabecera de la clase)."))
+            continue
         a = r["params"]["action"]
         rows.append((r["route"], r["method"].upper(), r["params"]["controller"], a, docs.get((r["method"].lower(), a.lower()), "")))
     rows.sort()
