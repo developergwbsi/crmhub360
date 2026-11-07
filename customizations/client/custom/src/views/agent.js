@@ -11,7 +11,7 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
     const DAYS = [[1, 'Lun'], [2, 'Mar'], [3, 'Mié'], [4, 'Jue'], [5, 'Vie'], [6, 'Sáb'], [7, 'Dom']];
     const TZ = ['America/Bogota', 'America/Lima', 'America/Mexico_City', 'America/Santiago', 'America/Argentina/Buenos_Aires', 'America/Caracas', 'America/Guayaquil', 'America/Panama', 'America/New_York', 'Europe/Madrid'];
     const ACT = {send: 'Escribiría al cliente', wait: 'Esperaría', escalate: 'Pasaría el caso a una persona', close: 'Cerraría la conversación'};
-    const KIND = {send: 'Mensaje enviado', inbound: 'Cliente escribió', status: 'Cambio de estado', escalate: 'Pasó a una persona', close: 'Conversación cerrada', wait: 'En espera', stop: 'Detenido', error: 'Error', control: 'Control manual', queued: 'En cola'};
+    const KIND = {send: 'Mensaje enviado', inbound: 'Cliente escribió', status: 'Cambio de estado', escalate: 'Pasó a una persona', close: 'Conversación cerrada', wait: 'En espera', stop: 'Detenido', error: 'Error', control: 'Control manual', queued: 'En cola', mail: 'Correo'};
     const when = d => { try { return new Date(d).toLocaleString('es', {dateStyle: 'short', timeStyle: 'short'}); } catch (e) { return d || ''; } };
 
     return class extends Dep {

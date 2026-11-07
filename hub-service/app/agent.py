@@ -867,6 +867,15 @@ async def decide(tenant: dict, cfg: dict, lead: dict, hist: list[dict], kind: st
     if variant and kind in ("first", "followup"):
         user += (f"\n\nPROSPECCIÓN EN FRÍO (la persona NO nos ha escrito antes): {OUTBOUND_RULES.get(channel, '')}\nGANCHO DE ESTE MENSAJE (úsalo como enfoque, con tus palabras, sin copiarlo): {variant['angle']}\n"
                  "Sé específico con su sector o situación si lo conoces, no inventes datos, no prometas resultados y no presiones.")
+    if kind == "followup" and channel == "email":
+        try:
+            from . import mailtrack
+            sg = mailtrack.signals(tenant["slug"], lead.get("id") or "")
+        except Exception:
+            sg = ""
+        if sg:
+            user += (f"\n\nQUÉ PASÓ CON TU ÚLTIMO CORREO: {sg}. Úsalo solo para ajustar el enfoque: si NO se abrió, usa un asunto distinto y más corto; si se abrió o hizo clic, "
+                     "retoma con una pregunta concreta y fácil. NUNCA le digas que sabes si abrió el correo ni que lo rastreas; las aperturas son aproximadas.")
     if kind in ("first", "followup", "reply"):
         try:
             user += products.prompt_text(tenant["slug"])   # lo que la empresa ofrece: siempre presente, en cualquier canal
@@ -1360,7 +1369,7 @@ async def _after_send(tenant: dict, cfg: dict, lead: dict, row: dict, kind: str,
         _set(slug, lead_id, state="waiting_reply", attempts=attempts, last_out_at=now, next_at=now + timedelta(minutes=delay), next_kind="followup", errors=0)
         nxt = f"Próximo seguimiento en {delay // 60} h" if delay >= 60 else f"Próximo seguimiento en {delay} min"
     log_event(slug, lead_id, "send", lead_name=lead.get("name") or "", channel=channel, title={"first": "Primer contacto", "followup": f"Seguimiento {attempts}", "reply": "Respuesta al cliente"}[kind] + (f" · aprobado por {by}" if by else ""),
-              detail=message, reason=reason, sent=sent, dry=dry, data={"summary": summary, "next": nxt, "subject": subject, "kind": kind, **({"menu": menu} if menu else {}), **({"variant": variant, "step": step} if variant else {}), **({"response_seconds": first_response} if first_response is not None else {})})
+              detail=message, reason=reason, sent=sent, dry=dry, data={"summary": summary, "next": nxt, "subject": subject, "kind": kind, **({"to": str(lead["emailAddress"]).lower()} if channel == "email" and lead.get("emailAddress") else {}), **({"menu": menu} if menu else {}), **({"variant": variant, "step": step} if variant else {}), **({"response_seconds": first_response} if first_response is not None else {})})
 
 
 # ---------------- aprobación previa

@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.37] - 2026-11-07
+
+### Añadido
+- Seguimiento de los correos del comercial virtual: registra en el lead si el correo llegó, si lo abrieron y si hicieron clic (avisos de Resend). Esa información llega al comercial virtual: si no abrieron usa otro asunto, si abrieron o hicieron clic retoma con una pregunta concreta, y un clic o dos aperturas adelantan el seguimiento (nunca antes de 2 h) y avisan al responsable. Los rebotes y las quejas de spam de Resend también detienen al comercial virtual. Las aperturas son aproximadas.
+
 ## [1.27.36] - 2026-11-06
 
 ### Corregido

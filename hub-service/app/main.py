@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 import httpx
 
-from . import pin as pinmod, ramp, bi, brand, chatbot, products, report, wallet, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, presenter, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
+from . import pin as pinmod, ramp, bi, brand, chatbot, products, report, wallet, compliance, emailcheck, presets, finder, growth, pipeline, proposals, qualifier, prospects, recordings, iforms, meet, meet_summary, monitor, presenter, usage, form_templates, assistant, broadcast, config, credit, db, forms, httpgen, ingest, lines, push, qualify, sms, telegram, voice, whatsapp, mailbox, mailcfg, mailout, searchengines, resend_inbound, mailtrack, ollama, simulate, knowledge, templates, routing, processes, documents, agent, llm
 
 log = logging.getLogger("crmhub")
 logging.basicConfig(level=logging.INFO)
@@ -221,7 +221,10 @@ async def resend_mail_ingest(slug: str, request: Request):
     if tenant["status"] != "active":
         raise HTTPException(403, "Licencia suspendida o vencida")
     try:
-        return {"imported": await resend_inbound.handle(tenant, json.loads(body))}
+        ev = json.loads(body)
+        if str(ev.get("type") or "") in mailtrack.TYPES:   # entregado, abierto, clic, rebote, queja
+            return {"tracked": await mailtrack.handle(tenant, ev)}
+        return {"imported": await resend_inbound.handle(tenant, ev)}
     except Exception:
         log.exception("fallo al procesar un correo entrante de Resend")
         return {"imported": False}

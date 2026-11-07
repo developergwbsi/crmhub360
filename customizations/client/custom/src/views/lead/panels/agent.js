@@ -6,7 +6,7 @@
 define('custom:views/lead/panels/agent', ['views/record/panels/bottom', 'custom:ui', 'custom:tpl', 'custom:live-panel'], function (Dep, ChUi, Tpl, Live) {
     const esc = ChUi.esc;
     const K = {send: ['fas fa-paper-plane', '#4f63e8'], inbound: ['fas fa-reply', '#2fa36b'], status: ['fas fa-right-left', '#0d9488'], escalate: ['fas fa-user-tie', '#f59e0b'], close: ['fas fa-flag-checkered', '#64748b'],
-        wait: ['fas fa-hourglass-half', '#94a3b8'], stop: ['fas fa-ban', '#d64545'], error: ['fas fa-triangle-exclamation', '#d64545'], control: ['fas fa-sliders', '#7c3aed'], queued: ['fas fa-clock', '#94a3b8']};
+        wait: ['fas fa-hourglass-half', '#94a3b8'], stop: ['fas fa-ban', '#d64545'], error: ['fas fa-triangle-exclamation', '#d64545'], control: ['fas fa-sliders', '#7c3aed'], queued: ['fas fa-clock', '#94a3b8'], mail: ['fas fa-envelope-open', '#0ea5e9']};
     const STATE = {awaiting_approval: 'Esperando tu aprobación', active: 'Activo', waiting_reply: 'Esperando respuesta del cliente', paused: 'Pausado', escalated: 'Pasó a una persona', stopped: 'Detenido', cooled: 'Sin más seguimientos'};
     const when = d => { try { return new Date(d).toLocaleString('es', {dateStyle: 'short', timeStyle: 'short'}); } catch (e) { return d || ''; } };
 
