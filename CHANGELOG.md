@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.39] - 2026-11-07
+
+### Corregido
+- Recuperar la contraseña ahora pide solo el correo (antes pedía usuario y correo, y la gente escribía el correo en «usuario»; el CRM decía «enviado» sin enviar nada). El sistema busca la cuenta activa con ese correo.
+
 ## [1.27.38] - 2026-11-07
 
 ### Corregido

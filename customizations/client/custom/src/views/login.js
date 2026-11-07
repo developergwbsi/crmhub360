@@ -19,6 +19,23 @@ define('custom:views/login', ['views/login', 'custom:ui'], function (Dep, ChUi) 
             });
         }
 
+        // Recuperar contraseña solo con el correo: se oculta el campo «usuario» (lo resuelve el servidor por el correo) y se copia el correo en él para que el formulario original lo valide
+        showPasswordChangeRequest() {
+            this.notifyLoading();
+            this.createView('passwordChangeRequest', 'views/modals/password-change-request', {url: window.location.href}, v => {
+                v.once('after:render', () => {
+                    const $m = v.$el, $e = $m.find('input[name="emailAddress"]'), $u = $m.find('input[name="username"]');
+                    $m.find('[data-name="userName"]').hide();
+                    $m.find('label[data-name="emailAddress"]').text('Tu correo electrónico');
+                    $e.attr('placeholder', 'El correo con el que te registraste');
+                    $e.on('input change keyup', () => $u.val(String($e.val() || '').trim()));
+                    setTimeout(() => $e.focus(), 80);
+                });
+                v.render();
+                Espo.Ui.notify(false);
+            });
+        }
+
         // Recordar usuario: la próxima vez se muestra una bienvenida y solo se pide la contraseña
         setupRemember() {
             if (this._chRem) { return; }

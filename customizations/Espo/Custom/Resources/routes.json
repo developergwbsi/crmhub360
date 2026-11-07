@@ -1637,5 +1637,11 @@
             "action": "login"
         },
         "noAuth": true
+    },
+    {
+        "route": "/User/passwordChangeRequest",
+        "method": "post",
+        "actionClassName": "Espo\\Custom\\Api\\PostPasswordChangeRequest",
+        "noAuth": true
     }
 ]
