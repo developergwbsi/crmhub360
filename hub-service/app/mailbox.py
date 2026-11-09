@@ -148,6 +148,15 @@ def bounced_addresses(m: dict, own: str) -> list[str]:
     return list(dict.fromkeys(a.lower() for a in re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", text) if a.lower() not in skip and not BOUNCE_FROM.search(a)))[:3]
 
 
+def _was_recipient(slug: str, addr: str) -> bool:
+    """¿Le hemos escrito a esta dirección (prospecto o correo enviado por el comercial virtual)?"""
+    a = addr.lower()
+    with db.pool.connection() as c:
+        if c.execute("SELECT 1 FROM prospects WHERE tenant=%s AND lower(email)=%s LIMIT 1", (slug, a)).fetchone():
+            return True
+        return bool(c.execute("SELECT 1 FROM agent_events WHERE tenant=%s AND kind='send' AND channel='email' AND data->>'to'=%s LIMIT 1", (slug, a)).fetchone())
+
+
 async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str, import_all: bool = False) -> bool:
     """Guarda un correo entrante en EspoCRM (Email archivado) asignado a su dueño y ligado al lead o contacto si se reconoce; avisa por push y al comercial virtual. False si ya estaba importado o no es de nadie (salvo import_all)."""
     if m["messageId"]:   # no repetir un correo ya importado (p. ej. si se reinicia el avance del buzón)
@@ -158,6 +167,10 @@ async def import_message(tenant: dict, espo: Espo, m: dict, own_address: str, im
         except Exception:
             pass
     bad = bounced_addresses(m, own_address)
+    if bad:
+        bad = [a for a in bad if _was_recipient(tenant["slug"], a)]   # solo direcciones a las que de verdad escribimos (el aviso de rebote cita también alias propios e identificadores)
+        if not bad:
+            return False
     if bad:   # rebote: la dirección no existe o rechazó el correo; no se vuelve a escribir y cuenta para el freno automático
         from . import compliance
         for a in bad:

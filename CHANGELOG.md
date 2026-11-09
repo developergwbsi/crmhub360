@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.40] - 2026-11-09
+
+### Corregido
+- Rebotes leídos del buzón: ya no se bloquean direcciones que el aviso de rebote solo cita (el alias propio o identificadores); solo cuentan las direcciones a las que se les escribió. Dos falsos rebotes habían frenado otra vez el correo en frío.
+
 ## [1.27.39] - 2026-11-07
 
 ### Corregido
