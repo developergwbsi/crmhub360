@@ -2,11 +2,16 @@
     {
         "name": "name",
         "link": true,
-        "width": 19
+        "width": 16
     },
     {
         "name": "status",
         "width": 12
+    },
+    {
+        "name": "attentionReason",
+        "width": 18,
+        "notSortable": true
     },
     {
         "name": "qualificationStatus",
@@ -14,7 +19,7 @@
     },
     {
         "name": "suggestedService",
-        "width": 17,
+        "width": 14,
         "notSortable": true
     },
     {

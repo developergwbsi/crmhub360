@@ -12,9 +12,29 @@ define('custom:views/lead/record/detail', ['views/record/detail', 'custom:lead-h
             Hero.mount(this);
             if (this.el && !this.el.closest('.modal-body')) { this.el.classList.add('ch-split'); Studio.attach(this, '.record-grid'); this.chSideTab(); }   // vista completa: datos a un lado (4/12) y pestañas de actividad al otro (8/12), cada zona con su propio desplazamiento
             if (this.model.entityType === 'Lead') { this.chDecorate(); }
+            if (this.model.entityType === 'Lead') { this.chAttnBanner(); if (!this._chAttnL) { this._chAttnL = true; this.listenTo(this.model, 'change:attentionReason', () => this.chAttnBanner()); } }
             // Sin el módulo «Cartera y cobranza» no se muestra el reporte de crédito (deuda, mora, ingresos…)
             if (this.model.entityType === 'Lead') { try { this.hidePanel('targetLists', true); } catch (e) { /* sin esa relación */ } }   // las listas de objetivos (campañas masivas de Espo) no se usan aquí
             if (this.model.entityType === 'Lead' && !this.getConfig().get('crmhubCartera')) { try { this.hidePanel('credit', true); } catch (e) { /* panel inexistente */ } }
+        }
+
+        // Aviso de «por atender»: el cliente reaccionó y nadie lo ha atendido; el botón quita la marca
+        chAttnBanner() {
+            const root = this.el; if (!root) { return; }
+            let b = root.querySelector('.ch-attn-banner');
+            const why = this.model.get('attentionReason');
+            if (!why) { if (b) { b.remove(); } return; }
+            if (!b) {
+                b = document.createElement('div'); b.className = 'ch-attn-banner';
+                const host = root.querySelector('.record-grid') || root.firstChild;
+                host.parentNode.insertBefore(b, host);
+                b.addEventListener('click', e => {
+                    if (!e.target.closest('[data-act="done"]')) { return; }
+                    this.model.save({attentionReason: '', attentionAt: null}, {patch: true}).then(() => Espo.Ui.success('Listo: marcado como atendido'));
+                });
+            }
+            const esc = t => String(t).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+            b.innerHTML = '<span class="fas fa-bell"></span><span class="ch-attn-t"><b>Atiende a este cliente:</b> ' + esc(why) + '</span><button type="button" class="btn btn-default btn-sm" data-act="done">Marcar atendido</button>';
         }
 
         // En la vista de dos zonas, la tarjeta de asignación (usuario, equipos, creado) pasa a ser una pestaña más junto a Resumen, Detalles y Calificación

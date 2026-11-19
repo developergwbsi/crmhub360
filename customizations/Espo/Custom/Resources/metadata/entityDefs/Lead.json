@@ -216,6 +216,22 @@
             "type": "varchar",
             "maxLength": 160,
             "readOnly": false
+        },
+        "attentionReason": {
+            "type": "varchar",
+            "maxLength": 120,
+            "readOnly": false,
+            "audited": false,
+            "importDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": false
+        },
+        "attentionAt": {
+            "type": "datetime",
+            "readOnly": true,
+            "importDisabled": true,
+            "layoutMassUpdateDisabled": true,
+            "layoutFiltersDisabled": true
         }
     }
 }

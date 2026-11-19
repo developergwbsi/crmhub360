@@ -24,7 +24,9 @@
         "originForm": "Formulario de origen",
         "processResult": "Resultado de procesos",
         "identificationIsTemp": "Identificación temporal",
-        "originDetail": "Detalle del origen"
+        "originDetail": "Detalle del origen",
+        "attentionReason": "Por atender",
+        "attentionAt": "Reaccionó el"
     },
     "options": {
         "status": {

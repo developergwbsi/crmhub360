@@ -19,6 +19,7 @@ define('custom:views/lead/kanban-item', ['views/record/kanban-item'], function (
             setTimeout(hideEmpty, 400);
             // color según la calificación (borde izquierdo de la tarjeta)
             const card = this.el.querySelector('.ch-card');
+            if (card) { card.classList.toggle('ch-attn', !!this.model.get('attentionReason')); }   // el cliente reaccionó: borde rojo hasta que una persona lo atienda
             if (card) { const q = this.model.get('qualificationStatus'); card.classList.toggle('q-ok', q === 'Califica'); card.classList.toggle('q-warn', q === 'Revisión Manual'); card.classList.toggle('q-bad', q === 'No califica'); }
         }
 

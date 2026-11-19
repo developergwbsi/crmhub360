@@ -1986,3 +1986,16 @@ body.ch-fit .list-kanban .kanban-columns-container td.group-column { height: var
 body.ch-fit .list-kanban td.group-column > div { max-height: var(--ch-kh); height: var(--ch-kh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 body.ch-fit .content .list-container > .list { max-height: var(--ch-kh) !important; overflow-y: auto !important; overscroll-behavior: contain; }
 body.ch-fit .content .list-container > .list thead th { position: sticky; top: 0; z-index: 3; background: var(--ch-surface); }
+
+/* Leads por atender: el cliente reaccionó y nadie lo ha atendido */
+.ch-card.ch-attn { border: 2px solid #e5484d !important; box-shadow: 0 0 0 3px rgba(229,72,77,.14) !important; }
+.ch-card .ch-f-attentionReason { display: none; }
+.ch-card.ch-attn .ch-f-attentionReason { display: inline-block; background: #fde6e6; color: #b42328; font-weight: 700; font-size: 12px; padding: 3px 9px; border-radius: 999px; margin: 2px 0 4px; }
+.ch-card.ch-attn .ch-f-attentionReason::before { content: "\f0f3"; font-family: "Font Awesome 6 Free"; font-weight: 900; margin-right: 6px; }
+tr.list-row.ch-attn > td { background: #fff5f5 !important; border-top: 2px solid #e5484d !important; border-bottom: 2px solid #e5484d !important; }
+tr.list-row.ch-attn > td:first-child { border-left: 4px solid #e5484d !important; }
+tr.list-row.ch-attn > td:last-child { border-right: 2px solid #e5484d !important; }
+tr.list-row.ch-attn td[data-name="attentionReason"] { color: #b42328; font-weight: 700; }
+.ch-attn-banner { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; padding: 11px 16px; background: #fff5f5; border: 2px solid #e5484d; border-radius: 12px; color: #7a1c20; }
+.ch-attn-banner .fa-bell { color: #e5484d; font-size: 18px; }
+.ch-attn-banner .ch-attn-t { flex: 1; }

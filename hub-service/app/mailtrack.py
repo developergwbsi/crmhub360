@@ -5,7 +5,7 @@ Las aperturas son aproximadas: Apple Mail y algunos filtros abren el correo solo
 import logging
 from datetime import datetime, timedelta, timezone
 
-from . import agent, compliance, db, push
+from . import agent, attention, compliance, db, push
 from .espo import Espo
 
 log = logging.getLogger("hub.mailtrack")
@@ -72,6 +72,10 @@ async def _react(tenant: dict, lead_id: str, lname: str, kind: str, url: str) ->
         target = now + timedelta(hours=2)
         if row["next_at"] > target:
             agent._set(slug, lead_id, next_at=target)
+    if kind == "clicked":
+        await attention.raise_(tenant, lead_id, "Hizo clic en el correo")
+    elif opens == 2:   # justo al segundo (no se vuelve a marcar con cada apertura)
+        await attention.raise_(tenant, lead_id, "Abrió el correo varias veces")
     if kind != "clicked":
         return
     try:

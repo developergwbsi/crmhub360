@@ -25,9 +25,19 @@ define('custom:views/record/list-drawer', ['views/record/list', 'custom:live-lis
             });
         }
 
+        // leads que reaccionaron y nadie ha atendido: fila con borde rojo
+        chAttn() {
+            if (this.entityType !== 'Lead' || !this.collection) { return; }
+            this.el.querySelectorAll('tr.list-row[data-id]').forEach(tr => {
+                const m = this.collection.get(tr.dataset.id);
+                tr.classList.toggle('ch-attn', !!(m && m.get('attentionReason')));
+            });
+        }
+
         afterRender() {
             super.afterRender();
             this.chRowActs();
+            this.chAttn();
             if (this._chRowBound) { return; }
             this._chRowBound = true;
             this.el.addEventListener('click', e => {

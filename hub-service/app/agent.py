@@ -6,7 +6,7 @@ from psycopg.types.json import Jsonb
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from . import compliance, db, emailcheck, llm, mailout, products, proposals, prospects, push, routing, sms, whatsapp
+from . import attention, compliance, db, emailcheck, llm, mailout, products, proposals, prospects, push, routing, sms, whatsapp
 from .espo import Espo
 
 log = logging.getLogger("hub.agent")
@@ -424,6 +424,7 @@ async def on_inbound(tenant: dict, lead_id: str, channel: str, text: str) -> Non
         from . import ingest
         await ingest.apply_optout(tenant, lead_id, {"whatsapp": "WhatsApp", "sms": "SMS", "email": "Correo"}.get(channel, channel))
         return
+    await attention.raise_(tenant, lead_id, "Respondió por " + {"whatsapp": "WhatsApp", "sms": "SMS", "email": "correo"}.get(channel, channel))
     # solo atiende a leads que ya están a su cargo (llegaron con el agente activo o se le pasaron); no adopta chats que una persona ya llevaba
     if not row or effective_mode(tenant, row) != "auto" or row["state"] in ("escalated", "stopped"):
         return
@@ -434,6 +435,7 @@ async def on_inbound(tenant: dict, lead_id: str, channel: str, text: str) -> Non
 
 def note_human(tenant_slug: str, lead_id: str, minutes: int | None = None) -> None:
     """Una persona escribió al cliente: el agente se hace a un lado un rato para no pisar la conversación."""
+    attention.clear_soon(tenant_slug, lead_id)
     row = _row(tenant_slug, lead_id)
     if not row:
         return

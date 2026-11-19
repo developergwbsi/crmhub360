@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.43] - 2026-11-19
+
+### Añadido
+- Leads por atender: cuando un cliente reacciona (responde por WhatsApp, SMS o correo, hace clic en el correo o lo abre dos veces) su lead se marca con borde rojo en el tablero y en la lista, con el motivo («Respondió por WhatsApp»), y la ficha muestra un aviso con el botón «Marcar atendido». La marca se quita sola cuando una persona le escribe al cliente. Campos nuevos del lead: «Por atender» y «Reaccionó el».
+
 ## [1.27.42] - 2026-11-19
 
 ### Corregido
