@@ -952,8 +952,17 @@ def _email_html(text: str, persona: str, role: str, company: str, slug: str = ""
             pass
     def link(t: str) -> str:   # enlaces pulsables (sin el punto o la coma final)
         return re.sub(r"(https?://[^\s<]+?)([.,;:!?)]*)(?=\s|<|$)", lambda m: f"<a href='{m.group(1)}' style='color:#4f46e5;text-decoration:underline'>{m.group(1)}</a>{m.group(2)}", t)
+    from urllib.parse import quote as _q
+    wa_text = _q(f"Hola, recibí su correo de {company} y quiero más información.")
     def btn(u: str, label: str, bg: str = "#4f46e5") -> str:
-        return f"<p style='margin:2px 0 16px'><a href='{e(u)}' style='display:inline-block;background:{bg};color:#ffffff;text-decoration:none;font-weight:700;font-size:14.5px;padding:12px 22px;border-radius:8px'>{e(label)}</a></p>"
+        extra = ""
+        if "wa.me/" in u:   # WhatsApp: mensaje ya escrito (se sabe de dónde viene el chat) y el número a la vista por si no abre
+            num = re.sub(r"\D", "", u.split("wa.me/")[1].split("?")[0])
+            if "text=" not in u:
+                u += ("&" if "?" in u else "?") + "text=" + wa_text
+            if num:
+                extra = f"<br><span style='font-size:12.5px;color:#64748b'>¿No abre? Escríbenos al +{e(num)}</span>"
+        return f"<p style='margin:2px 0 16px'><a href='{e(u)}' style='display:inline-block;background:{bg};color:#ffffff;text-decoration:none;font-weight:700;font-size:14.5px;padding:12px 22px;border-radius:8px'>{e(label)}</a>{extra}</p>"
     def label_of(u: str) -> tuple[str, str]:
         if "wa.me/" in u:
             return "Escribir por WhatsApp", "#16a34a"
@@ -997,7 +1006,7 @@ def _email_html(text: str, persona: str, role: str, company: str, slug: str = ""
                   f"<a href='{e(p['url'])}' style='display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 20px;border-radius:8px'>Ver la presentación</a>"
                   + ("<span style='font-size:12.5px;color:#64748b;margin-left:12px'>También va adjunta en PDF</span>" if pdf else "") + "</td></tr></table>")
     ini = e((persona or company or "?").strip()[:1].upper())
-    wab = (f"<a href='https://wa.me/{e(wa)}' style='color:#16a34a;text-decoration:none;font-weight:600'>Escríbeme por WhatsApp</a>" if wa else "")
+    wab = (f"<a href='https://wa.me/{e(wa)}?text={wa_text}' style='color:#16a34a;text-decoration:none;font-weight:600'>Escríbeme por WhatsApp</a> <span style='color:#64748b'>(+{e(wa)})</span>" if wa else "")
     sig = ("<table role='presentation' cellpadding='0' cellspacing='0' style='margin-top:6px;border-top:1px solid #e5e9f5;padding-top:14px;width:100%'><tr>"
            f"<td width='48' valign='top' style='padding:14px 12px 0 0'><div style='width:44px;height:44px;line-height:44px;border-radius:22px;background:#4f46e5;color:#fff;text-align:center;font-weight:700;font-size:19px'>{ini}</div></td>"
            f"<td valign='top' style='padding-top:14px;font-size:13.5px;line-height:1.5;color:#334155'>" + (f"<div style='font-size:15px;color:#1f2540;margin-bottom:4px'>{e(closing)}</div>" if closing else "") + f"<b style='font-size:15px;color:#0f172a'>{e(persona)}</b><br>{e(role)} · {e(company)}" + (f"<br>{wab}" if wab else "") + "</td></tr></table>")

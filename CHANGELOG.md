@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.41] - 2026-11-19
+
+### Cambiado
+- Correos del comercial virtual: el botón y el enlace de WhatsApp llevan un mensaje ya escrito («Hola, recibí su correo de …») y muestran el número en texto («¿No abre? Escríbenos al +…») por si el cliente no puede abrir WhatsApp desde el correo.
+
 ## [1.27.40] - 2026-11-09
 
 ### Corregido
