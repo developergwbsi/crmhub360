@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.44] - 2026-11-19
+
+### Cambiado
+- Comercial virtual → Mis comerciales, más visual y con menos texto: cabecera animada con el estado del comercial (en línea o en pausa), contadores animados, recorrido «mensajes → respuestas → pasados a una persona», gráfica de mensajes por día y reparto de leads con dos tarjetas y una barra de porcentajes. Las explicaciones largas pasan a ayudas que se ven al pasar el cursor.
+
 ## [1.27.43] - 2026-11-19
 
 ### Añadido

@@ -58,18 +58,27 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             const rows = [{k: 'humans', n: 'Asesores humanos (grupo, se balancean entre sí por carga)', w: w('humans')}].concat(d.agents.map(a => ({k: a.id, n: `${a.name} (comercial virtual)${a.enabled && a.mode === 'auto' ? '' : a.enabled ? ' · en manual: no participa' : ' · apagado: no participa'}`, w: w(a.id)})));
             const active = split ? rows.filter(r => r.k === 'humans' || liveAg.some(a => a.id === r.k)) : rows.filter(r => r.k !== 'humans' && liveAg.some(a => a.id === r.k));
             const sum = k => d.agents.reduce((a, x) => a + ((x.stats || {})[k] || 0), 0), onN = d.agents.filter(a => a.enabled).length, autoN = d.agents.filter(a => a.enabled && a.mode === 'auto').length;
-            const kpis = `<div class="ch-kpis"><div class="ch-kpi"><span class="ic"><i class="fas fa-robot"></i></span><div><span>Comerciales encendidos</span><b>${onN} <small>de ${d.agents.length}</small></b></div></div>` +
+            const kpis = `<div class="ch-kpis"><div class="ch-kpi"><span class="ic"><i class="fas fa-robot"></i></span><div><span>Comerciales encendidos</span><b><span data-count="${onN}">0</span> <small>de ${d.agents.length}</small></b></div></div>` +
                 `<div class="ch-kpi ${autoN ? 'ok' : 'warn'}"><span class="ic"><i class="fas fa-bolt"></i></span><div><span>En modo automático</span><b>${autoN}</b><small>${autoN ? 'atienden solos' : 'ninguno atiende solo'}</small></div></div>` +
-                `<div class="ch-kpi"><span class="ic"><i class="fas fa-user-group"></i></span><div><span>Leads activos</span><b>${sum('active')}</b><small>${sum('leads')} en total</small></div></div>` +
-                `<div class="ch-kpi"><span class="ic"><i class="fas fa-paper-plane"></i></span><div><span>Mensajes (30 días)</span><b>${sum('sent')}</b></div></div></div>`;
-            return `${kpis}${d.licensed ? '' : '<div class="ch-warn">La versión automática del comercial virtual no está activada para tu empresa: puedes crear y entrenar comerciales, pero no recibirán leads. Pídela a tu proveedor.</div>'}
-                <div class="ch-ln-bar"><button class="btn btn-primary btn-sm" data-act="agadd" ${canAdd ? '' : 'disabled'}><span class="fas fa-plus"></span> Nuevo comercial virtual</button><span class="ch-muted">${d.agents.length} comercial(es) virtual(es) · ${d.slots} incluido(s) en tu licencia${extra ? ` · <b>${extra} adicional(es)</b>` : ''}. Puedes crear todos los que necesites: cada comercial adicional tiene un costo que se suma a tu factura.</span></div>
+                `<div class="ch-kpi"><span class="ic"><i class="fas fa-user-group"></i></span><div><span>Leads activos</span><b data-count="${sum('active')}">0</b><small>${sum('leads')} en total</small></div></div>` +
+                `<div class="ch-kpi"><span class="ic"><i class="fas fa-paper-plane"></i></span><div><span>Mensajes (30 días)</span><b data-count="${sum('sent')}">0</b></div></div></div>`;
+            const st = this.stats, ser = (st && st.series) || [], mx = Math.max(1, ...ser.map(x => x.n));
+            const live = d.agents.find(x => x.enabled && x.mode === 'auto') || d.agents.find(x => x.enabled) || d.agents[0] || {persona: 'Tu comercial virtual'};
+            const hero = `<div class="ch-ag-hero ${autoN ? 'on' : ''}"><div class="ch-ag-robot"><svg viewBox="0 0 120 120" aria-hidden="true"><line x1="60" y1="8" x2="60" y2="24" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle class="ant" cx="60" cy="8" r="6"/><rect x="22" y="24" width="76" height="62" rx="22" class="head"/><circle class="eye" cx="44" cy="55" r="8"/><circle class="eye" cx="76" cy="55" r="8"/><path d="M46 72q14 11 28 0" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/><rect x="34" y="92" width="52" height="16" rx="8" class="body"/></svg></div>
+                <div class="ch-ag-hero-t"><h3>${esc(live.persona || 'Tu comercial virtual')} ${autoN ? 'está atendiendo' : 'está en pausa'}</h3><p>${autoN ? 'Responde y da seguimiento a toda hora.' : 'Enciéndelo para que atienda solo.'}</p></div>
+                <div class="ch-ag-pulse"><i></i>${autoN ? 'En línea' : 'Apagado'}</div></div>`;
+            const flow = st ? `<div class="ch-ag-flow">${[['fa-paper-plane', 'Mensajes enviados', st.sent, '#4f63e8'], ['fa-comment-dots', 'Clientes que respondieron', st.replies, '#16a34a'], ['fa-user-check', 'Pasados a una persona', st.escalations, '#f59e0b']].map(([ic, l, n, c], i) => `${i ? '<span class="ch-ag-arrow"><i class="fas fa-chevron-right"></i></span>' : ''}<div class="ch-ag-step" style="--c:${c}"><span class="ico"><i class="fas ${ic}"></i></span><b data-count="${n || 0}">0</b><small>${l}</small></div>`).join('')}</div>
+                <div class="ch-sim-card ch-ag-chart"><h4><span class="fas fa-chart-simple"></span> Mensajes por día <small class="ch-muted">últimos 30 días</small></h4>${ser.length ? `<div class="ch-ag-bars grow">${ser.map((x, i) => `<i style="height:${Math.max(4, 100 * x.n / mx)}%;animation-delay:${Math.min(i * 25, 600)}ms" title="${esc(x.d)}: ${x.n}"></i>`).join('')}</div>` : '<div class="ch-ag-nochart"><i class="fas fa-chart-simple"></i>Aquí verás la actividad en cuanto envíe mensajes</div>'}</div>` : '';
+            const sp = [['humans', 'Personas', '#4f63e8'], ...d.agents.filter(x => liveAg.some(l => l.id === x.id)).map(x => [x.id, x.name, '#16a34a'])].filter(([k]) => active.some(r => r.k === k));
+            const tipDp = 'El peso es la proporción: con personas 2 y un comercial virtual 1, de cada 3 leads salen 2 para personas y 1 para el comercial virtual. Un peso 0 excluye a ese participante. Solo participan los comerciales encendidos y en modo automático.';
+            return `${hero}${kpis}${flow}${d.licensed ? '' : '<div class="ch-warn">La versión automática del comercial virtual no está activada para tu empresa: puedes crear y entrenar comerciales, pero no recibirán leads. Pídela a tu proveedor.</div>'}
+                <div class="ch-ln-bar"><button class="btn btn-primary btn-sm" data-act="agadd" ${canAdd ? '' : 'disabled'}><span class="fas fa-plus"></span> Nuevo comercial virtual</button><span class="ch-ag-chip" title="Puedes crear todos los que necesites: cada comercial adicional tiene un costo que se suma a tu factura."><i class="fas fa-robot"></i> ${d.agents.length} de ${d.slots} incluidos${extra ? ` · <b>${extra} adicional(es)</b>` : ''}</span></div>
                 <div class="ch-ln-grid">${d.agents.map(card).join('')}</div>
-                <div class="ch-sim-card"><h4><span class="fas fa-shuffle"></span> Reparto de leads nuevos</h4><p class="ch-muted">Decide quién atiende cada lead que llega por formularios, WhatsApp, redes u otro canal automático.</p>
-                    <label class="ch-dz-chk"><input type="radio" name="dpmode" value="shared" ${split ? '' : 'checked'}> <b>Compartido</b> — los asesores humanos reciben la asignación de siempre y además un comercial virtual atiende el lead (si hay varios, rotan según su peso).</label>
-                    <label class="ch-dz-chk"><input type="radio" name="dpmode" value="split" ${split ? 'checked' : ''}> <b>Repartir entre humanos y virtuales</b> — cada lead nuevo va a <b>uno solo</b>: al grupo de asesores humanos o a un comercial virtual, según los pesos. Así los intercalas.</label>
+                <div class="ch-sim-card"><h4><span class="fas fa-shuffle"></span> ¿Quién atiende los leads nuevos?</h4><div class="ch-ag-modes"><label class="ch-ag-mode ${split ? '' : 'on'}"><input type="radio" name="dpmode" value="shared" ${split ? '' : 'checked'}><span class="ico"><i class="fas fa-people-arrows"></i></span><b>Compartido</b><small>Personas y comercial virtual atienden juntos</small></label>
+                    <label class="ch-ag-mode ${split ? 'on' : ''}"><input type="radio" name="dpmode" value="split" ${split ? 'checked' : ''}><span class="ico"><i class="fas fa-shuffle"></i></span><b>Repartir</b><small>Cada lead nuevo va a uno solo</small></label></div>
+                    ${split && sp.length > 1 ? `<div class="ch-ag-split">${sp.map(([k, n, c]) => `<span style="flex:${Math.max(1, pct(k, active))};background:${c}" title="${esc(n)}">${pct(k, active)}%</span>`).join('')}</div>` : ''}
                     <div class="ch-ag-dp">${rows.map(r => `<div class="ch-ag-dpr ${(split || r.k !== 'humans') ? '' : 'dim'}"><span>${esc(r.n)}</span><input type="number" min="0" max="100" data-dw="${esc(r.k)}" value="${r.w}"><small>${active.some(x => x.k === r.k) ? pct(r.k, active.map(x => ({k: x.k, w: +(this.el.querySelector(`[data-dw="${x.k}"]`) ? this.el.querySelector(`[data-dw="${x.k}"]`).value : x.w)}))) + '%' : '—'}</small></div>`).join('')}</div>
-                    <p class="ch-muted">El peso es la proporción: con humanos 2 y un comercial virtual 1, de cada 3 leads salen 2 para personas y 1 para el comercial virtual, intercalados. Un peso 0 excluye a ese participante. Solo participan los comerciales <b>encendidos y en modo automático</b>.</p>
+                    <span class="ch-ag-chip" title="${esc(tipDp)}"><i class="far fa-circle-question"></i> ¿Cómo funcionan los pesos?</span>
                     <div class="ch-mail-actions"><button class="btn btn-primary btn-sm" data-act="dpsave"><span class="fas fa-floppy-disk"></span> Guardar reparto</button></div></div>`;
         }
 
@@ -80,6 +89,12 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             const split = (this.el.querySelector('[name="dpmode"]:checked') || {}).value === 'split', w = this.dpWeights();
             const live = this.d.agents.filter(a => a.enabled && a.mode === 'auto').map(a => a.id), ks = (split ? ['humans'] : []).concat(live), tot = ks.reduce((s, k) => s + (w[k] || 0), 0);
             this.el.querySelectorAll('.ch-ag-dpr').forEach(r => { const i = r.querySelector('[data-dw]'), k = i.dataset.dw, sm = r.querySelector('small'); sm.textContent = ks.includes(k) && tot ? Math.round(100 * (w[k] || 0) / tot) + '%' : '—'; });
+            this.el.querySelectorAll('.ch-ag-mode').forEach(l => l.classList.toggle('on', l.querySelector('input').checked));
+            let bar = this.el.querySelector('.ch-ag-split'); const dp = this.el.querySelector('.ch-ag-dp');
+            if (split && ks.length > 1 && tot) {
+                if (!bar && dp) { bar = document.createElement('div'); bar.className = 'ch-ag-split'; dp.parentNode.insertBefore(bar, dp); }
+                if (bar) { bar.innerHTML = ks.map(k => `<span style="flex:${Math.max(0.0001, w[k] || 0)};background:${k === 'humans' ? '#4f63e8' : '#16a34a'}">${Math.round(100 * (w[k] || 0) / tot)}%</span>`).join(''); }
+            } else if (bar) { bar.remove(); }
         }
 
         dpSave() {
@@ -99,13 +114,15 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
             if (!this.d) { root.innerHTML = '<div class="ch-muted" style="padding:24px">Cargando…</div>'; return; }
             if (this.d.error) { root.innerHTML = '<div class="ch-chat-err">No se pudo cargar. Solo los administradores pueden ver esta pantalla.</div>'; return; }
             const tabs = [['agents', 'fas fa-users-gear', 'Mis comerciales'], ['train', 'fas fa-graduation-cap', 'Entrenamiento'], ['menus', 'fas fa-list-ul', 'Mensajes con opciones'], ['test', 'fas fa-comments', 'Probar'], ['prospect', 'fas fa-diagram-project', 'Agentes de prospección'], ['products', 'fas fa-box-open', 'Productos'], ['presets', 'fas fa-message', 'Respuestas automáticas'], ['material', 'fas fa-file-powerpoint', 'Propuestas y brochures'], ['stats', 'fas fa-chart-column', 'Resultados y trazabilidad'], ['ai', 'fas fa-microchip', 'Motor de IA']].map(([k, i, l]) => `<a class="ch-tpl-tab ${this.tab === k ? 'on' : ''}" data-act="tab" data-t="${k}"><span class="${i}"></span> ${l}</a>`).join('');
-            root.innerHTML = `<div class="ch-sim-head"><h3><span class="fas fa-robot"></span> Comercial virtual</h3><p class="ch-muted">Atiende a cada lead de principio a fin —primer contacto, respuestas, seguimientos, cambios de estado— y pasa el caso a una persona cuando hace falta. Cada decisión queda registrada con su porqué.</p></div><div class="ch-tpl-tabs">${tabs}</div>` +
+            root.innerHTML = `<div class="ch-sim-head"><h3><span class="fas fa-robot"></span> Comercial virtual</h3><p class="ch-muted">Atiende, da seguimiento y te avisa cuándo entrar tú.</p></div><div class="ch-tpl-tabs">${tabs}</div>` +
                 (this.tab === 'agents' ? this.agentsHtml() : ['train', 'menus', 'test'].includes(this.tab) ? this.agentBar() + (this.tab === 'train' ? this.trainHtml() : this.tab === 'menus' ? this.menusHtml() : this.testHtml()) : this.tab === 'ai' ? this.aiHtml() : ['prospect', 'products', 'presets', 'material'].includes(this.tab) ? '<div data-role="sub"></div>' : this.statsHtml());
             root.onclick = e => this.click(e);
             root.onchange = e => { const s = e.target.closest('[data-agsel]'); if (s) { this.load(s.value); return; } const sw = e.target.closest('[data-agsw]'); if (sw) { this.agentCall(Espo.Ajax.postRequest('CrmHub/agentEnable', {id: sw.dataset.agsw, enabled: sw.checked}), sw.checked ? 'Comercial virtual encendido' : 'Comercial virtual apagado'); } };
+            root.addEventListener('change', e => { if (e.target.closest('[name="dpmode"]') && this.tab === 'agents') { this.dpPreview(); } });
             root.oninput = e => { if (e.target.closest('[data-dw]') && this.tab === 'agents') { clearTimeout(this._dwt); this._dwt = setTimeout(() => this.dpPreview(), 250); } };
             if (this.tab === 'prospect' || this.tab === 'products' || this.tab === 'presets' || this.tab === 'material') { this.createView('sub', this.tab === 'prospect' ? 'custom:views/prospecting-agents' : this.tab === 'products' ? 'custom:views/products-lib' : this.tab === 'presets' ? 'custom:views/presets-config' : 'custom:views/proposals-lib', {selector: '[data-role="sub"]'}).then(v => v.render()); }
             if (this.tab === 'stats' && !this.stats) { this.loadStats(); }
+            if (this.tab === 'agents') { this.chCount(); if (!this.stats && !this._chStatsBusy) { this._chStatsBusy = true; this.loadStatsQuiet(); } }
         }
 
         // ------------------------------------------------ entrenamiento
@@ -269,6 +286,20 @@ define('custom:views/agent', ['view', 'custom:ui', 'custom:tpl'], function (Dep,
         }
 
         // ------------------------------------------------ resultados
+        // animación: los números suben de 0 al valor
+        chCount() {
+            this.el.querySelectorAll('[data-count]').forEach(el => {
+                const to = +el.dataset.count || 0, t0 = performance.now(), dur = 900;
+                const tick = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(to * e).toLocaleString('es'); if (k < 1 && el.isConnected) { requestAnimationFrame(tick); } };
+                requestAnimationFrame(tick);
+            });
+        }
+
+        // trae los resultados para el panel de «Mis comerciales» sin cambiar de pestaña
+        loadStatsQuiet() {
+            Espo.Ajax.getRequest('CrmHub/agentStats', {days: 30}).then(s => { s.pending = []; this.stats = s; this._chStatsBusy = false; if (this.tab === 'agents') { this.draw(); } }).catch(xhr => { this._chStatsBusy = false; if (xhr) { xhr.errorIsHandled = true; } });
+        }
+
         loadStats() { Promise.all([Espo.Ajax.getRequest('CrmHub/agentStats', {days: 30}), Espo.Ajax.getRequest('CrmHub/agentPending').catch(() => ({items: []}))]).then(([s, p]) => { s.pending = p.items || []; this.stats = s; this.draw(); }).catch(xhr => { if (xhr) { xhr.errorIsHandled = true; } }); }
 
         statsHtml() {
