@@ -45,7 +45,7 @@ x-espo-env: &espo-env
 
 services:
   espocrm:
-    image: espocrm/espocrm:latest
+    image: espocrm/espocrm:10.0.12
     container_name: crmhub-${SLUG}
     restart: unless-stopped
     environment: *espo-env
@@ -54,7 +54,7 @@ services:
     networks: [crmhub_net]
 
   espocrm-daemon:
-    image: espocrm/espocrm:latest
+    image: espocrm/espocrm:10.0.12
     container_name: crmhub-${SLUG}-daemon
     restart: unless-stopped
     volumes: *espo-volumes
@@ -64,7 +64,7 @@ services:
     networks: [crmhub_net]
 
   espocrm-websocket:
-    image: espocrm/espocrm:latest
+    image: espocrm/espocrm:10.0.12
     container_name: crmhub-${SLUG}-websocket
     restart: unless-stopped
     volumes: *espo-volumes

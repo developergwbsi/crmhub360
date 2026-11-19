@@ -4,6 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [1.27.42] - 2026-11-19
+
+### Corregido
+- Los CRM de cada empresa usan la imagen fija de EspoCRM 10.0.12 y ya no «latest»: una versión nueva (10.1) dejó caída la producción al no migrar con nuestras personalizaciones.
+
 ## [1.27.41] - 2026-11-19
 
 ### Cambiado
